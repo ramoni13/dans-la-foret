@@ -117,6 +117,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
+    zIndex: 1,      // plateau en dessous du jeton dragé (zIndex 999)
+    elevation: 1,   // Android
   },
   backgroundImage: {
     borderRadius: 16,
