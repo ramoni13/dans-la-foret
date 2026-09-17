@@ -129,8 +129,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
-    elevation: 8,
-    zIndex: 100,          // ← palette au-dessus du plateau
+    elevation: 2,         // ← réduit pour ne pas écraser le jeton dragé (elevation 999)
+    zIndex: 2,            // ← au-dessus du plateau (1) mais sous le jeton dragé (999)
     overflow: 'visible',  // ← laisse le jeton sortir vers le haut pendant le drag
   },
   title: {
