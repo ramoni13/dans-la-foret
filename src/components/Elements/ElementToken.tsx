@@ -112,6 +112,7 @@ export const ElementToken: React.FC<ElementTokenProps> = ({
   const gesture = isFixed ? tapGesture : panGesture;
 
   // ── Style animé (mobile) ──────────────────────────────────
+  // En reanimated v4 sans plugin Babel, il faut passer les dépendances explicitement
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: translateX.value },
@@ -120,8 +121,8 @@ export const ElementToken: React.FC<ElementTokenProps> = ({
     ],
     opacity: opacity.value,
     zIndex: zIndex.value,
-    elevation: zIndex.value,
-  }));
+    elevation: zIndex.value === 999 ? 999 : 3,
+  }), [translateX, translateY, scale, opacity, zIndex]);
 
   const borderColor = isFixed ? Colors.cell.fixed : elementDef.color;
 
@@ -150,10 +151,15 @@ export const ElementToken: React.FC<ElementTokenProps> = ({
     return (
       <View
         style={tokenStyle as any}
-        // @ts-ignore — onMouseDown est un prop web valide
+        // @ts-ignore — événements web valides (mouse + touch)
         onMouseDown={!isFixed ? (e: React.MouseEvent) => {
           e.preventDefault();
           if (onWebMouseDown) onWebMouseDown(elementDef.id, e.clientX, e.clientY);
+        } : undefined}
+        onTouchStart={!isFixed ? (e: React.TouchEvent) => {
+          e.preventDefault();
+          const t = e.touches[0];
+          if (t && onWebMouseDown) onWebMouseDown(elementDef.id, t.clientX, t.clientY);
         } : undefined}
         onClick={isFixed ? triggerError : onTap}
       >
