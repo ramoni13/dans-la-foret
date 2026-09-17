@@ -1,0 +1,22 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "jsx": "react",
+    "strict": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "types": ["jest"],
+    "paths": {
+      "@core/*":      ["src/core/*"],
+      "@boards/*":    ["src/boards/*"],
+      "@elements/*":  ["src/elements/*"],
+      "@components/*":["src/components/*"],
+      "@store/*":     ["src/store/*"],
+      "@hooks/*":     ["src/hooks/*"],
+      "@constants/*": ["src/constants/*"],
+      "@utils/*":     ["src/utils/*"],
+      "@data/*":      ["src/data/*"]
+    }
+  },
+  "exclude": ["node_modules", "scripts", "index.ts"]
+}
