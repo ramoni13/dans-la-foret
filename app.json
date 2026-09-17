@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Dans la Forêt",
-    "slug": "dans-la-foret-app",
+    "slug": "dans-la-foret",
     "version": "1.0.0",
     "scheme": "danslaforet",
     "orientation": "portrait",
