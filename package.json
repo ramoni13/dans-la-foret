@@ -60,12 +60,6 @@
   "private": true,
   "overrides": {
     "terser": "5.50.0",
-    "@babel/core": "7.26.10",
-    "@babel/parser": "7.26.10",
-    "@babel/helper-validator-identifier": "7.25.9",
-    "@babel/types": "7.26.10",
-    "@babel/traverse": "7.26.10",
-    "@babel/generator": "7.26.10",
     "hasown": "2.0.2",
     "ajv": "8.18.0",
     "semver": "7.7.4"
