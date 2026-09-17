@@ -23,6 +23,7 @@
     "react-native-screens": "~4.10.0",
     "react-native-svg": "15.11.2",
     "react-native-web": "~0.21.0",
+    "query-string": "^9.1.1",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
