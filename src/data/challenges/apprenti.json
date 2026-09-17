@@ -1,0 +1,3412 @@
+{
+  "challenges": [
+    {
+      "id": "apprenti_001",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 1,
+      "challengeNumber": 1,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.399Z"
+    },
+    {
+      "id": "apprenti_002",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 2,
+      "challengeNumber": 2,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.400Z"
+    },
+    {
+      "id": "apprenti_003",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 3,
+      "challengeNumber": 3,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.400Z"
+    },
+    {
+      "id": "apprenti_004",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 4,
+      "challengeNumber": 4,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.400Z"
+    },
+    {
+      "id": "apprenti_005",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 5,
+      "challengeNumber": 5,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.403Z"
+    },
+    {
+      "id": "apprenti_006",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 6,
+      "challengeNumber": 6,
+      "fixedPlacements": [
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.403Z"
+    },
+    {
+      "id": "apprenti_007",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 7,
+      "challengeNumber": 7,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.403Z"
+    },
+    {
+      "id": "apprenti_008",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 8,
+      "challengeNumber": 8,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 2
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.404Z"
+    },
+    {
+      "id": "apprenti_009",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 9,
+      "challengeNumber": 9,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.405Z"
+    },
+    {
+      "id": "apprenti_010",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 10,
+      "challengeNumber": 10,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.405Z"
+    },
+    {
+      "id": "apprenti_011",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 11,
+      "challengeNumber": 11,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.406Z"
+    },
+    {
+      "id": "apprenti_012",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 12,
+      "challengeNumber": 12,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.406Z"
+    },
+    {
+      "id": "apprenti_013",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 13,
+      "challengeNumber": 13,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.406Z"
+    },
+    {
+      "id": "apprenti_014",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 14,
+      "challengeNumber": 14,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.406Z"
+    },
+    {
+      "id": "apprenti_015",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 15,
+      "challengeNumber": 15,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 2
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.407Z"
+    },
+    {
+      "id": "apprenti_016",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 16,
+      "challengeNumber": 16,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.408Z"
+    },
+    {
+      "id": "apprenti_017",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 17,
+      "challengeNumber": 17,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.408Z"
+    },
+    {
+      "id": "apprenti_018",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 18,
+      "challengeNumber": 18,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 4
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.408Z"
+    },
+    {
+      "id": "apprenti_019",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 19,
+      "challengeNumber": 19,
+      "fixedPlacements": [
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.408Z"
+    },
+    {
+      "id": "apprenti_020",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 20,
+      "challengeNumber": 20,
+      "fixedPlacements": [
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.408Z"
+    },
+    {
+      "id": "apprenti_021",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 21,
+      "challengeNumber": 21,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.409Z"
+    },
+    {
+      "id": "apprenti_022",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 22,
+      "challengeNumber": 22,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.409Z"
+    },
+    {
+      "id": "apprenti_023",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 23,
+      "challengeNumber": 23,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.409Z"
+    },
+    {
+      "id": "apprenti_024",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 24,
+      "challengeNumber": 24,
+      "fixedPlacements": [
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 3
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.409Z"
+    },
+    {
+      "id": "apprenti_025",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 25,
+      "challengeNumber": 25,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.410Z"
+    },
+    {
+      "id": "apprenti_026",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 26,
+      "challengeNumber": 26,
+      "fixedPlacements": [
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.410Z"
+    },
+    {
+      "id": "apprenti_027",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 27,
+      "challengeNumber": 27,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 3
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.410Z"
+    },
+    {
+      "id": "apprenti_028",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 28,
+      "challengeNumber": 28,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.410Z"
+    },
+    {
+      "id": "apprenti_029",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 29,
+      "challengeNumber": 29,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.410Z"
+    },
+    {
+      "id": "apprenti_030",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 30,
+      "challengeNumber": 30,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.411Z"
+    },
+    {
+      "id": "apprenti_031",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 31,
+      "challengeNumber": 31,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 3
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.411Z"
+    },
+    {
+      "id": "apprenti_032",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 32,
+      "challengeNumber": 32,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 3
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.412Z"
+    },
+    {
+      "id": "apprenti_033",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 33,
+      "challengeNumber": 33,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.412Z"
+    },
+    {
+      "id": "apprenti_034",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 34,
+      "challengeNumber": 34,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.412Z"
+    },
+    {
+      "id": "apprenti_035",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 35,
+      "challengeNumber": 35,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.413Z"
+    },
+    {
+      "id": "apprenti_036",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 36,
+      "challengeNumber": 36,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.413Z"
+    },
+    {
+      "id": "apprenti_037",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 37,
+      "challengeNumber": 37,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.414Z"
+    },
+    {
+      "id": "apprenti_038",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 38,
+      "challengeNumber": 38,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 2
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.414Z"
+    },
+    {
+      "id": "apprenti_039",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 39,
+      "challengeNumber": 39,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.415Z"
+    },
+    {
+      "id": "apprenti_040",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 40,
+      "challengeNumber": 40,
+      "fixedPlacements": [
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.415Z"
+    },
+    {
+      "id": "apprenti_041",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 41,
+      "challengeNumber": 41,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 4
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.416Z"
+    },
+    {
+      "id": "apprenti_042",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 42,
+      "challengeNumber": 42,
+      "fixedPlacements": [
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.416Z"
+    },
+    {
+      "id": "apprenti_043",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 43,
+      "challengeNumber": 43,
+      "fixedPlacements": [
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.416Z"
+    },
+    {
+      "id": "apprenti_044",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 44,
+      "challengeNumber": 44,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.416Z"
+    },
+    {
+      "id": "apprenti_045",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 45,
+      "challengeNumber": 45,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.417Z"
+    },
+    {
+      "id": "apprenti_046",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 46,
+      "challengeNumber": 46,
+      "fixedPlacements": [
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.417Z"
+    },
+    {
+      "id": "apprenti_047",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 47,
+      "challengeNumber": 47,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.417Z"
+    },
+    {
+      "id": "apprenti_048",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 48,
+      "challengeNumber": 48,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.417Z"
+    },
+    {
+      "id": "apprenti_049",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 49,
+      "challengeNumber": 49,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "chien",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.418Z"
+    },
+    {
+      "id": "apprenti_050",
+      "boardId": "board_12",
+      "level": "apprenti",
+      "levelNumber": 50,
+      "challengeNumber": 50,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "chien"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "bucheron",
+        "mouton",
+        "mouton",
+        "bucheron",
+        "ours",
+        "chien",
+        "chien"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 450,
+      "createdAt": "2026-09-10T14:06:06.418Z"
+    }
+  ]
+}
