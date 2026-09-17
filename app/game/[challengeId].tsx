@@ -79,7 +79,7 @@ export default function GameScreen() {
   // Dimensions et position du plateau
   const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
   const boardContainerRef = useRef<View>(null);
-  // Position du plateau dans la page (web uniquement, pour convertir clientX/Y)
+  // Position du plateau dans la page (web ET mobile natif)
   const boardOffsetRef = useRef({ x: 0, y: 0 });
   // Zone disponible pour le plateau (pour calculer le carré)
   const [availableArea, setAvailableArea] = useState({ width: 0, height: 0 });
@@ -113,12 +113,10 @@ export default function GameScreen() {
   // → on soustrait l'offset du boardContainer pour obtenir des coords relatives
   const findNearest = useCallback((x: number, y: number) => {
     if (!boardDef || boardSize.width === 0) return null;
-    let relX = x;
-    let relY = y;
-    if (Platform.OS === 'web') {
-      relX = x - boardOffsetRef.current.x;
-      relY = y - boardOffsetRef.current.y;
-    }
+    // Soustraire l'offset du plateau pour obtenir des coords relatives
+    // Nécessaire sur web ET mobile natif (absoluteX/Y sont en coords écran)
+    const relX = x - boardOffsetRef.current.x;
+    const relY = y - boardOffsetRef.current.y;
     // snapRadius plus grand sur le web (pas de précision tactile)
     const snapRadius = Platform.OS === 'web' ? 80 : 60;
     return findNearestCell(relX, relY, boardDef, boardSize.width, boardSize.height, CELL_SIZE, snapRadius);
@@ -143,6 +141,13 @@ export default function GameScreen() {
 
   const wrappedDragStart = useCallback((elementId: string) => {
     setDraggingElement(elementId);
+    // Re-mesurer la position du plateau au moment du drag
+    // (au cas où le layout aurait changé depuis le dernier onLayout)
+    if (Platform.OS !== 'web' && boardContainerRef.current) {
+      boardContainerRef.current.measure((_x, _y, _w, _h, pageX, pageY) => {
+        boardOffsetRef.current = { x: pageX, y: pageY };
+      });
+    }
     handleDragStart(elementId);
   }, [handleDragStart]);
 
@@ -286,11 +291,18 @@ export default function GameScreen() {
                 onLayout={e => {
                   const { width, height } = e.nativeEvent.layout;
                   setBoardSize({ width, height });
-                  // Sur le web : récupérer la position absolue dans la page
-                  if (Platform.OS === 'web' && boardContainerRef.current) {
-                    const node = boardContainerRef.current as unknown as HTMLElement;
-                    const rect = node.getBoundingClientRect();
-                    boardOffsetRef.current = { x: rect.left, y: rect.top };
+                  // Récupérer la position absolue dans la page (web ET mobile)
+                  if (boardContainerRef.current) {
+                    if (Platform.OS === 'web') {
+                      const node = boardContainerRef.current as unknown as HTMLElement;
+                      const rect = node.getBoundingClientRect();
+                      boardOffsetRef.current = { x: rect.left, y: rect.top };
+                    } else {
+                      // Sur Android/iOS : measure() donne les coords absolues écran
+                      boardContainerRef.current.measure((_x, _y, _w, _h, pageX, pageY) => {
+                        boardOffsetRef.current = { x: pageX, y: pageY };
+                      });
+                    }
                   }
                 }}
               >
