@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.ui.card,
     borderTopWidth: 1,
     borderTopColor: Colors.ui.border,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
