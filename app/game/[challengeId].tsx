@@ -142,10 +142,10 @@ export default function GameScreen() {
   const wrappedDragStart = useCallback((elementId: string) => {
     setDraggingElement(elementId);
     // Re-mesurer la position du plateau au moment du drag
-    // (au cas où le layout aurait changé depuis le dernier onLayout)
+    // measureInWindow donne les coords écran réelles, plus fiable que measure()
     if (Platform.OS !== 'web' && boardContainerRef.current) {
-      boardContainerRef.current.measure((_x, _y, _w, _h, pageX, pageY) => {
-        boardOffsetRef.current = { x: pageX, y: pageY };
+      boardContainerRef.current.measureInWindow((x, y) => {
+        boardOffsetRef.current = { x, y };
       });
     }
     handleDragStart(elementId);
@@ -292,15 +292,18 @@ export default function GameScreen() {
                   const { width, height } = e.nativeEvent.layout;
                   setBoardSize({ width, height });
                   // Récupérer la position absolue dans la page (web ET mobile)
+                  // On utilise requestAnimationFrame pour s'assurer que le layout
+                  // est finalisé avant de mesurer la position écran
                   if (boardContainerRef.current) {
                     if (Platform.OS === 'web') {
                       const node = boardContainerRef.current as unknown as HTMLElement;
                       const rect = node.getBoundingClientRect();
                       boardOffsetRef.current = { x: rect.left, y: rect.top };
                     } else {
-                      // Sur Android/iOS : measure() donne les coords absolues écran
-                      boardContainerRef.current.measure((_x, _y, _w, _h, pageX, pageY) => {
-                        boardOffsetRef.current = { x: pageX, y: pageY };
+                      requestAnimationFrame(() => {
+                        boardContainerRef.current?.measureInWindow((x, y) => {
+                          boardOffsetRef.current = { x, y };
+                        });
                       });
                     }
                   }
@@ -400,7 +403,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 6,
     backgroundColor: Colors.ui.card,
     borderBottomWidth: 1,
     borderBottomColor: Colors.ui.border,
@@ -462,11 +465,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.ui.background,
-    padding: 8,
+    padding: 4,
   },
   // Conteneur carré : taille calculée dynamiquement = min(width, height)
+  // ⚠️ overflow: 'hidden' retiré — il crée un contexte de stacking sur Android
+  // qui écrase l'elevation du jeton dragué (le met en arrière-plan)
   boardContainer: {
     borderRadius: 16,
-    overflow: 'hidden',
   },
 });
