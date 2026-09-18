@@ -22,6 +22,12 @@ import { impactMedium, notificationError } from '../../utils/haptics';
 import { ElementDefinition } from '../../core/models/Element';
 import { Colors } from '../../constants/colors';
 
+// Callbacks pour le ghost natif mobile
+export interface MobileDragCallbacks {
+  onGhostMove: (x: number, y: number) => void;
+  onGhostEnd: () => void;
+}
+
 export const TOKEN_SIZE = 64;
 
 interface ElementTokenProps {
@@ -32,6 +38,8 @@ interface ElementTokenProps {
   onDragEnd?: (x: number, y: number) => void;
   // Spécifique web : démarre le ghost depuis useWebDrag
   onWebMouseDown?: (elementId: string, x: number, y: number) => void;
+  // Spécifique mobile : callbacks pour le ghost natif
+  mobileDragCallbacks?: MobileDragCallbacks;
   onTap?: () => void;
   positionStyle?: object;
   size?: number;
@@ -44,6 +52,7 @@ export const ElementToken: React.FC<ElementTokenProps> = ({
   onDragMove,
   onDragEnd,
   onWebMouseDown,
+  mobileDragCallbacks,
   onTap,
   positionStyle,
   size = TOKEN_SIZE,
@@ -74,31 +83,43 @@ export const ElementToken: React.FC<ElementTokenProps> = ({
     runOnJS(triggerError)();
   }, [translateX, triggerError]);
 
+  // Callbacks ghost mobile via refs
+  const ghostMoveRef = useCallback((x: number, y: number) => {
+    mobileDragCallbacks?.onGhostMove(x, y);
+  }, [mobileDragCallbacks]);
+  const ghostEndRef = useCallback(() => {
+    mobileDragCallbacks?.onGhostEnd();
+  }, [mobileDragCallbacks]);
+
   // ── Gesture mobile (Pan) ──────────────────────────────────
+  // Le jeton original devient semi-transparent pendant le drag
+  // Le ghost (MobileDragGhost) suit le doigt au niveau racine
   const panGesture = Gesture.Pan()
     .enabled(!isFixed && !isWeb)
-    .onBegin(() => {
+    .onBegin((e) => {
       'worklet';
-      scale.value   = withSpring(1.2, { damping: 12 });
-      zIndex.value  = 999;
-      opacity.value = withTiming(0.85);
+      // Jeton original : devient petit et transparent (ghost prend le relais)
+      scale.value   = withSpring(0.8, { damping: 12 });
+      opacity.value = withTiming(0.3);
+      zIndex.value  = 1;
       runOnJS(triggerImpact)();
       if (onDragStart) runOnJS(onDragStart)(elementDef.id);
+      runOnJS(ghostMoveRef)(e.absoluteX, e.absoluteY);
     })
     .onUpdate((e) => {
       'worklet';
-      translateX.value = e.translationX;
-      translateY.value = e.translationY;
+      // Le jeton original ne bouge plus — c'est le ghost qui suit
       if (onDragMove) runOnJS(onDragMove)(e.absoluteX, e.absoluteY);
+      runOnJS(ghostMoveRef)(e.absoluteX, e.absoluteY);
     })
     .onEnd((e) => {
       'worklet';
-      translateX.value = withSpring(0, { damping: 15, stiffness: 200 });
-      translateY.value = withSpring(0, { damping: 15, stiffness: 200 });
-      scale.value      = withSpring(1, { damping: 12 });
-      opacity.value    = withTiming(1);
-      zIndex.value     = 1;
+      // Jeton original revient à la normale
+      scale.value   = withSpring(1, { damping: 12 });
+      opacity.value = withTiming(1);
+      zIndex.value  = 1;
       if (onDragEnd) runOnJS(onDragEnd)(e.absoluteX, e.absoluteY);
+      runOnJS(ghostEndRef)();
     });
 
   // ── Gesture tap (jeton fixe) ──────────────────────────────
