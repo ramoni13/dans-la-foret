@@ -13,18 +13,21 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   Platform,
   Modal,
   ActivityIndicator,
   TextInput,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
+import { MobileDragGhost } from '../../src/components/Elements/MobileDragGhost';
+import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
+import { useConfetti, Confetti, ConfettiPiece } from '../../src/components/Game/Confetti';
 import { FailModal } from '../../src/components/Game/FailModal';
 
 import { useGame } from '../../src/hooks/useGame';
@@ -45,7 +48,7 @@ import { searchPlayers, PlayerProfile } from '../../src/services/playerService';
 
 // ── Modal résultat + recherche d'ami ──────────────────────────────────────────
 function FriendResultModal({
-  visible, isChallenger, myTime, challengerTime, myUid, myName, challengeData, onClose,
+  visible, isChallenger, myTime, challengerTime, myUid, myName, challengeData, onClose, confettiPieces,
 }: {
   visible: boolean;
   isChallenger: boolean;
@@ -55,6 +58,7 @@ function FriendResultModal({
   myName: string;
   challengeData: FriendChallengeData | null;
   onClose: () => void;
+  confettiPieces: ConfettiPiece[];
 }) {
   const iWon = !isChallenger && myTime <= challengerTime;
   const diff = Math.abs(myTime - challengerTime);
@@ -166,6 +170,8 @@ function FriendResultModal({
           </TouchableOpacity>
         </View>
       </View>
+      {/* Confettis dans le Modal — après la carte pour être au-dessus */}
+      <Confetti pieces={confettiPieces} />
     </Modal>
   );
 }
@@ -209,6 +215,7 @@ export default function FriendChallengeScreen() {
     };
   }, [challengeData]);
 
+  const insets   = useSafeAreaInsets();
   const game     = useGame();
   const boardDef = challenge ? BoardRegistry[challenge.boardId] : null;
 
@@ -221,16 +228,37 @@ export default function FriendChallengeScreen() {
   const [availableArea, setAvailableArea] = useState({ width: 0, height: 0 });
   const boardContainerRef                 = useRef<View>(null);
   const boardOffsetRef                    = useRef({ x: 0, y: 0 });
+  const gestureRootRef                    = useRef<React.ElementRef<typeof GestureHandlerRootView>>(null);
+  const gestureRootOffsetRef              = useRef({ x: 0, y: 0 });
+
+  // Ghost natif mobile
+  const [ghostState, setGhostState] = useState<{
+    visible: boolean; elementId: string | null; x: number; y: number;
+  }>({ visible: false, elementId: null, x: 0, y: 0 });
+
+  const mobileDragCallbacks = React.useMemo(() => ({
+    onGhostMove: (x: number, y: number) => {
+      setGhostState(prev => ({ ...prev, visible: true, x, y }));
+    },
+    onGhostEnd: () => {
+      setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
+    },
+  }), []);
 
   // ── Drag & Drop ─────────────────────────────────────────────────────────────
   const [draggingElement, setDraggingElement] = useState<string | null>(null);
 
   const findNearest = useCallback((x: number, y: number) => {
     if (!boardDef || boardSize.width === 0) return null;
-    let relX = x, relY = y;
+    let relX: number, relY: number;
     if (Platform.OS === 'web') {
       relX = x - boardOffsetRef.current.x;
       relY = y - boardOffsetRef.current.y;
+    } else {
+      const boardRelX = boardOffsetRef.current.x - gestureRootOffsetRef.current.x;
+      const boardRelY = boardOffsetRef.current.y - gestureRootOffsetRef.current.y;
+      relX = x - boardRelX;
+      relY = y - boardRelY;
     }
     return findNearestCell(
       relX, relY, boardDef, boardSize.width, boardSize.height,
@@ -248,11 +276,18 @@ export default function FriendChallengeScreen() {
 
   const wrappedDragStart = useCallback((elementId: string) => {
     setDraggingElement(elementId);
+    setGhostState({ visible: false, elementId, x: 0, y: 0 });
+    if (Platform.OS !== 'web' && boardContainerRef.current) {
+      boardContainerRef.current.measureInWindow((x, y) => {
+        boardOffsetRef.current = { x, y };
+      });
+    }
     handleDragStart(elementId);
   }, [handleDragStart]);
 
   const wrappedDragEnd = useCallback((x: number, y: number) => {
     setDraggingElement(null);
+    setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
     handleDragEnd(x, y);
   }, [handleDragEnd]);
 
@@ -278,6 +313,7 @@ export default function FriendChallengeScreen() {
 
   // ── Modal résultat ──────────────────────────────────────────────────────────
   const [showResult, setShowResult] = useState(false);
+  const confettiPieces = useConfetti(showResult);
 
   useEffect(() => {
     if (game.isVictory && challenge) setShowResult(true);
@@ -303,16 +339,26 @@ export default function FriendChallengeScreen() {
 
   if (!challenge || !boardDef) {
     return (
-      <SafeAreaView style={styles.loading}>
+      <View style={[styles.loading, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={Colors.forest.medium} />
         <Text style={styles.loadingText}>Préparation du défi…</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <SafeAreaView style={styles.root}>
+    <GestureHandlerRootView
+      ref={gestureRootRef}
+      style={styles.root}
+      onLayout={() => {
+        if (Platform.OS !== 'web') {
+          gestureRootRef.current?.measureInWindow((x, y) => {
+            gestureRootOffsetRef.current = { x, y };
+          });
+        }
+      }}
+    >
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
 
         {/* Header */}
         <View style={styles.header}>
@@ -366,10 +412,18 @@ export default function FriendChallengeScreen() {
                 onLayout={e => {
                   const { width, height } = e.nativeEvent.layout;
                   setBoardSize({ width, height });
-                  if (Platform.OS === 'web' && boardContainerRef.current) {
-                    const node = boardContainerRef.current as unknown as HTMLElement;
-                    const rect = node.getBoundingClientRect();
-                    boardOffsetRef.current = { x: rect.left, y: rect.top };
+                  if (boardContainerRef.current) {
+                    if (Platform.OS === 'web') {
+                      const node = boardContainerRef.current as unknown as HTMLElement;
+                      const rect = node.getBoundingClientRect();
+                      boardOffsetRef.current = { x: rect.left, y: rect.top };
+                    } else {
+                      requestAnimationFrame(() => {
+                        boardContainerRef.current?.measureInWindow((x, y) => {
+                          boardOffsetRef.current = { x, y };
+                        });
+                      });
+                    }
                   }
                 }}
               >
@@ -400,7 +454,20 @@ export default function FriendChallengeScreen() {
           onDragStart={wrappedDragStart}
           onDragMove={handleDragMove}
           onDragEnd={wrappedDragEnd}
+          mobileDragCallbacks={Platform.OS !== 'web' ? mobileDragCallbacks : undefined}
         />
+
+        {Platform.OS !== 'web' && (
+          <MobileDragGhost
+            elementId={ghostState.elementId}
+            x={ghostState.x}
+            y={ghostState.y}
+            visible={ghostState.visible}
+          />
+        )}
+
+        {/* Feuilles qui tombent */}
+        <FallingLeaves />
 
         {/* Modal résultat */}
         <FriendResultModal
@@ -412,7 +479,10 @@ export default function FriendChallengeScreen() {
           myName={params.challengerName ?? params.opponentName ?? player.username}
           challengeData={challengeData}
           onClose={handleClose}
+          confettiPieces={confettiPieces}
         />
+
+
 
         {/* Modal échec */}
         <FailModal
@@ -424,7 +494,7 @@ export default function FriendChallengeScreen() {
           onGiveUp={handleClose}
         />
 
-      </SafeAreaView>
+      </View>
     </GestureHandlerRootView>
   );
 }
@@ -522,5 +592,5 @@ const styles = StyleSheet.create({
   boardArea: {
     flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8,
   },
-  boardContainer: { borderRadius: 16, overflow: 'hidden' },
+  boardContainer: { borderRadius: 16 },
 });
