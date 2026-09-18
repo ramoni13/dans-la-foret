@@ -9,10 +9,10 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -36,6 +36,8 @@ import { CELL_SIZE } from '../../src/components/Board/Cell';
 import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { calculateSeedReward } from '../../src/core/engine/hintEngine';
 import { MobileDragGhost } from '../../src/components/Elements/MobileDragGhost';
+import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
+import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 
 // Donnees de defis embarquees (offline) — 10 niveaux
 import niveau1  from '../../src/data/challenges/niveau_1.json';
@@ -72,6 +74,7 @@ const ALL_CHALLENGES: Record<string, Challenge[]> = {
 export default function GameScreen() {
   const { challengeId } = useLocalSearchParams<{ challengeId: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
 
   const game = useGame();
@@ -81,6 +84,9 @@ export default function GameScreen() {
   // GestureHandlerRootView est une View, on peut utiliser useRef<View>
   const gestureRootRef = useRef<React.ElementRef<typeof GestureHandlerRootView>>(null);
   const gestureRootOffsetRef = useRef({ x: 0, y: 0 });
+
+  // Confettis — hook dans le composant racine, rendu hors du Modal
+  const confettiPieces = useConfetti(game.isVictory);
 
   // Dimensions et position du plateau
   const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
@@ -255,9 +261,9 @@ export default function GameScreen() {
 
   if (!challenge || !boardDef) {
     return (
-      <SafeAreaView style={styles.loading}>
+      <View style={[styles.loading, { paddingTop: insets.top }]}>
         <Text style={styles.loadingText}>Chargement du défi…</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -266,7 +272,6 @@ export default function GameScreen() {
       ref={gestureRootRef}
       style={styles.root}
       onLayout={() => {
-        // Mesurer l'offset de la GestureHandlerRootView dans l'écran
         if (Platform.OS !== 'web') {
           gestureRootRef.current?.measureInWindow((x, y) => {
             gestureRootOffsetRef.current = { x, y };
@@ -274,7 +279,7 @@ export default function GameScreen() {
         }
       }}
     >
-      <SafeAreaView style={styles.root}>
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         {/* ── Header ── */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -322,6 +327,7 @@ export default function GameScreen() {
         <View
           style={styles.boardArea}
           onLayout={e => {
+
             const { width, height } = e.nativeEvent.layout;
             setAvailableArea({ width, height });
           }}
@@ -387,6 +393,9 @@ export default function GameScreen() {
           mobileDragCallbacks={Platform.OS !== 'web' ? mobileDragCallbacks : undefined}
         />
 
+        {/* ── Feuilles qui tombent — en arrière-plan, pointerEvents none ── */}
+        <FallingLeaves />
+
         {/* ── Ghost natif mobile — rendu au niveau GestureHandlerRootView ── */}
         {Platform.OS !== 'web' && (
           <MobileDragGhost
@@ -404,6 +413,7 @@ export default function GameScreen() {
           seedsEarned={seedsEarned}
           difficulty={challenge.level}
           challengeNumber={challenge.challengeNumber}
+          confettiPieces={confettiPieces}
           onNextChallenge={() => {
             // Format de l'ID : niveau_1_002, niveau_1_003, etc.
             const nextNum = String(challenge.challengeNumber + 1).padStart(3, '0');
@@ -437,7 +447,7 @@ export default function GameScreen() {
             router.replace('/(tabs)/levels');
           }}
         />
-      </SafeAreaView>
+      </View>
     </GestureHandlerRootView>
   );
 }
