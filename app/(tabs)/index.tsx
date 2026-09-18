@@ -3,7 +3,7 @@
 // Progression globale + dernier défi joué + stats rapides
 // ============================================================
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { onAuthChange } from '../../src/services/authService';
 import {
@@ -13,7 +13,11 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  Animated,
+  Platform,
 } from 'react-native';
+
+const native = Platform.OS !== 'web';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { usePlayerStore } from '../../src/store/playerStore';
@@ -70,6 +74,9 @@ export default function HomeScreen() {
   const router = useRouter();
   const player = usePlayerStore();
 
+  // Animation barre de progression
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
   // ── Redirection vers accueil après connexion ────────────────────────────────────────────
   const [prevUser, setPrevUser] = useState<User | null | undefined>(undefined);
   useEffect(() => {
@@ -96,6 +103,15 @@ export default function HomeScreen() {
 
   const allCompleted = totalCompleted >= totalChallenges;
 
+  // Animer la barre de progression au chargement
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: progressPct / 100,
+      duration: 1000,
+      useNativeDriver: false, // false obligatoire car on anime 'width'
+    }).start();
+  }, [progressPct]);
+
   // Meilleur niveau atteint (dernier niveau avec au moins 1 défi complété)
   const bestLevel = useMemo(() => {
     const levels = ['niveau_13','niveau_12','niveau_11','niveau_10','niveau_9',
@@ -117,28 +133,38 @@ export default function HomeScreen() {
       >
         {/* ── Hero ── */}
         <View style={styles.hero}>
+          {/* Couches superposées pour simuler un dégradé sans LinearGradient */}
+          <View style={styles.heroBg1} />
+          <View style={styles.heroBg2} />
           <Text style={styles.heroEmoji}>🌲</Text>
           <Text style={styles.heroTitle}>Dans la Forêt</Text>
           <Text style={styles.heroSubtitle}>Jeu de logique</Text>
+          <View style={styles.seedsHeroBadge}>
+            <Text style={styles.seedsHeroText}>🌱 {player.seeds} graines</Text>
+          </View>
         </View>
 
-        {/* ── Graines + progression globale ── */}
+        {/* ── Progression globale ── */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <Text style={styles.progressTitle}>Progression globale</Text>
-            <View style={styles.seedsBadge}>
-              <Text style={styles.seedsText}>🌱 {player.seeds}</Text>
-            </View>
+            <Text style={styles.progressPct}>{progressPct}%</Text>
           </View>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${progressPct}%` }]} />
+            <Animated.View style={[
+              styles.progressBarFill,
+              { width: progressAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0%', '100%'],
+              })},
+            ]} />
           </View>
           <Text style={styles.progressLabel}>
-            {totalCompleted} / {totalChallenges} défis complétés — {progressPct}%
+            {totalCompleted} / {totalChallenges} défis complétés
           </Text>
         </View>
 
-        {/* ── Carte Prochain défi (toujours affichée) ── */}
+        {/* ── Carte Prochain défi ── */}
         <TouchableOpacity
           style={styles.resumeCard}
           onPress={() => router.push(`/game/${nextChallenge.id}`)}
@@ -227,23 +253,63 @@ const styles = StyleSheet.create({
   // Hero
   hero: {
     alignItems: 'center',
-    paddingVertical: 8,
-    gap: 4,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    gap: 6,
+    backgroundColor: Colors.forest.dark,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  // Couches pour simuler un dégradé diagonal
+  heroBg1: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.forest.medium,
+    opacity: 0.6,
+    borderRadius: 24,
+    top: '30%',
+    left: '40%',
+  },
+  heroBg2: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.forest.light,
+    opacity: 0.25,
+    borderRadius: 24,
+    top: '60%',
+    left: '60%',
   },
   heroEmoji: {
-    fontSize: 64,
+    fontSize: 72,
     marginBottom: 4,
   },
   heroTitle: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '800',
-    color: Colors.forest.dark,
+    color: '#fff',
     letterSpacing: -0.5,
   },
   heroSubtitle: {
     fontSize: 14,
-    color: Colors.ui.textLight,
+    color: 'rgba(255,255,255,0.75)',
     fontWeight: '500',
+  },
+  seedsHeroBadge: {
+    marginTop: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  seedsHeroText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
   },
 
   // Progression globale
@@ -254,6 +320,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.ui.border,
     gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -267,29 +338,21 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  seedsBadge: {
-    backgroundColor: Colors.ui.seed + '22',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.ui.seed + '66',
-  },
-  seedsText: {
+  progressPct: {
     fontSize: 13,
-    fontWeight: '700',
-    color: Colors.forest.dark,
+    fontWeight: '800',
+    color: Colors.forest.medium,
   },
   progressBarBg: {
-    height: 8,
+    height: 10,
     backgroundColor: Colors.ui.border,
-    borderRadius: 4,
+    borderRadius: 5,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: Colors.forest.medium,
-    borderRadius: 4,
+    borderRadius: 5,
+    overflow: 'hidden',
   },
   progressLabel: {
     fontSize: 12,
@@ -301,43 +364,46 @@ const styles = StyleSheet.create({
   resumeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.forest.dark + '08',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.forest.medium + '55',
+    backgroundColor: Colors.forest.dark,
+    borderRadius: 20,
+    padding: 20,
     gap: 12,
+    shadowColor: Colors.forest.dark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   resumeLeft: {
-    width: 40,
+    width: 44,
     alignItems: 'center',
   },
   resumeIcon: {
-    fontSize: 28,
+    fontSize: 32,
   },
   resumeCenter: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   resumeAction: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
-    color: Colors.forest.medium,
+    color: 'rgba(255,255,255,0.7)',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   resumeLevel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.forest.dark,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
   },
   resumeChallenge: {
     fontSize: 12,
-    color: Colors.ui.textLight,
+    color: 'rgba(255,255,255,0.6)',
   },
   resumeArrow: {
-    fontSize: 20,
-    color: Colors.forest.medium,
+    fontSize: 22,
+    color: 'rgba(255,255,255,0.9)',
   },
 
   // Actions
