@@ -35,6 +35,7 @@ import { Colors } from '../../src/constants/colors';
 import { CELL_SIZE } from '../../src/components/Board/Cell';
 import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { calculateSeedReward } from '../../src/core/engine/hintEngine';
+import { MobileDragGhost } from '../../src/components/Elements/MobileDragGhost';
 
 // Donnees de defis embarquees (offline) — 10 niveaux
 import niveau1  from '../../src/data/challenges/niveau_1.json';
@@ -76,6 +77,11 @@ export default function GameScreen() {
   const game = useGame();
   const player = usePlayerStore();
 
+  // Ref sur la GestureHandlerRootView pour mesurer son offset écran
+  // GestureHandlerRootView est une View, on peut utiliser useRef<View>
+  const gestureRootRef = useRef<React.ElementRef<typeof GestureHandlerRootView>>(null);
+  const gestureRootOffsetRef = useRef({ x: 0, y: 0 });
+
   // Dimensions et position du plateau
   const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
   const boardContainerRef = useRef<View>(null);
@@ -83,6 +89,14 @@ export default function GameScreen() {
   const boardOffsetRef = useRef({ x: 0, y: 0 });
   // Zone disponible pour le plateau (pour calculer le carré)
   const [availableArea, setAvailableArea] = useState({ width: 0, height: 0 });
+
+  // ── Ghost natif mobile ─────────────────────────────────────
+  const [ghostState, setGhostState] = useState<{
+    visible: boolean;
+    elementId: string | null;
+    x: number;
+    y: number;
+  }>({ visible: false, elementId: null, x: 0, y: 0 });
 
   // ── Chargement du défi ─────────────────────────────────────
   useEffect(() => {
@@ -109,15 +123,26 @@ export default function GameScreen() {
   }, [challenge]);
 
   // ── findNearestCell adapté aux dimensions du plateau ───────
-  // Sur le web, x/y sont en coordonnées viewport (clientX/Y)
-  // → on soustrait l'offset du boardContainer pour obtenir des coords relatives
+  // absoluteX/Y de reanimated sont relatives à GestureHandlerRootView
+  // Il faut donc soustraire : offset(GestureRoot) + offset(board dans GestureRoot)
+  // Sur web : clientX/Y sont en coords viewport, on soustrait juste l'offset du board
   const findNearest = useCallback((x: number, y: number) => {
     if (!boardDef || boardSize.width === 0) return null;
-    // Soustraire l'offset du plateau pour obtenir des coords relatives
-    // Nécessaire sur web ET mobile natif (absoluteX/Y sont en coords écran)
-    const relX = x - boardOffsetRef.current.x;
-    const relY = y - boardOffsetRef.current.y;
-    // snapRadius plus grand sur le web (pas de précision tactile)
+    let relX: number;
+    let relY: number;
+    if (Platform.OS === 'web') {
+      relX = x - boardOffsetRef.current.x;
+      relY = y - boardOffsetRef.current.y;
+    } else {
+      // absoluteX/Y sont relatives à GestureHandlerRootView
+      // boardOffsetRef est en coords écran (measureInWindow)
+      // gestureRootOffsetRef est en coords écran (measureInWindow)
+      // donc : coords relatives au board = absoluteXY - (boardOffset - gestureRootOffset)
+      const boardRelX = boardOffsetRef.current.x - gestureRootOffsetRef.current.x;
+      const boardRelY = boardOffsetRef.current.y - gestureRootOffsetRef.current.y;
+      relX = x - boardRelX;
+      relY = y - boardRelY;
+    }
     const snapRadius = Platform.OS === 'web' ? 80 : 60;
     return findNearestCell(relX, relY, boardDef, boardSize.width, boardSize.height, CELL_SIZE, snapRadius);
   }, [boardDef, boardSize]);
@@ -139,10 +164,21 @@ export default function GameScreen() {
     findNearestCell: findNearest,
   });
 
+  // Callbacks ghost mobile — appelés depuis ElementToken
+  const mobileDragCallbacks = React.useMemo(() => ({
+    onGhostMove: (x: number, y: number) => {
+      setGhostState(prev => ({ ...prev, visible: true, x, y }));
+    },
+    onGhostEnd: () => {
+      setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
+    },
+  }), []);
+
   const wrappedDragStart = useCallback((elementId: string) => {
     setDraggingElement(elementId);
+    setGhostState({ visible: false, elementId, x: 0, y: 0 });
     // Re-mesurer la position du plateau au moment du drag
-    // measureInWindow donne les coords écran réelles, plus fiable que measure()
+    // measureInWindow donne les coords écran réelles
     if (Platform.OS !== 'web' && boardContainerRef.current) {
       boardContainerRef.current.measureInWindow((x, y) => {
         boardOffsetRef.current = { x, y };
@@ -153,6 +189,7 @@ export default function GameScreen() {
 
   const wrappedDragEnd = useCallback((x: number, y: number) => {
     setDraggingElement(null);
+    setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
     handleDragEnd(x, y);
   }, [handleDragEnd]);
 
@@ -225,7 +262,18 @@ export default function GameScreen() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <GestureHandlerRootView
+      ref={gestureRootRef}
+      style={styles.root}
+      onLayout={() => {
+        // Mesurer l'offset de la GestureHandlerRootView dans l'écran
+        if (Platform.OS !== 'web') {
+          gestureRootRef.current?.measureInWindow((x, y) => {
+            gestureRootOffsetRef.current = { x, y };
+          });
+        }
+      }}
+    >
       <SafeAreaView style={styles.root}>
         {/* ── Header ── */}
         <View style={styles.header}>
@@ -336,7 +384,18 @@ export default function GameScreen() {
           onDragStart={wrappedDragStart}
           onDragMove={handleDragMove}
           onDragEnd={wrappedDragEnd}
+          mobileDragCallbacks={Platform.OS !== 'web' ? mobileDragCallbacks : undefined}
         />
+
+        {/* ── Ghost natif mobile — rendu au niveau GestureHandlerRootView ── */}
+        {Platform.OS !== 'web' && (
+          <MobileDragGhost
+            elementId={ghostState.elementId}
+            x={ghostState.x}
+            y={ghostState.y}
+            visible={ghostState.visible}
+          />
+        )}
 
         {/* ── Modal victoire ── */}
         <VictoryModal
