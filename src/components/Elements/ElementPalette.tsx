@@ -7,7 +7,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 
-import { ElementToken, TOKEN_SIZE } from './ElementToken';
+import { ElementToken, TOKEN_SIZE, MobileDragCallbacks } from './ElementToken';
 import { DragGhost } from './DragGhost';
 import { useWebDrag } from '../../hooks/useWebDrag';
 import { ElementRegistry } from '../../elements/ElementRegistry';
@@ -23,6 +23,7 @@ interface ElementPaletteProps {
   onDragStart: (elementId: string) => void;
   onDragMove: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
+  mobileDragCallbacks?: MobileDragCallbacks; // ghost natif mobile
 }
 
 export const ElementPalette: React.FC<ElementPaletteProps> = ({
@@ -34,6 +35,7 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
   onDragStart,
   onDragMove,
   onDragEnd,
+  mobileDragCallbacks,
 }) => {
   const isWeb = Platform.OS === 'web';
 
@@ -96,6 +98,7 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
                 onDragStart={onDragStart}
                 onDragMove={onDragMove}
                 onDragEnd={onDragEnd}
+                mobileDragCallbacks={!isWeb ? mobileDragCallbacks : undefined}
                 // Web : démarre le ghost natif
                 onWebMouseDown={isWeb ? startWebDrag : undefined}
                 onTap={() => onSelectElement(isSelected ? null : elementId)}
