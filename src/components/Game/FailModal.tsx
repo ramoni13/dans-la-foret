@@ -11,7 +11,10 @@ import {
   Modal,
   TouchableOpacity,
   Animated,
+  Platform,
 } from 'react-native';
+
+const native = Platform.OS !== 'web';
 import { Colors } from '../../constants/colors';
 import { notificationError } from '../../utils/haptics';
 
@@ -53,21 +56,20 @@ export const FailModal: React.FC<FailModalProps> = ({
             toValue: 1,
             damping: 10,
             stiffness: 180,
-            useNativeDriver: true,
+            useNativeDriver: native,
           }),
           Animated.timing(opacityAnim, {
             toValue: 1,
             duration: 180,
-            useNativeDriver: true,
+            useNativeDriver: native,
           }),
         ]),
-        // Shake horizontal de la croix
         Animated.sequence([
-          Animated.timing(shakeAnim, { toValue: 12,  duration: 60, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: -12, duration: 60, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: 8,   duration: 50, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: -8,  duration: 50, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: 0,   duration: 40, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 12,  duration: 60, useNativeDriver: native }),
+          Animated.timing(shakeAnim, { toValue: -12, duration: 60, useNativeDriver: native }),
+          Animated.timing(shakeAnim, { toValue: 8,   duration: 50, useNativeDriver: native }),
+          Animated.timing(shakeAnim, { toValue: -8,  duration: 50, useNativeDriver: native }),
+          Animated.timing(shakeAnim, { toValue: 0,   duration: 40, useNativeDriver: native }),
         ]),
       ]).start();
     } else {
