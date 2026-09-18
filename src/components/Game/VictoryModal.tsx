@@ -2,7 +2,7 @@
 // VICTORYMODAL — Écran de victoire animé
 // ============================================================
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,16 @@ import {
   Modal,
   TouchableOpacity,
   Animated,
+  Platform,
 } from 'react-native';
+
+const native = Platform.OS !== 'web';
 
 import { formatTime } from '../../utils/boardUtils';
 import { Colors } from '../../constants/colors';
 import { DifficultyLevel } from '../../core/models/Challenge';
 import { notificationSuccess } from '../../utils/haptics';
+import { useConfetti, Confetti, ConfettiPiece } from './Confetti';
 
 interface VictoryModalProps {
   visible: boolean;
@@ -25,6 +29,7 @@ interface VictoryModalProps {
   challengeNumber: number;
   onNextChallenge: () => void;
   onBackToMenu: () => void;
+  confettiPieces: ConfettiPiece[];
 }
 
 // Libelles pour chaque niveau
@@ -52,9 +57,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   challengeNumber,
   onNextChallenge,
   onBackToMenu,
+  confettiPieces,
 }) => {
-  const scaleAnim = React.useRef(new Animated.Value(0)).current;
-  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
@@ -65,12 +71,12 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           toValue: 1,
           damping: 12,
           stiffness: 150,
-          useNativeDriver: true,
+          useNativeDriver: native,
         }),
         Animated.timing(opacityAnim, {
           toValue: 1,
           duration: 200,
-          useNativeDriver: true,
+          useNativeDriver: native,
         }),
       ]).start();
     } else {
@@ -131,6 +137,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
+
+      {/* Confettis dans le Modal — après la carte pour être au-dessus */}
+      <Confetti pieces={confettiPieces} />
+
     </Modal>
   );
 };
