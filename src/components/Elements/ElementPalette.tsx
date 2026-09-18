@@ -92,16 +92,16 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
               )}
               <ElementToken
                 elementDef={elementDef}
-                isFixed={false}
+                isFixed={isEmpty} // ← bloque drag ET tap quand plus de jetons
                 size={TOKEN_SIZE}
                 // Mobile
-                onDragStart={onDragStart}
-                onDragMove={onDragMove}
-                onDragEnd={onDragEnd}
-                mobileDragCallbacks={!isWeb ? mobileDragCallbacks : undefined}
+                onDragStart={!isEmpty ? onDragStart : undefined}
+                onDragMove={!isEmpty ? onDragMove : undefined}
+                onDragEnd={!isEmpty ? onDragEnd : undefined}
+                mobileDragCallbacks={!isWeb && !isEmpty ? mobileDragCallbacks : undefined}
                 // Web : démarre le ghost natif
-                onWebMouseDown={isWeb ? startWebDrag : undefined}
-                onTap={() => onSelectElement(isSelected ? null : elementId)}
+                onWebMouseDown={isWeb && !isEmpty ? startWebDrag : undefined}
+                onTap={!isEmpty ? () => onSelectElement(isSelected ? null : elementId) : undefined}
               />
               <View style={[
                 styles.badge,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     color: Colors.ui.textLight,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 10,
+    marginBottom: 14, // ← plus d'espace pour que la pastille ne soit pas coupée
     marginLeft: 4,
   },
   scroll: {
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
     paddingHorizontal: 4,
+    paddingTop: 8, // ← espace pour la pastille en haut
   },
   tokenWrapper: {
     alignItems: 'center',
