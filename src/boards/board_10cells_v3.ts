@@ -37,16 +37,16 @@ export const board10cellsV3: BoardDefinition = {
     [6],          // case 9 — coin bas droite
   ],
   cellPositions: [
-    { x: 15, y: 12 }, // case 0 — coin haut gauche
-    { x: 50, y: 12 }, // case 1 — haut centre
-    { x: 85, y: 12 }, // case 2 — coin haut droite
-    { x: 50, y: 32 }, // case 3 — centre haut
-    { x: 25, y: 52 }, // case 4 — milieu gauche
-    { x: 75, y: 52 }, // case 5 — milieu droite
-    { x: 50, y: 68 }, // case 6 — centre bas
-    { x: 15, y: 85 }, // case 7 — coin bas gauche
-    { x: 50, y: 85 }, // case 8 — bas centre
-    { x: 85, y: 85 }, // case 9 — coin bas droite
+    { x: 15, y: 10 }, // case 0 — coin haut gauche
+    { x: 50, y: 10 }, // case 1 — haut centre
+    { x: 85, y: 10 }, // case 2 — coin haut droite
+    { x: 50, y: 28 }, // case 3 — centre haut
+    { x: 25, y: 46 }, // case 4 — milieu gauche
+    { x: 75, y: 46 }, // case 5 — milieu droite
+    { x: 50, y: 62 }, // case 6 — centre bas
+    { x: 15, y: 80 }, // case 7 — coin bas gauche
+    { x: 50, y: 80 }, // case 8 — bas centre
+    { x: 85, y: 80 }, // case 9 — coin bas droite
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
   availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
