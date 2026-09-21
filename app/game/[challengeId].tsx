@@ -26,7 +26,7 @@ import { useGame } from '../../src/hooks/useGame';
 import { useDragDrop } from '../../src/hooks/useDragDrop';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { auth } from '../../src/services/firebase';
-import { getPlayer, markCompleted } from '../../src/services/playerService';
+import { getPlayer, markCompleted, updateSeeds } from '../../src/services/playerService';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { findNearestCell } from '../../src/utils/boardUtils';
@@ -235,9 +235,13 @@ export default function GameScreen() {
     const uid = auth.currentUser?.uid;
     const isAnonymous = auth.currentUser?.isAnonymous ?? true;
     if (uid && !isAnonymous) {
-      getPlayer(uid).then(profile => {
+      getPlayer(uid).then(async profile => {
         if (profile) {
-          markCompleted(uid, challenge.id, game.elapsedTime, profile);
+          // Sauvegarde défi complété + meilleur temps
+          await markCompleted(uid, challenge.id, game.elapsedTime, profile);
+          // Sauvegarde des graines gagnées (total mis à jour)
+          const newSeeds = profile.seeds + seedsEarned;
+          await updateSeeds(uid, newSeeds);
         }
       }).catch(() => {
         // Silencieux : la progression locale est déjà sauvegardée

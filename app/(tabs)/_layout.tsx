@@ -4,7 +4,7 @@
 
 import { Tabs } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { Text } from 'react-native';
+import { Text, Platform } from 'react-native';
 import React from 'react';
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
@@ -26,8 +26,10 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: Colors.ui.card,
           borderTopColor: Colors.ui.border,
-          height: 60,
-          paddingBottom: 8,
+          // Sur iOS/Android on laisse le système gérer le safe-area bottom
+          // On fixe une hauteur suffisante pour que les icônes soient visibles
+          height: Platform.OS === 'ios' ? 82 : Platform.OS === 'android' ? 68 : 60,
+          paddingBottom: Platform.OS === 'ios' ? 24 : Platform.OS === 'android' ? 10 : 8,
           paddingTop: 6,
         },
       }}

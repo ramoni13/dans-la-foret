@@ -1,5 +1,6 @@
 // ============================================================
 // ÉCRAN SÉLECTION DES NIVEAUX
+// Navigation niveau par niveau avec flèches gauche/droite
 // ============================================================
 
 import React, { useState } from 'react';
@@ -74,25 +75,28 @@ const ALL_CHALLENGES: Record<string, any[]> = {
 export default function LevelsScreen() {
   const router = useRouter();
   const player = usePlayerStore();
-  const [selectedLevel, setSelectedLevel] = useState<DifficultyLevel>('niveau_1');
 
+  // Index du niveau courant (0 = niveau_1, 12 = niveau_13)
+  const [levelIndex, setLevelIndex] = useState(0);
+
+  const selectedLevelDef = LEVELS[levelIndex];
+  const selectedLevel = selectedLevelDef.id;
   const challenges = ALL_CHALLENGES[selectedLevel] ?? [];
-  const selectedLevelDef = LEVELS.find(l => l.id === selectedLevel)!;
 
   // Progression : nombre de défis complétés pour le niveau sélectionné
-  const completedCount = challenges.filter(c =>
+  const completedCount = challenges.filter((c: any) =>
     player.completedChallenges.includes(c.id)
   ).length;
 
-  // ── Logique de déblocage progressif ────────────────────────────────────────────────────────────
-  // Un niveau est débloqué si tous les défis du niveau précédent sont complétés
-  const isLevelUnlocked = (levelId: string): boolean => {
-    const idx = LEVELS.findIndex(l => l.id === levelId);
-    if (idx === 0) return true; // Niveau 1 toujours accessible
+  // ── Logique de déblocage progressif ──────────────────────────────────────
+  const isLevelUnlocked = (idx: number): boolean => {
+    if (idx === 0) return true;
     const prevLevel = LEVELS[idx - 1];
     const prevChallenges = ALL_CHALLENGES[prevLevel.id] ?? [];
-    return prevChallenges.every(c => player.completedChallenges.includes(c.id));
+    return prevChallenges.every((c: any) => player.completedChallenges.includes(c.id));
   };
+
+  const currentUnlocked = isLevelUnlocked(levelIndex);
 
   // Un défi est débloqué si c'est le premier OU si le défi précédent est complété
   const isChallengeUnlocked = (challengeIdx: number): boolean => {
@@ -101,8 +105,16 @@ export default function LevelsScreen() {
     return player.completedChallenges.includes(prevChallenge.id);
   };
 
+  const canGoPrev = levelIndex > 0;
+  const canGoNext = levelIndex < LEVELS.length - 1;
+
+  const progressPct = challenges.length > 0
+    ? Math.round((completedCount / challenges.length) * 100)
+    : 0;
+
   return (
     <SafeAreaView style={styles.root}>
+      {/* ── Header ── */}
       <View style={styles.header}>
         <Text style={styles.title}>Choisir un défi</Text>
         <View style={styles.seedsRow}>
@@ -110,117 +122,161 @@ export default function LevelsScreen() {
         </View>
       </View>
 
-      {/* Sélecteur de niveau */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.levelTabs}
-      >
-        {LEVELS.map(level => {
-          const unlocked = isLevelUnlocked(level.id);
-          const isSelected = selectedLevel === level.id;
-          return (
-            <TouchableOpacity
-              key={level.id}
-              style={[
-                styles.levelTab,
-                isSelected && unlocked && { backgroundColor: level.color, borderColor: level.color },
-                !unlocked && styles.levelTabLocked,
-              ]}
-              onPress={() => unlocked && setSelectedLevel(level.id)}
-              activeOpacity={unlocked ? 0.8 : 1}
-            >
-              <Text style={styles.levelTabEmoji}>{unlocked ? level.emoji : '🔒'}</Text>
-              <Text style={[styles.levelTabLabel, isSelected && unlocked && styles.levelTabLabelSelected]}>
-                {level.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      {/* ── Navigateur de niveau avec flèches ── */}
+      <View style={styles.levelNavigator}>
+        {/* Flèche gauche */}
+        <TouchableOpacity
+          style={[styles.arrowBtn, !canGoPrev && styles.arrowBtnDisabled]}
+          onPress={() => canGoPrev && setLevelIndex(levelIndex - 1)}
+          activeOpacity={canGoPrev ? 0.7 : 1}
+          disabled={!canGoPrev}
+        >
+          <Text style={[styles.arrowText, !canGoPrev && styles.arrowTextDisabled]}>‹</Text>
+        </TouchableOpacity>
 
-      {/* Description du niveau + barre de progression */}
-      <View style={[styles.levelDesc, { borderLeftColor: selectedLevelDef.color }]}>
-        <Text style={styles.levelDescText}>{selectedLevelDef.description}</Text>
-        <View style={styles.progressRow}>
-          <View style={styles.progressBarBg}>
-            <View
-              style={[
-                styles.progressBarFill,
-                {
-                  width: challenges.length > 0
-                    ? `${(completedCount / challenges.length) * 100}%`
-                    : '0%',
-                  backgroundColor: selectedLevelDef.color,
-                },
-              ]}
-            />
-          </View>
-          <Text style={styles.progressLabel}>
-            {completedCount}/{challenges.length}
+        {/* Carte du niveau courant */}
+        <View style={[
+          styles.levelCard,
+          { borderColor: currentUnlocked ? selectedLevelDef.color : Colors.ui.border },
+        ]}>
+          {/* Fond coloré léger */}
+          <View style={[
+            styles.levelCardBg,
+            { backgroundColor: currentUnlocked ? selectedLevelDef.color + '18' : Colors.ui.background },
+          ]} />
+
+          <Text style={styles.levelCardEmoji}>
+            {currentUnlocked ? selectedLevelDef.emoji : '🔒'}
           </Text>
+          <Text style={[
+            styles.levelCardLabel,
+            { color: currentUnlocked ? selectedLevelDef.color : Colors.ui.textLight },
+          ]}>
+            {selectedLevelDef.label}
+          </Text>
+          <Text style={styles.levelCardDesc}>{selectedLevelDef.description}</Text>
+
+          {/* Barre de progression */}
+          <View style={styles.progressRow}>
+            <View style={styles.progressBarBg}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: `${progressPct}%`,
+                    backgroundColor: currentUnlocked ? selectedLevelDef.color : Colors.ui.border,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressLabel}>
+              {completedCount}/{challenges.length}
+            </Text>
+          </View>
+
+          {/* Points de navigation */}
+          <View style={styles.dotsRow}>
+            {LEVELS.map((lvl, i) => (
+              <TouchableOpacity
+                key={lvl.id}
+                onPress={() => setLevelIndex(i)}
+                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              >
+                <View
+                  style={[
+                    styles.dot,
+                    i === levelIndex
+                      ? [styles.dotActive, { backgroundColor: selectedLevelDef.color }]
+                      : { backgroundColor: isLevelUnlocked(i) ? Colors.ui.border : Colors.ui.border + '55' },
+                  ]}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
+
+        {/* Flèche droite */}
+        <TouchableOpacity
+          style={[styles.arrowBtn, !canGoNext && styles.arrowBtnDisabled]}
+          onPress={() => canGoNext && setLevelIndex(levelIndex + 1)}
+          activeOpacity={canGoNext ? 0.7 : 1}
+          disabled={!canGoNext}
+        >
+          <Text style={[styles.arrowText, !canGoNext && styles.arrowTextDisabled]}>›</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Liste des défis */}
-      <ScrollView contentContainerStyle={styles.challengeList}>
-        {challenges.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>Aucun défi disponible pour ce niveau.</Text>
-            <Text style={styles.emptySubtext}>Bientôt disponible !</Text>
-          </View>
-        ) : (
-          challenges.map((challenge, idx) => {
-            const isCompleted = player.completedChallenges.includes(challenge.id);
-            const unlocked    = isChallengeUnlocked(idx);
-            const bestTime    = player.stats.bestTimes[challenge.id];
+      {/* ── Niveau verrouillé ── */}
+      {!currentUnlocked ? (
+        <View style={styles.lockedContainer}>
+          <Text style={styles.lockedEmoji}>🔒</Text>
+          <Text style={styles.lockedTitle}>Niveau verrouillé</Text>
+          <Text style={styles.lockedSubtitle}>
+            Terminez tous les défis du{' '}
+            {LEVELS[levelIndex - 1]?.label ?? 'niveau précédent'}{' '}
+            pour débloquer ce niveau.
+          </Text>
+        </View>
+      ) : (
+        /* ── Liste des défis ── */
+        <ScrollView contentContainerStyle={styles.challengeList}>
+          {challenges.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>Aucun défi disponible pour ce niveau.</Text>
+              <Text style={styles.emptySubtext}>Bientôt disponible !</Text>
+            </View>
+          ) : (
+            challenges.map((challenge: any, idx: number) => {
+              const isCompleted = player.completedChallenges.includes(challenge.id);
+              const unlocked    = isChallengeUnlocked(idx);
+              const bestTime    = player.stats.bestTimes[challenge.id];
 
-            return (
-              <TouchableOpacity
-                key={challenge.id}
-                style={[
-                  styles.challengeCard,
-                  isCompleted && styles.challengeCardDone,
-                  !unlocked && styles.challengeCardLocked,
-                ]}
-                onPress={() => unlocked && router.push(`/game/${challenge.id}`)}
-                activeOpacity={unlocked ? 0.8 : 1}
-              >
-                {/* Indicateur coloré sur le bord gauche */}
-                <View style={[
-                  styles.challengeAccent,
-                  { backgroundColor: unlocked ? selectedLevelDef.color : Colors.ui.border },
-                ]} />
+              return (
+                <TouchableOpacity
+                  key={challenge.id}
+                  style={[
+                    styles.challengeCard,
+                    isCompleted && styles.challengeCardDone,
+                    !unlocked && styles.challengeCardLocked,
+                  ]}
+                  onPress={() => unlocked && router.push(`/game/${challenge.id}`)}
+                  activeOpacity={unlocked ? 0.8 : 1}
+                >
+                  <View style={[
+                    styles.challengeAccent,
+                    { backgroundColor: unlocked ? selectedLevelDef.color : Colors.ui.border },
+                  ]} />
 
-                <View style={styles.challengeLeft}>
-                  <Text style={styles.challengeNumber}>#{idx + 1}</Text>
-                </View>
-                <View style={styles.challengeCenter}>
-                  <Text style={[
-                    styles.challengeTitle,
-                    !unlocked && styles.challengeTitleLocked,
-                  ]}>
-                    {unlocked ? `Défi ${challenge.challengeNumber}` : '🔒 Verrouillé'}
-                  </Text>
-                  {unlocked && (bestTime ? (
-                    <Text style={styles.challengeBestTime}>
-                      ⏱ {Math.floor(bestTime / 60000)}:{String(Math.floor((bestTime % 60000) / 1000)).padStart(2, '0')}
+                  <View style={styles.challengeLeft}>
+                    <Text style={styles.challengeNumber}>#{idx + 1}</Text>
+                  </View>
+                  <View style={styles.challengeCenter}>
+                    <Text style={[
+                      styles.challengeTitle,
+                      !unlocked && styles.challengeTitleLocked,
+                    ]}>
+                      {unlocked ? `Défi ${challenge.challengeNumber}` : '🔒 Verrouillé'}
                     </Text>
-                  ) : (
-                    <Text style={styles.challengeNew}>Nouveau</Text>
-                  ))}
-                </View>
-                {isCompleted
-                  ? <Text style={styles.checkmark}>✓</Text>
-                  : unlocked
-                    ? <Text style={styles.challengeArrow}>→</Text>
-                    : <Text style={styles.challengeArrow}>🔒</Text>
-                }
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </ScrollView>
+                    {unlocked && (bestTime ? (
+                      <Text style={styles.challengeBestTime}>
+                        ⏱ {Math.floor(bestTime / 60000)}:{String(Math.floor((bestTime % 60000) / 1000)).padStart(2, '0')}
+                      </Text>
+                    ) : (
+                      <Text style={styles.challengeNew}>Nouveau</Text>
+                    ))}
+                  </View>
+                  {isCompleted
+                    ? <Text style={styles.checkmark}>✓</Text>
+                    : unlocked
+                      ? <Text style={styles.challengeArrow}>→</Text>
+                      : <Text style={styles.challengeArrow}>🔒</Text>
+                  }
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -230,6 +286,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.ui.background,
   },
+
+  // ── Header ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -256,55 +314,86 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.forest.dark,
   },
-  levelTabs: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  levelTab: {
+
+  // ── Navigateur de niveau ──
+  levelNavigator: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 12,
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+  },
+  arrowBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.ui.card,
     borderWidth: 1.5,
     borderColor: Colors.ui.border,
-    backgroundColor: Colors.ui.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  levelTabLocked: {
-    opacity: 0.5,
+  arrowBtnDisabled: {
+    opacity: 0.3,
   },
-  levelTabEmoji: {
-    fontSize: 16,
+  arrowText: {
+    fontSize: 30,
+    fontWeight: '300',
+    color: Colors.forest.dark,
+    lineHeight: 34,
+    marginTop: -2,
   },
-  levelTabLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+  arrowTextDisabled: {
     color: Colors.ui.textLight,
   },
-  levelTabLabelSelected: {
-    color: '#fff',
-  },
-  lockIcon: {
-    fontSize: 11,
-  },
-  levelDesc: {
-    marginHorizontal: 20,
-    marginBottom: 8,
-    paddingLeft: 12,
-    borderLeftWidth: 3,
+
+  // Carte niveau
+  levelCard: {
+    flex: 1,
+    borderRadius: 20,
+    borderWidth: 2,
+    padding: 16,
+    alignItems: 'center',
     gap: 6,
+    backgroundColor: Colors.ui.card,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  levelDescText: {
-    fontSize: 13,
+  levelCardBg: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 18,
+  },
+  levelCardEmoji: {
+    fontSize: 36,
+    marginBottom: 2,
+  },
+  levelCardLabel: {
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  levelCardDesc: {
+    fontSize: 12,
     color: Colors.ui.textLight,
+    textAlign: 'center',
   },
+
+  // Barre de progression dans la carte
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    width: '100%',
+    marginTop: 4,
   },
   progressBarBg: {
     flex: 1,
@@ -324,6 +413,50 @@ const styles = StyleSheet.create({
     minWidth: 32,
     textAlign: 'right',
   },
+
+  // Points de navigation
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 5,
+    marginTop: 6,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  dotActive: {
+    width: 18,
+    height: 7,
+    borderRadius: 4,
+  },
+
+  // ── Niveau verrouillé ──
+  lockedContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    gap: 12,
+  },
+  lockedEmoji: {
+    fontSize: 52,
+  },
+  lockedTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+  },
+  lockedSubtitle: {
+    fontSize: 14,
+    color: Colors.ui.textLight,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  // ── Liste des défis ──
   challengeList: {
     padding: 16,
     gap: 10,
@@ -349,6 +482,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.forest.accent + '80',
     backgroundColor: Colors.forest.accent + '08',
   },
+  challengeCardLocked: {
+    opacity: 0.45,
+    backgroundColor: Colors.ui.background,
+  },
   challengeAccent: {
     width: 4,
     alignSelf: 'stretch',
@@ -365,12 +502,6 @@ const styles = StyleSheet.create({
     color: Colors.ui.textLight,
     fontWeight: '600',
   },
-  checkmark: {
-    fontSize: 18,
-    color: Colors.forest.accent,
-    fontWeight: '800',
-    paddingLeft: 4,
-  },
   challengeCenter: {
     flex: 1,
     paddingLeft: 8,
@@ -379,6 +510,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: Colors.ui.text,
+  },
+  challengeTitleLocked: {
+    color: Colors.ui.textLight,
+    fontStyle: 'italic',
   },
   challengeBestTime: {
     fontSize: 12,
@@ -391,18 +526,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontStyle: 'italic',
   },
+  checkmark: {
+    fontSize: 18,
+    color: Colors.forest.accent,
+    fontWeight: '800',
+    paddingLeft: 4,
+  },
   challengeArrow: {
     fontSize: 16,
     color: Colors.ui.textLight,
   },
-  challengeCardLocked: {
-    opacity: 0.45,
-    backgroundColor: Colors.ui.background,
-  },
-  challengeTitleLocked: {
-    color: Colors.ui.textLight,
-    fontStyle: 'italic',
-  },
+
+  // ── Vide ──
   empty: {
     alignItems: 'center',
     paddingTop: 48,
