@@ -5,6 +5,7 @@
 import { TokenCount } from '../models/Challenge';
 import { ElementDefinition } from '../models/Element';
 import { BoardDefinition } from '../models/Board';
+import { getConnectedGroup } from './validator';
 
 /**
  * 💡 Bonus 1 : Cases POSSIBLES pour un élément donné.
@@ -20,11 +21,14 @@ import { BoardDefinition } from '../models/Board';
  *  - neighbor_same / require     → au moins un voisin déjà posé est le même élément
  *  - neighbor_specific / forbid  → aucun voisin déjà posé n'est l'élément cible
  *  - neighbor_specific / require → au moins un voisin déjà posé est l'élément cible
+ *  - neighbor_specific_chain     → voisin targetElementId requis
+ *                                   + voisin chainTargetElementId si présent sur le plateau
+ *  - connected_group             → la case doit être voisine d'un exemplaire déjà posé
+ *                                   (pour ne pas créer un sous-groupe isolé)
+ *  - paired_specific             → la case doit être voisine d'exactement 1 partenaire
  *
  * ⚠️ Les cases voisines LIBRES ne comptent PAS pour valider un "require".
  *    Le bonus montre ce qui est légal MAINTENANT, pas ce qui pourrait l'être.
- *    Ex : chien → uniquement les cases directement voisines d'un chien déjà posé.
- *    Ex : chalet → uniquement les cases directement voisines d'un bucheron déjà posé.
  *
  * On exclut aussi les cases déjà occupées.
  */
@@ -52,18 +56,12 @@ export function getValidCellsForElement(
       switch (constraint.type) {
         case 'neighbor_same': {
           if (constraint.mode === 'forbid') {
-            // Interdit si un voisin déjà posé est le même élément
-            const hasSameNeighbor = neighbors.some(
-              n => playerBoard[n] === elementId
-            );
+            const hasSameNeighbor = neighbors.some(n => playerBoard[n] === elementId);
             if (hasSameNeighbor) { cellOk = false; }
           }
           if (constraint.mode === 'require') {
             // Valide UNIQUEMENT si un voisin déjà posé est le même élément.
-            // Les cases voisines libres ne comptent pas.
-            const hasSameNeighbor = neighbors.some(
-              n => playerBoard[n] === elementId
-            );
+            const hasSameNeighbor = neighbors.some(n => playerBoard[n] === elementId);
             if (!hasSameNeighbor) { cellOk = false; }
           }
           break;
@@ -72,22 +70,66 @@ export function getValidCellsForElement(
         case 'neighbor_specific': {
           const targetId = constraint.targetElementId;
           if (!targetId) break;
-
           if (constraint.mode === 'forbid') {
-            // Interdit si un voisin déjà posé est l'élément cible
-            const hasForbiddenNeighbor = neighbors.some(
-              n => playerBoard[n] === targetId
-            );
+            const hasForbiddenNeighbor = neighbors.some(n => playerBoard[n] === targetId);
             if (hasForbiddenNeighbor) { cellOk = false; }
           }
           if (constraint.mode === 'require') {
-            // Valide UNIQUEMENT si un voisin déjà posé est l'élément cible.
-            // Les cases voisines libres ne comptent pas.
-            const hasTargetNeighbor = neighbors.some(
-              n => playerBoard[n] === targetId
-            );
+            const hasTargetNeighbor = neighbors.some(n => playerBoard[n] === targetId);
             if (!hasTargetNeighbor) { cellOk = false; }
           }
+          break;
+        }
+
+        // neighbor_specific_chain : vérifier la contrainte principale
+        // (targetElementId) et la conditionnelle (chainTargetElementId si présent).
+        case 'neighbor_specific_chain': {
+          const targetId = constraint.targetElementId;
+          if (!targetId) break;
+          const hasTarget = neighbors.some(n => playerBoard[n] === targetId);
+          if (!hasTarget) { cellOk = false; break; }
+          const chainId = constraint.chainTargetElementId;
+          if (chainId) {
+            const chainOnBoard = playerBoard.some(el => el === chainId);
+            if (chainOnBoard) {
+              const hasChain = neighbors.some(n => playerBoard[n] === chainId);
+              if (!hasChain) { cellOk = false; }
+            }
+          }
+          break;
+        }
+
+        // connected_group : la case candidate doit être voisine d'au moins
+        // un exemplaire déjà posé (sinon elle créerait un sous-groupe isolé).
+        // Exception : si aucun exemplaire n'est encore posé, toutes les cases
+        // sont valides (le premier exemplaire peut aller n'importe où).
+        case 'connected_group': {
+          const existingPositions = playerBoard.reduce<number[]>((acc, el, idx) => {
+            if (el === elementId) acc.push(idx);
+            return acc;
+          }, []);
+          if (existingPositions.length > 0) {
+            // Vérifier que la case candidate est voisine du groupe connexe existant
+            const group = getConnectedGroup(
+              existingPositions[0], elementId, playerBoard, boardDef
+            );
+            const isAdjacentToGroup = neighbors.some(n => group.has(n));
+            if (!isAdjacentToGroup) { cellOk = false; }
+          }
+          break;
+        }
+
+        // paired_specific : la case candidate doit être voisine d'exactement
+        // 1 partenaire déjà posé (ni 0, ni 2+).
+        // Si aucun partenaire n'est encore posé, la case est invalide
+        // (on ne peut pas former un couple sans partenaire visible).
+        case 'paired_specific': {
+          const partnerId = constraint.targetElementId;
+          if (!partnerId) break;
+          const partnerNeighborCount = neighbors.filter(
+            n => playerBoard[n] === partnerId
+          ).length;
+          if (partnerNeighborCount !== 1) { cellOk = false; }
           break;
         }
 

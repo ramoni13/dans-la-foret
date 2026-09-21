@@ -8,20 +8,20 @@
       "challengeNumber": 1,
       "fixedPlacements": [
         {
-          "cellIndex": 1,
-          "elementId": "ours"
+          "cellIndex": 8,
+          "elementId": "chalet"
         },
         {
-          "cellIndex": 7,
-          "elementId": "chien"
+          "cellIndex": 11,
+          "elementId": "ruche"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "mouton"
         },
         {
           "cellIndex": 10,
-          "elementId": "chien"
-        },
-        {
-          "cellIndex": 8,
-          "elementId": "mouton"
+          "elementId": "chalet"
         },
         {
           "cellIndex": 0,
@@ -31,42 +31,38 @@
       "availableTokens": [
         {
           "elementId": "bucheron",
-          "count": 1
+          "count": 3
         },
         {
           "elementId": "ours",
           "count": 1
         },
         {
-          "elementId": "mouton",
-          "count": 1
-        },
-        {
-          "elementId": "chien",
-          "count": 1
+          "elementId": "renard",
+          "count": 2
         },
         {
           "elementId": "chalet",
-          "count": 3
+          "count": 1
         }
       ],
       "solution": [
         "bucheron",
         "ours",
         "bucheron",
-        "chalet",
-        "chalet",
         "mouton",
-        "ours",
-        "chien",
-        "mouton",
+        "renard",
         "chalet",
-        "chien",
-        "chien"
+        "bucheron",
+        "bucheron",
+        "chalet",
+        "renard",
+        "chalet",
+        "ruche"
       ],
       "solutionCount": 1,
       "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:35.339Z"
+      "createdAt": "2026-09-21T09:13:54.742Z"
     },
     {
       "id": "niveau_11_002",
@@ -76,7 +72,11 @@
       "challengeNumber": 2,
       "fixedPlacements": [
         {
-          "cellIndex": 5,
+          "cellIndex": 10,
+          "elementId": "tas_buches"
+        },
+        {
+          "cellIndex": 0,
           "elementId": "bucheron"
         },
         {
@@ -84,16 +84,12 @@
           "elementId": "ours"
         },
         {
-          "cellIndex": 10,
+          "cellIndex": 7,
           "elementId": "chalet"
         },
         {
-          "cellIndex": 4,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 1,
-          "elementId": "ours"
+          "cellIndex": 11,
+          "elementId": "ruche"
         }
       ],
       "availableTokens": [
@@ -102,11 +98,11 @@
           "count": 3
         },
         {
-          "elementId": "mouton",
+          "elementId": "ours",
           "count": 1
         },
         {
-          "elementId": "chien",
+          "elementId": "renard",
           "count": 2
         },
         {
@@ -119,18 +115,18 @@
         "ours",
         "bucheron",
         "ours",
-        "mouton",
+        "renard",
         "bucheron",
-        "chien",
         "chalet",
-        "chien",
-        "mouton",
         "chalet",
-        "bucheron"
+        "bucheron",
+        "renard",
+        "tas_buches",
+        "ruche"
       ],
       "solutionCount": 1,
       "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:35.348Z"
+      "createdAt": "2026-09-21T09:13:54.760Z"
     },
     {
       "id": "niveau_11_003",
@@ -140,45 +136,45 @@
       "challengeNumber": 3,
       "fixedPlacements": [
         {
-          "cellIndex": 9,
-          "elementId": "mouton"
+          "cellIndex": 5,
+          "elementId": "renard"
         },
         {
-          "cellIndex": 1,
+          "cellIndex": 3,
           "elementId": "ours"
         },
         {
           "cellIndex": 4,
-          "elementId": "chalet"
+          "elementId": "mouton"
         },
         {
           "cellIndex": 0,
           "elementId": "bucheron"
         },
         {
-          "cellIndex": 3,
-          "elementId": "ours"
+          "cellIndex": 11,
+          "elementId": "chalet"
         }
       ],
       "availableTokens": [
         {
           "elementId": "bucheron",
-          "count": 1
+          "count": 3
         },
         {
           "elementId": "ours",
           "count": 1
         },
         {
-          "elementId": "mouton",
-          "count": 2
-        },
-        {
-          "elementId": "chien",
-          "count": 2
+          "elementId": "renard",
+          "count": 1
         },
         {
           "elementId": "chalet",
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
           "count": 1
         }
       ],
@@ -187,18 +183,18 @@
         "ours",
         "bucheron",
         "ours",
-        "chalet",
         "mouton",
-        "chien",
-        "ours",
-        "chien",
-        "mouton",
+        "renard",
+        "bucheron",
+        "bucheron",
+        "ruche",
         "chalet",
-        "mouton"
+        "renard",
+        "chalet"
       ],
       "solutionCount": 1,
       "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:35.417Z"
+      "createdAt": "2026-09-21T09:13:54.795Z"
     },
     {
       "id": "niveau_11_004",
@@ -208,41 +204,41 @@
       "challengeNumber": 4,
       "fixedPlacements": [
         {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "ruche"
+        },
+        {
           "cellIndex": 3,
           "elementId": "ours"
         },
         {
           "cellIndex": 6,
-          "elementId": "chien"
-        },
-        {
-          "cellIndex": 8,
-          "elementId": "chalet"
-        },
-        {
-          "cellIndex": 2,
           "elementId": "bucheron"
         },
         {
-          "cellIndex": 1,
-          "elementId": "ours"
+          "cellIndex": 4,
+          "elementId": "mouton"
         }
       ],
       "availableTokens": [
         {
           "elementId": "bucheron",
-          "count": 3
-        },
-        {
-          "elementId": "mouton",
           "count": 2
         },
         {
-          "elementId": "chien",
+          "elementId": "ours",
           "count": 1
         },
         {
           "elementId": "chalet",
+          "count": 3
+        },
+        {
+          "elementId": "tas_buches",
           "count": 1
         }
       ],
@@ -252,17 +248,17 @@
         "bucheron",
         "ours",
         "mouton",
+        "chalet",
         "bucheron",
-        "chien",
+        "bucheron",
         "chalet",
+        "tas_buches",
         "chalet",
-        "mouton",
-        "chien",
-        "bucheron"
+        "ruche"
       ],
       "solutionCount": 1,
       "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:35.763Z"
+      "createdAt": "2026-09-21T09:13:54.823Z"
     },
     {
       "id": "niveau_11_005",
@@ -272,20 +268,20 @@
       "challengeNumber": 5,
       "fixedPlacements": [
         {
-          "cellIndex": 0,
-          "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 1,
-          "elementId": "ours"
-        },
-        {
-          "cellIndex": 7,
-          "elementId": "chien"
-        },
-        {
           "cellIndex": 3,
           "elementId": "ours"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "renard"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "chalet"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "ruche"
         },
         {
           "cellIndex": 2,
@@ -294,15 +290,15 @@
       ],
       "availableTokens": [
         {
+          "elementId": "bucheron",
+          "count": 3
+        },
+        {
           "elementId": "ours",
           "count": 1
         },
         {
-          "elementId": "mouton",
-          "count": 3
-        },
-        {
-          "elementId": "chien",
+          "elementId": "renard",
           "count": 1
         },
         {
@@ -315,18 +311,18 @@
         "ours",
         "bucheron",
         "ours",
+        "renard",
         "chalet",
-        "mouton",
-        "ours",
-        "chien",
-        "mouton",
+        "bucheron",
+        "bucheron",
         "chalet",
-        "mouton",
-        "chien"
+        "renard",
+        "chalet",
+        "ruche"
       ],
       "solutionCount": 1,
       "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:35.778Z"
+      "createdAt": "2026-09-21T09:13:54.848Z"
     },
     {
       "id": "niveau_11_006",
@@ -336,24 +332,24 @@
       "challengeNumber": 6,
       "fixedPlacements": [
         {
-          "cellIndex": 10,
+          "cellIndex": 5,
           "elementId": "chalet"
         },
         {
-          "cellIndex": 6,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 4,
+          "cellIndex": 3,
           "elementId": "ours"
         },
         {
-          "cellIndex": 7,
+          "cellIndex": 10,
+          "elementId": "tas_buches"
+        },
+        {
+          "cellIndex": 11,
           "elementId": "chalet"
         },
         {
-          "cellIndex": 9,
-          "elementId": "chien"
+          "cellIndex": 4,
+          "elementId": "mouton"
         }
       ],
       "availableTokens": [
@@ -363,10 +359,14 @@
         },
         {
           "elementId": "ours",
-          "count": 2
+          "count": 1
         },
         {
-          "elementId": "chien",
+          "elementId": "chalet",
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
           "count": 1
         }
       ],
@@ -375,18 +375,18 @@
         "ours",
         "bucheron",
         "ours",
-        "ours",
-        "bucheron",
         "mouton",
         "chalet",
-        "chien",
-        "chien",
+        "bucheron",
+        "bucheron",
+        "ruche",
         "chalet",
-        "bucheron"
+        "tas_buches",
+        "chalet"
       ],
       "solutionCount": 1,
       "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:35.783Z"
+      "createdAt": "2026-09-21T09:13:54.906Z"
     },
     {
       "id": "niveau_11_007",
@@ -396,24 +396,24 @@
       "challengeNumber": 7,
       "fixedPlacements": [
         {
+          "cellIndex": 4,
+          "elementId": "renard"
+        },
+        {
           "cellIndex": 6,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 10,
-          "elementId": "chalet"
-        },
-        {
-          "cellIndex": 7,
-          "elementId": "chalet"
-        },
-        {
-          "cellIndex": 11,
           "elementId": "bucheron"
         },
         {
-          "cellIndex": 3,
+          "cellIndex": 1,
           "elementId": "ours"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "ruche"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chalet"
         }
       ],
       "availableTokens": [
@@ -423,10 +423,14 @@
         },
         {
           "elementId": "ours",
-          "count": 2
+          "count": 1
         },
         {
-          "elementId": "chien",
+          "elementId": "renard",
+          "count": 1
+        },
+        {
+          "elementId": "chalet",
           "count": 2
         }
       ],
@@ -435,18 +439,18 @@
         "ours",
         "bucheron",
         "ours",
-        "ours",
+        "renard",
+        "chalet",
         "bucheron",
-        "mouton",
+        "bucheron",
+        "ruche",
         "chalet",
-        "chien",
-        "chien",
-        "chalet",
-        "bucheron"
+        "renard",
+        "chalet"
       ],
       "solutionCount": 1,
       "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:35.891Z"
+      "createdAt": "2026-09-21T09:13:54.953Z"
     },
     {
       "id": "niveau_11_008",
@@ -456,20 +460,20 @@
       "challengeNumber": 8,
       "fixedPlacements": [
         {
-          "cellIndex": 6,
-          "elementId": "chalet"
+          "cellIndex": 3,
+          "elementId": "mouton"
         },
         {
-          "cellIndex": 0,
+          "cellIndex": 9,
+          "elementId": "renard"
+        },
+        {
+          "cellIndex": 11,
           "elementId": "bucheron"
         },
         {
-          "cellIndex": 3,
-          "elementId": "ours"
-        },
-        {
           "cellIndex": 5,
-          "elementId": "chien"
+          "elementId": "ruche"
         },
         {
           "cellIndex": 1,
@@ -479,38 +483,34 @@
       "availableTokens": [
         {
           "elementId": "bucheron",
-          "count": 2
+          "count": 3
         },
         {
-          "elementId": "mouton",
-          "count": 2
-        },
-        {
-          "elementId": "chien",
+          "elementId": "renard",
           "count": 1
         },
         {
           "elementId": "chalet",
-          "count": 2
+          "count": 3
         }
       ],
       "solution": [
         "bucheron",
         "ours",
         "bucheron",
-        "ours",
         "mouton",
-        "chien",
-        "chalet",
-        "chien",
+        "renard",
+        "ruche",
         "bucheron",
         "chalet",
-        "mouton",
-        "chalet"
+        "chalet",
+        "renard",
+        "chalet",
+        "bucheron"
       ],
       "solutionCount": 1,
       "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:35.893Z"
+      "createdAt": "2026-09-21T09:13:54.995Z"
     },
     {
       "id": "niveau_11_009",
@@ -520,24 +520,24 @@
       "challengeNumber": 9,
       "fixedPlacements": [
         {
-          "cellIndex": 9,
-          "elementId": "mouton"
-        },
-        {
           "cellIndex": 8,
-          "elementId": "chien"
-        },
-        {
-          "cellIndex": 3,
-          "elementId": "ours"
-        },
-        {
-          "cellIndex": 7,
           "elementId": "chalet"
         },
         {
           "cellIndex": 1,
           "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "chalet"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "tas_buches"
         }
       ],
       "availableTokens": [
@@ -546,11 +546,75 @@
           "count": 4
         },
         {
-          "elementId": "mouton",
+          "elementId": "ours",
           "count": 1
         },
         {
-          "elementId": "chien",
+          "elementId": "chalet",
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "mouton",
+        "chalet",
+        "bucheron",
+        "bucheron",
+        "chalet",
+        "tas_buches",
+        "chalet",
+        "ruche"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 750,
+      "createdAt": "2026-09-21T09:13:55.060Z"
+    },
+    {
+      "id": "niveau_11_010",
+      "boardId": "board_12",
+      "level": "niveau_11",
+      "levelNumber": 10,
+      "challengeNumber": 10,
+      "fixedPlacements": [
+        {
+          "cellIndex": 10,
+          "elementId": "chalet"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "ruche"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "renard"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 4
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "renard",
           "count": 1
         },
         {
@@ -564,77 +628,17 @@
         "bucheron",
         "ours",
         "mouton",
+        "renard",
         "bucheron",
-        "chien",
+        "bucheron",
         "chalet",
-        "chien",
-        "mouton",
+        "renard",
         "chalet",
-        "bucheron"
+        "ruche"
       ],
       "solutionCount": 1,
       "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:36.004Z"
-    },
-    {
-      "id": "niveau_11_010",
-      "boardId": "board_12",
-      "level": "niveau_11",
-      "levelNumber": 10,
-      "challengeNumber": 10,
-      "fixedPlacements": [
-        {
-          "cellIndex": 6,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 8,
-          "elementId": "chalet"
-        },
-        {
-          "cellIndex": 10,
-          "elementId": "chalet"
-        },
-        {
-          "cellIndex": 9,
-          "elementId": "chien"
-        },
-        {
-          "cellIndex": 3,
-          "elementId": "ours"
-        }
-      ],
-      "availableTokens": [
-        {
-          "elementId": "bucheron",
-          "count": 4
-        },
-        {
-          "elementId": "ours",
-          "count": 2
-        },
-        {
-          "elementId": "chien",
-          "count": 1
-        }
-      ],
-      "solution": [
-        "bucheron",
-        "ours",
-        "bucheron",
-        "ours",
-        "ours",
-        "bucheron",
-        "mouton",
-        "chien",
-        "chalet",
-        "chien",
-        "chalet",
-        "bucheron"
-      ],
-      "solutionCount": 1,
-      "estimatedDuration": 750,
-      "createdAt": "2026-09-16T07:58:36.117Z"
+      "createdAt": "2026-09-21T09:13:55.125Z"
     }
   ]
 }
