@@ -283,6 +283,9 @@ export default function GameScreen() {
         }
       }}
     >
+      {/* ── Feuilles qui tombent — au niveau root pour couvrir tout l'écran ── */}
+      <FallingLeaves />
+
       <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         {/* ── Header ── */}
         <View style={styles.header}>
@@ -396,9 +399,6 @@ export default function GameScreen() {
           onDragEnd={wrappedDragEnd}
           mobileDragCallbacks={Platform.OS !== 'web' ? mobileDragCallbacks : undefined}
         />
-
-        {/* ── Feuilles qui tombent — en arrière-plan, pointerEvents none ── */}
-        <FallingLeaves />
 
         {/* ── Ghost natif mobile — rendu au niveau GestureHandlerRootView ── */}
         {Platform.OS !== 'web' && (
