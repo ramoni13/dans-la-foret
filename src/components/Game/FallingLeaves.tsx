@@ -1,7 +1,8 @@
 // ============================================================
 // FALINGLEAVES — Feuilles qui tombent en arrière-plan du jeu
 // 100% Animated natif, aucune dépendance externe
-// Rendu en position absolute derrière le plateau
+// Rendu en position absolute au niveau GestureHandlerRootView
+// pour couvrir tout l'écran depuis le haut (y compris safe area)
 // ============================================================
 
 import React, { useEffect, useRef } from 'react';
@@ -9,9 +10,10 @@ import { View, Animated, StyleSheet, Dimensions, Platform } from 'react-native';
 
 const native = Platform.OS !== 'web';
 
-// On écoute les changements de dimensions (rotation, etc.)
-let SCREEN_W = Dimensions.get('window').width;
-let SCREEN_H = Dimensions.get('window').height;
+// On utilise 'screen' pour avoir les dimensions physiques réelles
+// (inclut la status bar et la barre de navigation)
+let SCREEN_W = Dimensions.get('screen').width;
+let SCREEN_H = Dimensions.get('screen').height;
 
 const LEAF_EMOJIS = ['🍃', '🍂', '🌿', '🍁'];
 const LEAF_COUNT  = native ? 12 : 8;
@@ -29,7 +31,7 @@ interface Leaf {
 }
 
 function createLeaf(i: number): Leaf {
-  const { width } = Dimensions.get('window');
+  const { width } = Dimensions.get('screen'); // dimensions physiques réelles
   return {
     x:        new Animated.Value(0),
     y:        new Animated.Value(-60),
@@ -44,13 +46,13 @@ function createLeaf(i: number): Leaf {
 }
 
 function animateLeaf(leaf: Leaf, onDone: () => void) {
-  const { width, height } = Dimensions.get('window');
+  const { width, height } = Dimensions.get('screen'); // 'screen' = dimensions physiques réelles
   const swayX = (Math.random() - 0.5) * 100;
   // Recalcule startX aléatoire à chaque cycle
   leaf.startX = Math.random() * width;
 
   leaf.x.setValue(0);
-  leaf.y.setValue(-80);
+  leaf.y.setValue(-80); // démarre au-dessus du haut de l'écran
   leaf.rotate.setValue(0);
   leaf.opacity.setValue(0);
 
@@ -63,7 +65,7 @@ function animateLeaf(leaf: Leaf, onDone: () => void) {
         useNativeDriver: native,
       }),
       Animated.timing(leaf.y, {
-        toValue: height + 80,
+        toValue: height + 100, // tombe jusqu'en dessous du bas de l'écran
         duration: leaf.duration,
         useNativeDriver: native,
       }),
