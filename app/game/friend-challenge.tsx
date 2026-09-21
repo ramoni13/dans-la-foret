@@ -358,6 +358,9 @@ export default function FriendChallengeScreen() {
         }
       }}
     >
+      {/* ── Feuilles qui tombent — au niveau root pour couvrir tout l'écran ── */}
+      <FallingLeaves />
+
       <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
 
         {/* Header */}
@@ -465,9 +468,6 @@ export default function FriendChallengeScreen() {
             visible={ghostState.visible}
           />
         )}
-
-        {/* Feuilles qui tombent */}
-        <FallingLeaves />
 
         {/* Modal résultat */}
         <FriendResultModal
