@@ -43,7 +43,10 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
-    "generate": "npx ts-node --project tsconfig.scripts.json scripts/generateChallenges.ts"
+    "generate": "npx ts-node --project tsconfig.scripts.json scripts/generateChallenges.ts",
+    "generate:levels": "npx ts-node --project tsconfig.scripts.json scripts/generateChallenges.ts",
+    "generate:viewer": "npx ts-node --project tsconfig.scripts.json scripts/generateViewerData.ts",
+    "regenerate": "npx ts-node --project tsconfig.scripts.json scripts/regenerateChallenges.ts"
   },
   "jest": {
     "preset": "ts-jest",
