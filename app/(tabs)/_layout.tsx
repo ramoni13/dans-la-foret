@@ -4,7 +4,8 @@
 
 import { Tabs } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { Text, Platform } from 'react-native';
+import { Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React from 'react';
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
@@ -16,6 +17,13 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 }
 
 export default function TabsLayout() {
+  // On récupère les insets réels du système (barre de navigation Android,
+  // home indicator iOS, etc.) pour positionner la tab bar correctement
+  const insets = useSafeAreaInsets();
+  // paddingBottom = inset bas réel + espace interne pour les icônes
+  const tabBarPaddingBottom = insets.bottom + 6;
+  const tabBarHeight = tabBarPaddingBottom + 44; // 44 = hauteur minimale des icônes
+
   return (
     <Tabs
       screenOptions={{
@@ -26,10 +34,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: Colors.ui.card,
           borderTopColor: Colors.ui.border,
-          // Sur iOS/Android on laisse le système gérer le safe-area bottom
-          // On fixe une hauteur suffisante pour que les icônes soient visibles
-          height: Platform.OS === 'ios' ? 82 : Platform.OS === 'android' ? 68 : 60,
-          paddingBottom: Platform.OS === 'ios' ? 24 : Platform.OS === 'android' ? 10 : 8,
+          height: tabBarHeight,
+          paddingBottom: tabBarPaddingBottom,
           paddingTop: 6,
         },
       }}
