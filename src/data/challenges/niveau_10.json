@@ -8,12 +8,16 @@
       "challengeNumber": 1,
       "fixedPlacements": [
         {
-          "cellIndex": 11,
-          "elementId": "ruche"
+          "cellIndex": 4,
+          "elementId": "ours"
         },
         {
-          "cellIndex": 3,
-          "elementId": "ours"
+          "cellIndex": 5,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
         },
         {
           "cellIndex": 2,
@@ -24,18 +28,82 @@
           "elementId": "tas_buches"
         },
         {
-          "cellIndex": 4,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 8,
+          "cellIndex": 9,
           "elementId": "renard"
         }
       ],
       "availableTokens": [
         {
           "elementId": "bucheron",
-          "count": 3
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "chien",
+          "count": 2
+        },
+        {
+          "elementId": "renard",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "ours",
+        "ours",
+        "mouton",
+        "chien",
+        "bucheron",
+        "chien",
+        "renard",
+        "tas_buches",
+        "renard"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-09-21T19:51:37.940Z"
+    },
+    {
+      "id": "niveau_10_002",
+      "boardId": "board_12",
+      "level": "niveau_10",
+      "levelNumber": 2,
+      "challengeNumber": 2,
+      "fixedPlacements": [
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "biche"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "renard"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "tas_buches"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "ours"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 1
         },
         {
           "elementId": "ours",
@@ -43,6 +111,14 @@
         },
         {
           "elementId": "renard",
+          "count": 1
+        },
+        {
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
           "count": 1
         },
         {
@@ -54,87 +130,19 @@
         "bucheron",
         "ours",
         "bucheron",
-        "ours",
-        "mouton",
-        "renard",
-        "bucheron",
-        "bucheron",
-        "renard",
-        "tas_buches",
-        "tas_buches",
-        "ruche"
-      ],
-      "solutionCount": 1,
-      "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.239Z"
-    },
-    {
-      "id": "niveau_10_002",
-      "boardId": "board_12",
-      "level": "niveau_10",
-      "levelNumber": 2,
-      "challengeNumber": 2,
-      "fixedPlacements": [
-        {
-          "cellIndex": 10,
-          "elementId": "tas_buches"
-        },
-        {
-          "cellIndex": 8,
-          "elementId": "ruche"
-        },
-        {
-          "cellIndex": 9,
-          "elementId": "biche"
-        },
-        {
-          "cellIndex": 0,
-          "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 2,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 1,
-          "elementId": "ours"
-        }
-      ],
-      "availableTokens": [
-        {
-          "elementId": "ours",
-          "count": 1
-        },
-        {
-          "elementId": "chien",
-          "count": 2
-        },
-        {
-          "elementId": "renard",
-          "count": 2
-        },
-        {
-          "elementId": "cerf",
-          "count": 1
-        }
-      ],
-      "solution": [
-        "bucheron",
-        "ours",
-        "mouton",
-        "ours",
-        "chien",
-        "renard",
-        "chien",
         "cerf",
-        "ruche",
         "biche",
+        "renard",
+        "ours",
+        "cerf",
+        "biche",
+        "tas_buches",
         "tas_buches",
         "renard"
       ],
       "solutionCount": 1,
       "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.251Z"
+      "createdAt": "2026-09-21T19:51:37.957Z"
     },
     {
       "id": "niveau_10_003",
@@ -144,65 +152,69 @@
       "challengeNumber": 3,
       "fixedPlacements": [
         {
-          "cellIndex": 5,
+          "cellIndex": 6,
           "elementId": "mouton"
         },
         {
-          "cellIndex": 1,
-          "elementId": "ours"
+          "cellIndex": 3,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "tas_buches"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "renard"
         },
         {
           "cellIndex": 2,
           "elementId": "bucheron"
         },
         {
-          "cellIndex": 4,
-          "elementId": "ours"
-        },
-        {
-          "cellIndex": 0,
-          "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 9,
-          "elementId": "tas_buches"
+          "cellIndex": 7,
+          "elementId": "biche"
         }
       ],
       "availableTokens": [
         {
           "elementId": "bucheron",
-          "count": 1
+          "count": 2
         },
         {
           "elementId": "ours",
           "count": 1
         },
         {
-          "elementId": "chien",
-          "count": 2
+          "elementId": "renard",
+          "count": 1
         },
         {
-          "elementId": "renard",
-          "count": 2
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
+          "count": 1
         }
       ],
       "solution": [
         "bucheron",
         "ours",
         "bucheron",
-        "ours",
-        "ours",
-        "mouton",
+        "cerf",
+        "cerf",
         "bucheron",
-        "chien",
+        "mouton",
+        "biche",
+        "biche",
         "renard",
         "tas_buches",
-        "renard",
-        "chien"
+        "renard"
       ],
       "solutionCount": 1,
       "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.312Z"
+      "createdAt": "2026-09-21T19:51:37.971Z"
     },
     {
       "id": "niveau_10_004",
@@ -212,96 +224,28 @@
       "challengeNumber": 4,
       "fixedPlacements": [
         {
-          "cellIndex": 0,
-          "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 9,
-          "elementId": "biche"
-        },
-        {
-          "cellIndex": 10,
-          "elementId": "tas_buches"
-        },
-        {
-          "cellIndex": 8,
+          "cellIndex": 7,
           "elementId": "renard"
-        },
-        {
-          "cellIndex": 2,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 11,
-          "elementId": "ruche"
-        }
-      ],
-      "availableTokens": [
-        {
-          "elementId": "ours",
-          "count": 2
-        },
-        {
-          "elementId": "chien",
-          "count": 2
-        },
-        {
-          "elementId": "renard",
-          "count": 1
-        },
-        {
-          "elementId": "cerf",
-          "count": 1
-        }
-      ],
-      "solution": [
-        "bucheron",
-        "ours",
-        "mouton",
-        "ours",
-        "chien",
-        "renard",
-        "chien",
-        "cerf",
-        "renard",
-        "biche",
-        "tas_buches",
-        "ruche"
-      ],
-      "solutionCount": 1,
-      "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.371Z"
-    },
-    {
-      "id": "niveau_10_005",
-      "boardId": "board_12",
-      "level": "niveau_10",
-      "levelNumber": 5,
-      "challengeNumber": 5,
-      "fixedPlacements": [
-        {
-          "cellIndex": 9,
-          "elementId": "tas_buches"
-        },
-        {
-          "cellIndex": 0,
-          "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 3,
-          "elementId": "mouton"
         },
         {
           "cellIndex": 1,
           "elementId": "ours"
         },
         {
-          "cellIndex": 7,
-          "elementId": "renard"
+          "cellIndex": 9,
+          "elementId": "tas_buches"
         },
         {
           "cellIndex": 8,
           "elementId": "cerf"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 0,
+          "elementId": "bucheron"
         }
       ],
       "availableTokens": [
@@ -342,38 +286,38 @@
       ],
       "solutionCount": 1,
       "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.470Z"
+      "createdAt": "2026-09-21T19:51:37.987Z"
     },
     {
-      "id": "niveau_10_006",
+      "id": "niveau_10_005",
       "boardId": "board_12",
       "level": "niveau_10",
-      "levelNumber": 6,
-      "challengeNumber": 6,
+      "levelNumber": 5,
+      "challengeNumber": 5,
       "fixedPlacements": [
         {
-          "cellIndex": 5,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 10,
-          "elementId": "tas_buches"
-        },
-        {
-          "cellIndex": 4,
+          "cellIndex": 1,
           "elementId": "ours"
         },
         {
-          "cellIndex": 2,
-          "elementId": "bucheron"
+          "cellIndex": 4,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "renard"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "mouton"
         },
         {
           "cellIndex": 0,
           "elementId": "bucheron"
         },
         {
-          "cellIndex": 1,
-          "elementId": "ours"
+          "cellIndex": 8,
+          "elementId": "biche"
         }
       ],
       "availableTokens": [
@@ -386,68 +330,76 @@
           "count": 1
         },
         {
-          "elementId": "chien",
-          "count": 2
+          "elementId": "renard",
+          "count": 1
         },
         {
-          "elementId": "renard",
-          "count": 2
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
+          "count": 1
+        },
+        {
+          "elementId": "tas_buches",
+          "count": 1
         }
       ],
       "solution": [
         "bucheron",
         "ours",
         "bucheron",
-        "ours",
-        "ours",
-        "mouton",
-        "chien",
-        "bucheron",
-        "chien",
+        "cerf",
+        "cerf",
         "renard",
+        "ours",
+        "biche",
+        "biche",
+        "mouton",
         "tas_buches",
         "renard"
       ],
       "solutionCount": 1,
       "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.502Z"
+      "createdAt": "2026-09-21T19:51:38.002Z"
     },
     {
-      "id": "niveau_10_007",
+      "id": "niveau_10_006",
       "boardId": "board_12",
       "level": "niveau_10",
-      "levelNumber": 7,
-      "challengeNumber": 7,
+      "levelNumber": 6,
+      "challengeNumber": 6,
       "fixedPlacements": [
         {
-          "cellIndex": 7,
-          "elementId": "cerf"
-        },
-        {
-          "cellIndex": 11,
-          "elementId": "ruche"
+          "cellIndex": 2,
+          "elementId": "mouton"
         },
         {
           "cellIndex": 10,
           "elementId": "tas_buches"
         },
         {
-          "cellIndex": 2,
-          "elementId": "mouton"
+          "cellIndex": 9,
+          "elementId": "biche"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "renard"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
         },
         {
           "cellIndex": 0,
           "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 5,
-          "elementId": "renard"
         }
       ],
       "availableTokens": [
         {
           "elementId": "ours",
-          "count": 2
+          "count": 1
         },
         {
           "elementId": "chien",
@@ -458,7 +410,11 @@
           "count": 1
         },
         {
-          "elementId": "biche",
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
           "count": 1
         }
       ],
@@ -478,34 +434,34 @@
       ],
       "solutionCount": 1,
       "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.542Z"
+      "createdAt": "2026-09-21T19:51:38.014Z"
     },
     {
-      "id": "niveau_10_008",
+      "id": "niveau_10_007",
       "boardId": "board_12",
       "level": "niveau_10",
-      "levelNumber": 8,
-      "challengeNumber": 8,
+      "levelNumber": 7,
+      "challengeNumber": 7,
       "fixedPlacements": [
         {
-          "cellIndex": 6,
-          "elementId": "tas_buches"
-        },
-        {
-          "cellIndex": 8,
-          "elementId": "renard"
-        },
-        {
-          "cellIndex": 2,
-          "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 4,
+          "cellIndex": 5,
           "elementId": "mouton"
         },
         {
-          "cellIndex": 1,
-          "elementId": "ours"
+          "cellIndex": 4,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "biche"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "tas_buches"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "renard"
         },
         {
           "cellIndex": 0,
@@ -519,10 +475,6 @@
         },
         {
           "elementId": "ours",
-          "count": 1
-        },
-        {
-          "elementId": "chien",
           "count": 2
         },
         {
@@ -530,7 +482,11 @@
           "count": 1
         },
         {
-          "elementId": "ruche",
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
           "count": 1
         }
       ],
@@ -538,19 +494,91 @@
         "bucheron",
         "ours",
         "bucheron",
-        "ours",
+        "cerf",
+        "cerf",
         "mouton",
-        "bucheron",
+        "ours",
+        "biche",
+        "biche",
+        "renard",
         "tas_buches",
-        "chien",
-        "renard",
-        "chien",
-        "renard",
-        "ruche"
+        "renard"
       ],
       "solutionCount": 1,
       "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.610Z"
+      "createdAt": "2026-09-21T19:51:38.046Z"
+    },
+    {
+      "id": "niveau_10_008",
+      "boardId": "board_12",
+      "level": "niveau_10",
+      "levelNumber": 8,
+      "challengeNumber": 8,
+      "fixedPlacements": [
+        {
+          "cellIndex": 4,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "tas_buches"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "renard"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "biche"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "renard",
+          "count": 1
+        },
+        {
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ours",
+        "bucheron",
+        "cerf",
+        "cerf",
+        "bucheron",
+        "renard",
+        "biche",
+        "biche",
+        "mouton",
+        "tas_buches",
+        "renard"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-09-21T19:51:38.085Z"
     },
     {
       "id": "niveau_10_009",
@@ -560,28 +588,28 @@
       "challengeNumber": 9,
       "fixedPlacements": [
         {
-          "cellIndex": 9,
-          "elementId": "tas_buches"
+          "cellIndex": 0,
+          "elementId": "bucheron"
         },
         {
           "cellIndex": 3,
           "elementId": "mouton"
         },
         {
-          "cellIndex": 0,
-          "elementId": "bucheron"
-        },
-        {
           "cellIndex": 5,
           "elementId": "ruche"
         },
         {
-          "cellIndex": 8,
-          "elementId": "biche"
-        },
-        {
           "cellIndex": 7,
           "elementId": "renard"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "tas_buches"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "biche"
         }
       ],
       "availableTokens": [
@@ -622,7 +650,7 @@
       ],
       "solutionCount": 1,
       "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.637Z"
+      "createdAt": "2026-09-21T19:51:38.103Z"
     },
     {
       "id": "niveau_10_010",
@@ -640,20 +668,20 @@
           "elementId": "bucheron"
         },
         {
-          "cellIndex": 3,
-          "elementId": "ours"
-        },
-        {
-          "cellIndex": 5,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 9,
+          "cellIndex": 6,
           "elementId": "tas_buches"
         },
         {
           "cellIndex": 4,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 1,
           "elementId": "ours"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "renard"
         }
       ],
       "availableTokens": [
@@ -671,7 +699,11 @@
         },
         {
           "elementId": "renard",
-          "count": 2
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
+          "count": 1
         }
       ],
       "solution": [
@@ -679,18 +711,18 @@
         "ours",
         "bucheron",
         "ours",
-        "ours",
         "mouton",
         "bucheron",
+        "tas_buches",
         "chien",
         "renard",
-        "tas_buches",
+        "chien",
         "renard",
-        "chien"
+        "ruche"
       ],
       "solutionCount": 1,
       "estimatedDuration": 600,
-      "createdAt": "2026-09-21T09:13:54.711Z"
+      "createdAt": "2026-09-21T19:51:38.111Z"
     }
   ]
 }

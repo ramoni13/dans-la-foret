@@ -9,10 +9,12 @@ import { View, Animated, StyleSheet, Dimensions, Platform } from 'react-native';
 
 const native = Platform.OS !== 'web';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+// On écoute les changements de dimensions (rotation, etc.)
+let SCREEN_W = Dimensions.get('window').width;
+let SCREEN_H = Dimensions.get('window').height;
 
 const LEAF_EMOJIS = ['🍃', '🍂', '🌿', '🍁'];
-const LEAF_COUNT  = 8;
+const LEAF_COUNT  = native ? 12 : 8;
 
 interface Leaf {
   x:       Animated.Value;
@@ -27,24 +29,28 @@ interface Leaf {
 }
 
 function createLeaf(i: number): Leaf {
+  const { width } = Dimensions.get('window');
   return {
     x:        new Animated.Value(0),
     y:        new Animated.Value(-60),
     rotate:   new Animated.Value(0),
     opacity:  new Animated.Value(0),
     emoji:    LEAF_EMOJIS[i % LEAF_EMOJIS.length],
-    size:     16 + Math.floor(Math.random() * 12),
-    startX:   Math.random() * SCREEN_W,
-    delay:    i * 1800 + Math.random() * 1000,
-    duration: 5000 + Math.random() * 4000,
+    size:     native ? 20 + Math.floor(Math.random() * 14) : 16 + Math.floor(Math.random() * 12),
+    startX:   Math.random() * width,
+    delay:    i * 1200 + Math.random() * 800,
+    duration: 4000 + Math.random() * 3000,
   };
 }
 
 function animateLeaf(leaf: Leaf, onDone: () => void) {
-  const swayX = (Math.random() - 0.5) * 80;
+  const { width, height } = Dimensions.get('window');
+  const swayX = (Math.random() - 0.5) * 100;
+  // Recalcule startX aléatoire à chaque cycle
+  leaf.startX = Math.random() * width;
 
   leaf.x.setValue(0);
-  leaf.y.setValue(-60);
+  leaf.y.setValue(-80);
   leaf.rotate.setValue(0);
   leaf.opacity.setValue(0);
 
@@ -52,12 +58,12 @@ function animateLeaf(leaf: Leaf, onDone: () => void) {
     Animated.delay(leaf.delay),
     Animated.parallel([
       Animated.timing(leaf.opacity, {
-        toValue: 0.75,
-        duration: 600,
+        toValue: native ? 0.9 : 0.75,
+        duration: 500,
         useNativeDriver: native,
       }),
       Animated.timing(leaf.y, {
-        toValue: SCREEN_H + 60,
+        toValue: height + 80,
         duration: leaf.duration,
         useNativeDriver: native,
       }),
@@ -67,15 +73,15 @@ function animateLeaf(leaf: Leaf, onDone: () => void) {
         Animated.timing(leaf.x, { toValue: swayX / 3,  duration: leaf.duration / 3, useNativeDriver: native }),
       ]),
       Animated.timing(leaf.rotate, {
-        toValue: 3,
+        toValue: 4,
         duration: leaf.duration,
         useNativeDriver: native,
       }),
       Animated.sequence([
-        Animated.delay(leaf.duration * 0.75),
+        Animated.delay(leaf.duration * 0.8),
         Animated.timing(leaf.opacity, {
           toValue: 0,
-          duration: leaf.duration * 0.25,
+          duration: leaf.duration * 0.2,
           useNativeDriver: native,
         }),
       ]),
@@ -89,13 +95,21 @@ export function FallingLeaves() {
   ).current;
 
   useEffect(() => {
-    // Lance chaque feuille en boucle infinie
-    leaves.forEach(leaf => {
-      const loop = () => animateLeaf(leaf, loop);
-      loop();
+    // Lance chaque feuille en boucle infinie avec un délai initial échelonné
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    leaves.forEach((leaf, i) => {
+      // Délai initial échelonné pour éviter que toutes les feuilles partent en même temps
+      const initialDelay = i * 600;
+      const t = setTimeout(() => {
+        leaf.delay = 0; // Pas de délai supplémentaire après le premier cycle
+        const loop = () => animateLeaf(leaf, loop);
+        loop();
+      }, initialDelay);
+      timeouts.push(t);
     });
 
     return () => {
+      timeouts.forEach(clearTimeout);
       leaves.forEach(leaf => {
         leaf.x.stopAnimation();
         leaf.y.stopAnimation();
@@ -137,8 +151,10 @@ export function FallingLeaves() {
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-    pointerEvents: 'none',
+    // zIndex 5 : au-dessus du fond/plateau mais sous les modals et boutons
+    // pointerEvents="none" (sur le composant) empêche tout blocage d'interaction
+    zIndex: 5,
+    elevation: 5, // Android
   },
   leaf: {
     position: 'absolute',
