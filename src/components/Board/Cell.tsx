@@ -4,7 +4,7 @@
 // Pulsation douce quand la case est en état 'valid' (bonus highlight)
 // ============================================================
 
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
   Image,
@@ -13,6 +13,14 @@ import {
   ViewStyle,
   Platform,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import ReAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import { Colors } from '../../constants/colors';
 import { ElementRegistry } from '../../elements/ElementRegistry';
 
@@ -27,6 +35,10 @@ interface CellProps {
   positionStyle: ViewStyle;                              // { left, top } calculés par BoardRenderer
   onPress: (cellIndex: number) => void;
   onDrop: (cellIndex: number, elementId: string) => void; // signature alignée avec BoardRenderer
+  // Drag depuis la grille (case → case)
+  onCellDragStart?: (cellIndex: number, elementId: string, x: number, y: number) => void;
+  onCellDragMove?: (x: number, y: number) => void;
+  onCellDragEnd?: (x: number, y: number) => void;
 }
 
 export const Cell: React.FC<CellProps> = ({
@@ -37,7 +49,12 @@ export const Cell: React.FC<CellProps> = ({
   isDragTarget,
   positionStyle,
   onPress,
+  onCellDragStart,
+  onCellDragMove,
+  onCellDragEnd,
 }) => {
+  // Une case est draggable si elle contient un élément posé par le joueur (non fixe)
+  const isDraggable = !isFixed && elementId !== null && !!onCellDragStart;
   const elementDef = elementId ? ElementRegistry[elementId] : null;
 
   // ── Pulsation bonus highlight ────────────────────────────
@@ -86,23 +103,139 @@ export const Cell: React.FC<CellProps> = ({
 
   const borderWidth = isDropTarget ? 3 : isFixed ? 2 : 1.5;
 
-  return (
-    <TouchableOpacity
-      activeOpacity={isFixed ? 1 : 0.7}
-      onPress={() => !isFixed && onPress(cellIndex)}
-      style={[
-        styles.cell,
-        positionStyle,
-        {
-          backgroundColor,
-          borderColor,
-          borderWidth,
-          shadowOpacity: isDropTarget ? 0.4 : 0.15,
-          elevation: isDropTarget ? 8 : 3,
-        },
-      ]}
-    >
-      {/* Overlay de pulsation — superposé sur la case, ne bloque pas les events */}
+  // ── Callbacks JS stables (pour runOnJS depuis worklet) ──────────
+  const callCellDragStart = useCallback((x: number, y: number) => {
+    if (elementId) onCellDragStart?.(cellIndex, elementId, x, y);
+  }, [cellIndex, elementId, onCellDragStart]);
+
+  const callCellDragMove = useCallback((x: number, y: number) => {
+    onCellDragMove?.(x, y);
+  }, [onCellDragMove]);
+
+  const callCellDragEnd = useCallback((x: number, y: number) => {
+    onCellDragEnd?.(x, y);
+  }, [onCellDragEnd]);
+
+  const callOnPress = useCallback(() => {
+    if (!isFixed) onPress(cellIndex);
+  }, [isFixed, cellIndex, onPress]);
+
+  // ── Valeurs animées mobile (opacité pendant le drag) ──────────
+  const cellOpacity = useSharedValue(1);
+  const cellScale   = useSharedValue(1);
+
+  const animatedCellStyle = useAnimatedStyle(() => ({
+    opacity: cellOpacity.value,
+    transform: [{ scale: cellScale.value }],
+  }), [cellOpacity, cellScale]);
+
+  // ── Gesture Pan mobile (grille → grille) ────────────────────
+  const panGesture = Gesture.Pan()
+    .enabled(!isFixed && !!(elementId) && Platform.OS !== 'web')
+    .minDistance(6)   // seuil pour distinguer tap vs drag
+    .onBegin((e) => {
+      'worklet';
+      cellOpacity.value = withTiming(0.35);
+      cellScale.value   = withSpring(0.85, { damping: 12 });
+      runOnJS(callCellDragStart)(e.absoluteX, e.absoluteY);
+    })
+    .onUpdate((e) => {
+      'worklet';
+      runOnJS(callCellDragMove)(e.absoluteX, e.absoluteY);
+    })
+    .onEnd((e) => {
+      'worklet';
+      cellOpacity.value = withTiming(1);
+      cellScale.value   = withSpring(1, { damping: 12 });
+      runOnJS(callCellDragEnd)(e.absoluteX, e.absoluteY);
+    })
+    .onFinalize(() => {
+      'worklet';
+      // Sécurité : toujours restaurer l'apparence
+      cellOpacity.value = withTiming(1);
+      cellScale.value   = withSpring(1, { damping: 12 });
+    });
+
+  // Tap gesture (pour le tap normal sur la case)
+  const tapGesture = Gesture.Tap()
+    .enabled(!isFixed && Platform.OS !== 'web')
+    .onEnd(() => {
+      'worklet';
+      runOnJS(callOnPress)();
+    });
+
+  // Sur mobile : Pan prioritaire sur Tap (le tap ne se déclenche que si pas de pan)
+  const mobileGesture = Gesture.Exclusive(panGesture, tapGesture);
+
+  // ── Gestion du drag depuis la case (WEB : mouse + touch) ──
+  // On utilise un ref pour distinguer drag vs tap :
+  // si le pointeur a bougé de plus de 5px → c'est un drag, pas un tap
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+
+  const handlePointerDown = (clientX: number, clientY: number) => {
+    if (!isDraggable || !elementId) return;
+    dragStartPos.current = { x: clientX, y: clientY };
+    isDraggingRef.current = false;
+  };
+
+  const handlePointerMove = (clientX: number, clientY: number) => {
+    if (!isDraggable || !elementId || !dragStartPos.current) return;
+    const dx = clientX - dragStartPos.current.x;
+    const dy = clientY - dragStartPos.current.y;
+    if (!isDraggingRef.current && Math.sqrt(dx * dx + dy * dy) > 5) {
+      isDraggingRef.current = true;
+      onCellDragStart?.(cellIndex, elementId, clientX, clientY);
+    }
+    if (isDraggingRef.current) {
+      onCellDragMove?.(clientX, clientY);
+    }
+  };
+
+  const handlePointerUp = (clientX: number, clientY: number) => {
+    if (!isDraggable || !elementId) return;
+    if (isDraggingRef.current) {
+      onCellDragEnd?.(clientX, clientY);
+    }
+    dragStartPos.current = null;
+    isDraggingRef.current = false;
+  };
+
+  const webDragProps = Platform.OS === 'web' && isDraggable ? {
+    onMouseDown: (e: any) => {
+      e.preventDefault();
+      handlePointerDown(e.clientX, e.clientY);
+      const onMove = (ev: MouseEvent) => handlePointerMove(ev.clientX, ev.clientY);
+      const onUp = (ev: MouseEvent) => {
+        handlePointerUp(ev.clientX, ev.clientY);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    },
+    onTouchStart: (e: any) => {
+      const t = e.touches[0];
+      if (!t) return;
+      handlePointerDown(t.clientX, t.clientY);
+      const onMove = (ev: TouchEvent) => {
+        const touch = ev.touches[0];
+        if (touch) handlePointerMove(touch.clientX, touch.clientY);
+      };
+      const onUp = (ev: TouchEvent) => {
+        const touch = ev.changedTouches[0];
+        if (touch) handlePointerUp(touch.clientX, touch.clientY);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+      };
+      document.addEventListener('touchmove', onMove, { passive: true });
+      document.addEventListener('touchend', onUp, { passive: true });
+    },
+  } : {};
+
+  // ── Contenu commun (image + overlay pulsation) ──────────────
+  const cellContent = (
+    <>
       {isHighlighted && (
         <Animated.View
           style={[
@@ -113,7 +246,6 @@ export const Cell: React.FC<CellProps> = ({
           pointerEvents="none"
         />
       )}
-
       {elementDef && (
         <Image
           source={
@@ -125,7 +257,46 @@ export const Cell: React.FC<CellProps> = ({
           resizeMode="contain"
         />
       )}
-    </TouchableOpacity>
+    </>
+  );
+
+  const cellStyleProps = [
+    styles.cell,
+    positionStyle,
+    {
+      backgroundColor,
+      borderColor,
+      borderWidth,
+      shadowOpacity: isDropTarget ? 0.4 : 0.15,
+      elevation: isDropTarget ? 8 : 3,
+    },
+  ];
+
+  // ── Rendu WEB ──────────────────────────────────────────────
+  if (Platform.OS === 'web') {
+    return (
+      <TouchableOpacity
+        activeOpacity={isFixed ? 1 : 0.7}
+        onPress={() => !isFixed && !isDraggingRef.current && onPress(cellIndex)}
+        style={[
+          ...cellStyleProps,
+          { cursor: isDraggable ? ('grab' as any) : undefined },
+        ]}
+        {...webDragProps}
+      >
+        {cellContent}
+      </TouchableOpacity>
+    );
+  }
+
+  // ── Rendu MOBILE ─────────────────────────────────────────
+  // GestureDetector gère Pan (drag) + Tap (press) de façon exclusive
+  return (
+    <GestureDetector gesture={mobileGesture}>
+      <ReAnimated.View style={[...cellStyleProps, animatedCellStyle]}>
+        {cellContent}
+      </ReAnimated.View>
+    </GestureDetector>
   );
 };
 
