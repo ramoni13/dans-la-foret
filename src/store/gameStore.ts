@@ -110,6 +110,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!currentChallenge) return;
     if (fromCell === toCell) return;
 
+    // Gardes défensives : indices valides dans le tableau (protège contre
+    // un offset de plateau périmé qui produirait un index hors limites)
+    if (fromCell < 0 || fromCell >= playerBoard.length) return;
+    if (toCell < 0 || toCell >= playerBoard.length) return;
+
     // La case source doit contenir un élément posé par le joueur (non fixe)
     const isFromFixed = currentChallenge.fixedPlacements.some(fp => fp.cellIndex === fromCell);
     if (isFromFixed) return;
@@ -117,6 +122,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     // La case cible ne peut pas être une case fixe
     const isToFixed = currentChallenge.fixedPlacements.some(fp => fp.cellIndex === toCell);
     if (isToFixed) return;
+
+    // La case source doit contenir un élément (sinon rien à déplacer)
+    if (playerBoard[fromCell] === null) return;
 
     const newBoard = [...playerBoard];
     // Permutation : l'élément cible (null ou un jeton posé) prend la place source
