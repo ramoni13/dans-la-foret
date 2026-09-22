@@ -26,6 +26,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { MobileDragGhost } from '../../src/components/Elements/MobileDragGhost';
+import { DragGhost } from '../../src/components/Elements/DragGhost';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti, ConfettiPiece } from '../../src/components/Game/Confetti';
 import { FailModal } from '../../src/components/Game/FailModal';
@@ -266,13 +267,22 @@ export default function FriendChallengeScreen() {
     );
   }, [boardDef, boardSize]);
 
-  const { hoveredCell, handleDragStart, handleDragMove, handleDragEnd } = useDragDrop({
+  const { hoveredCell, handleDragStart, handleCellDragStart, handleDragMove, handleDragEnd } = useDragDrop({
     onDrop: (cellIndex, elementId) => {
       game.tryPlaceElement(cellIndex, elementId);
       setDraggingElement(null);
     },
+    onMoveFromCell: (fromCell, toCell) => {
+      game.moveElement(fromCell, toCell);
+      setDraggingElement(null);
+    },
     findNearestCell: findNearest,
   });
+
+  // Ghost web pour les drags depuis la grille
+  const [boardDragGhostState, setBoardDragGhostState] = useState<{
+    visible: boolean; elementId: string | null; x: number; y: number;
+  }>({ visible: false, elementId: null, x: 0, y: 0 });
 
   const wrappedDragStart = useCallback((elementId: string) => {
     setDraggingElement(elementId);
@@ -288,6 +298,41 @@ export default function FriendChallengeScreen() {
   const wrappedDragEnd = useCallback((x: number, y: number) => {
     setDraggingElement(null);
     setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
+    handleDragEnd(x, y);
+  }, [handleDragEnd]);
+
+  // Drag depuis une case de la grille
+  const wrappedCellDragStart = useCallback((cellIndex: number, elementId: string, x: number, y: number) => {
+    setDraggingElement(elementId);
+    if (Platform.OS === 'web') {
+      setBoardDragGhostState({ visible: true, elementId, x, y });
+    } else {
+      setGhostState({ visible: true, elementId, x, y });
+      if (boardContainerRef.current) {
+        boardContainerRef.current.measureInWindow((bx, by) => {
+          boardOffsetRef.current = { x: bx, y: by };
+        });
+      }
+    }
+    handleCellDragStart(cellIndex, elementId);
+  }, [handleCellDragStart]);
+
+  const wrappedCellDragMove = useCallback((x: number, y: number) => {
+    if (Platform.OS === 'web') {
+      setBoardDragGhostState(prev => ({ ...prev, x, y }));
+    } else {
+      setGhostState(prev => ({ ...prev, x, y }));
+    }
+    handleDragMove(x, y);
+  }, [handleDragMove]);
+
+  const wrappedCellDragEnd = useCallback((x: number, y: number) => {
+    setDraggingElement(null);
+    if (Platform.OS === 'web') {
+      setBoardDragGhostState({ visible: false, elementId: null, x: 0, y: 0 });
+    } else {
+      setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
+    }
     handleDragEnd(x, y);
   }, [handleDragEnd]);
 
@@ -441,6 +486,9 @@ export default function FriendChallengeScreen() {
                   getCellColor={(idx) => game.getCellColor(idx, null)}
                   onCellPress={handleCellPress}
                   onDrop={(cellIndex, elementId) => game.tryPlaceElement(cellIndex, elementId)}
+                  onCellDragStart={wrappedCellDragStart}
+                  onCellDragMove={wrappedCellDragMove}
+                  onCellDragEnd={wrappedCellDragEnd}
                 />
               </View>
             );
@@ -466,6 +514,15 @@ export default function FriendChallengeScreen() {
             x={ghostState.x}
             y={ghostState.y}
             visible={ghostState.visible}
+          />
+        )}
+
+        {Platform.OS === 'web' && (
+          <DragGhost
+            elementId={boardDragGhostState.elementId}
+            x={boardDragGhostState.x}
+            y={boardDragGhostState.y}
+            visible={boardDragGhostState.visible}
           />
         )}
 
