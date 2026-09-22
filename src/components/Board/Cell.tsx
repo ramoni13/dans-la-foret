@@ -132,8 +132,12 @@ export const Cell: React.FC<CellProps> = ({
   // ── Gesture Pan mobile (grille → grille) ────────────────────
   const panGesture = Gesture.Pan()
     .enabled(!isFixed && !!(elementId) && Platform.OS !== 'web')
-    .minDistance(6)   // seuil pour distinguer tap vs drag
-    .onBegin((e) => {
+    .minDistance(8)   // seuil pour distinguer tap vs drag
+    // onStart (et non onBegin) : se déclenche SEULEMENT après minDistance.
+    // onBegin se déclenchait immédiatement au toucher, avant même de savoir
+    // si c'est un tap ou un drag → causait Bug 1 (élément fantôme après tap)
+    // et Bug 2 (crash au swap) car le drag était initié trop tôt.
+    .onStart((e) => {
       'worklet';
       cellOpacity.value = withTiming(0.35);
       cellScale.value   = withSpring(0.85, { damping: 12 });
@@ -151,7 +155,7 @@ export const Cell: React.FC<CellProps> = ({
     })
     .onFinalize(() => {
       'worklet';
-      // Sécurité : toujours restaurer l'apparence
+      // Sécurité : toujours restaurer l'apparence même si le gesture est annulé
       cellOpacity.value = withTiming(1);
       cellScale.value   = withSpring(1, { damping: 12 });
     });
