@@ -97,6 +97,19 @@ function canonicalKey(solution: string[]): string {
 }
 
 /**
+ * Mélange Fisher-Yates sur les entrées d'un Record<string, number>.
+ * Utilisé pour randomiser l'ordre d'essai des éléments dans le backtracking.
+ */
+function shuffleEntries(obj: Record<string, number>): [string, number][] {
+  const entries = Object.entries(obj);
+  for (let i = entries.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [entries[i], entries[j]] = [entries[j], entries[i]];
+  }
+  return entries;
+}
+
+/**
  * Élagage précoce des contraintes 'require'.
  * Après chaque placement, vérifie si les contraintes 'require' encore
  * non satisfaites peuvent encore l'être (voisins vides disponibles
@@ -187,7 +200,11 @@ function backtrack(
   }
 
   // Essayer chaque élément disponible dans l'inventaire
-  for (const [elementId, count] of Object.entries(inventory)) {
+  // Fix 3.1 : ordre randomisé → brise le biais déterministe (Object.entries
+  // retourne toujours les clés dans l'ordre d'insertion en V8, ce qui fait
+  // que le premier élément de l'inventaire se retrouve systématiquement
+  // placé dans les cases de faible index).
+  for (const [elementId, count] of shuffleEntries(inventory)) {
     if (count <= 0) continue;
 
     // Vérifier si le placement est valide (contraintes forbid)
