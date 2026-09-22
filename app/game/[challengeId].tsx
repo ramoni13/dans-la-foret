@@ -18,6 +18,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
+import { DragGhost } from '../../src/components/Elements/DragGhost';
 import { HintOverlay } from '../../src/components/Bonus/HintOverlay';
 import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { FailModal } from '../../src/components/Game/FailModal';
@@ -162,9 +163,13 @@ export default function GameScreen() {
     ? (draggingElement ?? game.selectedElement)
     : null;
 
-  const { hoveredCell, handleDragStart, handleDragMove, handleDragEnd } = useDragDrop({
+  const { hoveredCell, handleDragStart, handleCellDragStart, handleDragMove, handleDragEnd } = useDragDrop({
     onDrop: (cellIndex, elementId) => {
       game.tryPlaceElement(cellIndex, elementId);
+      setDraggingElement(null);
+    },
+    onMoveFromCell: (fromCell, toCell) => {
+      game.moveElement(fromCell, toCell);
       setDraggingElement(null);
     },
     findNearestCell: findNearest,
@@ -180,6 +185,15 @@ export default function GameScreen() {
     },
   }), []);
 
+  // ── Ghost web pour les drags depuis la grille ──────────────
+  const [boardDragGhostState, setBoardDragGhostState] = useState<{
+    visible: boolean;
+    elementId: string | null;
+    x: number;
+    y: number;
+  }>({ visible: false, elementId: null, x: 0, y: 0 });
+
+  // ── Drag depuis la palette ──────────────────────────────────
   const wrappedDragStart = useCallback((elementId: string) => {
     setDraggingElement(elementId);
     setGhostState({ visible: false, elementId, x: 0, y: 0 });
@@ -196,6 +210,44 @@ export default function GameScreen() {
   const wrappedDragEnd = useCallback((x: number, y: number) => {
     setDraggingElement(null);
     setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
+    handleDragEnd(x, y);
+  }, [handleDragEnd]);
+
+  // ── Drag depuis une case de la grille ──────────────────────
+  const wrappedCellDragStart = useCallback((cellIndex: number, elementId: string, x: number, y: number) => {
+    setDraggingElement(elementId);
+    // Web : afficher le ghost au niveau de l'écran
+    if (Platform.OS === 'web') {
+      setBoardDragGhostState({ visible: true, elementId, x, y });
+    } else {
+      // Mobile : réutiliser le ghost natif
+      setGhostState({ visible: true, elementId, x, y });
+      // Re-mesurer la position du plateau
+      if (boardContainerRef.current) {
+        boardContainerRef.current.measureInWindow((bx, by) => {
+          boardOffsetRef.current = { x: bx, y: by };
+        });
+      }
+    }
+    handleCellDragStart(cellIndex, elementId);
+  }, [handleCellDragStart]);
+
+  const wrappedCellDragMove = useCallback((x: number, y: number) => {
+    if (Platform.OS === 'web') {
+      setBoardDragGhostState(prev => ({ ...prev, x, y }));
+    } else {
+      setGhostState(prev => ({ ...prev, x, y }));
+    }
+    handleDragMove(x, y);
+  }, [handleDragMove]);
+
+  const wrappedCellDragEnd = useCallback((x: number, y: number) => {
+    setDraggingElement(null);
+    if (Platform.OS === 'web') {
+      setBoardDragGhostState({ visible: false, elementId: null, x: 0, y: 0 });
+    } else {
+      setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
+    }
     handleDragEnd(x, y);
   }, [handleDragEnd]);
 
@@ -381,6 +433,9 @@ export default function GameScreen() {
                   getCellColor={(idx) => game.getCellColor(idx, highlightElement)}
                   onCellPress={handleCellPress}
                   onDrop={(cellIndex, elementId) => game.tryPlaceElement(cellIndex, elementId)}
+                  onCellDragStart={wrappedCellDragStart}
+                  onCellDragMove={wrappedCellDragMove}
+                  onCellDragEnd={wrappedCellDragEnd}
                 />
               </View>
             );
@@ -407,6 +462,16 @@ export default function GameScreen() {
             x={ghostState.x}
             y={ghostState.y}
             visible={ghostState.visible}
+          />
+        )}
+
+        {/* ── Ghost web pour les drags depuis la grille ── */}
+        {Platform.OS === 'web' && (
+          <DragGhost
+            elementId={boardDragGhostState.elementId}
+            x={boardDragGhostState.x}
+            y={boardDragGhostState.y}
+            visible={boardDragGhostState.visible}
           />
         )}
 
