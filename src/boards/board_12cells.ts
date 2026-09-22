@@ -19,8 +19,8 @@ export const board12cells: BoardDefinition = {
     [1, 7, 8, 10],  // case 11
   ],
   cellPositions: [
-    { x: 15, y: 10 }, // case 0  — coin haut gauche
-    { x: 85, y: 10 }, // case 1  — coin haut droite
+    { x: 7,  y: 5  }, // case 0  — coin haut gauche  (écarté)
+    { x: 93, y: 5  }, // case 1  — coin haut droite  (écarté)
     { x: 35, y: 22 }, // case 2  — haut gauche intérieur
     { x: 65, y: 22 }, // case 3  — haut droite intérieur
     { x: 20, y: 40 }, // case 4  — milieu gauche haut
@@ -29,8 +29,8 @@ export const board12cells: BoardDefinition = {
     { x: 80, y: 62 }, // case 7  — milieu droite bas
     { x: 35, y: 78 }, // case 8  — bas gauche intérieur
     { x: 65, y: 78 }, // case 9  — bas droite intérieur
-    { x: 15, y: 88 }, // case 10 — coin bas gauche
-    { x: 85, y: 88 }, // case 11 — coin bas droite
+    { x: 7,  y: 93 }, // case 10 — coin bas gauche  (écarté)
+    { x: 93, y: 93 }, // case 11 — coin bas droite  (écarté)
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
   availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
