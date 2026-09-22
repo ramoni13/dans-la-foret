@@ -103,22 +103,48 @@ export const Cell: React.FC<CellProps> = ({
 
   const borderWidth = isDropTarget ? 3 : isFixed ? 2 : 1.5;
 
-  // ── Callbacks JS stables (pour runOnJS depuis worklet) ──────────
-  const callCellDragStart = useCallback((x: number, y: number) => {
+  // ── Refs stables pour les callbacks worklet ──────────────────
+  // runOnJS sur Android capture la référence de la fonction au moment où
+  // le gesture object est instancié par Reanimated. Si un re-render survient
+  // (ex : placement d'un élément qui met à jour playerBoard), le worklet
+  // continuerait d'appeler l'ancienne version du callback avec d'anciennes
+  // valeurs de elementId/cellIndex. Les refs garantissent que le worklet
+  // appelle toujours la version courante, sans recréer le gesture object.
+  const callCellDragStartRef = useRef<(x: number, y: number) => void>(() => {});
+  const callCellDragMoveRef  = useRef<(x: number, y: number) => void>(() => {});
+  const callCellDragEndRef   = useRef<(x: number, y: number) => void>(() => {});
+  const callOnPressRef       = useRef<() => void>(() => {});
+
+  // Mise à jour des refs à chaque render (pas de stale closure)
+  callCellDragStartRef.current = (x: number, y: number) => {
     if (elementId) onCellDragStart?.(cellIndex, elementId, x, y);
-  }, [cellIndex, elementId, onCellDragStart]);
+  };
+  callCellDragMoveRef.current = (x: number, y: number) => {
+    onCellDragMove?.(x, y);
+  };
+  callCellDragEndRef.current = (x: number, y: number) => {
+    onCellDragEnd?.(x, y);
+  };
+  callOnPressRef.current = () => {
+    if (!isFixed) onPress(cellIndex);
+  };
+
+  // Wrappers stables (référence fixe) que runOnJS peut capturer une fois
+  const callCellDragStart = useCallback((x: number, y: number) => {
+    callCellDragStartRef.current(x, y);
+  }, []);
 
   const callCellDragMove = useCallback((x: number, y: number) => {
-    onCellDragMove?.(x, y);
-  }, [onCellDragMove]);
+    callCellDragMoveRef.current(x, y);
+  }, []);
 
   const callCellDragEnd = useCallback((x: number, y: number) => {
-    onCellDragEnd?.(x, y);
-  }, [onCellDragEnd]);
+    callCellDragEndRef.current(x, y);
+  }, []);
 
   const callOnPress = useCallback(() => {
-    if (!isFixed) onPress(cellIndex);
-  }, [isFixed, cellIndex, onPress]);
+    callOnPressRef.current();
+  }, []);
 
   // ── Valeurs animées mobile (opacité pendant le drag) ──────────
   const cellOpacity = useSharedValue(1);
