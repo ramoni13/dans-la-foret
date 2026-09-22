@@ -8,25 +8,25 @@
       "challengeNumber": 1,
       "fixedPlacements": [
         {
-          "cellIndex": 3,
-          "elementId": "mouton"
-        },
-        {
-          "cellIndex": 0,
+          "cellIndex": 4,
           "elementId": "ours"
         },
         {
-          "cellIndex": 2,
+          "cellIndex": 1,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 0,
           "elementId": "ours"
         }
       ],
       "availableTokens": [
         {
-          "elementId": "ours",
+          "elementId": "bucheron",
           "count": 1
         },
         {
-          "elementId": "mouton",
+          "elementId": "ours",
           "count": 1
         },
         {
@@ -36,15 +36,15 @@
       ],
       "solution": [
         "ours",
-        "mouton",
-        "ours",
-        "mouton",
+        "bucheron",
         "ruche",
+        "bucheron",
+        "ours",
         "ours"
       ],
       "solutionCount": 1,
       "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.318Z"
+      "createdAt": "2026-09-22T13:05:18.330Z"
     },
     {
       "id": "niveau_1_002",
@@ -55,38 +55,42 @@
       "fixedPlacements": [
         {
           "cellIndex": 1,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 0,
           "elementId": "bucheron"
         },
         {
           "cellIndex": 4,
-          "elementId": "ruche"
-        },
-        {
-          "cellIndex": 0,
-          "elementId": "mouton"
+          "elementId": "ours"
         }
       ],
       "availableTokens": [
         {
-          "elementId": "ours",
+          "elementId": "bucheron",
           "count": 1
         },
         {
           "elementId": "mouton",
-          "count": 2
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
+          "count": 1
         }
       ],
       "solution": [
-        "mouton",
         "bucheron",
         "mouton",
-        "ours",
         "ruche",
-        "mouton"
+        "mouton",
+        "ours",
+        "bucheron"
       ],
       "solutionCount": 1,
       "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.324Z"
+      "createdAt": "2026-09-22T13:05:18.334Z"
     },
     {
       "id": "niveau_1_003",
@@ -96,58 +100,16 @@
       "challengeNumber": 3,
       "fixedPlacements": [
         {
-          "cellIndex": 3,
-          "elementId": "mouton"
-        },
-        {
           "cellIndex": 2,
-          "elementId": "bucheron"
+          "elementId": "ours"
         },
         {
-          "cellIndex": 4,
-          "elementId": "ruche"
-        }
-      ],
-      "availableTokens": [
-        {
-          "elementId": "bucheron",
-          "count": 2
-        },
-        {
-          "elementId": "ours",
-          "count": 1
-        }
-      ],
-      "solution": [
-        "bucheron",
-        "ours",
-        "bucheron",
-        "mouton",
-        "ruche",
-        "bucheron"
-      ],
-      "solutionCount": 1,
-      "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.324Z"
-    },
-    {
-      "id": "niveau_1_004",
-      "boardId": "board_6_v1",
-      "level": "niveau_1",
-      "levelNumber": 4,
-      "challengeNumber": 4,
-      "fixedPlacements": [
-        {
-          "cellIndex": 0,
-          "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 4,
-          "elementId": "mouton"
+          "cellIndex": 5,
+          "elementId": "ours"
         },
         {
           "cellIndex": 1,
-          "elementId": "ours"
+          "elementId": "mouton"
         }
       ],
       "availableTokens": [
@@ -165,16 +127,62 @@
         }
       ],
       "solution": [
-        "bucheron",
-        "ours",
-        "ruche",
         "ours",
         "mouton",
-        "mouton"
+        "ours",
+        "mouton",
+        "ruche",
+        "ours"
       ],
       "solutionCount": 1,
       "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.324Z"
+      "createdAt": "2026-09-22T13:05:18.334Z"
+    },
+    {
+      "id": "niveau_1_004",
+      "boardId": "board_6_v1",
+      "level": "niveau_1",
+      "levelNumber": 4,
+      "challengeNumber": 4,
+      "fixedPlacements": [
+        {
+          "cellIndex": 2,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ruche"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "mouton",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "ruche",
+        "bucheron",
+        "mouton",
+        "ours",
+        "bucheron"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 105,
+      "createdAt": "2026-09-22T13:05:18.336Z"
     },
     {
       "id": "niveau_1_005",
@@ -185,107 +193,15 @@
       "fixedPlacements": [
         {
           "cellIndex": 3,
-          "elementId": "ours"
-        },
-        {
-          "cellIndex": 2,
-          "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 5,
           "elementId": "mouton"
-        }
-      ],
-      "availableTokens": [
-        {
-          "elementId": "bucheron",
-          "count": 1
-        },
-        {
-          "elementId": "ours",
-          "count": 1
-        },
-        {
-          "elementId": "ruche",
-          "count": 1
-        }
-      ],
-      "solution": [
-        "bucheron",
-        "ours",
-        "bucheron",
-        "ours",
-        "ruche",
-        "mouton"
-      ],
-      "solutionCount": 1,
-      "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.325Z"
-    },
-    {
-      "id": "niveau_1_006",
-      "boardId": "board_6_v1",
-      "level": "niveau_1",
-      "levelNumber": 6,
-      "challengeNumber": 6,
-      "fixedPlacements": [
-        {
-          "cellIndex": 0,
-          "elementId": "ours"
-        },
-        {
-          "cellIndex": 2,
-          "elementId": "ours"
-        },
-        {
-          "cellIndex": 1,
-          "elementId": "bucheron"
-        }
-      ],
-      "availableTokens": [
-        {
-          "elementId": "bucheron",
-          "count": 1
-        },
-        {
-          "elementId": "ours",
-          "count": 1
-        },
-        {
-          "elementId": "ruche",
-          "count": 1
-        }
-      ],
-      "solution": [
-        "ours",
-        "bucheron",
-        "ours",
-        "bucheron",
-        "ruche",
-        "ours"
-      ],
-      "solutionCount": 1,
-      "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.327Z"
-    },
-    {
-      "id": "niveau_1_007",
-      "boardId": "board_6_v1",
-      "level": "niveau_1",
-      "levelNumber": 7,
-      "challengeNumber": 7,
-      "fixedPlacements": [
-        {
-          "cellIndex": 1,
-          "elementId": "bucheron"
-        },
-        {
-          "cellIndex": 2,
-          "elementId": "ours"
         },
         {
           "cellIndex": 4,
-          "elementId": "mouton"
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "bucheron"
         }
       ],
       "availableTokens": [
@@ -301,32 +217,74 @@
       "solution": [
         "ours",
         "bucheron",
-        "ours",
         "ruche",
         "mouton",
+        "ours",
         "ours"
       ],
       "solutionCount": 1,
       "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.328Z"
+      "createdAt": "2026-09-22T13:05:18.341Z"
     },
     {
-      "id": "niveau_1_008",
+      "id": "niveau_1_006",
       "boardId": "board_6_v1",
       "level": "niveau_1",
-      "levelNumber": 8,
-      "challengeNumber": 8,
+      "levelNumber": 6,
+      "challengeNumber": 6,
       "fixedPlacements": [
         {
           "cellIndex": 1,
           "elementId": "ours"
         },
         {
-          "cellIndex": 0,
+          "cellIndex": 4,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "bucheron"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "mouton",
+          "count": 2
+        },
+        {
+          "elementId": "ruche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "mouton",
+        "ours",
+        "ruche",
+        "bucheron",
+        "mouton",
+        "mouton"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 105,
+      "createdAt": "2026-09-22T13:05:18.347Z"
+    },
+    {
+      "id": "niveau_1_007",
+      "boardId": "board_6_v1",
+      "level": "niveau_1",
+      "levelNumber": 7,
+      "challengeNumber": 7,
+      "fixedPlacements": [
+        {
+          "cellIndex": 4,
           "elementId": "bucheron"
         },
         {
-          "cellIndex": 4,
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
           "elementId": "bucheron"
         }
       ],
@@ -354,7 +312,53 @@
       ],
       "solutionCount": 1,
       "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.328Z"
+      "createdAt": "2026-09-22T13:05:18.348Z"
+    },
+    {
+      "id": "niveau_1_008",
+      "boardId": "board_6_v1",
+      "level": "niveau_1",
+      "levelNumber": 8,
+      "challengeNumber": 8,
+      "fixedPlacements": [
+        {
+          "cellIndex": 4,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 0,
+          "elementId": "mouton"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "mouton",
+        "ours",
+        "ruche",
+        "ours",
+        "bucheron",
+        "bucheron"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 105,
+      "createdAt": "2026-09-22T13:05:18.349Z"
     },
     {
       "id": "niveau_1_009",
@@ -364,16 +368,16 @@
       "challengeNumber": 9,
       "fixedPlacements": [
         {
-          "cellIndex": 5,
+          "cellIndex": 3,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 0,
           "elementId": "bucheron"
         },
         {
-          "cellIndex": 2,
+          "cellIndex": 4,
           "elementId": "ruche"
-        },
-        {
-          "cellIndex": 3,
-          "elementId": "mouton"
         }
       ],
       "availableTokens": [
@@ -393,14 +397,14 @@
       "solution": [
         "bucheron",
         "mouton",
-        "ruche",
-        "mouton",
         "ours",
+        "mouton",
+        "ruche",
         "bucheron"
       ],
       "solutionCount": 1,
       "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.329Z"
+      "createdAt": "2026-09-22T13:05:18.361Z"
     },
     {
       "id": "niveau_1_010",
@@ -410,25 +414,25 @@
       "challengeNumber": 10,
       "fixedPlacements": [
         {
-          "cellIndex": 4,
-          "elementId": "ours"
-        },
-        {
-          "cellIndex": 3,
-          "elementId": "bucheron"
+          "cellIndex": 2,
+          "elementId": "mouton"
         },
         {
           "cellIndex": 5,
           "elementId": "ours"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "bucheron"
         }
       ],
       "availableTokens": [
         {
-          "elementId": "bucheron",
+          "elementId": "ours",
           "count": 1
         },
         {
-          "elementId": "ours",
+          "elementId": "mouton",
           "count": 1
         },
         {
@@ -437,16 +441,16 @@
         }
       ],
       "solution": [
-        "ours",
+        "mouton",
         "bucheron",
+        "mouton",
         "ruche",
-        "bucheron",
         "ours",
         "ours"
       ],
       "solutionCount": 1,
       "estimatedDuration": 105,
-      "createdAt": "2026-09-21T19:19:38.329Z"
+      "createdAt": "2026-09-22T13:05:18.361Z"
     }
   ]
 }
