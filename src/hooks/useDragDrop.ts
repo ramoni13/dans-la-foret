@@ -74,23 +74,33 @@ export function useDragDrop({ onDrop, onMoveFromCell, findNearestCell }: UseDrag
     const elementId = elementIdRef.current;
     const sourceCell = sourceCellRef.current;
 
-    if (nearest !== null && elementId) {
-      if (sourceCell !== null) {
-        // Drag grille → grille : déplacement ou permutation
-        onMoveFromCellRef.current(sourceCell, nearest);
-      } else {
-        // Drag palette → grille : placement classique
-        onDropRef.current(nearest, elementId);
-      }
-      impactLight();
-    } else {
-      notificationWarning();
-    }
-
+    // Toujours réinitialiser les refs ET l'état avant les callbacks
+    // pour éviter un double-appel si un re-render survient pendant le callback.
     elementIdRef.current = null;
     sourceCellRef.current = null;
     setDragState({ isDragging: false, elementId: null, currentX: 0, currentY: 0 });
     setHoveredCell(null);
+
+    // Garde : elementId doit être non-null (sinon le drag a été initié sans élément)
+    if (!elementId) return;
+
+    if (nearest !== null) {
+      if (sourceCell !== null) {
+        // Drag grille → grille : déplacement ou permutation
+        // Pas de callback si dropped sur la case source (no-op)
+        if (nearest !== sourceCell) {
+          onMoveFromCellRef.current(sourceCell, nearest);
+          impactLight();
+        }
+      } else {
+        // Drag palette → grille : placement classique
+        onDropRef.current(nearest, elementId);
+        impactLight();
+      }
+    } else {
+      // Drop en dehors du plateau : avertissement haptique
+      notificationWarning();
+    }
   }, []);   // ← aucune dépendance : tout passe par les refs
 
   return {
