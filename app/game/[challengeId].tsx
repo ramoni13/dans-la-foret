@@ -219,17 +219,24 @@ export default function GameScreen() {
     // Web : afficher le ghost au niveau de l'écran
     if (Platform.OS === 'web') {
       setBoardDragGhostState({ visible: true, elementId, x, y });
+      handleCellDragStart(cellIndex, elementId);
     } else {
       // Mobile : réutiliser le ghost natif
       setGhostState({ visible: true, elementId, x, y });
-      // Re-mesurer la position du plateau
+      // Re-mesurer la position du plateau AVANT d'initier le drag.
+      // measureInWindow est asynchrone : on attend son callback pour
+      // mettre à jour boardOffsetRef PUIS appeler handleCellDragStart,
+      // sinon handleDragEnd calculerait findNearest avec l'ancien offset
+      // (celui du drag palette précédent) → index erroné → crash.
       if (boardContainerRef.current) {
         boardContainerRef.current.measureInWindow((bx, by) => {
           boardOffsetRef.current = { x: bx, y: by };
+          handleCellDragStart(cellIndex, elementId);
         });
+      } else {
+        handleCellDragStart(cellIndex, elementId);
       }
     }
-    handleCellDragStart(cellIndex, elementId);
   }, [handleCellDragStart]);
 
   const wrappedCellDragMove = useCallback((x: number, y: number) => {
