@@ -32,6 +32,8 @@ import niveau10 from '../../src/data/challenges/niveau_10.json';
 import niveau11 from '../../src/data/challenges/niveau_11.json';
 import niveau12 from '../../src/data/challenges/niveau_12.json';
 import niveau13 from '../../src/data/challenges/niveau_13.json';
+import niveau14 from '../../src/data/challenges/niveau_14.json';
+import niveau15 from '../../src/data/challenges/niveau_15.json';
 
 const LEVELS: Array<{
   id: DifficultyLevel;
@@ -41,19 +43,21 @@ const LEVELS: Array<{
   isPremium: boolean;
   color: string;
 }> = [
-  { id: 'niveau_1',  label: 'Niveau 1',  emoji: '🌱', description: '6 cases · 3 vides · 3 types',           isPremium: false, color: '#A5D6A7' },
-  { id: 'niveau_2',  label: 'Niveau 2',  emoji: '🌿', description: '6 cases · 4 vides · 4 types',           isPremium: false, color: '#81C784' },
-  { id: 'niveau_3',  label: 'Niveau 3',  emoji: '🌳', description: '8 cases · 3 vides · 4 types',           isPremium: false, color: '#66BB6A' },
-  { id: 'niveau_4',  label: 'Niveau 4',  emoji: '🦊', description: '8 cases · 4 vides · 4 types',           isPremium: false, color: '#4CAF50' },
-  { id: 'niveau_5',  label: 'Niveau 5',  emoji: '🏕️', description: '8 cases · 5 vides · 4 types',           isPremium: true,  color: '#43A047' },
-  { id: 'niveau_6',  label: 'Niveau 6',  emoji: '🌲', description: '10 cases · 4 vides · 3-4 types',        isPremium: true,  color: '#388E3C' },
-  { id: 'niveau_7',  label: 'Niveau 7',  emoji: '🐺', description: '10 cases · 5 vides · 4 types',          isPremium: true,  color: '#2E7D32' },
-  { id: 'niveau_8',  label: 'Niveau 8',  emoji: '🏔️', description: '10 cases · 6 vides · 4 types',          isPremium: true,  color: '#1B5E20' },
-  { id: 'niveau_9',  label: 'Niveau 9',  emoji: '🏹', description: '12 cases · 5 vides · 4 types',          isPremium: true,  color: '#33691E' },
-  { id: 'niveau_10', label: 'Niveau 10', emoji: '🐽', description: '12 cases · 6 vides · 4 types',          isPremium: true,  color: '#558B2F' },
-  { id: 'niveau_11', label: 'Niveau 11', emoji: '🏔️', description: '12 cases · 7 vides · 5 types + Chalet', isPremium: true,  color: '#827717' },
-  { id: 'niveau_12', label: 'Niveau 12', emoji: '⚡',  description: '12 cases · 8 vides · 6 types + Renard', isPremium: true,  color: '#E65100' },
-  { id: 'niveau_13', label: 'Niveau 13', emoji: '💀', description: '12 cases · 9 vides · 6 types · Sans bonus', isPremium: true,  color: '#3E2723' },
+  { id: 'niveau_1',  label: 'Niveau 1',  emoji: '🌱', description: '6 cases · 3 vides · Bucheron/Ours/Mouton',       isPremium: false, color: '#A5D6A7' },
+  { id: 'niveau_2',  label: 'Niveau 2',  emoji: '🌿', description: '7 cases · 4 vides · Bucheron/Ours/Mouton',       isPremium: false, color: '#81C784' },
+  { id: 'niveau_3',  label: 'Niveau 3',  emoji: '🌳', description: '8 cases · 3 vides · + Chien',                    isPremium: false, color: '#66BB6A' },
+  { id: 'niveau_4',  label: 'Niveau 4',  emoji: '🦊', description: '8 cases · 4 vides · + Chien',                    isPremium: false, color: '#4CAF50' },
+  { id: 'niveau_5',  label: 'Niveau 5',  emoji: '🏕️', description: '8 cases · 5 vides · + Cerf/Biche',               isPremium: true,  color: '#43A047' },
+  { id: 'niveau_6',  label: 'Niveau 6',  emoji: '🦌', description: '9 cases · 4 vides · + Cerf/Biche',               isPremium: true,  color: '#388E3C' },
+  { id: 'niveau_7',  label: 'Niveau 7',  emoji: '🌲', description: '10 cases · 4 vides · Cerf/Biche',                isPremium: true,  color: '#2E7D32' },
+  { id: 'niveau_8',  label: 'Niveau 8',  emoji: '🐺', description: '10 cases · 5 vides · + Renard',                  isPremium: true,  color: '#1B5E20' },
+  { id: 'niveau_9',  label: 'Niveau 9',  emoji: '🏔️', description: '10 cases · 6 vides · Renard',                    isPremium: true,  color: '#33691E' },
+  { id: 'niveau_10', label: 'Niveau 10', emoji: '🐾', description: '11 cases · 5 vides · Renard',                    isPremium: true,  color: '#558B2F' },
+  { id: 'niveau_11', label: 'Niveau 11', emoji: '🏹', description: '12 cases · 5 vides · + Tas de bûches',           isPremium: true,  color: '#827717' },
+  { id: 'niveau_12', label: 'Niveau 12', emoji: '🪵', description: '12 cases · 6 vides · Tas de bûches',             isPremium: true,  color: '#6D4C41' },
+  { id: 'niveau_13', label: 'Niveau 13', emoji: '🏠', description: '12 cases · 7 vides · + Chalet',                  isPremium: true,  color: '#4E342E' },
+  { id: 'niveau_14', label: 'Niveau 14', emoji: '⚡',  description: '12 cases · 8 vides · Chalet',                    isPremium: true,  color: '#E65100' },
+  { id: 'niveau_15', label: 'Niveau 15', emoji: '💀', description: '12 cases · 9 vides · Sans bonus',                isPremium: true,  color: '#3E2723' },
 ];
 
 const ALL_CHALLENGES: Record<string, any[]> = {
@@ -70,13 +74,15 @@ const ALL_CHALLENGES: Record<string, any[]> = {
   niveau_11: niveau11.challenges,
   niveau_12: niveau12.challenges,
   niveau_13: niveau13.challenges,
+  niveau_14: niveau14.challenges,
+  niveau_15: niveau15.challenges,
 };
 
 export default function LevelsScreen() {
   const router = useRouter();
   const player = usePlayerStore();
 
-  // Index du niveau courant (0 = niveau_1, 12 = niveau_13)
+  // Index du niveau courant (0 = niveau_1, 14 = niveau_15)
   const [levelIndex, setLevelIndex] = useState(0);
 
   const selectedLevelDef = LEVELS[levelIndex];
