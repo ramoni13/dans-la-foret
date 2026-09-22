@@ -34,6 +34,7 @@ interface GameState {
   loadChallenge: (challenge: Challenge) => void;
   placeElement: (cellIndex: number, elementId: string) => void;
   removeElement: (cellIndex: number) => void;
+  moveElement: (fromCell: number, toCell: number) => void;
   selectElement: (elementId: string | null) => void;
   useBonus: (bonusId: BonusId) => void;
   setHintCells: (cells: number[], type: GameState['hintType']) => void;
@@ -101,6 +102,27 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const newBoard = [...playerBoard];
     newBoard[cellIndex] = null;
+    set({ playerBoard: newBoard });
+  },
+
+  moveElement: (fromCell, toCell) => {
+    const { currentChallenge, playerBoard } = get();
+    if (!currentChallenge) return;
+    if (fromCell === toCell) return;
+
+    // La case source doit contenir un élément posé par le joueur (non fixe)
+    const isFromFixed = currentChallenge.fixedPlacements.some(fp => fp.cellIndex === fromCell);
+    if (isFromFixed) return;
+
+    // La case cible ne peut pas être une case fixe
+    const isToFixed = currentChallenge.fixedPlacements.some(fp => fp.cellIndex === toCell);
+    if (isToFixed) return;
+
+    const newBoard = [...playerBoard];
+    // Permutation : l'élément cible (null ou un jeton posé) prend la place source
+    const temp = newBoard[toCell];
+    newBoard[toCell] = newBoard[fromCell];
+    newBoard[fromCell] = temp ?? null;
     set({ playerBoard: newBoard });
   },
 
