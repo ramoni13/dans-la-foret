@@ -94,10 +94,15 @@ export default function GameScreen() {
   const [briefingForcedOpen, setBriefingForcedOpen] = useState(false);
 
   const handleBriefingClose = useCallback(() => {
+    const wasFirstOpen = !briefingDone;
     setBriefingDone(true);
     setBriefingForcedOpen(false);
-    game.startTimer();   // Démarre le chrono APRÈS fermeture du briefing
-  }, [game]);
+    // Ne démarrer le chrono qu'au premier "Jouer" (pas quand on rouvre via "?")
+    // pour éviter de réinitialiser startTime et remettre le compteur à zéro.
+    if (wasFirstOpen) {
+      game.startTimer();
+    }
+  }, [game, briefingDone]);
 
   // Note : GestureHandlerRootView ne forward pas de ref (composant fonction sans forwardRef)
   // et couvre toujours l'intégralité de l'écran → son offset est { x: 0, y: 0 } par définition.
@@ -136,6 +141,16 @@ export default function GameScreen() {
       game.loadChallenge(found);
       // Mémoriser le dernier défi joué pour l'écran d'accueil
       player.setLastPlayed(found.id);
+      // Le briefing est affiché automatiquement uniquement sur le défi n°1 du niveau.
+      // Sur les défis suivants (challengeNumber >= 2), il n'y a pas de briefing initial :
+      // on démarre le chrono directement ici.
+      if (found.challengeNumber !== 1) {
+        // Petit délai pour laisser loadChallenge initialiser l'état avant startTimer
+        setTimeout(() => game.startTimer(), 50);
+        setBriefingDone(true);
+      } else {
+        setBriefingDone(false);
+      }
     }
   }, [challengeId]);
 
@@ -427,18 +442,6 @@ export default function GameScreen() {
           />
         )}
 
-        {/* ── Briefing de niveau ── */}
-        {/* Affiché automatiquement sur le 1er défi du niveau,
-            ou manuellement via le bouton "?" (briefingForcedOpen) */}
-        {challenge && levelMeta &&
-         (briefingForcedOpen || (!briefingDone && challenge.challengeNumber === 1)) && (
-          <LevelBriefingModal
-            challenge={challenge}
-            levelMeta={levelMeta}
-            onClose={handleBriefingClose}
-          />
-        )}
-
         {/* ── Modal victoire ── */}
         <VictoryModal
           visible={game.isVictory}
@@ -481,6 +484,20 @@ export default function GameScreen() {
           }}
         />
       </View>
+
+      {/* ── Briefing de niveau ── */}
+      {/* Rendu directement dans GestureHandlerRootView (hors du View avec paddingTop/Bottom)
+          pour que absoluteFillObject couvre VRAIMENT tout l'écran sans double-insets */}
+      {/* Affiché automatiquement sur le 1er défi du niveau,
+          ou manuellement via le bouton "?" (briefingForcedOpen) */}
+      {challenge && levelMeta &&
+       (briefingForcedOpen || (!briefingDone && challenge.challengeNumber === 1)) && (
+        <LevelBriefingModal
+          challenge={challenge}
+          levelMeta={levelMeta}
+          onClose={handleBriefingClose}
+        />
+      )}
     </GestureHandlerRootView>
   );
 }
