@@ -10,34 +10,107 @@ import {
   signOut,
   updateProfile,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   User,
   GoogleAuthProvider,
   signInWithPopup,
+  fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import { Platform } from 'react-native';
 import { auth } from './firebase';
-import { createPlayer, getPlayer } from './playerService';
+import { createPlayer, getPlayer, isUsernameTaken } from './playerService';
 
-// ── Inscription email/password ─────────────────────────────
+// ── Traduction des codes d'erreur Firebase en messages lisibles ───────────────
+export function translateAuthError(code: string): string {
+  const map: Record<string, string> = {
+    'auth/email-already-in-use':    'Cette adresse e-mail est déjà utilisée par un autre compte.',
+    'auth/invalid-email':           'Adresse e-mail invalide.',
+    'auth/weak-password':           'Le mot de passe doit contenir au moins 6 caractères.',
+    'auth/user-not-found':          'Aucun compte trouvé avec cet e-mail.',
+    'auth/wrong-password':          'Mot de passe incorrect.',
+    'auth/too-many-requests':       'Trop de tentatives. Réessaie dans quelques minutes.',
+    'auth/network-request-failed':  'Erreur réseau. Vérifie ta connexion internet.',
+    'auth/user-disabled':           'Ce compte a été désactivé.',
+    'auth/invalid-credential':      'Identifiants invalides. Vérifie ton e-mail et ton mot de passe.',
+  };
+  return map[code] ?? 'Une erreur inattendue est survenue. Réessaie.';
+}
+
+// ── Vérifier si une adresse e-mail est déjà utilisée ─────────────────────────
+// Retourne true si au moins un compte existe avec cet e-mail.
+export async function isEmailAlreadyUsed(email: string): Promise<boolean> {
+  try {
+    const methods = await fetchSignInMethodsForEmail(auth, email);
+    return methods.length > 0;
+  } catch {
+    return false; // En cas d'erreur réseau on ne bloque pas, Firebase le détectera
+  }
+}
+
+// ── Inscription email/password ─────────────────────────────────────────────────
+// Vérifie : pseudo unique + e-mail libre avant création du compte Firebase.
 export async function registerWithEmail(
   email: string,
   password: string,
   username: string
 ): Promise<User> {
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  // 1. Vérifier unicité du pseudo (insensible à la casse)
+  const pseudoTaken = await isUsernameTaken(username);
+  if (pseudoTaken) {
+    throw Object.assign(
+      new Error('Ce nom de joueur est déjà pris. Choisis-en un autre.'),
+      { code: 'app/username-taken' }
+    );
+  }
+
+  // 2. Créer le compte Firebase Auth
+  //    Firebase lève auth/email-already-in-use automatiquement si l'e-mail existe
+  let cred;
+  try {
+    cred = await createUserWithEmailAndPassword(auth, email, password);
+  } catch (err: any) {
+    throw Object.assign(
+      new Error(translateAuthError(err?.code ?? '')),
+      { code: err?.code }
+    );
+  }
+
+  // 3. Mettre à jour le displayName et créer le profil Firestore
   await updateProfile(cred.user, { displayName: username });
-  // Créer le profil Firestore
   await createPlayer(cred.user.uid, username);
   return cred.user;
 }
 
-// ── Connexion email/password ───────────────────────────────
+// ── Connexion email/password ────────────────────────────────────────────────
 export async function loginWithEmail(
   email: string,
   password: string
 ): Promise<User> {
-  const cred = await signInWithEmailAndPassword(auth, email, password);
-  return cred.user;
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    return cred.user;
+  } catch (err: any) {
+    throw Object.assign(
+      new Error(translateAuthError(err?.code ?? '')),
+      { code: err?.code }
+    );
+  }
+}
+
+// ── Mot de passe oublié ─────────────────────────────────────────────────────
+// Envoie un e-mail de réinitialisation via Firebase Auth.
+export async function sendPasswordReset(email: string): Promise<void> {
+  if (!email.trim()) {
+    throw new Error('Saisis ton adresse e-mail pour recevoir le lien.');
+  }
+  try {
+    await sendPasswordResetEmail(auth, email.trim());
+  } catch (err: any) {
+    throw Object.assign(
+      new Error(translateAuthError(err?.code ?? '')),
+      { code: err?.code }
+    );
+  }
 }
 
 // ── Connexion Google (web uniquement) ─────────────────────
