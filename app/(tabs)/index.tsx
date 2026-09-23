@@ -3,7 +3,7 @@
 // Progression globale + dernier défi joué + stats rapides
 // ============================================================
 
-import React, { useMemo, useEffect, useState, useRef } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
 import { onAuthChange } from '../../src/services/authService';
 import {
@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
-  Animated,
   Platform,
 } from 'react-native';
 
@@ -74,9 +73,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const player = usePlayerStore();
 
-  // Animation barre de progression
-  const progressAnim = useRef(new Animated.Value(0)).current;
-
   // ── Redirection vers accueil après connexion ────────────────────────────────────────────
   const [prevUser, setPrevUser] = useState<User | null | undefined>(undefined);
   useEffect(() => {
@@ -87,13 +83,6 @@ export default function HomeScreen() {
     return unsub;
   }, []);
 
-  // ── Progression globale ────────────────────────────────────────────────────────────
-  const totalChallenges = ALL_CHALLENGES.length;
-  const totalCompleted  = player.completedChallenges.length;
-  const progressPct     = totalChallenges > 0
-    ? Math.round((totalCompleted / totalChallenges) * 100)
-    : 0;
-
   // ── Prochain défi à jouer ────────────────────────────────────────────────────────────
   // Premier défi non complété dans l'ordre, ou niveau_1_001 si tout est fait
   const nextChallenge = useMemo(() => {
@@ -101,29 +90,9 @@ export default function HomeScreen() {
     return next ?? ALL_CHALLENGES[0]; // Si tout complété → recommencer depuis le début
   }, [player.completedChallenges]);
 
+  const totalCompleted  = player.completedChallenges.length;
+  const totalChallenges = ALL_CHALLENGES.length;
   const allCompleted = totalCompleted >= totalChallenges;
-
-  // Animer la barre de progression au chargement
-  useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: progressPct / 100,
-      duration: 1000,
-      useNativeDriver: false, // false obligatoire car on anime 'width'
-    }).start();
-  }, [progressPct]);
-
-  // Meilleur niveau atteint (dernier niveau avec au moins 1 défi complété)
-  const bestLevel = useMemo(() => {
-    const levels = ['niveau_13','niveau_12','niveau_11','niveau_10','niveau_9',
-                    'niveau_8','niveau_7','niveau_6','niveau_5','niveau_4',
-                    'niveau_3','niveau_2','niveau_1'];
-    for (const lvl of levels) {
-      if (player.completedChallenges.some(id => id.startsWith(lvl))) {
-        return LEVEL_LABELS[lvl] ?? lvl;
-      }
-    }
-    return null;
-  }, [player.completedChallenges]);
 
   return (
     <SafeAreaView style={styles.root}>
@@ -142,26 +111,6 @@ export default function HomeScreen() {
           <View style={styles.seedsHeroBadge}>
             <Text style={styles.seedsHeroText}>🌱 {player.seeds} graines</Text>
           </View>
-        </View>
-
-        {/* ── Progression globale ── */}
-        <View style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Progression globale</Text>
-            <Text style={styles.progressPct}>{progressPct}%</Text>
-          </View>
-          <View style={styles.progressBarBg}>
-            <Animated.View style={[
-              styles.progressBarFill,
-              { width: progressAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%'],
-              })},
-            ]} />
-          </View>
-          <Text style={styles.progressLabel}>
-            {totalCompleted} / {totalChallenges} défis complétés
-          </Text>
         </View>
 
         {/* ── Carte Prochain défi ── */}
@@ -219,20 +168,7 @@ export default function HomeScreen() {
             <Text style={styles.statValue}>{player.stats.currentStreak}</Text>
             <Text style={styles.statLabel}>Série en cours</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{player.stats.longestStreak}</Text>
-            <Text style={styles.statLabel}>Meilleure série</Text>
-          </View>
         </View>
-
-        {/* ── Meilleur niveau atteint ── */}
-        {bestLevel && (
-          <View style={styles.bestLevelCard}>
-            <Text style={styles.bestLevelLabel}>Meilleur niveau atteint</Text>
-            <Text style={styles.bestLevelValue}>{bestLevel}</Text>
-          </View>
-        )}
 
       </ScrollView>
     </SafeAreaView>
@@ -310,54 +246,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#fff',
-  },
-
-  // Progression globale
-  progressCard: {
-    backgroundColor: Colors.ui.card,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.ui.border,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.forest.dark,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  progressPct: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.forest.medium,
-  },
-  progressBarBg: {
-    height: 10,
-    backgroundColor: Colors.ui.border,
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  progressLabel: {
-    fontSize: 12,
-    color: Colors.ui.textLight,
-    textAlign: 'right',
   },
 
   // Carte Reprendre
@@ -474,26 +362,4 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
 
-  // Meilleur niveau
-  bestLevelCard: {
-    backgroundColor: Colors.forest.accent + '15',
-    borderRadius: 14,
-    padding: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.forest.accent + '40',
-    gap: 4,
-  },
-  bestLevelLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.ui.textLight,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  bestLevelValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.forest.dark,
-  },
 });
