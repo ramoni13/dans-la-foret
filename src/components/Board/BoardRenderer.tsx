@@ -23,10 +23,6 @@ interface BoardRendererProps {
   getCellColor: (cellIndex: number) => string;
   onCellPress: (cellIndex: number) => void;
   onDrop: (cellIndex: number, elementId: string) => void;
-  // Drag depuis une case de la grille vers une autre
-  onCellDragStart?: (cellIndex: number, elementId: string, x: number, y: number) => void;
-  onCellDragMove?: (x: number, y: number) => void;
-  onCellDragEnd?: (x: number, y: number) => void;
 }
 
 export const BoardRenderer: React.FC<BoardRendererProps> = ({
@@ -37,9 +33,6 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
   onCellPress,
   onDrop,
   hoveredCell = null,
-  onCellDragStart,
-  onCellDragMove,
-  onCellDragEnd,
 }) => {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
@@ -83,9 +76,6 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         onPress={onCellPress}
         onDrop={onDrop}
         positionStyle={{ left: x, top: y }}
-        onCellDragStart={onCellDragStart}
-        onCellDragMove={onCellDragMove}
-        onCellDragEnd={onCellDragEnd}
       />
     );
   });
