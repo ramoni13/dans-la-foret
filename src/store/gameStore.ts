@@ -42,6 +42,7 @@ interface GameState {
   tick: (elapsedMs: number) => void;
   validateChallenge: () => ValidationResult; // Appelé par le bouton "Valider"
   dismissValidation: () => void;             // Ferme le modal échec
+  startTimer: () => void;
   resetGame: () => void;
 }
 
@@ -69,7 +70,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       currentChallenge: challenge,
       playerBoard: board,
       selectedElement: null,
-      startTime: Date.now(),
+      startTime: null,   // Le timer démarre APRÈS le briefing (via startTimer)
       elapsedTime: 0,
       isVictory: false,
       bonusUsed: [],
@@ -149,6 +150,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   setHintCells: (cells, type) => set({ hintCells: cells, hintType: type }),
   clearHint: () => set({ hintCells: [], hintType: null }),
   tick: (elapsedMs) => set({ elapsedTime: elapsedMs }),
+  startTimer: () => set({ startTime: Date.now() }),
 
   // ── Validation manuelle (bouton "Valider") ──────────────────────
   validateChallenge: () => {
@@ -176,6 +178,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Comparer avec la solution
     for (let i = 0; i < playerBoard.length; i++) {
       if (playerBoard[i] !== solution[i]) errorCells.push(i);
+    }
+
+    if (errorCells.length > 0) {
+      console.warn('[Validation] Échec — cases incorrectes:', errorCells.map(i =>
+        `case${i}: joueur="${playerBoard[i]}" attendu="${solution[i]}"`
+      ).join(', '));
     }
 
     const result: ValidationResult = {

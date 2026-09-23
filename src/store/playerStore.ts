@@ -4,7 +4,8 @@
 // ============================================================
 
 import { create } from 'zustand';
-import { PlayerProfile } from '../services/playerService';
+import { PlayerProfile, computePlayerLevel } from '../services/playerService';
+import { Lang, getSystemLocale } from '../i18n/locale';
 
 interface PlayerStats {
   totalSolved: number;
@@ -24,8 +25,14 @@ interface PlayerState {
 
   stats: PlayerStats;
 
+  language: Lang;
+
+  // Niveau courant du joueur (calculé depuis completedChallenges.length)
+  currentLevel: number;
+
   // Actions
   setUser: (userId: string, username: string) => void;
+  setLanguage: (lang: Lang) => void;
   restoreFromCloud: (profile: PlayerProfile) => void;
   addSeeds: (amount: number) => void;
   spendSeeds: (amount: number) => boolean;
@@ -46,6 +53,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   lastPlayedChallengeId: null,
   friendChallengeTokens: 3,          // 3 jetons offerts au démarrage (tests)
 
+  language: getSystemLocale(),
+
+  currentLevel: computePlayerLevel(0), // Recalculé depuis completedChallenges.length à chaque mise à jour
+
   stats: {
     totalSolved: 0,
     bestTimes: {},
@@ -54,6 +65,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   setUser: (userId, username) => set({ userId, username }),
+
+  setLanguage: (lang) => set({ language: lang }),
 
   addFriendChallengeToken: () => set(state => ({
     friendChallengeTokens: state.friendChallengeTokens + 1,
@@ -72,6 +85,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     seeds: profile.seeds,
     completedChallenges: profile.completedChallenges,
     isPremium: profile.isPremium,
+    currentLevel: computePlayerLevel(profile.completedChallenges?.length ?? 0),
     stats: {
       totalSolved: profile.stats.totalSolved,
       bestTimes: profile.stats.bestTimes,
@@ -105,6 +119,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
       return {
         completedChallenges: newCompleted,
+        currentLevel: computePlayerLevel(newCompleted.length),
         friendChallengeTokens: tokenEarned
           ? state.friendChallengeTokens + 1
           : state.friendChallengeTokens,
@@ -131,6 +146,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     isPremium: false,
     lastPlayedChallengeId: null,
     friendChallengeTokens: 0,
+    currentLevel: 1,
     stats: { totalSolved: 0, bestTimes: {}, currentStreak: 0, longestStreak: 0 },
   }),
 }));
