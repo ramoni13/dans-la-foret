@@ -1,0 +1,17 @@
+{
+  "btn_play": "Play",
+  "label_cells": "cells",
+  "label_empty": "empty",
+  "label_new": "New!",
+  "level_prefix": "Level",
+  "a11y_no_same": "Two {{element}} cannot be adjacent",
+  "a11y_require_neighbor": "{{e1}} must be adjacent to {{e2}}",
+  "a11y_forbid_neighbor": "{{e1}} cannot be adjacent to {{e2}}",
+  "a11y_connected_group": "All {{element}} form one pack",
+  "a11y_paired": "Equal numbers of {{e1}} and {{e2}}",
+  "a11y_chain": "{{e1}} must be adjacent to {{e2}}",
+  "a11y_singleton": "Only one {{element}} per puzzle",
+  "briefing_rules_title": "Level rules",
+  "briefing_recap_title": "This puzzle",
+  "label_expert": "Expert mode - no bonus"
+}

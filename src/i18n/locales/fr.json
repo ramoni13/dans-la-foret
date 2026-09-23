@@ -1,0 +1,17 @@
+{
+  "btn_play": "Jouer",
+  "label_cells": "cases",
+  "label_empty": "vides",
+  "label_new": "Nouveau !",
+  "level_prefix": "Niveau",
+  "a11y_no_same": "Deux {{element}} ne peuvent pas être voisins",
+  "a11y_require_neighbor": "{{e1}} doit être voisin de {{e2}}",
+  "a11y_forbid_neighbor": "{{e1}} ne peut pas être voisin de {{e2}}",
+  "a11y_connected_group": "Tous les {{element}} forment une seule meute",
+  "a11y_paired": "Autant de {{e1}} que de {{e2}}",
+  "a11y_chain": "{{e1}} doit être voisin de {{e2}}",
+  "a11y_singleton": "Un seul {{element}} par défi",
+  "briefing_rules_title": "Règles du niveau",
+  "briefing_recap_title": "Ce défi",
+  "label_expert": "Mode expert - sans bonus"
+}
