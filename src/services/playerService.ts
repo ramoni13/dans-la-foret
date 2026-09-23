@@ -33,6 +33,20 @@ export interface PlayerProfile {
   updatedAt?: any;
 }
 
+// ── Calcul du niveau courant d'un joueur ──────────────────
+// Basé sur le nombre de défis solo complétés : 1 niveau par tranche de 3 défis.
+// Niveau 1 minimum, niveau 15 maximum.
+export function computePlayerLevel(completedCount: number): number {
+  return Math.min(15, Math.max(1, Math.ceil(completedCount / 3)));
+}
+
+// ── Résultat de recherche d'ami (avec niveau calculé) ─────
+export interface PlayerSearchResult {
+  userId: string;
+  username: string;
+  level: number;         // Niveau calculé du joueur
+}
+
 // ── Créer ou mettre à jour le profil ──────────────────────
 export async function upsertPlayer(profile: PlayerProfile): Promise<void> {
   const ref = doc(db, 'players', profile.userId);
@@ -79,12 +93,12 @@ export async function updateSeeds(userId: string, seeds: number): Promise<void> 
   });
 }
 
-// ── Chercher des joueurs par pseudo (recherche préfixe) ───────────
+// ── Chercher des joueurs par pseudo (avec niveau calculé) ─────────
 export async function searchPlayers(
   searchTerm: string,
   excludeUid: string,
   maxResults = 8,
-): Promise<PlayerProfile[]> {
+): Promise<PlayerSearchResult[]> {
   if (!searchTerm.trim() || searchTerm.length < 2) return [];
 
   // Firestore ne supporte pas le LIKE — on simule un préfixe avec >= et <
@@ -101,7 +115,12 @@ export async function searchPlayers(
   const snap = await getDocs(q);
   return snap.docs
     .map(d => d.data() as PlayerProfile)
-    .filter(p => p.userId !== excludeUid);
+    .filter(p => p.userId !== excludeUid)
+    .map(p => ({
+      userId: p.userId,
+      username: p.username,
+      level: computePlayerLevel(p.completedChallenges?.length ?? 0),
+    }));
 }
 
 // ── Marquer un défi comme complété ────────────────────────

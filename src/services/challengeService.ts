@@ -3,12 +3,16 @@
 // Collection : /friendChallenges/{id}
 //
 // Flux :
-//   Joueur A génère un défi inédit → joue sans bonus → envoie le lien
-//   Joueur B reçoit le lien → joue le même défi sans bonus → résultat comparé
+//   Joueur A cherche un ami par pseudo → génère un défi au niveau min(A,B)
+//   → joue sans bonus → envoie directement à l'ami choisi
+//   Joueur B reçoit le défi → peut refuser ou jouer → résultat comparé
 //
 // Le défi généré (fixedPlacements + availableTokens + solution) est
 // stocké dans Firestore. La solution est lue uniquement pour valider
-// le résultat de B côté serveur (règles Firestore à durcir en Phase 6).
+// le résultat de B côté serveur.
+//
+// Expiration : 1 semaine sans réponse de B.
+// Récompense vainqueur : 15 graines.
 // ============================================================
 
 import {
@@ -19,7 +23,6 @@ import {
   updateDoc,
   query,
   where,
-  orderBy,
   getDocs,
   serverTimestamp,
   Timestamp,
@@ -27,10 +30,14 @@ import {
 import { db } from './firebase';
 import { FixedPlacement, TokenCount } from '../core/models/Challenge';
 
+export const CHALLENGE_WINNER_SEEDS = 15; // Graines gagnées par le vainqueur
+const CHALLENGE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 1 semaine
+
 export type FriendChallengeStatus =
-  | 'pending'    // Joueur A a joué, attend que B accepte
+  | 'pending'    // Joueur A a joué, attend que B accepte ou refuse
+  | 'refused'    // Joueur B a refusé le défi
   | 'completed'  // Les deux ont joué, résultat disponible
-  | 'expired';   // 48h sans réponse de B
+  | 'expired';   // 1 semaine sans réponse de B
 
 // Données du défi généré à la volée (plateau + solution)
 export interface FriendChallengeData {
@@ -38,6 +45,7 @@ export interface FriendChallengeData {
   fixedPlacements: FixedPlacement[];
   availableTokens: TokenCount[];
   solution: string[];            // Stockée pour valider le résultat de B
+  level: number;                 // Niveau du défi (min des deux joueurs)
 }
 
 export interface FriendChallengeDoc {
@@ -48,9 +56,11 @@ export interface FriendChallengeDoc {
   challengerUid: string;
   challengerName: string;
   challengerTime: number;        // Temps de A en ms (sans bonus)
+  challengerLevel: number;       // Niveau de A au moment du défi
   // Joueur B (adversaire)
-  opponentUid?: string;
-  opponentName?: string;
+  opponentUid: string;           // Requis : le défi est toujours assigné à un ami précis
+  opponentName: string;
+  opponentLevel: number;         // Niveau de B au moment du défi
   opponentTime?: number;         // Temps de B en ms
   // Résultat
   status: FriendChallengeStatus;
@@ -61,24 +71,28 @@ export interface FriendChallengeDoc {
   updatedAt?: Timestamp;
 }
 
-// ── Créer un défi (Joueur A vient de jouer) ───────────────
+// ── Créer un défi (Joueur A a trouvé un ami et joué) ──────
 export async function createFriendChallenge(
   challengeData: FriendChallengeData,
   challengerUid: string,
   challengerName: string,
   challengerTime: number,
-  opponentUid?: string,    // Optionnel : si connu, le défi est assigné directement
-  opponentName?: string,
+  challengerLevel: number,
+  opponentUid: string,
+  opponentName: string,
+  opponentLevel: number,
 ): Promise<string> {
-  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // +48h
+  const expiresAt = new Date(Date.now() + CHALLENGE_EXPIRY_MS); // +1 semaine
 
   const ref = await addDoc(collection(db, 'friendChallenges'), {
     challengeData,
     challengerUid,
     challengerName,
     challengerTime,
-    ...(opponentUid ? { opponentUid } : {}),
-    ...(opponentName ? { opponentName } : {}),
+    challengerLevel,
+    opponentUid,
+    opponentName,
+    opponentLevel,
     status: 'pending',
     createdAt: serverTimestamp(),
     expiresAt: Timestamp.fromDate(expiresAt),
@@ -99,35 +113,51 @@ export async function getFriendChallenge(id: string): Promise<FriendChallengeDoc
 export async function answerFriendChallenge(
   friendChallengeId: string,
   opponentUid: string,
-  opponentName: string,
   opponentTime: number,
+  challengerUid: string,
   challengerTime: number,
-): Promise<void> {
-  const winnerId = opponentTime <= challengerTime ? opponentUid : 'challenger';
+): Promise<{ winnerId: string }> {
+  const winnerId = opponentTime <= challengerTime ? opponentUid : challengerUid;
 
   await updateDoc(doc(db, 'friendChallenges', friendChallengeId), {
-    opponentUid,
-    opponentName,
     opponentTime,
     status: 'completed',
     winnerId,
     updatedAt: serverTimestamp(),
   });
+
+  return { winnerId };
 }
 
-// ── Défis reçus (statut pending, pas encore répondus par moi) ─
+// ── Refuser un défi (Joueur B refuse) ─────────────────────
+export async function refuseFriendChallenge(
+  friendChallengeId: string,
+): Promise<void> {
+  await updateDoc(doc(db, 'friendChallenges', friendChallengeId), {
+    status: 'refused',
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ── Défis reçus (statut pending uniquement — à répondre) ──
 export async function getReceivedChallenges(
   myUid: string,
 ): Promise<FriendChallengeDoc[]> {
-  // Requête simple sans orderBy pour éviter les index composites
+  // Uniquement les défis en attente de réponse
   const q = query(
     collection(db, 'friendChallenges'),
     where('opponentUid', '==', myUid),
     where('status', '==', 'pending'),
   );
   const snap = await getDocs(q);
+  const now = Date.now();
   return snap.docs
     .map(d => ({ id: d.id, ...d.data() } as FriendChallengeDoc))
+    // Filtrer côté client les défis expirés (Firestore ne purge pas automatiquement)
+    .filter(d => {
+      const exp = (d.expiresAt as Timestamp)?.toMillis() ?? Infinity;
+      return exp > now;
+    })
     .sort((a, b) => {
       const ta = (a.createdAt as Timestamp)?.toMillis() ?? 0;
       const tb = (b.createdAt as Timestamp)?.toMillis() ?? 0;
@@ -158,7 +188,6 @@ export async function getSentChallenges(
 export async function getCompletedChallenges(
   myUid: string,
 ): Promise<FriendChallengeDoc[]> {
-  // Requêtes simples sans orderBy pour éviter les index composites
   const qSent = query(
     collection(db, 'friendChallenges'),
     where('challengerUid', '==', myUid),
@@ -178,3 +207,7 @@ export async function getCompletedChallenges(
     return tb - ta;
   });
 }
+
+// Note : la purge des défis expirés (status → 'expired') sera gérée
+// par une Cloud Function Firestore. Côté client, les défis expirés sont
+// filtrés dans getReceivedChallenges() via leur champ expiresAt.
