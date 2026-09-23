@@ -23,6 +23,7 @@ import { User } from 'firebase/auth';
 import { Colors } from '../../src/constants/colors';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { formatTime } from '../../src/utils/boardUtils';
+import { Lang } from '../../src/i18n';
 import {
   registerWithEmail,
   loginWithEmail,
@@ -31,7 +32,6 @@ import {
   logout,
   onAuthChange,
 } from '../../src/services/authService';
-import { getPlayer } from '../../src/services/playerService';
 
 // Niveaux pour la progression (13 niveaux, 10 défis chacun)
 const LEVELS = [
@@ -62,18 +62,12 @@ export default function ProfileScreen() {
   const [username, setUsername]         = useState('');
   const [submitting, setSubmitting]     = useState(false);
 
-  // Observer l'état de connexion Firebase
+  // Observer l'état de connexion Firebase (UI seulement — la restauration
+  // du profil est gérée dans _layout.tsx au montage de l'app)
   useEffect(() => {
-    const unsub = onAuthChange(async (user) => {
+    const unsub = onAuthChange((user) => {
       setFirebaseUser(user);
       setAuthLoading(false);
-      // Si connecté et non anonyme → restaurer toute la progression depuis Firestore
-      if (user && !user.isAnonymous) {
-        const profile = await getPlayer(user.uid);
-        if (profile) {
-          player.restoreFromCloud(profile); // ← remplace setUser : restaure TOUT
-        }
-      }
     });
     return unsub;
   }, []);
@@ -288,8 +282,33 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <Text style={styles.guestNote}>
-            En tant qu’invité, ta progression n’est pas sauvegardée sur le cloud.
+            En tant qu'invité, ta progression n'est pas sauvegardée sur le cloud.
           </Text>
+
+          {/* Sélecteur de langue (accessible même non connecté) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Langue / Language</Text>
+            <View style={styles.langRow}>
+              {(['fr', 'en'] as Lang[]).map(lang => (
+                <TouchableOpacity
+                  key={lang}
+                  style={[
+                    styles.langBtn,
+                    player.language === lang && styles.langBtnActive,
+                  ]}
+                  onPress={() => player.setLanguage(lang)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.langBtnText,
+                    player.language === lang && styles.langBtnTextActive,
+                  ]}>
+                    {lang === 'fr' ? '🇫🇷 Français' : '🇬🇧 English'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -388,6 +407,31 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Sélecteur de langue */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Langue / Language</Text>
+          <View style={styles.langRow}>
+            {(['fr', 'en'] as Lang[]).map(lang => (
+              <TouchableOpacity
+                key={lang}
+                style={[
+                  styles.langBtn,
+                  player.language === lang && styles.langBtnActive,
+                ]}
+                onPress={() => player.setLanguage(lang)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.langBtnText,
+                  player.language === lang && styles.langBtnTextActive,
+                ]}>
+                  {lang === 'fr' ? '🇫🇷 Français' : '🇬🇧 English'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {/* Déconnexion */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
@@ -576,6 +620,33 @@ const styles = StyleSheet.create({
   resetBtnText: {
     fontSize: 13,
     color: Colors.ui.textLight,
+  },
+  langRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  langBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.ui.border,
+    backgroundColor: Colors.ui.card,
+    alignItems: 'center',
+  },
+  langBtnActive: {
+    backgroundColor: Colors.forest.medium + '15',
+    borderColor: Colors.forest.medium,
+  },
+  langBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.ui.textLight,
+  },
+  langBtnTextActive: {
+    color: Colors.forest.dark,
+    fontWeight: '700',
   },
   premiumCard: {
     backgroundColor: Colors.forest.dark,

@@ -6,7 +6,10 @@ import { Tabs } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import React from 'react';
+import React, { useEffect } from 'react';
+import { usePlayerStore } from '../../src/store/playerStore';
+import { onAuthChange } from '../../src/services/authService';
+import { getPlayer } from '../../src/services/playerService';
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return (
@@ -17,9 +20,21 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 }
 
 export default function TabsLayout() {
-  // On récupère les insets réels du système (barre de navigation Android,
-  // home indicator iOS, etc.) pour positionner la tab bar correctement
+  const player = usePlayerStore();
   const insets = useSafeAreaInsets();
+
+  // Restaurer le profil depuis Firestore dès le montage de l'app,
+  // quel que soit l'onglet ouvert — garantit que currentLevel est correct
+  // même si l'utilisateur n'ouvre jamais l'onglet Profil.
+  useEffect(() => {
+    const unsub = onAuthChange(async (user) => {
+      if (user && !user.isAnonymous) {
+        const profile = await getPlayer(user.uid);
+        if (profile) player.restoreFromCloud(profile);
+      }
+    });
+    return unsub;
+  }, []);
   // paddingBottom = inset bas réel + espace interne pour les icônes
   const tabBarPaddingBottom = insets.bottom + 6;
   const tabBarHeight = tabBarPaddingBottom + 44; // 44 = hauteur minimale des icônes

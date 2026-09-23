@@ -2,10 +2,13 @@
 // ÉCRAN DE JEU — MODE DÉFI ENTRE AMIS
 //
 // CAS A — Joueur A (créateur) :
-//   joue le défi sans bonus → victoire → cherche un ami par pseudo → envoie
+//   params : data, challengerUid, challengerName, challengerLevel, friendData
+//   → joue sans bonus → victoire → modal "Envoyer" ou "Quitter"
+//   → "Envoyer" : createFriendChallenge() puis retour onglet Défis
 //
 // CAS B — Joueur B (adversaire) :
-//   reçoit le défi → joue sans bonus → résultat comparé affiché
+//   params : data, friendChallengeId, challengerUid, challengerTime, opponentUid, opponentName, opponentLevel
+//   → joue → victoire → answerFriendChallenge() → résultat + 15 🌱 si vainqueur
 // ============================================================
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -17,7 +20,6 @@ import {
   Platform,
   Modal,
   ActivityIndicator,
-  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,9 +28,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { MobileDragGhost } from '../../src/components/Elements/MobileDragGhost';
-import { DragGhost } from '../../src/components/Elements/DragGhost';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
-import { useConfetti, Confetti, ConfettiPiece } from '../../src/components/Game/Confetti';
+import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { FailModal } from '../../src/components/Game/FailModal';
 
 import { useGame } from '../../src/hooks/useGame';
@@ -39,140 +40,156 @@ import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { findNearestCell, formatTime } from '../../src/utils/boardUtils';
 import { Colors } from '../../src/constants/colors';
 import { CELL_SIZE } from '../../src/components/Board/Cell';
-import { Challenge, FixedPlacement, TokenCount } from '../../src/core/models/Challenge';
+import { Challenge } from '../../src/core/models/Challenge';
 import {
   FriendChallengeData,
   createFriendChallenge,
   answerFriendChallenge,
+  CHALLENGE_WINNER_SEEDS,
 } from '../../src/services/challengeService';
-import { searchPlayers, PlayerProfile } from '../../src/services/playerService';
+import { updateSeeds } from '../../src/services/playerService';
+import { auth } from '../../src/services/firebase';
 
-// ── Modal résultat + recherche d'ami ──────────────────────────────────────────
-function FriendResultModal({
-  visible, isChallenger, myTime, challengerTime, myUid, myName, challengeData, onClose, confettiPieces,
+// ── Modal résultat Joueur A (après sa partie, avant envoi) ────────────────────
+function ChallengerResultModal({
+  visible,
+  myTime,
+  friendName,
+  friendLevel,
+  challengeLevel,
+  sending,
+  sent,
+  onSend,
+  onQuit,
 }: {
   visible: boolean;
-  isChallenger: boolean;
   myTime: number;
-  challengerTime: number;
-  myUid: string;
-  myName: string;
-  challengeData: FriendChallengeData | null;
-  onClose: () => void;
-  confettiPieces: ConfettiPiece[];
+  friendName: string;
+  friendLevel: number;
+  challengeLevel: number;
+  sending: boolean;
+  sent: boolean;
+  onSend: () => void;
+  onQuit: () => void;
 }) {
-  const iWon = !isChallenger && myTime <= challengerTime;
-  const diff = Math.abs(myTime - challengerTime);
-  const [query, setQuery]         = useState('');
-  const [results, setResults]     = useState<PlayerProfile[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [sending, setSending]     = useState(false);
-  const [sentTo, setSentTo]       = useState<string | null>(null);
-  const debounce                  = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (debounce.current) clearTimeout(debounce.current);
-    if (query.length < 2) { setResults([]); setSearching(false); return; }
-    setSearching(true);
-    debounce.current = setTimeout(async () => {
-      try { setResults(await searchPlayers(query, myUid)); }
-      catch { setResults([]); }
-      finally { setSearching(false); }
-    }, 400);
-  }, [query]);
-
-  const handleSend = async (p: PlayerProfile) => {
-    if (!challengeData || sending) return;
-    setSending(true);
-    try {
-      await createFriendChallenge(challengeData, myUid, myName, myTime, p.userId, p.username);
-      setSentTo(p.username);
-    } catch {
-      if (Platform.OS === 'web') window.alert("Erreur lors de l'envoi. Réessaie.");
-    } finally { setSending(false); }
-  };
-
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={rs.overlay}>
         <View style={rs.card}>
-          <Text style={rs.emoji}>{isChallenger ? '⏱️' : iWon ? '🏆' : '😤'}</Text>
-          <Text style={rs.title}>
-            {isChallenger ? 'Défi résolu !' : iWon ? 'Victoire !' : 'Défaite…'}
-          </Text>
+          <Text style={rs.emoji}>⏱️</Text>
+          <Text style={rs.title}>Défi résolu !</Text>
+
+          <View style={rs.timeBlock}>
+            <Text style={rs.timeLabel}>Ton temps</Text>
+            <Text style={rs.timeValue}>{formatTime(myTime)}</Text>
+          </View>
+
+          <View style={rs.infoBox}>
+            <Text style={rs.infoText}>
+              Niveau du défi : <Text style={rs.infoStrong}>Niv. {challengeLevel}</Text>
+            </Text>
+            <Text style={rs.infoText}>
+              Ami ciblé : <Text style={rs.infoStrong}>{friendName}</Text>{' '}
+              <Text style={rs.infoLight}>(Niveau {friendLevel})</Text>
+            </Text>
+          </View>
+
+          {sent ? (
+            <View style={rs.sentBox}>
+              <Text style={rs.sentText}>✅ Défi envoyé à {friendName} !</Text>
+              <Text style={rs.sentSub}>Il a 1 semaine pour relever le défi.</Text>
+            </View>
+          ) : (
+            <View style={rs.btnGroup}>
+              <TouchableOpacity
+                style={[rs.btnSend, sending && rs.btnDisabled]}
+                onPress={onSend}
+                disabled={sending}
+                activeOpacity={0.8}
+              >
+                {sending
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={rs.btnSendText}>📤 Envoyer le défi</Text>
+                }
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={rs.btnQuit}
+                onPress={onQuit}
+                activeOpacity={0.8}
+                disabled={sending}
+              >
+                <Text style={rs.btnQuitText}>Quitter sans envoyer</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {sent && (
+            <TouchableOpacity style={rs.btnClose} onPress={onQuit} activeOpacity={0.8}>
+              <Text style={rs.btnCloseText}>Retour aux défis</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Modal résultat Joueur B (résultat de la confrontation) ────────────────────
+function OpponentResultModal({
+  visible,
+  myTime,
+  challengerTime,
+  iWon,
+  onClose,
+  confettiPieces: _confetti,
+}: {
+  visible: boolean;
+  myTime: number;
+  challengerTime: number;
+  iWon: boolean;
+  onClose: () => void;
+  confettiPieces: any[];
+}) {
+  const diff = Math.abs(myTime - challengerTime);
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={rs.overlay}>
+        <View style={rs.card}>
+          <Text style={rs.emoji}>{iWon ? '🏆' : '😤'}</Text>
+          <Text style={rs.title}>{iWon ? 'Victoire !' : 'Défaite…'}</Text>
+
+          {iWon && (
+            <View style={rs.rewardBox}>
+              <Text style={rs.rewardText}>+{CHALLENGE_WINNER_SEEDS} 🌱 graines gagnées !</Text>
+            </View>
+          )}
+
           <View style={rs.timesRow}>
             <View style={rs.timeBlock}>
               <Text style={rs.timeLabel}>Ton temps</Text>
-              <Text style={[rs.timeValue, !isChallenger && iWon && { color: Colors.forest.medium }]}>
+              <Text style={[rs.timeValue, iWon && { color: Colors.forest.medium }]}>
                 {formatTime(myTime)}
               </Text>
             </View>
-            {!isChallenger && (
-              <View style={rs.timeBlock}>
-                <Text style={rs.timeLabel}>Son temps</Text>
-                <Text style={[rs.timeValue, !iWon && { color: Colors.forest.medium }]}>
-                  {formatTime(challengerTime)}
-                </Text>
-              </View>
-            )}
+            <View style={rs.timeBlock}>
+              <Text style={rs.timeLabel}>Son temps</Text>
+              <Text style={[rs.timeValue, !iWon && { color: Colors.forest.medium }]}>
+                {formatTime(challengerTime)}
+              </Text>
+            </View>
           </View>
-          {!isChallenger && (
-            <Text style={rs.diff}>
-              {iWon
-                ? `Gagné de ${formatTime(diff)} 🎉`
-                : `Perdu de ${formatTime(diff)} — revanche ?`}
-            </Text>
-          )}
 
-          {/* Sélecteur d'ami — Joueur A uniquement */}
-          {isChallenger && (
-            sentTo
-              ? <View style={rs.sentBox}>
-                  <Text style={rs.sentText}>✅ Défi envoyé à {sentTo} !</Text>
-                </View>
-              : <View style={rs.searchSection}>
-                  <Text style={rs.searchLabel}>👥 Envoyer le défi à un ami</Text>
-                  <TextInput
-                    style={rs.searchInput}
-                    placeholder="Chercher par pseudo…"
-                    placeholderTextColor={Colors.ui.textLight}
-                    value={query}
-                    onChangeText={setQuery}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  {searching && (
-                    <ActivityIndicator size="small" color={Colors.forest.medium} style={{ marginTop: 4 }} />
-                  )}
-                  {results.length > 0 && (
-                    <View style={rs.resultsList}>
-                      {results.map(p => (
-                        <TouchableOpacity
-                          key={p.userId}
-                          style={rs.resultRow}
-                          onPress={() => handleSend(p)}
-                          disabled={sending}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={rs.resultName}>{p.username}</Text>
-                          <Text style={rs.resultSend}>{sending ? '⏳' : 'Envoyer →'}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                  {query.length >= 2 && !searching && results.length === 0 && (
-                    <Text style={rs.noResult}>Aucun joueur trouvé</Text>
-                  )}
-                </View>
-          )}
+          <Text style={rs.diff}>
+            {iWon
+              ? `Gagné de ${formatTime(diff)} 🎉`
+              : `Perdu de ${formatTime(diff)} — revanche ?`}
+          </Text>
 
           <TouchableOpacity style={rs.btnClose} onPress={onClose} activeOpacity={0.8}>
             <Text style={rs.btnCloseText}>Retour aux défis</Text>
           </TouchableOpacity>
         </View>
       </View>
-      {/* Confettis dans le Modal — après la carte pour être au-dessus */}
-      <Confetti pieces={confettiPieces} />
     </Modal>
   );
 }
@@ -183,29 +200,43 @@ export default function FriendChallengeScreen() {
   const player = usePlayerStore();
   const params = useLocalSearchParams<{
     data:               string;
+    // Joueur A
     challengerUid?:     string;
     challengerName?:    string;
+    challengerLevel?:   string;
+    friendData?:        string;   // JSON { userId, username, level }
+    // Joueur B
     friendChallengeId?: string;
     challengerTime?:    string;
     opponentUid?:       string;
     opponentName?:      string;
+    opponentLevel?:     string;
   }>();
 
   const isChallenger   = !!params.challengerUid && !params.friendChallengeId;
   const challengerTime = params.challengerTime ? parseInt(params.challengerTime, 10) : 0;
+
+  // Données ami (Joueur A uniquement)
+  const friendData = React.useMemo(() => {
+    if (!params.friendData) return null;
+    try { return JSON.parse(decodeURIComponent(params.friendData)); }
+    catch { return null; }
+  }, [params.friendData]);
 
   const challengeData: FriendChallengeData | null = React.useMemo(() => {
     try { return JSON.parse(decodeURIComponent(params.data ?? '')); }
     catch { return null; }
   }, [params.data]);
 
+  const challengeLevel = challengeData?.level ?? 7;
+
   const challenge: Challenge | null = React.useMemo(() => {
     if (!challengeData) return null;
     return {
       id:               `friend_${Date.now()}`,
       boardId:          challengeData.boardId,
-      level:            'niveau_7' as any,
-      levelNumber:      7,
+      level:            `niveau_${challengeLevel}` as any,
+      levelNumber:      challengeLevel,
       challengeNumber:  1,
       fixedPlacements:  challengeData.fixedPlacements,
       availableTokens:  challengeData.availableTokens,
@@ -221,7 +252,18 @@ export default function FriendChallengeScreen() {
   const boardDef = challenge ? BoardRegistry[challenge.boardId] : null;
 
   useEffect(() => {
-    if (challenge) game.loadChallenge(challenge);
+    if (challenge) {
+      console.log('[FriendChallenge] Chargement défi:', {
+        boardId: challenge.boardId,
+        solutionLength: challenge.solution?.length,
+        solution: challenge.solution,
+        fixedCount: challenge.fixedPlacements?.length,
+        availableCount: challenge.availableTokens?.length,
+      });
+      game.loadChallenge(challenge);
+      // Démarrer le timer immédiatement (pas de modal briefing en mode défi ami)
+      setTimeout(() => game.startTimer(), 100);
+    }
   }, []);
 
   // ── Dimensions plateau ──────────────────────────────────────────────────────
@@ -229,7 +271,6 @@ export default function FriendChallengeScreen() {
   const [availableArea, setAvailableArea] = useState({ width: 0, height: 0 });
   const boardContainerRef                 = useRef<View>(null);
   const boardOffsetRef                    = useRef({ x: 0, y: 0 });
-  // Note : GestureHandlerRootView ne forward pas de ref et couvre tout l'écran → offset (0,0).
 
   // Ghost natif mobile
   const [ghostState, setGhostState] = useState<{
@@ -246,13 +287,8 @@ export default function FriendChallengeScreen() {
   }), []);
 
   // ── Drag & Drop ─────────────────────────────────────────────────────────────
-  const [draggingElement, setDraggingElement] = useState<string | null>(null);
-
   const findNearest = useCallback((x: number, y: number) => {
     if (!boardDef || boardSize.width === 0) return null;
-    // absoluteX/Y (mobile) et clientX/Y (web) sont en coords écran.
-    // boardOffsetRef est en coords écran (measureInWindow).
-    // GestureHandlerRootView couvre tout l'écran → offset (0,0), pas de correction.
     const relX = x - boardOffsetRef.current.x;
     const relY = y - boardOffsetRef.current.y;
     return findNearestCell(
@@ -261,25 +297,14 @@ export default function FriendChallengeScreen() {
     );
   }, [boardDef, boardSize]);
 
-  const { hoveredCell, handleDragStart, handleCellDragStart, handleDragMove, handleDragEnd } = useDragDrop({
+  const { hoveredCell, handleDragStart, handleDragMove, handleDragEnd } = useDragDrop({
     onDrop: (cellIndex, elementId) => {
       game.tryPlaceElement(cellIndex, elementId);
-      setDraggingElement(null);
-    },
-    onMoveFromCell: (fromCell, toCell) => {
-      game.moveElement(fromCell, toCell);
-      setDraggingElement(null);
     },
     findNearestCell: findNearest,
   });
 
-  // Ghost web pour les drags depuis la grille
-  const [boardDragGhostState, setBoardDragGhostState] = useState<{
-    visible: boolean; elementId: string | null; x: number; y: number;
-  }>({ visible: false, elementId: null, x: 0, y: 0 });
-
   const wrappedDragStart = useCallback((elementId: string) => {
-    setDraggingElement(elementId);
     setGhostState({ visible: false, elementId, x: 0, y: 0 });
     if (Platform.OS !== 'web' && boardContainerRef.current) {
       boardContainerRef.current.measureInWindow((x, y) => {
@@ -290,40 +315,7 @@ export default function FriendChallengeScreen() {
   }, [handleDragStart]);
 
   const wrappedDragEnd = useCallback((x: number, y: number) => {
-    setDraggingElement(null);
     setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    handleDragEnd(x, y);
-  }, [handleDragEnd]);
-
-  // Drag depuis une case de la grille
-  const wrappedCellDragStart = useCallback((cellIndex: number, elementId: string, x: number, y: number) => {
-    setDraggingElement(elementId);
-    if (Platform.OS === 'web') {
-      setBoardDragGhostState({ visible: true, elementId, x, y });
-    } else {
-      setGhostState({ visible: true, elementId, x, y });
-    }
-    // handleCellDragStart DOIT être synchrone : sourceCellRef doit être à jour
-    // avant que handleDragEnd ne soit appelé par onEnd du worklet.
-    handleCellDragStart(cellIndex, elementId);
-  }, [handleCellDragStart]);
-
-  const wrappedCellDragMove = useCallback((x: number, y: number) => {
-    if (Platform.OS === 'web') {
-      setBoardDragGhostState(prev => ({ ...prev, x, y }));
-    } else {
-      setGhostState(prev => ({ ...prev, x, y }));
-    }
-    handleDragMove(x, y);
-  }, [handleDragMove]);
-
-  const wrappedCellDragEnd = useCallback((x: number, y: number) => {
-    setDraggingElement(null);
-    if (Platform.OS === 'web') {
-      setBoardDragGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    } else {
-      setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    }
     handleDragEnd(x, y);
   }, [handleDragEnd]);
 
@@ -347,8 +339,11 @@ export default function FriendChallengeScreen() {
       )
     : false;
 
-  // ── Modal résultat ──────────────────────────────────────────────────────────
+  // ── État modal résultat ─────────────────────────────────────────────────────
   const [showResult, setShowResult] = useState(false);
+  const [sending, setSending]       = useState(false);
+  const [sent, setSent]             = useState(false);
+  const [opponentWon, setOpponentWon] = useState<boolean | null>(null);
   const confettiPieces = useConfetti(showResult);
 
   useEffect(() => {
@@ -358,15 +353,59 @@ export default function FriendChallengeScreen() {
   // ── Enregistrer le résultat (Joueur B) ─────────────────────────────────────
   useEffect(() => {
     if (!game.isVictory || isChallenger || !params.friendChallengeId) return;
-    if (!params.opponentUid || !params.opponentName) return;
-    answerFriendChallenge(
-      params.friendChallengeId,
-      params.opponentUid,
-      params.opponentName,
-      game.elapsedTime,
-      challengerTime,
-    ).catch(() => {});
+    if (!params.opponentUid || !params.challengerUid) return;
+
+    const record = async () => {
+      try {
+        const { winnerId } = await answerFriendChallenge(
+          params.friendChallengeId!,
+          params.opponentUid!,
+          game.elapsedTime,
+          params.challengerUid!,
+          challengerTime,
+        );
+        const iWon = winnerId === params.opponentUid;
+        setOpponentWon(iWon);
+
+        // Récompense : 15 graines au vainqueur
+        if (iWon) {
+          player.addSeeds(CHALLENGE_WINNER_SEEDS);
+          // Sync Firestore (non-anonyme)
+          const currentUser = auth.currentUser;
+          if (currentUser && !currentUser.isAnonymous) {
+            updateSeeds(params.opponentUid!, player.seeds + CHALLENGE_WINNER_SEEDS).catch(() => {});
+          }
+        }
+      } catch {
+        // Silencieux — le résultat est affiché quand même
+      }
+    };
+
+    record();
   }, [game.isVictory]);
+
+  // ── Envoyer le défi (Joueur A, depuis le modal) ─────────────────────────────
+  const handleSendChallenge = async () => {
+    if (!challengeData || !friendData || !params.challengerUid || !params.challengerName || sending) return;
+    setSending(true);
+    try {
+      await createFriendChallenge(
+        challengeData,
+        params.challengerUid,
+        params.challengerName,
+        game.elapsedTime,
+        parseInt(params.challengerLevel ?? '1', 10),
+        friendData.userId,
+        friendData.username,
+        friendData.level,
+      );
+      setSent(true);
+    } catch {
+      if (Platform.OS === 'web') window.alert("Erreur lors de l'envoi. Réessaie.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handleClose = () => {
     game.resetGame();
@@ -382,11 +421,12 @@ export default function FriendChallengeScreen() {
     );
   }
 
+  const headerSub = isChallenger
+    ? `Défi Niv. ${challengeLevel} · Résous puis envoie à ${friendData?.username ?? '?'}`
+    : `Défi Niv. ${challengeLevel} · Battre ${formatTime(challengerTime)}`;
+
   return (
-    <GestureHandlerRootView
-      style={styles.root}
-    >
-      {/* ── Feuilles qui tombent — au niveau root pour couvrir tout l'écran ── */}
+    <GestureHandlerRootView style={styles.root}>
       <FallingLeaves />
 
       <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -398,9 +438,7 @@ export default function FriendChallengeScreen() {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>⚔️ Défi ami</Text>
-            <Text style={styles.headerSub}>
-              {isChallenger ? 'Résous puis envoie à un ami' : `Battre ${formatTime(challengerTime)}`}
-            </Text>
+            <Text style={styles.headerSub}>{headerSub}</Text>
           </View>
           <View style={styles.timer}>
             <Text style={styles.timerText}>{formatTime(game.elapsedTime)}</Text>
@@ -469,9 +507,6 @@ export default function FriendChallengeScreen() {
                   getCellColor={(idx) => game.getCellColor(idx, null)}
                   onCellPress={handleCellPress}
                   onDrop={(cellIndex, elementId) => game.tryPlaceElement(cellIndex, elementId)}
-                  onCellDragStart={wrappedCellDragStart}
-                  onCellDragMove={wrappedCellDragMove}
-                  onCellDragEnd={wrappedCellDragEnd}
                 />
               </View>
             );
@@ -500,29 +535,47 @@ export default function FriendChallengeScreen() {
           />
         )}
 
-        {Platform.OS === 'web' && (
-          <DragGhost
-            elementId={boardDragGhostState.elementId}
-            x={boardDragGhostState.x}
-            y={boardDragGhostState.y}
-            visible={boardDragGhostState.visible}
+        {/* Modal résultat Joueur A */}
+        {isChallenger && (
+          <ChallengerResultModal
+            visible={showResult}
+            myTime={game.elapsedTime}
+            friendName={friendData?.username ?? '?'}
+            friendLevel={friendData?.level ?? 1}
+            challengeLevel={challengeLevel}
+            sending={sending}
+            sent={sent}
+            onSend={handleSendChallenge}
+            onQuit={handleClose}
           />
         )}
 
-        {/* Modal résultat */}
-        <FriendResultModal
-          visible={showResult}
-          isChallenger={isChallenger}
-          myTime={game.elapsedTime}
-          challengerTime={challengerTime}
-          myUid={params.challengerUid ?? params.opponentUid ?? ''}
-          myName={params.challengerName ?? params.opponentName ?? player.username}
-          challengeData={challengeData}
-          onClose={handleClose}
-          confettiPieces={confettiPieces}
-        />
+        {/* Confettis */}
+        <Confetti pieces={confettiPieces} />
 
+        {/* Modal résultat Joueur B */}
+        {!isChallenger && opponentWon !== null && (
+          <OpponentResultModal
+            visible={showResult}
+            myTime={game.elapsedTime}
+            challengerTime={challengerTime}
+            iWon={opponentWon}
+            onClose={handleClose}
+            confettiPieces={confettiPieces}
+          />
+        )}
 
+        {/* Modal résultat Joueur B (chargement) */}
+        {!isChallenger && opponentWon === null && showResult && (
+          <Modal visible transparent animationType="fade">
+            <View style={rs.overlay}>
+              <View style={rs.card}>
+                <ActivityIndicator size="large" color={Colors.forest.medium} />
+                <Text style={{ color: Colors.ui.textLight, marginTop: 12 }}>Enregistrement…</Text>
+              </View>
+            </View>
+          </Modal>
+        )}
 
         {/* Modal échec */}
         <FailModal
@@ -542,49 +595,86 @@ export default function FriendChallengeScreen() {
 // ── Styles modal ───────────────────────────────────────────────────────────────
 const rs = StyleSheet.create({
   overlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center', justifyContent: 'center', padding: 24,
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
   },
   card: {
-    backgroundColor: Colors.ui.card, borderRadius: 24, padding: 24,
-    width: '100%', maxWidth: 400, alignItems: 'center', gap: 14,
+    backgroundColor: Colors.ui.card,
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    gap: 14,
   },
   emoji: { fontSize: 48 },
   title: { fontSize: 24, fontWeight: '800', color: Colors.forest.dark },
-  timesRow: { flexDirection: 'row', gap: 24, justifyContent: 'center' },
+  timesRow: { flexDirection: 'row', gap: 32, justifyContent: 'center' },
   timeBlock: { alignItems: 'center', gap: 4 },
   timeLabel: {
-    fontSize: 11, color: Colors.ui.textLight,
-    textTransform: 'uppercase', letterSpacing: 0.5,
+    fontSize: 11,
+    color: Colors.ui.textLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   timeValue: { fontSize: 26, fontWeight: '800', color: Colors.forest.dark },
   diff: { fontSize: 13, color: Colors.ui.textLight, textAlign: 'center' },
-  searchSection: { width: '100%', gap: 8 },
-  searchLabel: { fontSize: 13, fontWeight: '700', color: Colors.forest.dark, textAlign: 'center' },
-  searchInput: {
-    backgroundColor: Colors.ui.background, borderRadius: 10,
-    borderWidth: 1, borderColor: Colors.ui.border,
-    paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 14, color: Colors.ui.text, width: '100%',
+  infoBox: {
+    width: '100%',
+    backgroundColor: Colors.ui.background,
+    borderRadius: 12,
+    padding: 14,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.ui.border,
   },
-  resultsList: {
-    width: '100%', borderRadius: 10,
-    borderWidth: 1, borderColor: Colors.ui.border, overflow: 'hidden',
+  infoText: { fontSize: 13, color: Colors.ui.text, textAlign: 'center' },
+  infoStrong: { fontWeight: '700', color: Colors.forest.dark },
+  infoLight: { color: Colors.ui.textLight },
+  rewardBox: {
+    backgroundColor: Colors.forest.medium + '15',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: Colors.forest.medium + '40',
   },
-  resultRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 12, backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1, borderBottomColor: Colors.ui.border,
+  rewardText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.forest.medium,
+    textAlign: 'center',
   },
-  resultName: { fontSize: 14, fontWeight: '600', color: Colors.forest.dark },
-  resultSend: { fontSize: 13, color: Colors.forest.medium, fontWeight: '700' },
-  noResult: { fontSize: 12, color: Colors.ui.textLight, textAlign: 'center' },
   sentBox: {
-    backgroundColor: Colors.forest.medium + '15', borderRadius: 10, padding: 14,
-    width: '100%', alignItems: 'center',
-    borderWidth: 1, borderColor: Colors.forest.medium + '40',
+    width: '100%',
+    backgroundColor: Colors.forest.medium + '15',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.forest.medium + '40',
   },
-  sentText: { fontSize: 14, fontWeight: '700', color: Colors.forest.medium },
+  sentText: { fontSize: 15, fontWeight: '700', color: Colors.forest.medium },
+  sentSub: { fontSize: 12, color: Colors.ui.textLight },
+  btnGroup: { width: '100%', gap: 10 },
+  btnSend: {
+    backgroundColor: Colors.forest.medium,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    width: '100%',
+  },
+  btnSendText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  btnDisabled: { opacity: 0.5 },
+  btnQuit: {
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  btnQuitText: { fontSize: 14, color: Colors.ui.textLight, fontWeight: '600' },
   btnClose: { paddingVertical: 8 },
   btnCloseText: { fontSize: 14, color: Colors.ui.textLight, fontWeight: '600' },
 });
@@ -593,15 +683,22 @@ const rs = StyleSheet.create({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.ui.background },
   loading: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    gap: 12, backgroundColor: Colors.ui.background,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: Colors.ui.background,
   },
   loadingText: { fontSize: 15, color: Colors.ui.textLight },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1, borderBottomColor: Colors.ui.border,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.ui.border,
   },
   backBtn: { padding: 4 },
   backText: { fontSize: 14, color: Colors.forest.medium, fontWeight: '600' },
@@ -610,27 +707,39 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 11, color: Colors.ui.textLight, textAlign: 'center' },
   timer: {
     backgroundColor: Colors.forest.dark + '15',
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   timerText: { fontSize: 15, fontWeight: '700', color: Colors.forest.dark },
   noBonusBanner: {
-    backgroundColor: '#FFF3E0', paddingVertical: 6, paddingHorizontal: 16,
-    borderBottomWidth: 1, borderBottomColor: '#FFE0B2',
+    backgroundColor: '#FFF3E0',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE0B2',
   },
   noBonusText: { fontSize: 11, color: '#E65100', textAlign: 'center', fontWeight: '600' },
   validateRow: {
-    paddingHorizontal: 16, paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1, borderBottomColor: Colors.ui.border,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.ui.border,
   },
   validateBtn: {
-    backgroundColor: Colors.forest.medium, borderRadius: 10,
-    paddingVertical: 10, alignItems: 'center',
+    backgroundColor: Colors.forest.medium,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
   },
   validateBtnDisabled: { backgroundColor: Colors.ui.border, opacity: 0.6 },
   validateBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   boardArea: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
   },
   boardContainer: { borderRadius: 16 },
 });

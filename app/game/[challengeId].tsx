@@ -18,10 +18,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
-import { DragGhost } from '../../src/components/Elements/DragGhost';
 import { HintOverlay } from '../../src/components/Bonus/HintOverlay';
 import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { FailModal } from '../../src/components/Game/FailModal';
+import { LevelBriefingModal } from '../../src/components/LevelBriefing/LevelBriefingModal';
 
 import { useGame } from '../../src/hooks/useGame';
 import { useDragDrop } from '../../src/hooks/useDragDrop';
@@ -35,6 +35,7 @@ import { formatTime } from '../../src/utils/boardUtils';
 import { Colors } from '../../src/constants/colors';
 import { CELL_SIZE } from '../../src/components/Board/Cell';
 import { LEVEL_PARAMS } from '../../src/constants/difficulty';
+import { LEVEL_META } from '../../src/data/levelMeta';
 import { calculateSeedReward } from '../../src/core/engine/hintEngine';
 import { MobileDragGhost } from '../../src/components/Elements/MobileDragGhost';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
@@ -81,6 +82,23 @@ export default function GameScreen() {
   const game = useGame();
   const player = usePlayerStore();
 
+  // ── Briefing de niveau ─────────────────────────────────────
+  // showBriefing : vrai si le modal doit être visible
+  //   - automatique uniquement sur challengeNumber === 1
+  //   - rouvrable via le bouton "?" sur n'importe quel défi du niveau
+  //
+  // IMPORTANT : challenge.levelNumber dans les JSON = numéro du défi dans le niveau
+  // (pas le numéro du niveau). La vraie clé niveau est dans challenge.level ("niveau_2" → 2).
+  const [briefingDone, setBriefingDone] = useState(false);
+  // Force l'ouverture via "?" même si ce n'est pas le défi n°1
+  const [briefingForcedOpen, setBriefingForcedOpen] = useState(false);
+
+  const handleBriefingClose = useCallback(() => {
+    setBriefingDone(true);
+    setBriefingForcedOpen(false);
+    game.startTimer();   // Démarre le chrono APRÈS fermeture du briefing
+  }, [game]);
+
   // Note : GestureHandlerRootView ne forward pas de ref (composant fonction sans forwardRef)
   // et couvre toujours l'intégralité de l'écran → son offset est { x: 0, y: 0 } par définition.
   // Les absoluteX/Y de Reanimated sont donc directement en coords écran,
@@ -124,6 +142,13 @@ export default function GameScreen() {
   const challenge = game.challenge;
   const boardDef = challenge ? BoardRegistry[challenge.boardId] : null;
 
+  // Numéro du niveau réel (1–15) extrait du champ `level` ("niveau_3" → 3).
+  // Ne pas utiliser challenge.levelNumber qui est le numéro du défi dans le niveau.
+  const levelNumber = challenge
+    ? parseInt(challenge.level.replace('niveau_', ''), 10)
+    : null;
+  const levelMeta = levelNumber != null ? LEVEL_META[levelNumber] : null;
+
   // ── Ensemble des cases fixes ───────────────────────────────
   const fixedCells = React.useMemo(() => {
     if (!challenge) return new Set<number>();
@@ -153,13 +178,9 @@ export default function GameScreen() {
     ? (draggingElement ?? game.selectedElement)
     : null;
 
-  const { hoveredCell, handleDragStart, handleCellDragStart, handleDragMove, handleDragEnd } = useDragDrop({
+  const { hoveredCell, handleDragStart, handleDragMove, handleDragEnd } = useDragDrop({
     onDrop: (cellIndex, elementId) => {
       game.tryPlaceElement(cellIndex, elementId);
-      setDraggingElement(null);
-    },
-    onMoveFromCell: (fromCell, toCell) => {
-      game.moveElement(fromCell, toCell);
       setDraggingElement(null);
     },
     findNearestCell: findNearest,
@@ -175,20 +196,11 @@ export default function GameScreen() {
     },
   }), []);
 
-  // ── Ghost web pour les drags depuis la grille ──────────────
-  const [boardDragGhostState, setBoardDragGhostState] = useState<{
-    visible: boolean;
-    elementId: string | null;
-    x: number;
-    y: number;
-  }>({ visible: false, elementId: null, x: 0, y: 0 });
-
-  // ── Drag depuis la palette ──────────────────────────────────
+  // ── Drag depuis la palette uniquement ──────────────────────
   const wrappedDragStart = useCallback((elementId: string) => {
     setDraggingElement(elementId);
     setGhostState({ visible: false, elementId, x: 0, y: 0 });
     // Re-mesurer la position du plateau au moment du drag
-    // measureInWindow donne les coords écran réelles
     if (Platform.OS !== 'web' && boardContainerRef.current) {
       boardContainerRef.current.measureInWindow((x, y) => {
         boardOffsetRef.current = { x, y };
@@ -200,46 +212,6 @@ export default function GameScreen() {
   const wrappedDragEnd = useCallback((x: number, y: number) => {
     setDraggingElement(null);
     setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    handleDragEnd(x, y);
-  }, [handleDragEnd]);
-
-  // ── Drag depuis une case de la grille ──────────────────────
-  const wrappedCellDragStart = useCallback((cellIndex: number, elementId: string, x: number, y: number) => {
-    setDraggingElement(elementId);
-    // Web : afficher le ghost au niveau de l'écran
-    if (Platform.OS === 'web') {
-      setBoardDragGhostState({ visible: true, elementId, x, y });
-    } else {
-      // Mobile : réutiliser le ghost natif
-      setGhostState({ visible: true, elementId, x, y });
-    }
-    // handleCellDragStart DOIT être appelé de façon synchrone ici pour que
-    // sourceCellRef et elementIdRef soient à jour AVANT que handleDragEnd
-    // soit appelé par le worklet onEnd (runOnJS est schedulé sur le JS thread
-    // mais l'ordre onStart → onEnd est garanti).
-    // Ne PAS mettre handleCellDragStart dans un callback async (measureInWindow)
-    // car onEnd peut arriver avant ce callback si le drag est rapide,
-    // laissant sourceCellRef=null → le drop est traité comme un drag depuis
-    // la palette → tryPlaceElement au lieu de moveElement → crash/comportement erroné.
-    handleCellDragStart(cellIndex, elementId);
-  }, [handleCellDragStart]);
-
-  const wrappedCellDragMove = useCallback((x: number, y: number) => {
-    if (Platform.OS === 'web') {
-      setBoardDragGhostState(prev => ({ ...prev, x, y }));
-    } else {
-      setGhostState(prev => ({ ...prev, x, y }));
-    }
-    handleDragMove(x, y);
-  }, [handleDragMove]);
-
-  const wrappedCellDragEnd = useCallback((x: number, y: number) => {
-    setDraggingElement(null);
-    if (Platform.OS === 'web') {
-      setBoardDragGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    } else {
-      setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    }
     handleDragEnd(x, y);
   }, [handleDragEnd]);
 
@@ -325,9 +297,18 @@ export default function GameScreen() {
       <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         {/* ── Header ── */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>← Retour</Text>
-          </TouchableOpacity>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Text style={styles.backText}>← Retour</Text>
+            </TouchableOpacity>
+            {/* Bouton "?" — rouvre le briefing sans remettre le chrono à zéro */}
+            <TouchableOpacity
+              onPress={() => setBriefingForcedOpen(true)}
+              style={styles.helpBtn}
+            >
+              <Text style={styles.helpText}>?</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.headerCenter}>
             <Text style={styles.levelLabel}>
@@ -417,9 +398,6 @@ export default function GameScreen() {
                   getCellColor={(idx) => game.getCellColor(idx, highlightElement)}
                   onCellPress={handleCellPress}
                   onDrop={(cellIndex, elementId) => game.tryPlaceElement(cellIndex, elementId)}
-                  onCellDragStart={wrappedCellDragStart}
-                  onCellDragMove={wrappedCellDragMove}
-                  onCellDragEnd={wrappedCellDragEnd}
                 />
               </View>
             );
@@ -449,13 +427,15 @@ export default function GameScreen() {
           />
         )}
 
-        {/* ── Ghost web pour les drags depuis la grille ── */}
-        {Platform.OS === 'web' && (
-          <DragGhost
-            elementId={boardDragGhostState.elementId}
-            x={boardDragGhostState.x}
-            y={boardDragGhostState.y}
-            visible={boardDragGhostState.visible}
+        {/* ── Briefing de niveau ── */}
+        {/* Affiché automatiquement sur le 1er défi du niveau,
+            ou manuellement via le bouton "?" (briefingForcedOpen) */}
+        {challenge && levelMeta &&
+         (briefingForcedOpen || (!briefingDone && challenge.challengeNumber === 1)) && (
+          <LevelBriefingModal
+            challenge={challenge}
+            levelMeta={levelMeta}
+            onClose={handleBriefingClose}
           />
         )}
 
@@ -530,6 +510,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.ui.border,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   backBtn: {
     padding: 4,
   },
@@ -537,6 +522,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.forest.medium,
     fontWeight: '600',
+  },
+  helpBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.forest.dark + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.forest.dark + '30',
+  },
+  helpText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.forest.dark,
   },
   headerCenter: {
     alignItems: 'center',
