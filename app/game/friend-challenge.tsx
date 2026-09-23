@@ -229,8 +229,7 @@ export default function FriendChallengeScreen() {
   const [availableArea, setAvailableArea] = useState({ width: 0, height: 0 });
   const boardContainerRef                 = useRef<View>(null);
   const boardOffsetRef                    = useRef({ x: 0, y: 0 });
-  const gestureRootRef                    = useRef<React.ElementRef<typeof GestureHandlerRootView>>(null);
-  const gestureRootOffsetRef              = useRef({ x: 0, y: 0 });
+  // Note : GestureHandlerRootView ne forward pas de ref et couvre tout l'écran → offset (0,0).
 
   // Ghost natif mobile
   const [ghostState, setGhostState] = useState<{
@@ -251,16 +250,11 @@ export default function FriendChallengeScreen() {
 
   const findNearest = useCallback((x: number, y: number) => {
     if (!boardDef || boardSize.width === 0) return null;
-    let relX: number, relY: number;
-    if (Platform.OS === 'web') {
-      relX = x - boardOffsetRef.current.x;
-      relY = y - boardOffsetRef.current.y;
-    } else {
-      const boardRelX = boardOffsetRef.current.x - gestureRootOffsetRef.current.x;
-      const boardRelY = boardOffsetRef.current.y - gestureRootOffsetRef.current.y;
-      relX = x - boardRelX;
-      relY = y - boardRelY;
-    }
+    // absoluteX/Y (mobile) et clientX/Y (web) sont en coords écran.
+    // boardOffsetRef est en coords écran (measureInWindow).
+    // GestureHandlerRootView couvre tout l'écran → offset (0,0), pas de correction.
+    const relX = x - boardOffsetRef.current.x;
+    const relY = y - boardOffsetRef.current.y;
     return findNearestCell(
       relX, relY, boardDef, boardSize.width, boardSize.height,
       CELL_SIZE, Platform.OS === 'web' ? 80 : 60,
@@ -308,12 +302,9 @@ export default function FriendChallengeScreen() {
       setBoardDragGhostState({ visible: true, elementId, x, y });
     } else {
       setGhostState({ visible: true, elementId, x, y });
-      if (boardContainerRef.current) {
-        boardContainerRef.current.measureInWindow((bx, by) => {
-          boardOffsetRef.current = { x: bx, y: by };
-        });
-      }
     }
+    // handleCellDragStart DOIT être synchrone : sourceCellRef doit être à jour
+    // avant que handleDragEnd ne soit appelé par onEnd du worklet.
     handleCellDragStart(cellIndex, elementId);
   }, [handleCellDragStart]);
 
@@ -393,15 +384,7 @@ export default function FriendChallengeScreen() {
 
   return (
     <GestureHandlerRootView
-      ref={gestureRootRef}
       style={styles.root}
-      onLayout={() => {
-        if (Platform.OS !== 'web') {
-          gestureRootRef.current?.measureInWindow((x, y) => {
-            gestureRootOffsetRef.current = { x, y };
-          });
-        }
-      }}
     >
       {/* ── Feuilles qui tombent — au niveau root pour couvrir tout l'écran ── */}
       <FallingLeaves />
