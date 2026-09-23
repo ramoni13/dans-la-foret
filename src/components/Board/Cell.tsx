@@ -4,7 +4,7 @@
 // Pulsation douce quand la case est en état 'valid' (bonus highlight)
 // ============================================================
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
   Image,
@@ -150,33 +150,53 @@ export const Cell: React.FC<CellProps> = ({
   const cellOpacity = useSharedValue(1);
   const cellScale   = useSharedValue(1);
 
+  // SharedValue d'activation : lisible depuis le worklet UI thread.
+  // Mis à jour à chaque render pour refléter l'état réel sans recréer le gesture.
+  // On utilise une SharedValue (et non une ref JS) car les worklets Reanimated
+  // s'exécutent sur le thread UI Android et n'ont pas accès aux objets JS.
+  const isDraggableSV = useSharedValue(
+    !isFixed && elementId !== null && Platform.OS !== 'web' ? 1 : 0
+  );
+  // Mise à jour synchrone à chaque render (pas d'animation, juste assignation)
+  isDraggableSV.value = !isFixed && elementId !== null && Platform.OS !== 'web' ? 1 : 0;
+
   const animatedCellStyle = useAnimatedStyle(() => ({
     opacity: cellOpacity.value,
     transform: [{ scale: cellScale.value }],
   }), [cellOpacity, cellScale]);
 
   // ── Gesture Pan mobile (grille → grille) ────────────────────
-  const panGesture = Gesture.Pan()
-    .enabled(!isFixed && !!(elementId) && Platform.OS !== 'web')
+  // useMemo : le gesture object est créé UNE SEULE FOIS par instance de Cell.
+  // Les callbacks (callCellDragStart, etc.) ont des références stables (useCallback [],
+  // qui délèguent via refs). L'activation est contrôlée par isDraggableSV
+  // lisible depuis le worklet UI thread, sans recréer le gesture object.
+  //
+  // POURQUOI useMemo([]) ici ?
+  // Sur Android, RNGH reconfigure le recognizer natif chaque fois que GestureDetector
+  // reçoit un nouveau gesture object. Si un drag est en cours entre onStart et onEnd
+  // et qu'un re-render survient (ex: playerBoard change après un placement), la
+  // reconfiguration du recognizer en mid-gesture provoque un crash natif Android.
+  // Le gesture object doit donc rester stable pendant toute la vie du composant.
+  const panGesture = useMemo(() => Gesture.Pan()
     .minDistance(8)   // seuil pour distinguer tap vs drag
     // onStart (et non onBegin) : se déclenche SEULEMENT après minDistance.
-    // onBegin se déclenchait immédiatement au toucher, avant même de savoir
-    // si c'est un tap ou un drag → causait Bug 1 (élément fantôme après tap)
-    // et Bug 2 (crash au swap) car le drag était initié trop tôt.
     .onStart((e) => {
       'worklet';
+      if (isDraggableSV.value === 0) return;
       cellOpacity.value = withTiming(0.35);
       cellScale.value   = withSpring(0.85, { damping: 12 });
       runOnJS(callCellDragStart)(e.absoluteX, e.absoluteY);
     })
     .onUpdate((e) => {
       'worklet';
+      if (isDraggableSV.value === 0) return;
       runOnJS(callCellDragMove)(e.absoluteX, e.absoluteY);
     })
     .onEnd((e) => {
       'worklet';
       cellOpacity.value = withTiming(1);
       cellScale.value   = withSpring(1, { damping: 12 });
+      if (isDraggableSV.value === 0) return;
       runOnJS(callCellDragEnd)(e.absoluteX, e.absoluteY);
     })
     .onFinalize(() => {
@@ -184,18 +204,29 @@ export const Cell: React.FC<CellProps> = ({
       // Sécurité : toujours restaurer l'apparence même si le gesture est annulé
       cellOpacity.value = withTiming(1);
       cellScale.value   = withSpring(1, { damping: 12 });
-    });
+    }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  []); // ← [] intentionnel : le gesture object NE DOIT PAS être recréé
 
   // Tap gesture (pour le tap normal sur la case)
-  const tapGesture = Gesture.Tap()
-    .enabled(!isFixed && Platform.OS !== 'web')
+  // useMemo pour la même raison que panGesture : stabilité de l'objet gesture.
+  // Le tap est toujours actif (callOnPress vérifie isFixed en interne).
+  // Gesture.Exclusive(pan, tap) garantit que si le pan est reconnu (minDistance=8),
+  // le tap est annulé — donc pas de double-déclenchement.
+  const tapGesture = useMemo(() => Gesture.Tap()
     .onEnd(() => {
       'worklet';
       runOnJS(callOnPress)();
-    });
+    }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  []); // ← [] intentionnel
 
   // Sur mobile : Pan prioritaire sur Tap (le tap ne se déclenche que si pas de pan)
-  const mobileGesture = Gesture.Exclusive(panGesture, tapGesture);
+  // useMemo pour éviter de recréer le gesture composé à chaque render
+  const mobileGesture = useMemo(
+    () => Gesture.Exclusive(panGesture, tapGesture),
+    [panGesture, tapGesture]
+  );
 
   // ── Gestion du drag depuis la case (WEB : mouse + touch) ──
   // On utilise un ref pour distinguer drag vs tap :
