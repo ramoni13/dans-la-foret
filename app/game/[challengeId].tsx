@@ -131,9 +131,6 @@ export default function GameScreen() {
   }, [challenge]);
 
   // ── findNearestCell adapté aux dimensions du plateau ───────
-  // absoluteX/Y de reanimated sont relatives à GestureHandlerRootView
-  // Il faut donc soustraire : offset(GestureRoot) + offset(board dans GestureRoot)
-  // Sur web : clientX/Y sont en coords viewport, on soustrait juste l'offset du board
   const findNearest = useCallback((x: number, y: number) => {
     if (!boardDef || boardSize.width === 0) return null;
     // Sur web : x/y sont des coords viewport (clientX/Y) → on soustrait l'offset du board en viewport.
