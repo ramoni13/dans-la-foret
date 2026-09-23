@@ -1,7 +1,7 @@
 // ============================================================
 // HOOK useDragDrop
-// Coordonne le drag depuis la palette OU depuis une case du plateau.
-// Maintient l'état du drag en cours et notifie le BoardRenderer.
+// Coordonne le drag depuis la palette vers le plateau.
+// Les jetons posés sur le plateau ne sont pas déplaçables (tap pour retirer).
 // ============================================================
 
 import { useState, useCallback, useRef } from 'react';
@@ -15,14 +15,11 @@ interface DragState {
 }
 
 interface UseDragDropOptions {
-  // Appelé quand le drag vient de la palette (sourceCell = null)
   onDrop: (cellIndex: number, elementId: string) => void;
-  // Appelé quand le drag vient d'une case de la grille
-  onMoveFromCell: (fromCell: number, toCell: number) => void;
   findNearestCell: (x: number, y: number) => number | null;
 }
 
-export function useDragDrop({ onDrop, onMoveFromCell, findNearestCell }: UseDragDropOptions) {
+export function useDragDrop({ onDrop, findNearestCell }: UseDragDropOptions) {
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     elementId: null,
@@ -31,34 +28,18 @@ export function useDragDrop({ onDrop, onMoveFromCell, findNearestCell }: UseDrag
   });
 
   // ── Refs pour éviter les problèmes de closure ────────────────
-  // Le state React est asynchrone : au moment du mouseup,
-  // les callbacks liraient d'anciennes valeurs via leur closure.
-  // Les refs sont toujours synchrones et à jour.
-  const elementIdRef = useRef<string | null>(null);
-  // null = drag depuis la palette, number = index de la case source
-  const sourceCellRef = useRef<number | null>(null);
-  const findNearestRef = useRef(findNearestCell);
-  const onDropRef = useRef(onDrop);
-  const onMoveFromCellRef = useRef(onMoveFromCell);
-  findNearestRef.current = findNearestCell;   // mise à jour à chaque render
-  onDropRef.current = onDrop;
-  onMoveFromCellRef.current = onMoveFromCell;
+  const elementIdRef    = useRef<string | null>(null);
+  const findNearestRef  = useRef(findNearestCell);
+  const onDropRef       = useRef(onDrop);
+  findNearestRef.current = findNearestCell;
+  onDropRef.current      = onDrop;
 
   // Case actuellement survolée (pour le highlight)
   const [hoveredCell, setHoveredCell] = useState<number | null>(null);
 
-  // Drag depuis la palette
+  // Drag depuis la palette uniquement
   const handleDragStart = useCallback((elementId: string) => {
     elementIdRef.current = elementId;
-    sourceCellRef.current = null;
-    setDragState({ isDragging: true, elementId, currentX: 0, currentY: 0 });
-    impactMedium();
-  }, []);
-
-  // Drag depuis une case de la grille
-  const handleCellDragStart = useCallback((cellIndex: number, elementId: string) => {
-    elementIdRef.current = elementId;
-    sourceCellRef.current = cellIndex;
     setDragState({ isDragging: true, elementId, currentX: 0, currentY: 0 });
     impactMedium();
   }, []);
@@ -70,44 +51,27 @@ export function useDragDrop({ onDrop, onMoveFromCell, findNearestCell }: UseDrag
   }, []);
 
   const handleDragEnd = useCallback((x: number, y: number) => {
-    const nearest = findNearestRef.current(x, y);
+    const nearest   = findNearestRef.current(x, y);
     const elementId = elementIdRef.current;
-    const sourceCell = sourceCellRef.current;
 
-    // Toujours réinitialiser les refs ET l'état avant les callbacks
-    // pour éviter un double-appel si un re-render survient pendant le callback.
     elementIdRef.current = null;
-    sourceCellRef.current = null;
     setDragState({ isDragging: false, elementId: null, currentX: 0, currentY: 0 });
     setHoveredCell(null);
 
-    // Garde : elementId doit être non-null (sinon le drag a été initié sans élément)
     if (!elementId) return;
 
     if (nearest !== null) {
-      if (sourceCell !== null) {
-        // Drag grille → grille : déplacement ou permutation
-        // Pas de callback si dropped sur la case source (no-op)
-        if (nearest !== sourceCell) {
-          onMoveFromCellRef.current(sourceCell, nearest);
-          impactLight();
-        }
-      } else {
-        // Drag palette → grille : placement classique
-        onDropRef.current(nearest, elementId);
-        impactLight();
-      }
+      onDropRef.current(nearest, elementId);
+      impactLight();
     } else {
-      // Drop en dehors du plateau : avertissement haptique
       notificationWarning();
     }
-  }, []);   // ← aucune dépendance : tout passe par les refs
+  }, []);
 
   return {
     dragState,
     hoveredCell,
     handleDragStart,
-    handleCellDragStart,
     handleDragMove,
     handleDragEnd,
   };
