@@ -5,7 +5,7 @@
 // ============================================================
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
 
 import { ElementToken, TOKEN_SIZE, MobileDragCallbacks } from './ElementToken';
 import { DragGhost } from './DragGhost';
@@ -13,6 +13,14 @@ import { useWebDrag } from '../../hooks/useWebDrag';
 import { ElementRegistry } from '../../elements/ElementRegistry';
 import { TokenCount } from '../../core/models/Challenge';
 import { Colors } from '../../constants/colors';
+
+// Taille minimale en dessous de laquelle le jeton devient illisible
+const TOKEN_MIN_SIZE = 44;
+// Marges horizontales du conteneur (paddingHorizontal * 2 + scroll padding * 2)
+const PALETTE_H_PADDING = (8 + 4) * 2;
+// Espace réservé au badge (+8 autour du jeton) + gap entre jetons
+const TOKEN_WRAPPER_EXTRA = 8; // selectedRing padding
+const GAP = 12;
 
 interface ElementPaletteProps {
   availableTokens: TokenCount[];
@@ -38,6 +46,22 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
   mobileDragCallbacks,
 }) => {
   const isWeb = Platform.OS === 'web';
+  const { width: screenWidth } = useWindowDimensions();
+
+  // Calcule la taille de jeton adaptée pour que tous les jetons tiennent
+  // sans scroll horizontal sur l'écran courant.
+  const tokenSize = React.useMemo(() => {
+    const tokenCount = availableTokens.length;
+    if (tokenCount === 0) return TOKEN_SIZE;
+    // Largeur disponible = écran - marges palette
+    const availableWidth = screenWidth - PALETTE_H_PADDING;
+    // Chaque wrapper = taille + TOKEN_WRAPPER_EXTRA, séparés par GAP
+    // totalWidth = tokenCount * (size + TOKEN_WRAPPER_EXTRA) + (tokenCount - 1) * GAP
+    const maxSize = Math.floor(
+      (availableWidth - (tokenCount - 1) * GAP) / tokenCount - TOKEN_WRAPPER_EXTRA
+    );
+    return Math.max(TOKEN_MIN_SIZE, Math.min(TOKEN_SIZE, maxSize));
+  }, [availableTokens.length, screenWidth]);
 
   // ── Ghost web ───────────────────────────────────────────────
   const { webDragState, startWebDrag } = useWebDrag({
@@ -74,7 +98,7 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { gap: GAP }]}
       >
         {availableTokens.map(({ elementId, count }) => {
           const elementDef = ElementRegistry[elementId];
@@ -85,21 +109,31 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
           const isSelected = selectedElement === elementId;
           const isEmpty    = remaining <= 0;
 
+          // Styles dynamiques basés sur tokenSize calculé
+          const wrapperSize = tokenSize + TOKEN_WRAPPER_EXTRA;
+          const ringStyle = {
+            position: 'absolute' as const,
+            top: -4,
+            left: -4,
+            width: wrapperSize,
+            height: wrapperSize,
+            borderRadius: wrapperSize / 2,
+            borderWidth: 3,
+            borderColor: elementDef.color,
+            zIndex: 0,
+          };
+
           return (
-            <View key={elementId} style={styles.tokenWrapper}>
-              {isSelected && (
-                <View style={[styles.selectedRing, { borderColor: elementDef.color }]} />
-              )}
+            <View key={elementId} style={[styles.tokenWrapper, { width: wrapperSize }]}>
+              {isSelected && <View style={ringStyle} />}
               <ElementToken
                 elementDef={elementDef}
-                isFixed={isEmpty} // ← bloque drag ET tap quand plus de jetons
-                size={TOKEN_SIZE}
-                // Mobile
+                isFixed={isEmpty}
+                size={tokenSize}
                 onDragStart={!isEmpty ? onDragStart : undefined}
                 onDragMove={!isEmpty ? onDragMove : undefined}
                 onDragEnd={!isEmpty ? onDragEnd : undefined}
                 mobileDragCallbacks={!isWeb && !isEmpty ? mobileDragCallbacks : undefined}
-                // Web : démarre le ghost natif
                 onWebMouseDown={isWeb && !isEmpty ? startWebDrag : undefined}
                 onTap={!isEmpty ? () => onSelectElement(isSelected ? null : elementId) : undefined}
               />
@@ -109,10 +143,10 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
               ]}>
                 <Text style={styles.badgeText}>{remaining}</Text>
               </View>
-              <Text style={[styles.label, isEmpty && styles.labelEmpty]}>
+              <Text style={[styles.label, isEmpty && styles.labelEmpty]} numberOfLines={1}>
                 {elementDef.label}
               </Text>
-              {isEmpty && <View style={styles.emptyOverlay} />}
+              {isEmpty && <View style={[styles.emptyOverlay, { borderRadius: tokenSize / 2 }]} />}
             </View>
           );
         })}
@@ -148,26 +182,16 @@ const styles = StyleSheet.create({
   scroll: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    // gap est passé dynamiquement via style inline
     paddingHorizontal: 4,
     paddingTop: 8, // ← espace pour la pastille en haut
   },
   tokenWrapper: {
     alignItems: 'center',
     position: 'relative',
-    width: TOKEN_SIZE + 8,
+    // width est passé dynamiquement (tokenSize + TOKEN_WRAPPER_EXTRA)
     overflow: 'visible',  // ← le jeton doit pouvoir sortir du wrapper pendant le drag
     zIndex: 100,
-  },
-  selectedRing: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    width: TOKEN_SIZE + 8,
-    height: TOKEN_SIZE + 8,
-    borderRadius: (TOKEN_SIZE + 8) / 2,
-    borderWidth: 3,
-    zIndex: 0,
   },
   badge: {
     position: 'absolute',
@@ -199,7 +223,7 @@ const styles = StyleSheet.create({
   emptyOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255,255,255,0.6)',
-    borderRadius: TOKEN_SIZE / 2,
+    // borderRadius est passé dynamiquement (tokenSize / 2)
     pointerEvents: 'none' as any, // ne bloque pas le drag même quand vide
   },
 });
