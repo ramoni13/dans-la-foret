@@ -10,6 +10,8 @@ import React, { useEffect } from 'react';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { onAuthChange } from '../../src/services/authService';
 import { getPlayer } from '../../src/services/playerService';
+import { updateDailyStreak } from '../../src/services/badgeService';
+import { auth } from '../../src/services/firebase';
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return (
@@ -35,6 +37,25 @@ export default function TabsLayout() {
     });
     return unsub;
   }, []);
+
+  // ── Connexion quotidienne ──────────────────────────────────────────────────
+  // Vérifie au montage si c'est la première connexion du jour.
+  // Si oui : incrémente le dailyStreak, octroie +3 graines, sync Firestore.
+  useEffect(() => {
+    const isNewDay = player.checkDailyLogin();
+    if (isNewDay) {
+      // +3 graines de connexion quotidienne
+      player.addSeeds(3);
+
+      // Sync Firestore en arrière-plan (si connecté non-anonyme)
+      const uid = auth.currentUser?.uid;
+      const isAnon = auth.currentUser?.isAnonymous ?? true;
+      if (uid && !isAnon) {
+        const state = usePlayerStore.getState();
+        updateDailyStreak(uid, state.dailyStreak, state.lastPlayedDate).catch(() => {});
+      }
+    }
+  }, []); // Une seule fois au montage
   // paddingBottom = inset bas réel + espace interne pour les icônes
   const tabBarPaddingBottom = insets.bottom + 6;
   const tabBarHeight = tabBarPaddingBottom + 44; // 44 = hauteur minimale des icônes

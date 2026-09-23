@@ -31,7 +31,13 @@ import {
   loginAnonymously,
   logout,
   onAuthChange,
+  sendPasswordReset,
 } from '../../src/services/authService';
+import { BadgeCollection } from '../../src/components/Badges/BadgeCollection';
+import { BadgeCard } from '../../src/components/Badges/BadgeCard';
+import { BadgeUnlockProgress } from '../../src/components/Badges/BadgeUnlockProgress';
+import { BADGE_MAP } from '../../src/constants/badges';
+import { LeaderboardScreen } from '../../src/components/Leaderboard/LeaderboardScreen';
 
 // Niveaux pour la progression (13 niveaux, 10 défis chacun)
 const LEVELS = [
@@ -61,6 +67,17 @@ export default function ProfileScreen() {
   const [password, setPassword]         = useState('');
   const [username, setUsername]         = useState('');
   const [submitting, setSubmitting]     = useState(false);
+
+  // ── Onglets internes du profil connecté ─────────────────────────────────────
+  type ProfileTab = 'progression' | 'badges' | 'classement';
+  const [activeTab, setActiveTab] = useState<ProfileTab>('progression');
+  const [showFullBadges, setShowFullBadges] = useState(false);
+
+  // ── Mot de passe oublié ───────────────────────────────────────────────────
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail]                 = useState('');
+  const [resetSent, setResetSent]                   = useState(false);
+  const [resetLoading, setResetLoading]             = useState(false);
 
   // Observer l'état de connexion Firebase (UI seulement — la restauration
   // du profil est gérée dans _layout.tsx au montage de l'app)
@@ -134,6 +151,18 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    setResetLoading(true);
+    try {
+      await sendPasswordReset(resetEmail || email);
+      setResetSent(true);
+    } catch (e: any) {
+      alert(e.message ?? 'Impossible d\'envoyer l\'e-mail de réinitialisation.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   // Confirmation compatible web (window.confirm) + mobile (Alert.alert)
   const confirm = (message: string, onConfirm: () => void) => {
     if (Platform.OS === 'web') {
@@ -192,7 +221,7 @@ export default function ProfileScreen() {
           <View style={styles.toggleRow}>
             <TouchableOpacity
               style={[styles.toggleBtn, isLogin && styles.toggleBtnActive]}
-              onPress={() => setIsLogin(true)}
+              onPress={() => { setIsLogin(true); setShowForgotPassword(false); setResetSent(false); }}
             >
               <Text style={[styles.toggleBtnText, isLogin && styles.toggleBtnTextActive]}>
                 Connexion
@@ -200,7 +229,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toggleBtn, !isLogin && styles.toggleBtnActive]}
-              onPress={() => setIsLogin(false)}
+              onPress={() => { setIsLogin(false); setShowForgotPassword(false); setResetSent(false); }}
             >
               <Text style={[styles.toggleBtnText, !isLogin && styles.toggleBtnTextActive]}>
                 Inscription
@@ -250,7 +279,73 @@ export default function ProfileScreen() {
                   </Text>
               }
             </TouchableOpacity>
+
+            {/* Mot de passe oublié — visible uniquement en mode connexion */}
+            {isLogin && !showForgotPassword && (
+              <TouchableOpacity
+                onPress={() => { setShowForgotPassword(true); setResetEmail(email); setResetSent(false); }}
+                style={styles.forgotBtn}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.forgotBtnText}>Mot de passe oublié ?</Text>
+              </TouchableOpacity>
+            )}
           </View>
+
+          {/* ── Bloc réinitialisation mot de passe ── */}
+          {isLogin && showForgotPassword && (
+            <View style={styles.forgotBox}>
+              {resetSent ? (
+                <>
+                  <Text style={styles.forgotTitle}>✉️ E-mail envoyé !</Text>
+                  <Text style={styles.forgotDesc}>
+                    Un lien de réinitialisation a été envoyé à {resetEmail || email}.{'\n'}
+                    Vérifie tes spams si tu ne le reçois pas.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.forgotBack}
+                    onPress={() => { setShowForgotPassword(false); setResetSent(false); }}
+                  >
+                    <Text style={styles.forgotBackText}>← Retour à la connexion</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.forgotTitle}>Réinitialiser le mot de passe</Text>
+                  <Text style={styles.forgotDesc}>
+                    Saisis ton adresse e-mail et nous t'enverrons un lien pour définir un nouveau mot de passe.
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Adresse e-mail"
+                    placeholderTextColor={Colors.ui.textLight}
+                    value={resetEmail}
+                    onChangeText={setResetEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoFocus
+                  />
+                  <TouchableOpacity
+                    style={styles.btnPrimary}
+                    onPress={handleForgotPassword}
+                    disabled={resetLoading}
+                    activeOpacity={0.8}
+                  >
+                    {resetLoading
+                      ? <ActivityIndicator color="#fff" />
+                      : <Text style={styles.btnPrimaryText}>Envoyer le lien</Text>
+                    }
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.forgotBack}
+                    onPress={() => setShowForgotPassword(false)}
+                  >
+                    <Text style={styles.forgotBackText}>← Retour</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          )}
 
           {/* Séparateur */}
           <View style={styles.separator}>
@@ -318,131 +413,232 @@ export default function ProfileScreen() {
   const displayName = firebaseUser.displayName ?? firebaseUser.email ?? 'Joueur';
   const isAnonymous = firebaseUser.isAnonymous;
 
+  // 4 derniers badges obtenus (pour l'aperçu)
+  const recentBadges = [...player.earnedBadges].reverse().slice(0, 4);
+
   return (
     <SafeAreaView style={styles.root}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Avatar & nom */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarEmoji}>🌲</Text>
-          </View>
-          <Text style={styles.username}>
-            {isAnonymous ? 'Invité' : displayName}
+      {/* Onglets internes : Progression / Badges / Classement */}
+      <View style={styles.tabRow}>
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'progression' && styles.tabBtnActive]}
+          onPress={() => setActiveTab('progression')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === 'progression' && styles.tabTextActive]}>
+            Progression
           </Text>
-          {isAnonymous && (
-            <Text style={styles.authSubtitle}>Mode invité — progression non sauvegardée</Text>
-          )}
-          {player.isPremium && (
-            <View style={styles.premiumBadge}>
-              <Text style={styles.premiumText}>✨ Premium</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'badges' && styles.tabBtnActive]}
+          onPress={() => setActiveTab('badges')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === 'badges' && styles.tabTextActive]}>
+            Badges {player.earnedBadges.length > 0 ? `(${player.earnedBadges.length})` : ''}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'classement' && styles.tabBtnActive]}
+          onPress={() => setActiveTab('classement')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === 'classement' && styles.tabTextActive]}>
+            🌍 Classement
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Onglet PROGRESSION ── */}
+      {activeTab === 'progression' && (
+        <ScrollView contentContainerStyle={styles.container}>
+          {/* Avatar & nom */}
+          <View style={styles.avatarSection}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarEmoji}>🌲</Text>
+            </View>
+            <Text style={styles.username}>
+              {isAnonymous ? 'Invité' : displayName}
+            </Text>
+            {isAnonymous && (
+              <Text style={styles.authSubtitle}>Mode invité — progression non sauvegardée</Text>
+            )}
+            {player.isPremium && (
+              <View style={styles.premiumBadge}>
+                <Text style={styles.premiumText}>✨ Premium</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Graines */}
+          <View style={styles.seedsCard}>
+            <Text style={styles.seedsEmoji}>🌱</Text>
+            <View>
+              <Text style={styles.seedsValue}>{player.seeds}</Text>
+              <Text style={styles.seedsLabel}>Graines disponibles</Text>
+            </View>
+          </View>
+
+          {/* Progression globale */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Progression globale</Text>
+              <Text style={styles.sectionSub}>{totalCompleted}/{totalChallenges} défis</Text>
+            </View>
+            <View style={styles.globalProgressBg}>
+              <View style={[styles.globalProgressFill, { width: `${globalPct * 100}%` }]} />
+            </View>
+          </View>
+
+          {/* Statistiques */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Statistiques</Text>
+            <View style={styles.statsGrid}>
+              <StatCard label="Défis résolus" value={String(player.stats.totalSolved)} emoji="🏆" />
+              <StatCard label="Série actuelle" value={String(player.stats.currentStreak)} emoji="🔥" />
+              <StatCard label="Meilleure série" value={String(player.stats.longestStreak)} emoji="⭐" />
+              <StatCard
+                label="Meilleur temps"
+                value={fastestTime ? formatTime(fastestTime) : '—'}
+                emoji="⏱"
+              />
+            </View>
+          </View>
+
+          {/* Section Badges — aperçu + bouton voir tous */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Badges</Text>
+              <TouchableOpacity onPress={() => setActiveTab('badges')}>
+                <Text style={styles.sectionLink}>Voir tous →</Text>
+              </TouchableOpacity>
+            </View>
+            {recentBadges.length > 0 ? (
+              <View style={styles.badgePreviewRow}>
+                {recentBadges.map(id => {
+                  const badge = BADGE_MAP[id];
+                  if (!badge) return null;
+                  return (
+                    <BadgeCard
+                      key={id}
+                      badge={badge}
+                      earned
+                      size="small"
+                      onPress={() => setActiveTab('badges')}
+                    />
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={styles.emptyBadges}>
+                Complète des défis pour débloquer tes premiers badges !
+              </Text>
+            )}
+          </View>
+
+          {/* Progression par niveau */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Par niveau</Text>
+            {LEVELS.map(level => {
+              const done = player.completedChallenges.filter(id =>
+                id.startsWith(level.id + '_')
+              ).length;
+              const pct = level.total > 0 ? done / level.total : 0;
+              return (
+                <View key={level.id} style={styles.levelRow}>
+                  <Text style={styles.levelRowEmoji}>{level.emoji}</Text>
+                  <Text style={styles.levelRowLabel}>{level.label}</Text>
+                  <View style={styles.levelRowBarBg}>
+                    <View style={[styles.levelRowBarFill, { width: `${pct * 100}%` }]} />
+                  </View>
+                  <Text style={styles.levelRowCount}>{done}/{level.total}</Text>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Premium */}
+          {!player.isPremium && (
+            <View style={styles.premiumCard}>
+              <Text style={styles.premiumCardTitle}>✨ Passer Premium</Text>
+              <Text style={styles.premiumCardDesc}>
+                Accès illimité aux défis Expert & Maître, tous les plateaux, bonus illimités et mode défi entre amis.
+              </Text>
+              <TouchableOpacity style={styles.premiumBtn} activeOpacity={0.8}>
+                <Text style={styles.premiumBtnText}>Débloquer — 3,99 €</Text>
+              </TouchableOpacity>
             </View>
           )}
-        </View>
 
-        {/* Graines */}
-        <View style={styles.seedsCard}>
-          <Text style={styles.seedsEmoji}>🌱</Text>
-          <View>
-            <Text style={styles.seedsValue}>{player.seeds}</Text>
-            <Text style={styles.seedsLabel}>Graines disponibles</Text>
+          {/* Sélecteur de langue */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Langue / Language</Text>
+            <View style={styles.langRow}>
+              {(['fr', 'en'] as Lang[]).map(lang => (
+                <TouchableOpacity
+                  key={lang}
+                  style={[
+                    styles.langBtn,
+                    player.language === lang && styles.langBtnActive,
+                  ]}
+                  onPress={() => player.setLanguage(lang)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.langBtnText,
+                    player.language === lang && styles.langBtnTextActive,
+                  ]}>
+                    {lang === 'fr' ? '🇫🇷 Français' : '🇬🇧 English'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Progression globale */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Progression globale</Text>
-            <Text style={styles.sectionSub}>{totalCompleted}/{totalChallenges} défis</Text>
-          </View>
-          <View style={styles.globalProgressBg}>
-            <View style={[styles.globalProgressFill, { width: `${globalPct * 100}%` }]} />
-          </View>
-        </View>
+          {/* Déconnexion */}
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
+            <Text style={styles.logoutBtnText}>🚪 Se déconnecter</Text>
+          </TouchableOpacity>
 
-        {/* Statistiques */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Statistiques</Text>
-          <View style={styles.statsGrid}>
-            <StatCard label="Défis résolus" value={String(player.stats.totalSolved)} emoji="🏆" />
-            <StatCard label="Série actuelle" value={String(player.stats.currentStreak)} emoji="🔥" />
-            <StatCard label="Meilleure série" value={String(player.stats.longestStreak)} emoji="⭐" />
-            <StatCard
-              label="Meilleur temps"
-              value={fastestTime ? formatTime(fastestTime) : '—'}
-              emoji="⏱"
-            />
-          </View>
-        </View>
+          {/* Réinitialisation */}
+          <TouchableOpacity style={styles.resetBtn} onPress={handleReset} activeOpacity={0.7}>
+            <Text style={styles.resetBtnText}>🗑️ Réinitialiser la progression</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
 
-        {/* Progression par niveau */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Par niveau</Text>
-          {LEVELS.map(level => {
-            const done = player.completedChallenges.filter(id =>
-              id.startsWith(level.id + '_')
-            ).length;
-            const pct = level.total > 0 ? done / level.total : 0;
-            return (
-              <View key={level.id} style={styles.levelRow}>
-                <Text style={styles.levelRowEmoji}>{level.emoji}</Text>
-                <Text style={styles.levelRowLabel}>{level.label}</Text>
-                <View style={styles.levelRowBarBg}>
-                  <View style={[styles.levelRowBarFill, { width: `${pct * 100}%` }]} />
-                </View>
-                <Text style={styles.levelRowCount}>{done}/{level.total}</Text>
+      {/* ── Onglet BADGES ── */}
+      {activeTab === 'badges' && (
+        <View style={{ flex: 1 }}>
+          {!showFullBadges ? (
+            <ScrollView contentContainerStyle={styles.container}>
+              {/* Collection complète (aperçu) */}
+              <BadgeCollection
+                earnedBadges={player.earnedBadges}
+                onBadgePress={() => {}}
+              />
+              {/* Déblocages par rareté */}
+              <View style={[styles.section, { marginTop: 16 }]}>
+                <BadgeUnlockProgress
+                  earnedBadges={player.earnedBadges}
+                  unlockedBonuses={player.unlockedBonuses as string[]}
+                  unlockedThemes={player.unlockedThemes}
+                />
               </View>
-            );
-          })}
+            </ScrollView>
+          ) : (
+            <BadgeCollection
+              earnedBadges={player.earnedBadges}
+              onBadgePress={() => {}}
+            />
+          )}
         </View>
+      )}
 
-        {/* Premium */}
-        {!player.isPremium && (
-          <View style={styles.premiumCard}>
-            <Text style={styles.premiumCardTitle}>✨ Passer Premium</Text>
-            <Text style={styles.premiumCardDesc}>
-              Accès illimité aux défis Expert & Maître, tous les plateaux, bonus illimités et mode défi entre amis.
-            </Text>
-            <TouchableOpacity style={styles.premiumBtn} activeOpacity={0.8}>
-              <Text style={styles.premiumBtnText}>Débloquer — 3,99 €</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Sélecteur de langue */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Langue / Language</Text>
-          <View style={styles.langRow}>
-            {(['fr', 'en'] as Lang[]).map(lang => (
-              <TouchableOpacity
-                key={lang}
-                style={[
-                  styles.langBtn,
-                  player.language === lang && styles.langBtnActive,
-                ]}
-                onPress={() => player.setLanguage(lang)}
-                activeOpacity={0.7}
-              >
-                <Text style={[
-                  styles.langBtnText,
-                  player.language === lang && styles.langBtnTextActive,
-                ]}>
-                  {lang === 'fr' ? '🇫🇷 Français' : '🇬🇧 English'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Déconnexion */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
-          <Text style={styles.logoutBtnText}>🚪 Se déconnecter</Text>
-        </TouchableOpacity>
-
-        {/* Réinitialisation */}
-        <TouchableOpacity style={styles.resetBtn} onPress={handleReset} activeOpacity={0.7}>
-          <Text style={styles.resetBtnText}>🗑️ Réinitialiser la progression</Text>
-        </TouchableOpacity>
-      </ScrollView>
+      {/* ── Onglet CLASSEMENT ── */}
+      {activeTab === 'classement' && (
+        <LeaderboardScreen />
+      )}
     </SafeAreaView>
   );
 }
@@ -477,6 +673,50 @@ const statStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.ui.background },
   container: { padding: 20, gap: 20, paddingBottom: 40 },
+  // ── Onglets internes ──────────────────────────────────────────
+  tabRow: {
+    flexDirection: 'row',
+    backgroundColor: Colors.ui.card,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.ui.border,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabBtnActive: {
+    borderBottomColor: Colors.forest.medium,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.ui.textLight,
+  },
+  tabTextActive: {
+    color: Colors.forest.dark,
+    fontWeight: '700',
+  },
+  // ── Badges aperçu ─────────────────────────────────────────────
+  sectionLink: {
+    fontSize: 12,
+    color: Colors.forest.medium,
+    fontWeight: '600',
+  },
+  badgePreviewRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  emptyBadges: {
+    fontSize: 13,
+    color: Colors.ui.textLight,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
   avatarSection: { alignItems: 'center', gap: 8, paddingTop: 8 },
   avatar: {
     width: 88,
@@ -664,4 +904,44 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   premiumBtnText: { fontSize: 15, fontWeight: '700', color: Colors.forest.dark },
+  // ── Mot de passe oublié ─────────────────────────────────────
+  forgotBtn: {
+    alignSelf: 'center',
+    marginTop: 4,
+    paddingVertical: 8,
+  },
+  forgotBtnText: {
+    fontSize: 13,
+    color: Colors.forest.medium,
+    fontWeight: '600',
+  },
+  forgotBox: {
+    backgroundColor: Colors.ui.card,
+    borderRadius: 16,
+    padding: 20,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.ui.border,
+  },
+  forgotTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.forest.dark,
+    textAlign: 'center',
+  },
+  forgotDesc: {
+    fontSize: 13,
+    color: Colors.ui.textLight,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  forgotBack: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+  },
+  forgotBackText: {
+    fontSize: 13,
+    color: Colors.forest.medium,
+    fontWeight: '600',
+  },
 });
