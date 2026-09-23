@@ -81,10 +81,11 @@ export default function GameScreen() {
   const game = useGame();
   const player = usePlayerStore();
 
-  // Ref sur la GestureHandlerRootView pour mesurer son offset écran
-  // GestureHandlerRootView est une View, on peut utiliser useRef<View>
-  const gestureRootRef = useRef<React.ElementRef<typeof GestureHandlerRootView>>(null);
-  const gestureRootOffsetRef = useRef({ x: 0, y: 0 });
+  // Note : GestureHandlerRootView ne forward pas de ref (composant fonction sans forwardRef)
+  // et couvre toujours l'intégralité de l'écran → son offset est { x: 0, y: 0 } par définition.
+  // Les absoluteX/Y de Reanimated sont donc directement en coords écran,
+  // et boardOffsetRef (mesuré via measureInWindow) est en coords écran.
+  // Aucune correction gestureRoot n'est nécessaire : on soustrait juste boardOffset.
 
   // Confettis — hook dans le composant racine, rendu hors du Modal
   const confettiPieces = useConfetti(game.isVictory);
@@ -135,21 +136,13 @@ export default function GameScreen() {
   // Sur web : clientX/Y sont en coords viewport, on soustrait juste l'offset du board
   const findNearest = useCallback((x: number, y: number) => {
     if (!boardDef || boardSize.width === 0) return null;
-    let relX: number;
-    let relY: number;
-    if (Platform.OS === 'web') {
-      relX = x - boardOffsetRef.current.x;
-      relY = y - boardOffsetRef.current.y;
-    } else {
-      // absoluteX/Y sont relatives à GestureHandlerRootView
-      // boardOffsetRef est en coords écran (measureInWindow)
-      // gestureRootOffsetRef est en coords écran (measureInWindow)
-      // donc : coords relatives au board = absoluteXY - (boardOffset - gestureRootOffset)
-      const boardRelX = boardOffsetRef.current.x - gestureRootOffsetRef.current.x;
-      const boardRelY = boardOffsetRef.current.y - gestureRootOffsetRef.current.y;
-      relX = x - boardRelX;
-      relY = y - boardRelY;
-    }
+    // Sur web : x/y sont des coords viewport (clientX/Y) → on soustrait l'offset du board en viewport.
+    // Sur mobile : absoluteX/Y de Reanimated sont en coords écran (relatives à l'origine de l'écran)
+    //   et boardOffsetRef est aussi en coords écran (via measureInWindow).
+    //   GestureHandlerRootView couvre tout l'écran et son origine est (0,0) :
+    //   pas de correction supplémentaire nécessaire.
+    const relX = x - boardOffsetRef.current.x;
+    const relY = y - boardOffsetRef.current.y;
     const snapRadius = Platform.OS === 'web' ? 80 : 60;
     return findNearestCell(relX, relY, boardDef, boardSize.width, boardSize.height, CELL_SIZE, snapRadius);
   }, [boardDef, boardSize]);
@@ -219,24 +212,19 @@ export default function GameScreen() {
     // Web : afficher le ghost au niveau de l'écran
     if (Platform.OS === 'web') {
       setBoardDragGhostState({ visible: true, elementId, x, y });
-      handleCellDragStart(cellIndex, elementId);
     } else {
       // Mobile : réutiliser le ghost natif
       setGhostState({ visible: true, elementId, x, y });
-      // Re-mesurer la position du plateau AVANT d'initier le drag.
-      // measureInWindow est asynchrone : on attend son callback pour
-      // mettre à jour boardOffsetRef PUIS appeler handleCellDragStart,
-      // sinon handleDragEnd calculerait findNearest avec l'ancien offset
-      // (celui du drag palette précédent) → index erroné → crash.
-      if (boardContainerRef.current) {
-        boardContainerRef.current.measureInWindow((bx, by) => {
-          boardOffsetRef.current = { x: bx, y: by };
-          handleCellDragStart(cellIndex, elementId);
-        });
-      } else {
-        handleCellDragStart(cellIndex, elementId);
-      }
     }
+    // handleCellDragStart DOIT être appelé de façon synchrone ici pour que
+    // sourceCellRef et elementIdRef soient à jour AVANT que handleDragEnd
+    // soit appelé par le worklet onEnd (runOnJS est schedulé sur le JS thread
+    // mais l'ordre onStart → onEnd est garanti).
+    // Ne PAS mettre handleCellDragStart dans un callback async (measureInWindow)
+    // car onEnd peut arriver avant ce callback si le drag est rapide,
+    // laissant sourceCellRef=null → le drop est traité comme un drag depuis
+    // la palette → tryPlaceElement au lieu de moveElement → crash/comportement erroné.
+    handleCellDragStart(cellIndex, elementId);
   }, [handleCellDragStart]);
 
   const wrappedCellDragMove = useCallback((x: number, y: number) => {
@@ -332,15 +320,7 @@ export default function GameScreen() {
 
   return (
     <GestureHandlerRootView
-      ref={gestureRootRef}
       style={styles.root}
-      onLayout={() => {
-        if (Platform.OS !== 'web') {
-          gestureRootRef.current?.measureInWindow((x, y) => {
-            gestureRootOffsetRef.current = { x, y };
-          });
-        }
-      }}
     >
       {/* ── Feuilles qui tombent — au niveau root pour couvrir tout l'écran ── */}
       <FallingLeaves />
