@@ -74,6 +74,10 @@ export function generateChallenge(options: GeneratorOptions): Challenge | null {
   // même si les cases fixes diffèrent.
   const usedSolutionSignatures = new Set<string>();
 
+  // Compteurs pour debug — supprimés en prod
+  let dbgNoSolution = 0, dbgDupSol = 0, dbgNotCoherent = 0, dbgNotEnoughEmpty = 0,
+      dbgNotUnique = 0, dbgNotPedago = 0, dbgNotNarrative = 0, dbgTooSimilar = 0;
+
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     // Fix 3.5 : choisir la composition la moins utilisée (shuffle pour égalité)
     const sortedIndices = shuffleArray(params.compositions.map((_, i) => i))
@@ -89,20 +93,20 @@ export function generateChallenge(options: GeneratorOptions): Challenge | null {
     // Étape 1 : Collecter TOUTES les solutions valides pour cette composition,
     // puis en choisir une aléatoirement → maximise la diversité des structures.
     const solution = generateValidSolution(boardDef, elementDefs, tokenCounts);
-    if (!solution) continue;
+    if (!solution) { dbgNoSolution++; continue; }
 
     // Fix 3.4 : rejeter immédiatement si cette solution complète a déjà été
     // utilisée dans ce niveau → deux défis avec la même solution mais des cases
     // fixes différentes donnent la même expérience au joueur.
     const solSig = solutionSignature(solution);
-    if (usedSolutionSignatures.has(solSig)) continue;
+    if (usedSolutionSignatures.has(solSig)) { dbgDupSol++; continue; }
 
     // Fix 3.6 : vérifier la tension narrative AVANT de retirer des jetons.
     // Si la composition contient renard+mouton ou chalet+bucheron, la solution
     // doit en placer au moins un de chaque côté de la frontière fixe/disponible.
     // Ici on vérifie juste que les deux éléments sont présents dans la solution —
     // la tension sera vérifiée après la création du défi (une fois les cases fixes connues).
-    if (!isNarrativelyCoherent(tokenCounts)) continue;
+    if (!isNarrativelyCoherent(tokenCounts)) { dbgNotCoherent++; continue; }
 
     // Étape 2 : Créer le défi en retirant des jetons.
     // La stratégie de retrait varie selon la tentative pour diversifier
@@ -122,26 +126,26 @@ export function generateChallenge(options: GeneratorOptions): Challenge | null {
 
     // Rejeter si le nombre de cases vides cible n'est pas atteint
     const actualEmpty = boardDef.cellCount - fixedPlacements.length;
-    if (actualEmpty < targetEmptyCells) continue;
+    if (actualEmpty < targetEmptyCells) { dbgNotEnoughEmpty++; continue; }
 
     // Vérifier l'unicité finale avec TOUS les jetons disponibles pour le joueur.
     // C'est la garantie absolue : avec exactement ces jetons, il n'existe
     // qu'une seule façon de compléter le plateau.
     const solverResult = solve({ boardDef, fixedPlacements, availableTokens, elementDefs });
-    if (!solverResult.isUnique) continue;
+    if (!solverResult.isUnique) { dbgNotUnique++; continue; }
 
     // Vérifier la validité pédagogique
-    if (!isPedagogicallyValid(availableTokens, tokenCounts)) continue;
+    if (!isPedagogicallyValid(availableTokens, tokenCounts)) { dbgNotPedago++; continue; }
 
     // Fix 3.6 : tension narrative — rejeter si renard présent sans tension
     // renard/mouton, ou chalet présent sans tension chalet/bucheron.
-    if (!isNarrativelyInteresting(availableTokens, fixedPlacements, tokenCounts)) continue;
+    if (!isNarrativelyInteresting(availableTokens, fixedPlacements, tokenCounts)) { dbgNotNarrative++; continue; }
 
     // Vérifier la diversité structurelle : rejeter si trop similaire
     // à un défi récent (même cases fixes, même éléments).
     if (recentFixedSignatures) {
       const sig = fixedSignature(fixedPlacements);
-      if (isTooSimilarToRecent(sig, recentFixedSignatures, fixedPlacements.length)) continue;
+      if (isTooSimilarToRecent(sig, recentFixedSignatures, fixedPlacements.length)) { dbgTooSimilar++; continue; }
     }
 
     // Fix 3.4 : mémoriser la signature de solution complète
@@ -167,24 +171,29 @@ export function generateChallenge(options: GeneratorOptions): Challenge | null {
     };
   }
 
+  console.warn(
+    `[Générateur] Échec ${difficulty} après ${MAX_ATTEMPTS} tentatives — ` +
+    `noSol:${dbgNoSolution} dupSol:${dbgDupSol} notCoherent:${dbgNotCoherent} ` +
+    `notEnoughEmpty:${dbgNotEnoughEmpty} notUnique:${dbgNotUnique} ` +
+    `notPedago:${dbgNotPedago} notNarrative:${dbgNotNarrative} tooSimilar:${dbgTooSimilar}`
+  );
   return null; // Échec après MAX_ATTEMPTS tentatives
 }
 
 /**
  * Vérifie que le défi est pédagogiquement valide.
  *
- * Règle générale (point 5) : pour chaque type d'élément présent dans la
- * composition, au moins 1 exemplaire doit rester à placer par le joueur.
- * Un élément entièrement en cases fixes n'apporte aucun intérêt pédagogique.
+ * Règle générale : au moins 1 token doit être disponible pour le joueur
+ * (le défi ne peut pas être 100% pré-rempli).
  *
- * Règles spécifiques supplémentaires :
- *   - chien    : au moins 1 chien à poser (la meute doit être à construire)
- *   - chalet   : au moins 1 chalet OU 1 bucheron à poser (relation visible)
- *   - renard   : au moins 1 renard OU 1 mouton à poser (relation visible)
- *   - ruche    : au moins 1 ruche OU 1 ours à poser (relation visible)
- *   - cerf     : au moins 1 cerf OU 1 biche à poser (couple à former)
- *   - biche    : au moins 1 biche OU 1 cerf à poser (couple à former)
- *   - tas_buches : au moins 1 tas_buches OU 1 bucheron à poser
+ * Règles relationnelles (dures) : pour les paires liées par contraintes,
+ * au moins un des deux éléments de la paire doit être à placer.
+ * Ça garantit que la relation est visible et jouable.
+ *
+ * NOTE : On NE requiert plus que chaque type ait ≥1 exemplaire disponible —
+ * cette règle était trop stricte pour les niveaux élevés avec beaucoup de types
+ * (ex: 6 types sur 4 cases fixes → mathématiquement impossible de tous les couvrir).
+ * Les règles relationnelles ci-dessous assurent déjà la valeur pédagogique essentielle.
  */
 function isPedagogicallyValid(
   availableTokens: TokenCount[],
@@ -196,12 +205,8 @@ function isPedagogicallyValid(
   const inFull = (id: string) => (fullMap.get(id) ?? 0) > 0;
   const hasAvailable = (id: string) => (availableMap.get(id) ?? 0) > 0;
 
-  // Règle générale : aucun type ne doit être entièrement en cases fixes.
-  // Si un type est dans la composition mais absent des jetons disponibles
-  // → tous ses exemplaires sont fixés → invalide.
-  for (const [elementId] of fullMap) {
-    if (!hasAvailable(elementId)) return false;
-  }
+  // Règle minimale : le joueur doit avoir au moins 1 token à placer.
+  if (availableTokens.length === 0 || availableTokens.every(t => t.count === 0)) return false;
 
   // Règles relationnelles : au moins un des deux éléments d'une paire
   // doit être à poser pour que la relation soit visible et jouable.
@@ -211,6 +216,10 @@ function isPedagogicallyValid(
   if (inFull('cerf') && !hasAvailable('cerf') && !hasAvailable('biche')) return false;
   if (inFull('biche') && !hasAvailable('biche') && !hasAvailable('cerf')) return false;
   if (inFull('tas_buches') && !hasAvailable('tas_buches') && !hasAvailable('bucheron')) return false;
+
+  // Règle chien : si chien présent, au moins 1 chien à poser
+  // (la meute doit rester à construire — sinon le défi est trivial sur ce point).
+  if (inFull('chien') && !hasAvailable('chien')) return false;
 
   return true;
 }
@@ -567,37 +576,33 @@ function isNarrativelyCoherent(tokenCounts: TokenCount[]): boolean {
 /**
  * Fix 3.6 : vérifie la tension narrative APRÈS création des cases fixes.
  *
- * Règle A (dure) : si renard est dans la composition, le défi doit créer
- * une tension renard/mouton visible — c'est-à-dire qu'au moins un des deux
- * doit être fixé ET au moins un de l'autre doit être disponible à placer.
+ * Règle A (dure) : si renard et mouton sont dans la composition, il ne faut PAS
+ * que les deux soient entièrement en cases fixes (aucune tension visible pour le joueur).
+ * Si au moins l'un des deux est disponible → tension possible → OK.
  *
  * Règle B (dure) : idem pour chalet/bucheron.
  *
- * Règle C (souple) : ruche/ours — pas de rejet dur, géré par le tri des tentatives.
+ * NOTE : on n'exige PLUS qu'un des deux soit FIXÉ — si tous les deux sont disponibles,
+ * le joueur doit quand même gérer leur relation en les plaçant, ce qui est pédagogique.
  */
 function isNarrativelyInteresting(
   availableTokens: TokenCount[],
-  fixedPlacements: FixedPlacement[],
+  _fixedPlacements: FixedPlacement[],
   fullTokenCounts: TokenCount[]
 ): boolean {
   const inCompo = (id: string) => fullTokenCounts.some(t => t.elementId === id && t.count > 0);
-  const hasFixed = (id: string) => fixedPlacements.some(fp => fp.elementId === id);
   const hasAvailable = (id: string) => availableTokens.some(t => t.elementId === id && t.count > 0);
 
-  // Règle A : tension renard/mouton obligatoire si renard présent
+  // Règle A : si renard ET mouton sont dans la composition,
+  // au moins l'un des deux doit être à placer (pas les deux entièrement fixés).
   if (inCompo('renard') && inCompo('mouton')) {
-    const tension =
-      (hasFixed('renard') && hasAvailable('mouton')) ||
-      (hasFixed('mouton') && hasAvailable('renard'));
-    if (!tension) return false;
+    if (!hasAvailable('renard') && !hasAvailable('mouton')) return false;
   }
 
-  // Règle B : tension chalet/bucheron obligatoire si chalet présent
+  // Règle B : si chalet ET bucheron sont dans la composition,
+  // au moins l'un des deux doit être à placer.
   if (inCompo('chalet') && inCompo('bucheron')) {
-    const tension =
-      (hasFixed('chalet') && hasAvailable('bucheron')) ||
-      (hasFixed('bucheron') && hasAvailable('chalet'));
-    if (!tension) return false;
+    if (!hasAvailable('chalet') && !hasAvailable('bucheron')) return false;
   }
 
   return true;
