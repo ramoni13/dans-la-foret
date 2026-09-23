@@ -255,19 +255,29 @@ function isCompleteSolutionValid(
 
       switch (constraint.type) {
         case 'neighbor_same': {
-          if (constraint.mode !== 'require') break;
-          const minCount = constraint.minCount ?? 1;
-          const sameCount = neighbors.filter(n => board[n] === elementId).length;
-          if (sameCount < minCount) return false;
+          if (constraint.mode === 'forbid') {
+            // Aucun voisin identique autorisé
+            const hasSameNeighbor = neighbors.some(n => board[n] === elementId);
+            if (hasSameNeighbor) return false;
+          } else if (constraint.mode === 'require') {
+            const minCount = constraint.minCount ?? 1;
+            const sameCount = neighbors.filter(n => board[n] === elementId).length;
+            if (sameCount < minCount) return false;
+          }
           break;
         }
         case 'neighbor_specific': {
-          if (constraint.mode !== 'require') break;
           const targetId = constraint.targetElementId;
           if (!targetId) break;
-          const minCount = constraint.minCount ?? 1;
-          const targetCount = neighbors.filter(n => board[n] === targetId).length;
-          if (targetCount < minCount) return false;
+          if (constraint.mode === 'forbid') {
+            // Aucun voisin du type cible autorisé
+            const hasForbiddenNeighbor = neighbors.some(n => board[n] === targetId);
+            if (hasForbiddenNeighbor) return false;
+          } else if (constraint.mode === 'require') {
+            const minCount = constraint.minCount ?? 1;
+            const targetCount = neighbors.filter(n => board[n] === targetId).length;
+            if (targetCount < minCount) return false;
+          }
           break;
         }
         case 'neighbor_specific_chain': {
