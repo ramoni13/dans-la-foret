@@ -20,6 +20,10 @@ import { Colors } from '../../constants/colors';
 import { DifficultyLevel } from '../../core/models/Challenge';
 import { notificationSuccess } from '../../utils/haptics';
 import { useConfetti, Confetti, ConfettiPiece } from './Confetti';
+import { BadgeProgressInline } from '../Badges/BadgeProgressInline';
+import { BadgeToast } from '../Badges/BadgeToast';
+import { BadgeProgress } from '../../core/engine/badgeEngine';
+import { WorldRecord } from '../../services/worldRecordService';
 
 interface VictoryModalProps {
   visible: boolean;
@@ -30,6 +34,15 @@ interface VictoryModalProps {
   onNextChallenge: () => void;
   onBackToMenu: () => void;
   confettiPieces: ConfettiPiece[];
+  /** Badges les plus proches d'être débloqués (fournis par badgeEngine) */
+  closestBadges?: BadgeProgress[];
+  /** File de badges à notifier via toast (rendu dans le Modal pour passer au-dessus) */
+  badgeQueue?: string[];
+  onBadgeQueueEmpty?: () => void;
+  /** Record mondial actuel au moment de la victoire (null = aucun record existant) */
+  worldRecord?: WorldRecord | null;
+  /** true = le joueur vient de battre (ou créer) le record mondial */
+  isNewWorldRecord?: boolean;
 }
 
 // Libelles pour chaque niveau
@@ -58,6 +71,11 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   onNextChallenge,
   onBackToMenu,
   confettiPieces,
+  closestBadges = [],
+  badgeQueue = [],
+  onBadgeQueueEmpty,
+  worldRecord = null,
+  isNewWorldRecord = false,
 }) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -119,6 +137,30 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             </View>
           </View>
 
+          {/* Record mondial */}
+          {isNewWorldRecord ? (
+            <View style={styles.wrBanner}>
+              <Text style={styles.wrBannerEmoji}>🌍🏆</Text>
+              <View style={styles.wrBannerText}>
+                <Text style={styles.wrBannerTitle}>Nouveau record mondial !</Text>
+                <Text style={styles.wrBannerTime}>{formatTime(elapsedTime)}</Text>
+              </View>
+            </View>
+          ) : worldRecord ? (
+            <View style={styles.wrInfo}>
+              <Text style={styles.wrInfoLabel}>🌍 Record mondial</Text>
+              <Text style={styles.wrInfoTime}>{formatTime(worldRecord.timeMs)}</Text>
+              <Text style={styles.wrInfoHolder}>par {worldRecord.username}</Text>
+            </View>
+          ) : null}
+
+          {/* Progression badge la plus proche */}
+          {closestBadges.length > 0 && (
+            <View style={styles.badgeProgressWrapper}>
+              <BadgeProgressInline closestBadges={closestBadges} />
+            </View>
+          )}
+
           {/* Actions */}
           <TouchableOpacity
             style={styles.btnPrimary}
@@ -141,6 +183,13 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
       {/* Confettis dans le Modal — après la carte pour être au-dessus */}
       <Confetti pieces={confettiPieces} />
 
+      {/* Toasts de badge — dans le Modal pour passer au-dessus du backdrop */}
+      {badgeQueue.length > 0 && onBadgeQueueEmpty && (
+        <BadgeToast
+          queue={badgeQueue}
+          onQueueEmpty={onBadgeQueueEmpty}
+        />
+      )}
     </Modal>
   );
 };
@@ -231,5 +280,68 @@ const styles = StyleSheet.create({
   btnSecondaryText: {
     color: Colors.ui.textLight,
     fontSize: 14,
+  },
+  badgeProgressWrapper: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  // ── Record mondial ──────────────────────────────────────────
+  wrBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.badges.or + '20',
+    borderWidth: 1.5,
+    borderColor: Colors.badges.or,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    width: '100%',
+    gap: 10,
+  },
+  wrBannerEmoji: {
+    fontSize: 28,
+  },
+  wrBannerText: {
+    flex: 1,
+  },
+  wrBannerTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.badges.or,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  wrBannerTime: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+  },
+  wrInfo: {
+    backgroundColor: Colors.ui.background,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  wrInfoLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.ui.textLight,
+    flex: 1,
+  },
+  wrInfoTime: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+  },
+  wrInfoHolder: {
+    fontSize: 11,
+    color: Colors.ui.textLight,
+    maxWidth: 100,
   },
 });
