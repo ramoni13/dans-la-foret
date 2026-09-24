@@ -23,7 +23,7 @@ import { createPlayer, getPlayer, isUsernameTaken } from './playerService';
 // ── Traduction des codes d'erreur Firebase en messages lisibles ───────────────
 export function translateAuthError(code: string): string {
   const map: Record<string, string> = {
-    'auth/email-already-in-use':    'Cette adresse e-mail est déjà utilisée par un autre compte.',
+    'auth/email-already-in-use':    'Un compte existe déjà avec cet e-mail. Utilise "Connexion" ou "Mot de passe oublié" pour récupérer l\'accès.',
     'auth/invalid-email':           'Adresse e-mail invalide.',
     'auth/weak-password':           'Le mot de passe doit contenir au moins 6 caractères.',
     'auth/user-not-found':          'Aucun compte trouvé avec cet e-mail.',
@@ -48,22 +48,19 @@ export async function isEmailAlreadyUsed(email: string): Promise<boolean> {
 }
 
 // ── Inscription email/password ─────────────────────────────────────────────────
-// Vérifie : pseudo unique + e-mail libre avant création du compte Firebase.
+// Séquence :
+//   1. Créer le compte Firebase Auth (l'user est immédiatement authentifié)
+//   2. Vérifier l'unicité du pseudo avec les permissions Firestore actives
+//   3. Si pseudo pris → supprimer le compte Auth créé et rejeter
+//   4. Sinon → créer le profil Firestore
+// Cette séquence est nécessaire car les règles Firestore refusent
+// les lectures non authentifiées sur /players.
 export async function registerWithEmail(
   email: string,
   password: string,
   username: string
 ): Promise<User> {
-  // 1. Vérifier unicité du pseudo (insensible à la casse)
-  const pseudoTaken = await isUsernameTaken(username);
-  if (pseudoTaken) {
-    throw Object.assign(
-      new Error('Ce nom de joueur est déjà pris. Choisis-en un autre.'),
-      { code: 'app/username-taken' }
-    );
-  }
-
-  // 2. Créer le compte Firebase Auth
+  // 1. Créer le compte Firebase Auth
   //    Firebase lève auth/email-already-in-use automatiquement si l'e-mail existe
   let cred;
   try {
@@ -75,7 +72,25 @@ export async function registerWithEmail(
     );
   }
 
-  // 3. Mettre à jour le displayName et créer le profil Firestore
+  // 2. Vérifier unicité du pseudo (maintenant authentifié → Firestore accepte)
+  let pseudoTaken = false;
+  try {
+    pseudoTaken = await isUsernameTaken(username);
+  } catch {
+    // Erreur réseau : on continue, le pseudo sera potentiellement dupliqué
+    // mais c'est préférable à bloquer l'inscription définitivement
+  }
+
+  if (pseudoTaken) {
+    // 3. Rollback : supprimer le compte Auth créé
+    try { await cred.user.delete(); } catch { /* silencieux */ }
+    throw Object.assign(
+      new Error('Ce nom de joueur est déjà pris. Choisis-en un autre.'),
+      { code: 'app/username-taken' }
+    );
+  }
+
+  // 4. Mettre à jour le displayName et créer le profil Firestore
   await updateProfile(cred.user, { displayName: username });
   await createPlayer(cred.user.uid, username);
   return cred.user;
