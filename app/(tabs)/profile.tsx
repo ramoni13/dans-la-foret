@@ -9,7 +9,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -17,6 +16,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from 'firebase/auth';
 
@@ -28,7 +28,6 @@ import {
   registerWithEmail,
   loginWithEmail,
   loginWithGoogle,
-  loginAnonymously,
   logout,
   onAuthChange,
   sendPasswordReset,
@@ -58,6 +57,7 @@ const LEVELS = [
 
 export default function ProfileScreen() {
   const player = usePlayerStore();
+  const insets = useSafeAreaInsets();
 
   // ── État Firebase Auth ────────────────────────────────────────────────────────────
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
@@ -140,17 +140,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleAnonymous = async () => {
-    setSubmitting(true);
-    try {
-      await loginAnonymously();
-    } catch (e: any) {
-      alert(e.message ?? 'Connexion invité échouée.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleForgotPassword = async () => {
     setResetLoading(true);
     try {
@@ -192,19 +181,19 @@ export default function ProfileScreen() {
   // ── Chargement initial ────────────────────────────────────────────────────────────────
   if (authLoading) {
     return (
-      <SafeAreaView style={styles.root}>
+      <View style={[styles.root, { paddingTop: insets.top }]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.forest.medium} />
           <Text style={styles.loadingText}>Connexion en cours…</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // ── NON CONNECTÉ : formulaire ────────────────────────────────────────────────────────────
   if (!firebaseUser) {
     return (
-      <SafeAreaView style={styles.root}>
+      <View style={[styles.root, { paddingTop: insets.top }]}>
         <ScrollView contentContainerStyle={styles.container}>
           {/* Header */}
           <View style={styles.avatarSection}>
@@ -366,20 +355,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Invité */}
-          <TouchableOpacity
-            style={styles.btnGuest}
-            onPress={handleAnonymous}
-            disabled={submitting}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.btnGuestText}>👤 Jouer en tant qu’invité</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.guestNote}>
-            En tant qu'invité, ta progression n'est pas sauvegardée sur le cloud.
-          </Text>
-
           {/* Sélecteur de langue (accessible même non connecté) */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Langue / Language</Text>
@@ -405,19 +380,18 @@ export default function ProfileScreen() {
             </View>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // ── CONNECTÉ : profil complet ────────────────────────────────────────────────────────────
   const displayName = firebaseUser.displayName ?? firebaseUser.email ?? 'Joueur';
-  const isAnonymous = firebaseUser.isAnonymous;
 
   // 4 derniers badges obtenus (pour l'aperçu)
   const recentBadges = [...player.earnedBadges].reverse().slice(0, 4);
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Onglets internes : Progression / Badges / Classement */}
       <View style={styles.tabRow}>
         <TouchableOpacity
@@ -457,12 +431,7 @@ export default function ProfileScreen() {
             <View style={styles.avatar}>
               <Text style={styles.avatarEmoji}>🌲</Text>
             </View>
-            <Text style={styles.username}>
-              {isAnonymous ? 'Invité' : displayName}
-            </Text>
-            {isAnonymous && (
-              <Text style={styles.authSubtitle}>Mode invité — progression non sauvegardée</Text>
-            )}
+            <Text style={styles.username}>{displayName}</Text>
             {player.isPremium && (
               <View style={styles.premiumBadge}>
                 <Text style={styles.premiumText}>✨ Premium</Text>
@@ -639,7 +608,7 @@ export default function ProfileScreen() {
       {activeTab === 'classement' && (
         <LeaderboardScreen />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -834,12 +803,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.ui.border,
   },
   btnGoogleText: { fontSize: 15, fontWeight: '600', color: Colors.ui.text },
-  btnGuest: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  btnGuestText: { fontSize: 14, color: Colors.ui.textLight },
-  guestNote: { fontSize: 11, color: Colors.ui.border, textAlign: 'center' },
+
   logoutBtn: {
     alignItems: 'center',
     paddingVertical: 12,
