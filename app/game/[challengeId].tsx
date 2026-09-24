@@ -301,10 +301,8 @@ export default function GameScreen() {
 
     const newBadges = evaluateBadges(ctx);
 
-    // Attribuer chaque badge dans le store
-    for (const badgeId of newBadges) {
-      player.awardBadge(badgeId);
-    }
+    // Attribuer TOUS les badges en UN SEUL set() Zustand — zéro re-render intermédiaire
+    player.awardBadges(newBadges);
 
     // Déclencher la file de toasts
     if (newBadges.length > 0) {
@@ -336,9 +334,8 @@ export default function GameScreen() {
           if (wrResult.previousRecord !== null && !currentEarned.includes('record_mondial')) {
             wrNewBadges.push('record_mondial');
           }
-          for (const bid of wrNewBadges) {
-            player.awardBadge(bid);
-          }
+          // Un seul set() pour les badges WR
+          player.awardBadges(wrNewBadges);
           if (wrNewBadges.length > 0) {
             setBadgeQueue(prev => [...prev, ...wrNewBadges]);
             awardBadgesFirestore(uid, wrNewBadges).catch(() => {});

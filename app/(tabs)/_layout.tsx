@@ -1,12 +1,14 @@
 // ============================================================
 // LAYOUT TABS — Navigation par onglets
+// Contient aussi la garde d'authentification (un seul onAuthChange dans l'app).
 // ============================================================
 
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter, useSegments } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { User } from 'firebase/auth';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { onAuthChange } from '../../src/services/authService';
 import { getPlayer } from '../../src/services/playerService';
@@ -22,33 +24,56 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 }
 
 export default function TabsLayout() {
-  const player = usePlayerStore();
-  const insets = useSafeAreaInsets();
+  const player   = usePlayerStore();
+  const insets   = useSafeAreaInsets();
+  const router   = useRouter();
+  const segments = useSegments();
 
-  // Restaurer le profil depuis Firestore dès le montage de l'app,
-  // quel que soit l'onglet ouvert — garantit que currentLevel est correct
-  // même si l'utilisateur n'ouvre jamais l'onglet Profil.
+  // undefined = Firebase pas encore répondu, null = déconnecté, User = connecté
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  // Verrou anti-boucle : une seule redirection par changement d'état auth
+  const redirectedRef = useRef(false);
+
+  // ── Un seul abonnement Firebase Auth pour toute l'app ──────────────────────
   useEffect(() => {
-    const unsub = onAuthChange(async (user) => {
-      if (user && !user.isAnonymous) {
-        const profile = await getPlayer(user.uid);
+    const unsub = onAuthChange(async (firebaseUser) => {
+      setUser(firebaseUser);
+
+      if (firebaseUser && !firebaseUser.isAnonymous) {
+        // Restaurer le profil Firestore
+        const profile = await getPlayer(firebaseUser.uid);
         if (profile) player.restoreFromCloud(profile);
       }
     });
     return unsub;
-  }, []);
+  }, []); // [] garanti : onAuthChange est stable
+
+  // ── Garde d'authentification — sans boucle ─────────────────────────────────
+  // Règle : si l'utilisateur n'est PAS connecté, il ne peut accéder qu'à /profile.
+  // On n'utilise PAS router.replace vers /(tabs)/ après connexion pour ne pas
+  // interférer avec la navigation normale de l'utilisateur.
+  useEffect(() => {
+    if (user === undefined) return; // Firebase pas encore répondu
+
+    const inProfileTab = segments.some(s => s === 'profile');
+
+    if (!user && !inProfileTab && !redirectedRef.current) {
+      // Non connecté et pas sur le profil → forcer le profil
+      redirectedRef.current = true;
+      router.replace('/(tabs)/profile');
+    } else if (user) {
+      // Connecté : réinitialiser le verrou pour les prochaines déconnexions
+      redirectedRef.current = false;
+    }
+  }, [user, segments]);
 
   // ── Connexion quotidienne ──────────────────────────────────────────────────
-  // Vérifie au montage si c'est la première connexion du jour.
-  // Si oui : incrémente le dailyStreak, octroie +3 graines, sync Firestore.
   useEffect(() => {
     const isNewDay = player.checkDailyLogin();
     if (isNewDay) {
-      // +3 graines de connexion quotidienne
       player.addSeeds(3);
 
-      // Sync Firestore en arrière-plan (si connecté non-anonyme)
-      const uid = auth.currentUser?.uid;
+      const uid    = auth.currentUser?.uid;
       const isAnon = auth.currentUser?.isAnonymous ?? true;
       if (uid && !isAnon) {
         const state = usePlayerStore.getState();
@@ -56,9 +81,9 @@ export default function TabsLayout() {
       }
     }
   }, []); // Une seule fois au montage
-  // paddingBottom = inset bas réel + espace interne pour les icônes
+
   const tabBarPaddingBottom = insets.bottom + 6;
-  const tabBarHeight = tabBarPaddingBottom + 44; // 44 = hauteur minimale des icônes
+  const tabBarHeight = tabBarPaddingBottom + 44;
 
   return (
     <Tabs
