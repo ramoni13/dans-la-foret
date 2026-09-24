@@ -208,27 +208,44 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   // ── restoreFromCloud ──────────────────────────────────────
   // Fait un UNION des badges locaux + cloud pour ne jamais perdre
   // un badge obtenu localement (hors-ligne) non encore synchronisé.
+  // Exception : si le profil cloud est vierge (nouveau compte), on ne merge
+  // pas les badges locaux pour éviter de contaminer un nouveau compte avec
+  // les données d'une session de test précédente.
   restoreFromCloud: (profile) => {
     const cloudEarned = profile.earnedBadges ?? [];
-    // Union : merge badges locaux actuels + badges cloud
+    const isNewCloudProfile =
+      cloudEarned.length === 0 &&
+      (profile.completedChallenges ?? []).length === 0;
+
+    // Union : merge badges locaux actuels + badges cloud,
+    // SAUF si le profil cloud est vierge (nouveau compte).
     const localEarned = get().earnedBadges;
-    const mergedEarned = Array.from(new Set([...localEarned, ...cloudEarned]));
+    const mergedEarned = isNewCloudProfile
+      ? cloudEarned
+      : Array.from(new Set([...localEarned, ...cloudEarned]));
 
     // Prendre le dailyStreak le plus élevé (le local peut être + récent que le cloud)
+    // Sauf pour un profil vierge : on repart de zéro pour éviter de récupérer
+    // le streak d'une session précédente sur un autre compte.
     const localDailyStreak    = get().dailyStreak;
     const localLastPlayedDate = get().lastPlayedDate;
     const cloudDailyStreak    = profile.dailyStreak ?? 0;
     const cloudLastPlayedDate = profile.lastPlayedDate ?? '';
 
-    // Prendre le plus récent lastPlayedDate
-    const mergedLastPlayed = localLastPlayedDate >= cloudLastPlayedDate
-      ? localLastPlayedDate
-      : cloudLastPlayedDate;
+    // Prendre le plus récent lastPlayedDate (ou cloud uniquement si profil vierge)
+    const mergedLastPlayed = isNewCloudProfile
+      ? cloudLastPlayedDate
+      : (localLastPlayedDate >= cloudLastPlayedDate
+          ? localLastPlayedDate
+          : cloudLastPlayedDate);
 
     // Si le local est plus récent, conserver son streak ; sinon prendre le cloud
-    const mergedDailyStreak = localLastPlayedDate >= cloudLastPlayedDate
-      ? Math.max(localDailyStreak, cloudDailyStreak)
-      : cloudDailyStreak;
+    // Profil vierge → streak cloud (0)
+    const mergedDailyStreak = isNewCloudProfile
+      ? cloudDailyStreak
+      : (localLastPlayedDate >= cloudLastPlayedDate
+          ? Math.max(localDailyStreak, cloudDailyStreak)
+          : cloudDailyStreak);
 
     set({
       userId: profile.userId,
