@@ -387,6 +387,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   // ── logout ────────────────────────────────────────────────
   logout: () => set({
+    isAuthenticated: false,
+    // authReady reste true : Firebase a déjà répondu, on sait qu'on est déconnecté
     userId: null,
     username: 'Joueur',
     seeds: 3,
