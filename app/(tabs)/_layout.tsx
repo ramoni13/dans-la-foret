@@ -39,9 +39,15 @@ export default function TabsLayout() {
     const unsub = onAuthChange(async (firebaseUser) => {
       setUser(firebaseUser);
 
-      if (firebaseUser && !firebaseUser.isAnonymous) {
+      const authenticated = !!firebaseUser && !firebaseUser.isAnonymous;
+      // Propager l'état auth dans le store pour que les écrans enfants
+      // n'aient pas besoin de leur propre onAuthChange (évite les crashes
+      // liés aux règles des hooks React).
+      player.setAuthState(true, authenticated);
+
+      if (authenticated) {
         // Restaurer le profil Firestore
-        const profile = await getPlayer(firebaseUser.uid);
+        const profile = await getPlayer(firebaseUser!.uid);
         if (profile) player.restoreFromCloud(profile);
       }
     });

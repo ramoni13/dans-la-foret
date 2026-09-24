@@ -3,7 +3,7 @@
 // Navigation niveau par niveau avec flèches gauche/droite
 // ============================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User } from 'firebase/auth';
-import { onAuthChange } from '../../src/services/authService';
 
 import { Colors } from '../../src/constants/colors';
 import { DifficultyLevel } from '../../src/core/models/Challenge';
@@ -84,19 +82,13 @@ const ALL_CHALLENGES: Record<string, any[]> = {
 export default function LevelsScreen() {
   const router = useRouter();
   const player = usePlayerStore();
+  const { authReady, isAuthenticated } = player;
 
-  // ── État d'authentification ──────────────────────────────────────────────────
-  const [user, setUser] = useState<User | null | undefined>(undefined);
-  useEffect(() => {
-    const unsub = onAuthChange(u => setUser(u));
-    return unsub;
-  }, []);
-
-  // Index du niveau courant (0 = niveau_1, 14 = niveau_15) — hook avant tout return conditionnel
+  // Index du niveau courant — hook toujours appelé, sans condition
   const [levelIndex, setLevelIndex] = useState(0);
 
-  // ── Garde : non connecté ─────────────────────────────────────────────────────
-  if (user === undefined) {
+  // ── Garde : Firebase pas encore répondu ─────────────────────────────────────
+  if (!authReady) {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.centered}>
@@ -106,7 +98,8 @@ export default function LevelsScreen() {
     );
   }
 
-  if (!user || user.isAnonymous) {
+  // ── Garde : non connecté ─────────────────────────────────────────────────────
+  if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.centered}>

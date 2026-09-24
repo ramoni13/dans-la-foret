@@ -3,9 +3,7 @@
 // Progression globale + dernier défi joué + stats rapides
 // ============================================================
 
-import React, { useMemo, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
-import { onAuthChange } from '../../src/services/authService';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -73,24 +71,16 @@ const LEVEL_LABELS: Record<string, string> = {
 export default function HomeScreen() {
   const router = useRouter();
   const player = usePlayerStore();
+  const { authReady, isAuthenticated } = player;
 
-  // ── État d'authentification ──────────────────────────────────────────────────
-  // undefined = Firebase pas encore répondu, null = déconnecté, User = connecté
-  const [user, setUser] = useState<User | null | undefined>(undefined);
-  useEffect(() => {
-    const unsub = onAuthChange(u => setUser(u));
-    return unsub;
-  }, []);
-
-  // ── Prochain défi à jouer — hook AVANT tout return conditionnel ─────────────
-  // Premier défi non complété dans l'ordre, ou niveau_1_001 si tout est fait
+  // ── Prochain défi (useMemo toujours appelé, sans condition) ─────────────────
   const nextChallenge = useMemo(() => {
     const next = ALL_CHALLENGES.find(c => !player.completedChallenges.includes(c.id));
-    return next ?? ALL_CHALLENGES[0]; // Si tout complété → recommencer depuis le début
+    return next ?? ALL_CHALLENGES[0];
   }, [player.completedChallenges]);
 
-  // ── Garde : non connecté ─────────────────────────────────────────────────────
-  if (user === undefined) {
+  // ── Garde : Firebase pas encore répondu ─────────────────────────────────────
+  if (!authReady) {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.centered}>
@@ -100,7 +90,8 @@ export default function HomeScreen() {
     );
   }
 
-  if (!user || user.isAnonymous) {
+  // ── Garde : non connecté ─────────────────────────────────────────────────────
+  if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.centered}>
