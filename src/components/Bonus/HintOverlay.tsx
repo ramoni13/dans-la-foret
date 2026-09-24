@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 
-import { BonusId, BONUS_DEFINITIONS } from '../../constants/bonus';
+import { BonusId, BONUS_DEFINITIONS, BASE_BONUS_IDS, ADVANCED_BONUS_IDS } from '../../constants/bonus';
 import { Colors } from '../../constants/colors';
 
 interface HintOverlayProps {
@@ -21,6 +21,8 @@ interface HintOverlayProps {
   isPremium: boolean;
   bonusDisabled: boolean;
   onActivateBonus: (bonusId: BonusId) => boolean;
+  /** Bonus avancés débloqués via badges (instinct, flash) */
+  unlockedBonuses?: BonusId[];
 }
 
 export const HintOverlay: React.FC<HintOverlayProps> = ({
@@ -30,14 +32,25 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
   isPremium,
   bonusDisabled,
   onActivateBonus,
+  unlockedBonuses = [],
 }) => {
   const handleBonus = (bonusId: BonusId) => {
+    const def = BONUS_DEFINITIONS[bonusId];
+
+    // Bonus verrouillé (avancé non débloqué)
+    if (def.requiresUnlock && !unlockedBonuses.includes(bonusId)) {
+      const unlockHint = bonusId === 'instinct'
+        ? 'Débloque 3 badges Or pour accéder au bonus Instinct.'
+        : 'Débloque 5 badges Pierre pour accéder au bonus Flash.';
+      Alert.alert('Bonus verrouillé 🔒', unlockHint);
+      return;
+    }
+
     if (bonusDisabled) {
       Alert.alert('Mode Maître', 'Les bonus sont désactivés en mode Maître !');
       return;
     }
 
-    const def = BONUS_DEFINITIONS[bonusId];
     if (seeds < def.cost) {
       Alert.alert(
         'Pas assez de graines 🌱',
@@ -49,6 +62,12 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
     onActivateBonus(bonusId);
   };
 
+  // Afficher les bonus de base + les avancés débloqués (ou grisés avec cadenas)
+  const visibleBonusIds: BonusId[] = [
+    ...BASE_BONUS_IDS,
+    ...ADVANCED_BONUS_IDS,
+  ];
+
   return (
     <View style={styles.container}>
       {/* Compteur de graines */}
@@ -59,10 +78,12 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
 
       {/* Boutons bonus */}
       <View style={styles.bonusRow}>
-        {(Object.values(BONUS_DEFINITIONS) as typeof BONUS_DEFINITIONS[BonusId][]).map((def) => {
+        {visibleBonusIds.map((bonusId) => {
+          const def = BONUS_DEFINITIONS[bonusId];
           const alreadyUsed = bonusUsed.includes(def.id);
           const canAfford = seeds >= def.cost;
-          const disabled = bonusDisabled || !canAfford;
+          const locked = def.requiresUnlock && !unlockedBonuses.includes(bonusId);
+          const disabled = bonusDisabled || !canAfford || locked;
 
           return (
             <TouchableOpacity
@@ -71,14 +92,14 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
                 styles.bonusBtn,
                 disabled && styles.bonusBtnDisabled,
                 alreadyUsed && styles.bonusBtnUsed,
+                locked && styles.bonusBtnLocked,
               ]}
               onPress={() => handleBonus(def.id)}
               activeOpacity={0.7}
-              disabled={disabled}
             >
-              <Text style={styles.bonusIcon}>{def.icon}</Text>
-              <Text style={[styles.bonusCost, !canAfford && styles.bonusCostInsufficient]}>
-                {def.cost}🌱
+              <Text style={styles.bonusIcon}>{locked ? '🔒' : def.icon}</Text>
+              <Text style={[styles.bonusCost, !canAfford && !locked && styles.bonusCostInsufficient]}>
+                {locked ? '' : `${def.cost}🌱`}
               </Text>
             </TouchableOpacity>
           );
@@ -141,6 +162,11 @@ const styles = StyleSheet.create({
   bonusBtnUsed: {
     borderColor: Colors.forest.accent,
     backgroundColor: Colors.forest.accent + '22',
+  },
+  bonusBtnLocked: {
+    borderColor: Colors.ui.border,
+    backgroundColor: Colors.ui.border + '44',
+    opacity: 0.6,
   },
   bonusIcon: {
     fontSize: 20,

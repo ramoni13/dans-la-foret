@@ -87,6 +87,10 @@ export const BadgeToast: React.FC<BadgeToastProps> = ({
   const particlesRef = useRef<Particle[]>(createParticles());
   const particles = particlesRef.current;
 
+  // Ref de la queue précédente pour détecter un VRAI changement de contenu
+  // (pas juste une nouvelle référence tableau avec le même contenu)
+  const prevQueueRef = useRef<string[]>([]);
+
   const currentBadgeId = queue[currentIndex];
   const currentBadge   = currentBadgeId ? BADGE_MAP[currentBadgeId] : null;
 
@@ -193,14 +197,18 @@ export const BadgeToast: React.FC<BadgeToastProps> = ({
     setVisible(true);
     slideIn();
     notificationSuccess();
-  }, [currentIndex, queue.length]);
+  }, [currentIndex, queue.length]); // queue.length suffit : on ne compare pas la référence
 
-  // Reset quand une nouvelle file arrive
+  // Reset seulement si la queue a un NOUVEAU CONTENU (pas juste une nouvelle référence)
+  // On compare le join() pour détecter un vrai changement de badges.
   useEffect(() => {
-    if (queue.length > 0) {
+    const prevKey = prevQueueRef.current.join(',');
+    const newKey  = queue.join(',');
+    if (queue.length > 0 && newKey !== prevKey) {
+      prevQueueRef.current = queue;
       setCurrentIndex(0);
     }
-  }, [queue]);
+  }, [queue.join(',')]);
 
   const handleOK = () => {
     slideOut(() => {

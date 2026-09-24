@@ -40,4 +40,20 @@ export const Colors = {
     shadow: 'rgba(0,0,0,0.15)',
     seed: '#FFC107', // Couleur des graines (monnaie)
   },
+
+  // Badges — raretés et fonds
+  badges: {
+    bois:      '#8B5E3C', // Marron
+    pierre:    '#9E9E9E', // Gris
+    or:        '#FFC107', // Doré (identique à ui.seed)
+    cristal:   '#2196F3', // Bleu brillant
+    secret:    '#7B1FA2', // Violet mystérieux
+    saisonnier:'#4CAF50', // Vert saisonnier
+    // Fonds (version claire pour les cartes)
+    boisBg:    '#F5EDE4',
+    pierreBg:  '#F5F5F5',
+    orBg:      '#FFF8E1',
+    cristalBg: '#E3F2FD',
+    secretBg:  '#F3E5F5',
+  },
 };
