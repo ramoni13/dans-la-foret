@@ -14,6 +14,7 @@ import {
   SafeAreaView,
   ScrollView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 const native = Platform.OS !== 'web';
@@ -73,15 +74,45 @@ export default function HomeScreen() {
   const router = useRouter();
   const player = usePlayerStore();
 
-  // ── Redirection vers accueil après connexion ────────────────────────────────────────────
-  const [prevUser, setPrevUser] = useState<User | null | undefined>(undefined);
+  // ── État d'authentification ──────────────────────────────────────────────────
+  // undefined = Firebase pas encore répondu, null = déconnecté, User = connecté
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   useEffect(() => {
-    const unsub = onAuthChange(user => {
-      // Dès qu'on passe de non-connecté à connecté → on est déjà sur l'accueil
-      setPrevUser(user);
-    });
+    const unsub = onAuthChange(u => setUser(u));
     return unsub;
   }, []);
+
+  // ── Garde : non connecté ─────────────────────────────────────────────────────
+  if (user === undefined) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.forest.medium} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user || user.isAnonymous) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={styles.centered}>
+          <Text style={styles.lockEmoji}>🔒</Text>
+          <Text style={styles.lockTitle}>Connexion requise</Text>
+          <Text style={styles.lockDesc}>
+            Connecte-toi pour accéder à l'accueil et voir ta progression.
+          </Text>
+          <TouchableOpacity
+            style={styles.btnLogin}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.btnLoginText}>Se connecter</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // ── Prochain défi à jouer ────────────────────────────────────────────────────────────
   // Premier défi non complété dans l'ordre, ou niveau_1_001 si tout est fait
@@ -179,6 +210,40 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.ui.background,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 16,
+  },
+  lockEmoji: {
+    fontSize: 48,
+  },
+  lockTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.forest.dark,
+    textAlign: 'center',
+  },
+  lockDesc: {
+    fontSize: 14,
+    color: Colors.ui.textLight,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  btnLogin: {
+    backgroundColor: Colors.forest.medium,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginTop: 8,
+  },
+  btnLoginText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   container: {
     padding: 20,

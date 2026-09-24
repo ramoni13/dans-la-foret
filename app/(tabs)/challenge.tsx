@@ -26,6 +26,7 @@ import {
   RefreshControl,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
@@ -133,14 +134,17 @@ function FriendSearchModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View style={ms.overlay}>
+      <KeyboardAvoidingView
+        style={ms.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={ms.card}>
           <Text style={ms.title}>⚔️ Défier un ami</Text>
           <Text style={ms.subtitle}>
             Ton niveau : <Text style={ms.levelBadge}>Niv. {myLevel}</Text>
           </Text>
           <Text style={ms.hint}>
-            Le défi sera au niveau le plus bas entre vous deux (min. 3).
+            Le défi sera au niveau le plus bas entre vous deux (minimum niveau 3, les niveaux 1-2 ne sont pas disponibles en mode défi).
           </Text>
 
           <TextInput
@@ -191,7 +195,7 @@ function FriendSearchModal({
             <Text style={ms.btnCancelText}>Annuler</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -719,15 +723,16 @@ const ms = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
   },
   card: {
     backgroundColor: Colors.ui.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     padding: 24,
+    paddingTop: 52,
     gap: 14,
-    maxHeight: '85%',
+    maxHeight: '75%',
   },
   title: {
     fontSize: 20,

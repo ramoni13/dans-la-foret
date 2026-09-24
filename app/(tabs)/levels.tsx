@@ -3,7 +3,7 @@
 // Navigation niveau par niveau avec flèches gauche/droite
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,11 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { User } from 'firebase/auth';
+import { onAuthChange } from '../../src/services/authService';
 
 import { Colors } from '../../src/constants/colors';
 import { DifficultyLevel } from '../../src/core/models/Challenge';
@@ -82,8 +85,47 @@ export default function LevelsScreen() {
   const router = useRouter();
   const player = usePlayerStore();
 
-  // Index du niveau courant (0 = niveau_1, 14 = niveau_15)
+  // ── État d'authentification ──────────────────────────────────────────────────
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  useEffect(() => {
+    const unsub = onAuthChange(u => setUser(u));
+    return unsub;
+  }, []);
+
+  // Index du niveau courant (0 = niveau_1, 14 = niveau_15) — hook avant tout return conditionnel
   const [levelIndex, setLevelIndex] = useState(0);
+
+  // ── Garde : non connecté ─────────────────────────────────────────────────────
+  if (user === undefined) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.forest.medium} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user || user.isAnonymous) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={styles.centered}>
+          <Text style={styles.lockEmoji}>🔒</Text>
+          <Text style={styles.lockTitle}>Connexion requise</Text>
+          <Text style={styles.lockDesc}>
+            Connecte-toi pour accéder aux défis et suivre ta progression.
+          </Text>
+          <TouchableOpacity
+            style={styles.btnLogin}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.btnLoginText}>Se connecter</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const selectedLevelDef = LEVELS[levelIndex];
   const selectedLevel = selectedLevelDef.id;
@@ -291,6 +333,42 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.ui.background,
+  },
+
+  // ── Garde connexion ──
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 16,
+  },
+  lockEmoji: {
+    fontSize: 48,
+  },
+  lockTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.forest.dark,
+    textAlign: 'center',
+  },
+  lockDesc: {
+    fontSize: 14,
+    color: Colors.ui.textLight,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  btnLogin: {
+    backgroundColor: Colors.forest.medium,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginTop: 8,
+  },
+  btnLoginText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 
   // ── Header ──
