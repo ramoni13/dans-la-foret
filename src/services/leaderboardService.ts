@@ -3,7 +3,7 @@
 // Collection Firestore : /leaderboard/{userId}
 //
 // Score composite pour tri global :
-//   score = level * 10_000_000 + badgeCount * 10_000 + seeds
+//   score = level * 10000000 + badgeCount * 10000 + seeds
 //
 // Priorité : niveau → badges → graines
 // Mise à jour à chaque victoire (upsert avec merge).
@@ -40,7 +40,7 @@ const COLLECTION = 'leaderboard';
 
 // ── Calculer le score composite ───────────────────────────────────────────────
 export function computeLeaderboardScore(level: number, badgeCount: number, seeds: number): number {
-  return level * 10_000_000 + badgeCount * 10_000 + seeds;
+  return level * 10000000 + badgeCount * 10000 + seeds;
 }
 
 // ── Mettre à jour l'entrée du joueur courant ──────────────────────────────────
