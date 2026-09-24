@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
+import { useAudioStore } from '../../src/store/audioStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -97,6 +98,8 @@ export default function GameScreen() {
 
   const game = useGame();
   const player = usePlayerStore();
+  const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
+  const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
 
   // ── Briefing de niveau ─────────────────────────────────────
   const [briefingDone, setBriefingDone] = useState(false);
@@ -438,15 +441,15 @@ export default function GameScreen() {
                 </Text>
               )}
             </View>
+            {/* Bouton haut-parleur — remplace le bouton Valider dans le header */}
             <TouchableOpacity
-              style={[
-                styles.validateBtn,
-                !allFilled && styles.validateBtnDisabled,
-              ]}
-              onPress={handleValidate}
-              activeOpacity={0.8}
+              style={styles.speakerBtn}
+              onPress={() => setIngameEnabled(!audioIngameEnabled)}
+              activeOpacity={0.7}
             >
-              <Text style={styles.validateBtnText}>Valider ✓</Text>
+              <Text style={styles.speakerIcon}>
+                {audioIngameEnabled ? '🔊' : '🔇'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -461,6 +464,21 @@ export default function GameScreen() {
           onActivateBonus={game.activateBonus}
           unlockedBonuses={player.unlockedBonuses}
         />
+
+        {/* ── Bouton Valider (sous la barre de bonus) ── */}
+        <View style={styles.validateRow}>
+          <TouchableOpacity
+            style={[
+              styles.validateBtn,
+              !allFilled && styles.validateBtnDisabled,
+            ]}
+            onPress={handleValidate}
+            activeOpacity={0.8}
+            disabled={!allFilled}
+          >
+            <Text style={styles.validateBtnText}>Valider ✓</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* ── Plateau ── */}
         <View
@@ -683,11 +701,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 1,
   },
+  // Bouton haut-parleur dans le header
+  speakerBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.forest.dark + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.forest.dark + '30',
+  },
+  speakerIcon: {
+    fontSize: 18,
+  },
+  // Rangée du bouton Valider (sous la barre de bonus)
+  validateRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: Colors.ui.card,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.ui.border,
+    alignItems: 'flex-end',
+  },
   validateBtn: {
     backgroundColor: Colors.forest.medium,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 9,
+    borderRadius: 12,
   },
   validateBtnDisabled: {
     backgroundColor: Colors.ui.border,
@@ -695,7 +736,7 @@ const styles = StyleSheet.create({
   },
   validateBtnText: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
   boardArea: {

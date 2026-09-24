@@ -37,6 +37,7 @@ import { BadgeCard } from '../../src/components/Badges/BadgeCard';
 import { BadgeUnlockProgress } from '../../src/components/Badges/BadgeUnlockProgress';
 import { BADGE_MAP } from '../../src/constants/badges';
 import { LeaderboardScreen } from '../../src/components/Leaderboard/LeaderboardScreen';
+import { MusicPanel } from '../../src/components/Audio/MusicPanel';
 
 // Niveaux pour la progression (13 niveaux, 10 défis chacun)
 const LEVELS = [
@@ -355,6 +356,9 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
 
+          {/* Musique (accessible même non connecté) */}
+          <MusicPanel />
+
           {/* Sélecteur de langue (accessible même non connecté) */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Langue / Language</Text>
@@ -538,6 +542,9 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Musique */}
+          <MusicPanel />
 
           {/* Sélecteur de langue */}
           <View style={styles.section}>
