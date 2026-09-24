@@ -175,7 +175,10 @@ export async function updateSeeds(userId: string, seeds: number): Promise<void> 
   });
 }
 
-// ── Chercher des joueurs par pseudo ───────────────────────────────────────────
+// ── Chercher des joueurs par pseudo (insensible à la casse) ──────────────────
+// Double requête pour couvrir :
+//   - les nouveaux comptes qui ont le champ `usernameLower`
+//   - les anciens comptes créés avant l'ajout de ce champ (recherche sur `username`)
 export async function searchPlayers(
   searchTerm: string,
   excludeUid: string,
@@ -183,26 +186,67 @@ export async function searchPlayers(
 ): Promise<PlayerSearchResult[]> {
   if (!searchTerm.trim() || searchTerm.length < 2) return [];
 
-  // Firestore ne supporte pas le LIKE — on simule un préfixe avec >= et <
-  const term    = searchTerm.trim();
-  const termEnd = term.slice(0, -1) + String.fromCharCode(term.charCodeAt(term.length - 1) + 1);
+  const termLower = searchTerm.trim().toLowerCase();
+  const termUpper = searchTerm.trim();
 
-  const q = query(
+  // Borne haute pour la requête préfixe Firestore (>= term, < termEnd)
+  const makeTermEnd = (t: string) =>
+    t.slice(0, -1) + String.fromCharCode(t.charCodeAt(t.length - 1) + 1);
+
+  const termLowerEnd = makeTermEnd(termLower);
+  const termUpperEnd = makeTermEnd(termUpper);
+
+  // Requête 1 : champ usernameLower (nouveaux comptes, insensible à la casse)
+  const qLower = query(
     collection(db, 'players'),
-    where('username', '>=', term),
-    where('username', '<', termEnd),
+    where('usernameLower', '>=', termLower),
+    where('usernameLower', '<', termLowerEnd),
     limit(maxResults),
   );
 
-  const snap = await getDocs(q);
-  return snap.docs
-    .map(d => migrateProfile(d.data()))
-    .filter(p => p.userId !== excludeUid)
-    .map(p => ({
-      userId: p.userId,
-      username: p.username,
-      level: computePlayerLevel(p.completedChallenges?.length ?? 0),
-    }));
+  // Requête 2 : champ username original (anciens comptes sans usernameLower)
+  // On cherche avec la casse exacte du terme saisi — Firestore ne supporte pas
+  // l'insensible à la casse natif, mais au moins on rattrape les anciens profils.
+  const qOriginal = query(
+    collection(db, 'players'),
+    where('username', '>=', termUpper),
+    where('username', '<', termUpperEnd),
+    limit(maxResults),
+  );
+
+  const [snapLower, snapOriginal] = await Promise.all([
+    getDocs(qLower),
+    getDocs(qOriginal),
+  ]);
+
+  // Fusionner en dédupliquant par userId
+  const seen = new Set<string>();
+  const results: PlayerSearchResult[] = [];
+
+  for (const snap of [snapLower, snapOriginal]) {
+    for (const d of snap.docs) {
+      const profile = migrateProfile(d.data());
+      if (profile.userId === excludeUid) continue;
+      if (seen.has(profile.userId)) continue;
+      seen.add(profile.userId);
+
+      // Rétro-alimenter usernameLower si absent (migration silencieuse)
+      if (!d.data().usernameLower) {
+        updateDoc(d.ref, { usernameLower: profile.username.toLowerCase() }).catch(() => {});
+      }
+
+      results.push({
+        userId: profile.userId,
+        username: profile.username,
+        level: computePlayerLevel(profile.completedChallenges?.length ?? 0),
+      });
+
+      if (results.length >= maxResults) break;
+    }
+    if (results.length >= maxResults) break;
+  }
+
+  return results;
 }
 
 // ── Marquer un défi comme complété ────────────────────────────────────────────
