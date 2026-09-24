@@ -46,6 +46,10 @@ interface PlayerStats {
 }
 
 interface PlayerState {
+  // ── État d'authentification (mis à jour par _layout.tsx uniquement) ──────────
+  authReady: boolean;        // true = Firebase a répondu
+  isAuthenticated: boolean;  // true = connecté et non anonyme
+
   userId: string | null;
   username: string;
   seeds: number;
@@ -72,6 +76,7 @@ interface PlayerState {
   lastPlayedDate: string;   // "YYYY-MM-DD" — date ISO de la dernière session de jeu
 
   // ── Actions de base ─────────────────────────────────────────────────────────
+  setAuthState: (ready: boolean, authenticated: boolean) => void;
   setUser: (userId: string, username: string) => void;
   setLanguage: (lang: Lang) => void;
   restoreFromCloud: (profile: PlayerProfile) => void;
@@ -152,6 +157,9 @@ function computeUnlockedThemes(earnedBadges: string[]): string[] {
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
+  authReady: false,
+  isAuthenticated: false,
+
   userId: null,
   username: 'Joueur',
   seeds: 99,                        // 99 graines pour les tests — TODO: passer à 3 avant publication
@@ -186,6 +194,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   dailyStreak: 0,
   lastPlayedDate: '',
+
+  // ── setAuthState ──────────────────────────────────────────
+  setAuthState: (ready, authenticated) => set({ authReady: ready, isAuthenticated: authenticated }),
 
   // ── setUser ───────────────────────────────────────────────
   setUser: (userId, username) => set({ userId, username }),
