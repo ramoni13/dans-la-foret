@@ -46,6 +46,7 @@ class AudioService {
   private currentTrackId: string | null = null;
   private currentState: PlayState | null = null;
   private stopPromise: Promise<void> | null = null;
+  private audioModeInitialized = false;
 
   /** Appelé par AudioController à chaque changement d'état */
   async syncFromStore(state: PlayState) {
@@ -106,6 +107,20 @@ class AudioService {
     }
   }
 
+    private async _initAudioMode() {
+    if (this.audioModeInitialized) return;
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        staysActiveInBackground: false,
+      });
+      this.audioModeInitialized = true;
+    } catch (e) {
+      console.warn('[AudioService] setAudioModeAsync error:', e);
+    }
+  }
+
   private async _playTrack(trackId: string, state: PlayState) {
     const track = state.catalog.find(t => t.id === trackId);
     if (!track) return;
@@ -117,11 +132,8 @@ class AudioService {
     await this._stop();
 
     try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: false,
-        staysActiveInBackground: false,
-      });
+      // Initialisation du mode audio une seule fois (évite le crash Android au cold start)
+      await this._initAudioMode();
 
       const { sound } = await Audio.Sound.createAsync(
         track.file,
@@ -167,14 +179,10 @@ class AudioService {
     return this.stopPromise;
   }
 
-  /** Joue un aperçu d'une piste (une seule fois, sans boucle) */
+    /** Joue un aperçu d'une piste (une seule fois, sans boucle) */
   async playPreview(trackFile: any, volume: number): Promise<Audio.Sound | null> {
     try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: false,
-        staysActiveInBackground: false,
-      });
+      await this._initAudioMode();
       const { sound } = await Audio.Sound.createAsync(
         trackFile,
         { isLooping: false, volume, shouldPlay: true }
@@ -202,8 +210,9 @@ class AudioService {
     } catch (_) {/* ignoré */}
   }
 
-  async dispose() {
+    async dispose() {
     await this._stop();
+    this.audioModeInitialized = false;
   }
 }
 

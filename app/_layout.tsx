@@ -50,11 +50,13 @@ function AudioBridge() {
     };
   }, [userHasInteracted, signalInteraction]);
 
-  // Sur mobile natif : l'audio est autorisé sans interaction préalable,
-  // on signale directement que l'utilisateur est "interagi"
+      // Sur mobile natif : l'audio est autorisé sans interaction préalable.
+  // On diffère de 500ms pour laisser Android initialiser le contexte audio
+  // natif avant le premier Audio.setAudioModeAsync (évite le crash cold start).
   useEffect(() => {
     if (Platform.OS !== 'web' && !userHasInteracted) {
-      signalInteraction();
+      const t = setTimeout(() => signalInteraction(), 500);
+      return () => clearTimeout(t);
     }
   }, []);
 
