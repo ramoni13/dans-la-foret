@@ -22,6 +22,7 @@ import {
   FlatList,
   Dimensions,
   Platform,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Challenge } from '../../core/models/Challenge';
@@ -113,6 +114,13 @@ export const LevelBriefingModal: React.FC<LevelBriefingModalProps> = ({
   };
 
   return (
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
     <View
       style={[
         styles.overlay,
@@ -127,19 +135,30 @@ export const LevelBriefingModal: React.FC<LevelBriefingModalProps> = ({
         <Text style={styles.levelTitle}>
           {t('level_prefix')} {levelNumber}
         </Text>
-        {totalPages > 1 && (
-          <View style={styles.dots}>
-            {pages.map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  i === currentPage && styles.dotActive,
-                ]}
-              />
-            ))}
-          </View>
-        )}
+        <View style={styles.headerRight}>
+          {totalPages > 1 && (
+            <View style={styles.dots}>
+              {pages.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.dot,
+                    i === currentPage && styles.dotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+          {/* ── Bouton fermer ── */}
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={onClose}
+            activeOpacity={0.7}
+            accessibilityLabel="Fermer"
+          >
+            <Text style={styles.closeBtnText}>✕</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ── Séparateur ── */}
@@ -211,14 +230,14 @@ export const LevelBriefingModal: React.FC<LevelBriefingModalProps> = ({
         )}
       </View>
     </View>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 58, 26, 0.96)',
-    zIndex: 100,
+    flex: 1,
+    backgroundColor: 'rgba(26, 58, 26, 0.97)',
     flexDirection: 'column',
   },
   header: {
@@ -228,10 +247,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   levelTitle: {
     fontSize: 20,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    lineHeight: 20,
   },
   dots: {
     flexDirection: 'row',
