@@ -7,7 +7,7 @@
     "@react-navigation/drawer": "^7.3.9",
     "@react-navigation/native": "^7.3.18",
     "expo": "~57.0.21",
-    "expo-av": "file:../../../../../../../../../AppData/Local/Temp/kilo/expo-av-14.0.7.tgz",
+    "expo-av": "~14.0.7",
     "expo-constants": "~57.0.17",
     "expo-haptics": "~57.0.2",
     "expo-linking": "~57.0.9",
