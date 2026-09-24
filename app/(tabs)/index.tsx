@@ -82,6 +82,13 @@ export default function HomeScreen() {
     return unsub;
   }, []);
 
+  // ── Prochain défi à jouer — hook AVANT tout return conditionnel ─────────────
+  // Premier défi non complété dans l'ordre, ou niveau_1_001 si tout est fait
+  const nextChallenge = useMemo(() => {
+    const next = ALL_CHALLENGES.find(c => !player.completedChallenges.includes(c.id));
+    return next ?? ALL_CHALLENGES[0]; // Si tout complété → recommencer depuis le début
+  }, [player.completedChallenges]);
+
   // ── Garde : non connecté ─────────────────────────────────────────────────────
   if (user === undefined) {
     return (
@@ -113,13 +120,6 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
-
-  // ── Prochain défi à jouer ────────────────────────────────────────────────────────────
-  // Premier défi non complété dans l'ordre, ou niveau_1_001 si tout est fait
-  const nextChallenge = useMemo(() => {
-    const next = ALL_CHALLENGES.find(c => !player.completedChallenges.includes(c.id));
-    return next ?? ALL_CHALLENGES[0]; // Si tout complété → recommencer depuis le début
-  }, [player.completedChallenges]);
 
   const totalCompleted  = player.completedChallenges.length;
   const totalChallenges = ALL_CHALLENGES.length;
