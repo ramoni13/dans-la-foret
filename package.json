@@ -7,6 +7,7 @@
     "@react-navigation/drawer": "^7.3.9",
     "@react-navigation/native": "^7.3.18",
     "expo": "~57.0.21",
+    "expo-av": "file:../../../../../../../../../AppData/Local/Temp/kilo/expo-av-14.0.7.tgz",
     "expo-constants": "~57.0.17",
     "expo-haptics": "~57.0.2",
     "expo-linking": "~57.0.9",
@@ -14,17 +15,17 @@
     "expo-status-bar": "~57.0.1",
     "firebase": "12.19.0",
     "lottie-react-native": "~7.3.8",
+    "query-string": "^9.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
-    "react-native-worklets": "0.10.1",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
-    "query-string": "^9.1.1",
+    "react-native-worklets": "0.10.1",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -66,6 +67,11 @@
     "terser": "5.50.0",
     "hasown": "2.0.2",
     "ajv": "8.18.0",
-    "semver": "7.7.4"
+    "semver": "7.7.4",
+    "@babel/helper-validator-identifier": "7.28.5",
+    "@babel/types": "7.29.0",
+    "@babel/parser": "7.29.2",
+    "@babel/traverse": "7.29.8",
+    "@babel/code-frame": "7.26.2"
   }
 }
