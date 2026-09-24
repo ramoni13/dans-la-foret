@@ -4,7 +4,7 @@
   "label_empty": "vides",
   "label_new": "Nouveau !",
   "level_prefix": "Niveau",
-  "a11y_no_same": "Deux {{element}} ne peuvent pas être voisins",
+  "a11y_no_same": "Deux {{element}}(s) ne peuvent pas être voisins",
   "a11y_require_neighbor": "{{e1}} doit être voisin de {{e2}}",
   "a11y_forbid_neighbor": "{{e1}} ne peut pas être voisin de {{e2}}",
   "a11y_connected_group": "Tous les {{element}} forment une seule meute",
