@@ -53,24 +53,36 @@ export default function TabsLayout() {
     });
     return unsub;
   }, []); // [] garanti : onAuthChange est stable
-
+  // Mémorise l'état précédent pour détecter la transition "vient de se connecter"
+  const prevAuthenticatedRef = useRef<boolean | null>(null);
   // ── Garde d'authentification — sans boucle ─────────────────────────────────
   // Règle : si l'utilisateur n'est PAS connecté, il ne peut accéder qu'à /profile.
   // On n'utilise PAS router.replace vers /(tabs)/ après connexion pour ne pas
   // interférer avec la navigation normale de l'utilisateur.
+  // Règles :
+  //   1. Non connecté et pas sur /profile → forcer /profile
+  //   2. Transition non-connecté → connecté depuis /profile → aller à l'accueil
   useEffect(() => {
     if (user === undefined) return; // Firebase pas encore répondu
 
-    const inProfileTab = segments.some(s => s === 'profile');
+    const authenticated   = !!user && !user.isAnonymous;
+    const inProfileTab    = segments.some(s => s === 'profile');
+    const wasAuthenticated = prevAuthenticatedRef.current;
 
-    if (!user && !inProfileTab && !redirectedRef.current) {
+    if (!authenticated && !inProfileTab && !redirectedRef.current) {
       // Non connecté et pas sur le profil → forcer le profil
       redirectedRef.current = true;
       router.replace('/(tabs)/profile');
-    } else if (user) {
+    } else if (authenticated && wasAuthenticated === false && inProfileTab) {
+      // Vient de se connecter depuis /profile → rediriger vers l'accueil
+      router.replace('/(tabs)/');
+    }
+    if (authenticated) {
       // Connecté : réinitialiser le verrou pour les prochaines déconnexions
       redirectedRef.current = false;
     }
+
+    prevAuthenticatedRef.current = authenticated;
   }, [user, segments]);
 
   // ── Connexion quotidienne ──────────────────────────────────────────────────

@@ -5,8 +5,7 @@
 // ============================================================
 
 import React, { useEffect, useRef } from 'react';
-import { View, Image, StyleSheet, Animated, Platform } from 'react-native';
-import Svg, { Path, Defs, Marker, Line } from 'react-native-svg';
+import { View, Image, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
 import { RuleCard } from '../../../data/levelMeta';
 
@@ -58,20 +57,9 @@ export const RequireNeighborAnim: React.FC<Props> = ({ rule, accessibilityLabel 
         <Animated.View style={[styles.glowRing, { borderColor: '#4CAF50', opacity: glowOpacity }]} />
       </Animated.View>
 
-      {/* Flèche SVG */}
+                        {/* Flèche Unicode — remplace le SVG pour éviter les IDs globaux dupliqués sur le web */}
       <Animated.View style={[styles.arrow, { opacity: arrowOpacity }]}>
-        <Svg width={48} height={24} viewBox="0 0 48 24">
-          <Defs>
-            <Marker id="rna_arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-              <Path d="M0,0 L0,6 L6,3 Z" fill="#4CAF50" />
-            </Marker>
-          </Defs>
-          <Line
-            x1="2" y1="12" x2="40" y2="12"
-            stroke="#4CAF50" strokeWidth="2.5"
-            markerEnd="url(#rna_arrowhead)"
-          />
-        </Svg>
+        <Text style={styles.arrowText}>→</Text>
       </Animated.View>
 
       {/* Token 2 */}
@@ -105,9 +93,16 @@ const styles = StyleSheet.create({
     width: TOKEN_SIZE * 0.7,
     height: TOKEN_SIZE * 0.7,
   },
-  arrow: {
+          arrow: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 48,
+  },
+  arrowText: {
+    fontSize: 28,
+    color: '#4CAF50',
+    fontWeight: '700',
+    textAlign: 'center',
   },
   glowRing: {
     position: 'absolute',

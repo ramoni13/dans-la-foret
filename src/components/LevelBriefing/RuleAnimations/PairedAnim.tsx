@@ -6,7 +6,6 @@
 
 import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Text, Animated, Platform } from 'react-native';
-import Svg, { Path, Defs, Marker } from 'react-native-svg';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
 import { RuleCard } from '../../../data/levelMeta';
 
@@ -70,25 +69,9 @@ export const PairedAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
         </Animated.View>
       </Animated.View>
 
-      {/* Flèche ↔ */}
-      <Animated.View style={{ opacity: arrowOp }}>
-        <Svg width={40} height={24} viewBox="0 0 40 24">
-          <Defs>
-            <Marker id="pa_ar1" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
-              <Path d="M0,0 L0,5 L5,2.5 Z" fill="#4CAF50" />
-            </Marker>
-            <Marker id="pa_ar2" markerWidth="5" markerHeight="5" refX="1" refY="2.5" orient="auto-start-reverse">
-              <Path d="M0,0 L0,5 L5,2.5 Z" fill="#4CAF50" />
-            </Marker>
-          </Defs>
-          <Path
-            d="M5,12 L35,12"
-            stroke="#4CAF50"
-            strokeWidth="2"
-            markerEnd="url(#pa_ar1)"
-            markerStart="url(#pa_ar2)"
-          />
-        </Svg>
+                        {/* Flèche ↔ — texte Unicode, pas de SVG (évite les IDs DOM globaux dupliqués sur le web) */}
+      <Animated.View style={[styles.arrowWrapper, { opacity: arrowOp }]}>
+        <Text style={styles.arrow}>↔</Text>
       </Animated.View>
 
       {/* e2 (biche) */}
@@ -128,9 +111,19 @@ const styles = StyleSheet.create({
     width: TOKEN_SIZE * 0.7,
     height: TOKEN_SIZE * 0.7,
   },
-  counter: {
+          counter: {
     fontSize: 13,
     fontWeight: '700',
     color: '#4CAF50',
+  },
+  arrowWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+  },
+  arrow: {
+    fontSize: 26,
+    color: '#4CAF50',
+    fontWeight: '700',
   },
 });

@@ -5,8 +5,7 @@
 // ============================================================
 
 import React, { useEffect, useRef } from 'react';
-import { View, Image, StyleSheet, Animated, Platform } from 'react-native';
-import Svg, { Path, Defs, Marker, Line } from 'react-native-svg';
+import { View, Image, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
 import { RuleCard } from '../../../data/levelMeta';
 
@@ -77,16 +76,9 @@ export const ChainAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
         <Image source={def1.icon} style={styles.image} resizeMode="contain" />
       </View>
 
-      {/* Flèche 1 */}
-      <Animated.View style={{ opacity: arrow1Op }}>
-        <Svg width={28} height={18} viewBox="0 0 28 18">
-          <Defs>
-            <Marker id="ch_a1" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
-              <Path d="M0,0 L0,5 L5,2.5 Z" fill="#4CAF50" />
-            </Marker>
-          </Defs>
-          <Line x1="2" y1="9" x2="22" y2="9" stroke="#4CAF50" strokeWidth="2" markerEnd="url(#ch_a1)" />
-        </Svg>
+                        {/* Flèche 1 — Unicode pour éviter les IDs SVG globaux dupliqués sur le web */}
+      <Animated.View style={[styles.arrowWrapper, { opacity: arrow1Op }]}>
+        <Text style={styles.arrow}>→</Text>
       </Animated.View>
 
       {/* Tas de bûches */}
@@ -97,16 +89,9 @@ export const ChainAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
         <Animated.View style={[styles.glowRing, { borderColor: '#4CAF50', opacity: tasGlowOp }]} />
       </Animated.View>
 
-      {/* Flèche 2 conditionnelle */}
-      <Animated.View style={{ opacity: arrow2Op }}>
-        <Svg width={28} height={18} viewBox="0 0 28 18">
-          <Defs>
-            <Marker id="ch_a2" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto">
-              <Path d="M0,0 L0,5 L5,2.5 Z" fill="#8BC34A" />
-            </Marker>
-          </Defs>
-          <Line x1="2" y1="9" x2="22" y2="9" stroke="#8BC34A" strokeWidth="2" strokeDasharray="3,2" markerEnd="url(#ch_a2)" />
-        </Svg>
+                        {/* Flèche 2 conditionnelle — Unicode */}
+      <Animated.View style={[styles.arrowWrapper, { opacity: arrow2Op }]}>
+        <Text style={[styles.arrow, styles.arrowDashed]}>→</Text>
       </Animated.View>
 
       {/* Chalet conditionnel */}
@@ -142,7 +127,7 @@ const styles = StyleSheet.create({
     width: TOKEN_SIZE * 0.7,
     height: TOKEN_SIZE * 0.7,
   },
-  glowRing: {
+        glowRing: {
     position: 'absolute',
     top: -4,
     left: -4,
@@ -150,5 +135,19 @@ const styles = StyleSheet.create({
     height: TOKEN_SIZE + 8,
     borderRadius: (TOKEN_SIZE + 8) / 2,
     borderWidth: 2,
+  },
+  arrowWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+  },
+  arrow: {
+    fontSize: 20,
+    color: '#4CAF50',
+    fontWeight: '700',
+  },
+  arrowDashed: {
+    color: '#8BC34A',
+    opacity: 0.8,
   },
 });

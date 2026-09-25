@@ -84,8 +84,13 @@ export default function LevelsScreen() {
   const player = usePlayerStore();
   const { authReady, isAuthenticated } = player;
 
-  // Index du niveau courant — hook toujours appelé, sans condition
-  const [levelIndex, setLevelIndex] = useState(0);
+    // Index du niveau courant — initialisé sur le niveau réel du joueur (currentLevel - 1)
+  // On clamp à [0, LEVELS.length-1] pour éviter tout dépassement.
+  const initialIndex = Math.min(
+    Math.max(0, player.currentLevel - 1),
+    LEVELS.length - 1,
+  );
+  const [levelIndex, setLevelIndex] = useState(initialIndex);
 
   // ── Garde : Firebase pas encore répondu ─────────────────────────────────────
   if (!authReady) {

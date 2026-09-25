@@ -51,10 +51,15 @@ export interface PlayerProfile {
 }
 
 // ── Calcul du niveau courant d'un joueur ──────────────────────────────────────
-// Basé sur le nombre de défis solo complétés : 1 niveau par tranche de 3 défis.
-// Niveau 1 minimum, niveau 15 maximum.
+// Basé sur le nombre de défis solo complétés : 1 niveau par tranche de 10 défis.
+// Chaque niveau du jeu contient 10 défis, donc :
+//   Niveau 1 : 0–9 défis complétés
+//   Niveau 2 : 10–19 défis complétés
+//   Niveau N : (N-1)*10 … N*10-1
+//   → formule : Math.floor(count / 10) + 1, plafonné à 15.
+// Exemples : 42 défis → Niv. 4, 50 défis → Niv. 5, 59 défis → Niv. 5.
 export function computePlayerLevel(completedCount: number): number {
-  return Math.min(15, Math.max(1, Math.ceil(completedCount / 3)));
+  return Math.min(15, Math.floor(completedCount / 10) + 1);
 }
 
 // ── Résultat de recherche d'ami ───────────────────────────────────────────────
