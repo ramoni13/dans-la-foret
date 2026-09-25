@@ -18,7 +18,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { Audio } from 'expo-av';
+import { AudioPlayer } from 'expo-audio';
 
 import { Colors } from '../../constants/colors';
 import { useAudioStore } from '../../store/audioStore';
@@ -200,8 +200,8 @@ export function MusicPanel() {
   const audioStore  = useAudioStore();
   const player      = usePlayerStore();
 
-  // Preview en cours (expo-av Sound instance)
-  const previewSoundRef    = useRef<Audio.Sound | null>(null);
+    // Preview en cours (expo-audio AudioPlayer instance)
+  const previewSoundRef    = useRef<AudioPlayer | null>(null);
   const previewTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
 
@@ -256,14 +256,10 @@ export function MusicPanel() {
     if (sound) {
       previewSoundRef.current = sound;
 
-      // Sur web, setOnPlaybackStatusUpdate provoque un crash après unload.
-      // On utilise getStatusAsync en polling léger + timer de sécurité (30s max).
-      // Sur natif, on peut utiliser le callback normalement.
+            // expo-audio : écouter la fin de lecture via addListener
       if (Platform.OS !== 'web') {
-        sound.setOnPlaybackStatusUpdate(status => {
-          if (status.isLoaded && status.didJustFinish) {
-            stopPreview();
-          }
+        sound.addListener('playbackStatusUpdate', (status) => {
+          if (status.didJustFinish) stopPreview();
         });
       }
 

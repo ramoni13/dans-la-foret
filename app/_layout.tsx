@@ -12,9 +12,7 @@ import React, { useCallback, useEffect } from 'react';
 import { useStorage } from '../src/hooks/useStorage';
 import { AudioController } from '../src/components/Audio/AudioController';
 import { useAudioStore } from '../src/store/audioStore';
-// Patch expo-av web : neutralise le crash "emit" dans ontimeupdate lors du unload.
-// Metro choisit automatiquement .web.ts sur web et .ts (stub vide) sur natif.
-import '../src/services/exponentAVPatch';
+
 
 // ── Error Boundary audio ──────────────────────────────────────────────────────
 // Isole AudioBridge du reste de l'app : si l'audio crash pour n'importe
