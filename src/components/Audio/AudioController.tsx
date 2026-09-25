@@ -4,10 +4,20 @@
 // Reçoit `isInGame` en prop (true quand l'écran game/[id] est actif).
 // ============================================================
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAudioStore } from '../../store/audioStore';
 import { audioService } from '../../services/audioService';
-import { MUSIC_CATALOG } from '../../constants/music';
+
+// Chargement défensif du catalogue : si require() échoue (asset manquant
+// ou nom de fichier invalide sur Android), l'app ne crashe pas.
+let SAFE_CATALOG: Array<{ id: string; type: string; file: any }> = [];
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { MUSIC_CATALOG } = require('../../constants/music');
+  SAFE_CATALOG = MUSIC_CATALOG.map((t: any) => ({ id: t.id, type: t.type, file: t.file }));
+} catch (e) {
+  console.warn('[AudioController] Impossible de charger le catalogue audio:', e);
+}
 
 interface AudioControllerProps {
   isInGame: boolean;
@@ -23,12 +33,8 @@ export function AudioController({ isInGame }: AudioControllerProps) {
   const previewTrackId      = useAudioStore(s => s.previewTrackId);
   const userHasInteracted   = useAudioStore(s => s.userHasInteracted);
 
-  // Catalogue statique (ne change jamais en runtime) — mémoïsé en ref
-  const catalogRef = useRef(MUSIC_CATALOG.map(t => ({
-    id: t.id,
-    type: t.type,
-    file: t.file,
-  })));
+    // Catalogue statique (ne change jamais en runtime) — mémoïsé en ref
+  const catalogRef = useRef(SAFE_CATALOG);
 
   // Synchroniser le service audio à chaque changement
   useEffect(() => {
