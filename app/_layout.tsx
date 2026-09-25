@@ -16,6 +16,30 @@ import { useAudioStore } from '../src/store/audioStore';
 // Metro choisit automatiquement .web.ts sur web et .ts (stub vide) sur natif.
 import '../src/services/exponentAVPatch';
 
+// ── Error Boundary audio ──────────────────────────────────────────────────────
+// Isole AudioBridge du reste de l'app : si l'audio crash pour n'importe
+// quelle raison (asset manquant, codec non supporté, etc.), l'app continue
+// de fonctionner normalement, juste sans musique.
+class AudioErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error) {
+    console.warn('[AudioErrorBoundary] Audio désactivé suite à une erreur:', error.message);
+  }
+  render() {
+    if (this.state.hasError) return null; // Silence : pas de musique, mais app vivante
+    return this.props.children;
+  }
+}
+
 // Composant interne pour brancher la persistance AsyncStorage
 function StorageBridge() {
   useStorage();
@@ -67,7 +91,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <StorageBridge />
-      <AudioBridge />
+      <AudioErrorBoundary>
+        <AudioBridge />
+      </AudioErrorBoundary>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
