@@ -23,7 +23,7 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Manor Cocktail',
     type: 'menu',
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    file: require('../../assets/musics/Manor Cocktail.mp3'),
+    file: require('../../assets/musics/manor_cocktail.mp3'),
     cost: 0,
     description: 'Ambiance feutrée pour explorer les menus',
   },
