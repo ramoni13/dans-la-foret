@@ -12,8 +12,8 @@
 //   Niv 3  : 8 cases,  3 vides
 //   Niv 4  : 8 cases,  4 vides
 //   Niv 5  : 8 cases,  5 vides
-//   Niv 6  : 9 cases,  3 vides  ★ Nouveau plateau, respiration
-//   Niv 7  : 9 cases,  4 vides
+//   Niv 6  : 9 cases,  4 vides  ★ Nouveau plateau, respiration
+//   Niv 7  : 9 cases,  5 vides
 //   Niv 8  : 9 cases,  5 vides  ★ Introduction Renard (sur plateau 9 cases)
 //   Niv 9  : 10 cases, 4 vides  ★ Nouveau plateau, respiration
 //   Niv 10 : 10 cases, 5 vides
@@ -218,64 +218,68 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
   // PLATEAU 9 CASES — niveaux 6, 7, 8
   // ────────────────────────────────────────────────────────────────
 
-  niveau_6: {
-    // 7 types : Bucheron, Ours, Mouton, Ruche, Chien, Cerf, Biche — 3 vides fixes
-    // Nouveau plateau 9 cases : respiration (3 vides au lieu de 5).
-    // Même palette que niv 5. cerf = biche (I5). chien >= 2 si présent (I4).
+        niveau_6: {
+    // 7 types : Bucheron, Ours, Mouton, Ruche, Chien, Cerf, Biche — 4 vides fixes
+    // Nouveau plateau 9 cases. 4 vides : la marge nécessaire pour que la règle de diversité
+    // pédagogique (chien tous non-fixés + couple cerf/biche non-fixé) reste toujours satisfiable,
+    // quelle que soit la composition tirée (cf. investigation variété).
+    // Même palette que niv 5/7. cerf = biche (I5). chien >= 2 si présent (I4).
     boardId: 'board_9_v1',
     cellCount: 9,
     compositions: [
       // 1 couple — chien=2, ruche=1 (7 types actifs)
+      { bucheron: 1, ours: 1, mouton: 2, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 1+1+2+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
       { bucheron: 2, ours: 1, mouton: 1, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 2+1+1+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
       { bucheron: 1, ours: 2, mouton: 1, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 1+2+1+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
-      { bucheron: 1, ours: 1, mouton: 2, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 1+1+2+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
+      { bucheron: 0, ours: 2, mouton: 2, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 0+2+2+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
       { bucheron: 2, ours: 2, mouton: 0, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 2+2+0+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
       // 1 couple — ruche=1, sans chien (5 types actifs)
-      { bucheron: 2, ours: 2, mouton: 2, cerf: 1, biche: 1, ruche: 1 },           // 2+2+2+1+1+1=9   I1✓ I2✓ I3✓ I5✓
       { bucheron: 3, ours: 2, mouton: 1, cerf: 1, biche: 1, ruche: 1 },           // 3+2+1+1+1+1=9   I1✓ I2✓ I3✓ I5✓
-      { bucheron: 2, ours: 3, mouton: 1, cerf: 1, biche: 1, ruche: 1 },           // 2+3+1+1+1+1=9   I1✓ I2✓ I3✓ I5✓
+      { bucheron: 1, ours: 3, mouton: 2, cerf: 1, biche: 1, ruche: 1 },           // 1+3+2+1+1+1=9   I1✓ I2✓ I3✓ I5✓
+      { bucheron: 2, ours: 2, mouton: 2, cerf: 1, biche: 1, ruche: 1 },           // 2+2+2+1+1+1=9   I1✓ I2✓ I3✓ I5✓
       // 1 couple — chien=2, sans ruche (5 types actifs)
       { bucheron: 2, ours: 2, mouton: 1, chien: 2, cerf: 1, biche: 1 },           // 2+2+1+2+1+1=9   I1✓ I4✓ I5✓
-      { bucheron: 2, ours: 1, mouton: 2, chien: 2, cerf: 1, biche: 1 },           // 2+1+2+2+1+1=9   I1✓ I4✓ I5✓
+      { bucheron: 1, ours: 2, mouton: 2, chien: 2, cerf: 1, biche: 1 },           // 1+2+2+2+1+1=9   I1✓ I4✓ I5✓
       { bucheron: 3, ours: 1, mouton: 1, chien: 2, cerf: 1, biche: 1 },           // 3+1+1+2+1+1=9   I1✓ I4✓ I5✓
       // Sans couple — cerf/biche absents (4 types actifs)
-      { bucheron: 3, ours: 2, mouton: 2, cerf: 1, biche: 1 },                     // 3+2+2+1+1=9     I1✓ I5✓
-      // 2 couples — sans chien, sans ruche
-      { bucheron: 2, ours: 1, mouton: 0, chien: 2, cerf: 2, biche: 2 },           // 2+1+0+2+2+2=9   I1✓ I4✓ I5✓
+      { bucheron: 2, ours: 3, mouton: 2, cerf: 1, biche: 1 },                     // 2+3+2+1+1=9     I1✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, ruche: 1 },                    // 3+2+1+2+1=9     I1✓ I2✓ I3✓ I4✓ (5 types)
+      // 2 couples — chien=2, sans ruche (4 types actifs)
+      { bucheron: 1, ours: 2, mouton: 0, chien: 2, cerf: 2, biche: 2 },           // 1+2+0+2+2+2=9   I1✓ I4✓ I5✓
+      { bucheron: 0, ours: 3, mouton: 0, chien: 2, cerf: 2, biche: 2 },           // 0+3+0+2+2+2=9   I1✓ I4✓ I5✓
+            // 2 couples — sans chien, sans ruche (3 types actifs)
+      { bucheron: 2, ours: 1, mouton: 2, cerf: 2, biche: 2 },                     // 2+1+2+2+2=9     I1✓ I5✓
     ],
-    emptyCellsRange: [3, 3],
+    emptyCellsRange: [4, 4],
     bonusDisabled: false,
-    estimatedDurationRange: [150, 270],
+    estimatedDurationRange: [180, 300],
   },
 
-  niveau_7: {
-    // 7 types : Bucheron, Ours, Mouton, Ruche, Chien, Cerf, Biche — 4 vides fixes
-    // Même palette que niv 6, plus de vides. Reprend les compositions actuelles du niv 6.
+    niveau_7: {
+    // 7 types : Bucheron, Ours, Mouton, Ruche, Chien, Cerf, Biche — 5 vides fixes
+    // Même palette que niv 6, plus de vides (5 au lieu de 4) pour différencier la difficulté.
+    // Compositions validées empiriquement (script diagnoseNiveau6Success.ts niveau_7, 3000 tirages/compo) :
+    // les combos "ruche=1 + ours>=2" ont été retirées (uniqueOk=0/3000, non-viables à 5 vides).
     boardId: 'board_9_v1',
     cellCount: 9,
     compositions: [
-      // 1 couple — chien=2, ruche=1 (7 types actifs)
+      // 1 couple — chien=2, ruche=1, ours=1 (7 types actifs) — validé
       { bucheron: 2, ours: 1, mouton: 1, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 2+1+1+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
-      { bucheron: 1, ours: 2, mouton: 1, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 1+2+1+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
       { bucheron: 1, ours: 1, mouton: 2, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 1+1+2+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
-      { bucheron: 2, ours: 2, mouton: 0, chien: 2, cerf: 1, biche: 1, ruche: 1 }, // 2+2+0+2+1+1+1=9 I1✓ I2✓ I3✓ I4✓ I5✓
       // 1 couple — chien=2, sans ruche (5 types actifs)
       { bucheron: 2, ours: 2, mouton: 1, chien: 2, cerf: 1, biche: 1 },           // 2+2+1+2+1+1=9   I1✓ I4✓ I5✓
       { bucheron: 2, ours: 1, mouton: 2, chien: 2, cerf: 1, biche: 1 },           // 2+1+2+2+1+1=9   I1✓ I4✓ I5✓
       { bucheron: 1, ours: 2, mouton: 2, chien: 2, cerf: 1, biche: 1 },           // 1+2+2+2+1+1=9   I1✓ I4✓ I5✓
       { bucheron: 3, ours: 1, mouton: 1, chien: 2, cerf: 1, biche: 1 },           // 3+1+1+2+1+1=9   I1✓ I4✓ I5✓
-      // 1 couple — ruche=1, sans chien (5 types actifs)
-      { bucheron: 2, ours: 2, mouton: 2, cerf: 1, biche: 1, ruche: 1 },           // 2+2+2+1+1+1=9   I1✓ I2✓ I3✓ I5✓
+      // 1 couple — ruche=1, ours=1, sans chien (5 types actifs)
       { bucheron: 3, ours: 2, mouton: 1, cerf: 1, biche: 1, ruche: 1 },           // 3+2+1+1+1+1=9   I1✓ I2✓ I3✓ I5✓
-      { bucheron: 2, ours: 3, mouton: 1, cerf: 1, biche: 1, ruche: 1 },           // 2+3+1+1+1+1=9   I1✓ I2✓ I3✓ I5✓
-      { bucheron: 1, ours: 3, mouton: 2, cerf: 1, biche: 1, ruche: 1 },           // 1+3+2+1+1+1=9   I1✓ I2✓ I3✓ I5✓
       // 2 couples — chien=2, sans ruche (4 types actifs)
       { bucheron: 2, ours: 1, mouton: 0, chien: 2, cerf: 2, biche: 2 },           // 2+1+0+2+2+2=9   I1✓ I4✓ I5✓
       { bucheron: 1, ours: 2, mouton: 0, chien: 2, cerf: 2, biche: 2 },           // 1+2+0+2+2+2=9   I1✓ I4✓ I5✓
       // Sans couple — cerf/biche absents
       { bucheron: 3, ours: 2, mouton: 2, cerf: 1, biche: 1 },                     // 3+2+2+1+1=9     I1✓ I5✓
     ],
-    emptyCellsRange: [4, 4],
+    emptyCellsRange: [5, 5],
     bonusDisabled: false,
     estimatedDurationRange: [270, 420],
   },

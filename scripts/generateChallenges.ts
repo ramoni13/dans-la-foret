@@ -203,8 +203,8 @@ const boards: Record<string, BoardDefinition> = {
       [1, 2, 5],        // 0 — haut centre
       [0, 3],           // 1 — gauche haut
       [0, 4],           // 2 — droite haut
-      [1, 4, 5, 6],     // 3 — gauche milieu
-      [2, 3, 5, 7],     // 4 — droite milieu
+            [1, 5, 6],        // 3 — gauche milieu (PAS de lien direct vers 4 : la case 5 est entre les deux)
+      [2, 5, 7],        // 4 — droite milieu (PAS de lien direct vers 3 : la case 5 est entre les deux)
       [0, 3, 4, 6, 7],  // 5 — centre milieu
       [3, 5, 8],        // 6 — gauche bas
       [4, 5, 8],        // 7 — droite bas
@@ -490,7 +490,8 @@ function generateOneChallenge(
   challengeNumber: number,
   usedSolutions: Set<string>,
   usedChallenges: Set<string>,
-  compositionUsageCount: Map<number, number>
+  compositionUsageCount: Map<number, number>,
+  maxUsagePerComposition: number = Infinity
 ): Challenge | null {
   const params = LEVEL_PARAMS[level];
   const boardDef = boards[params.boardId];
@@ -503,6 +504,11 @@ function generateOneChallenge(
     );
 
   for (const compIdx of compositionIndices) {
+    // Plafond d'usage par composition : evite qu'une seule composition
+    // (celle qui reussit le plus facilement le filtre 1-solution) monopolise
+    // tout le niveau et casse la variete des defis.
+    if ((compositionUsageCount.get(compIdx) ?? 0) >= maxUsagePerComposition) continue;
+
     const composition = params.compositions[compIdx];
     const total = Object.values(composition).reduce((a, b) => a + (b ?? 0), 0);
     if (total !== params.cellCount) continue;
@@ -694,11 +700,18 @@ function generateAll() {
     let attempts = 0;
     const maxAttempts = count * 200; // augmente pour les niveaux contraints
 
+        // Plafond d'usage par composition : ~1.5x la part equitable, min 2.
+    // Empeche qu'une seule composition soit reutilisee pour tous les defis.
+    const maxUsagePerComposition = Math.max(
+      2, Math.ceil((count / params.compositions.length) * 1.5)
+    );
+
     while (challenges.length < count && attempts < maxAttempts) {
       attempts++;
       const c = generateOneChallenge(
         level, challenges.length + 1,
-        usedSolutions, usedChallenges, compositionUsageCount
+        usedSolutions, usedChallenges, compositionUsageCount,
+        maxUsagePerComposition
       );
       if (c) {
         challenges.push(c);

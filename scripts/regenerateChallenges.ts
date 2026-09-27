@@ -177,7 +177,7 @@ const boards: Record<string, BoardDefinition> = {
     backgroundAsset: null as any,
     availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
   },
-  board_12: {
+    board_12: {
     id: 'board_12', label: 'Foret Profonde', cellCount: 12,
     connections: [
       [1, 3, 4, 10], [0, 2, 5, 11], [1, 3, 4, 9], [0, 2, 5, 8], [0, 2, 6, 7], [1, 3, 6, 7],
@@ -190,6 +190,37 @@ const boards: Record<string, BoardDefinition> = {
     backgroundAsset: null as any,
     availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
     specialCells: { corners: [0, 1, 10, 11], edges: [2, 3, 4, 5, 6, 7, 8, 9] },
+  },
+  board_9_v1: {
+    id: 'board_9_v1', label: 'Lisiere Etendue', cellCount: 9,
+    connections: [
+      [1, 2, 5], [0, 3], [0, 4], [1, 5, 6], [2, 5, 7],
+      [0, 3, 4, 6, 7], [3, 5, 8], [4, 5, 8], [6, 7],
+    ],
+    cellPositions: [
+      { x: 50, y: 12 }, { x: 25, y: 30 }, { x: 75, y: 30 },
+      { x: 25, y: 52 }, { x: 75, y: 52 }, { x: 50, y: 52 },
+      { x: 25, y: 78 }, { x: 75, y: 78 }, { x: 50, y: 93 },
+    ],
+    backgroundAsset: null as any,
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche'],
+    specialCells: { corners: [0, 8], edges: [1, 2, 3, 4], center: [5, 6, 7] },
+  },
+  board_11_v2: {
+    id: 'board_11_v2', label: 'Sous-bois Profond', cellCount: 11,
+    connections: [
+      [2], [2], [0, 1, 3, 5], [2, 4, 6], [3, 5, 6, 7], [2, 4, 7],
+      [3, 4, 8, 9], [4, 5, 8, 10], [6, 7, 9, 10], [6, 8], [7, 8],
+    ],
+    cellPositions: [
+      { x: 12, y: 8 }, { x: 88, y: 8 }, { x: 50, y: 20 },
+      { x: 25, y: 38 }, { x: 50, y: 50 }, { x: 75, y: 38 },
+      { x: 25, y: 62 }, { x: 75, y: 62 }, { x: 50, y: 78 },
+      { x: 12, y: 92 }, { x: 88, y: 92 },
+    ],
+    backgroundAsset: null as any,
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche', 'tas_buches'],
+    specialCells: { corners: [0, 1, 9, 10], center: [4], edges: [2, 3, 5, 6, 7, 8] },
   },
 };
 
@@ -334,7 +365,8 @@ function generateOneChallenge(
   challengeNumber: number,
   usedSolutions: Set<string>,
   usedChallenges: Set<string>,
-  compositionUsageCount: Map<number, number>
+  compositionUsageCount: Map<number, number>,
+  maxUsagePerComposition: number = Infinity
 ): Challenge | null {
   const params = LEVEL_PARAMS[level];
   const boardDef = boards[params.boardId];
@@ -344,6 +376,11 @@ function generateOneChallenge(
     .sort((a, b) => (compositionUsageCount.get(a) ?? 0) - (compositionUsageCount.get(b) ?? 0));
 
   for (const compIdx of compositionIndices) {
+    // Plafond d'usage par composition : evite qu'une seule composition
+    // (celle qui reussit le plus facilement le filtre 1-solution) monopolise
+    // tout le niveau et casse la variete des defis.
+    if ((compositionUsageCount.get(compIdx) ?? 0) >= maxUsagePerComposition) continue;
+
     const composition = params.compositions[compIdx];
     const total = Object.values(composition).reduce((a, b) => a + (b ?? 0), 0);
     if (total !== params.cellCount) continue;
@@ -441,18 +478,29 @@ function regenerateLevel(level: DifficultyLevel, defiNumbers: number[] | null): 
     }
   }
 
-  // Regenerer les defis cibles
+    // Regenerer les defis cibles
   const newChallenges: Challenge[] = [];
-  let attempts = 0;
-  const maxAttempts = toRegenerate.size * 300;
+  // Budget de tentatives INDIVIDUEL par defi (le compteur precedent etait
+  // partage entre tous les defis, ce qui epuisait tout le budget des le
+  // premier echec et faisait echouer tous les suivants automatiquement).
+  const maxAttemptsPerDefi = 800;
+
+  // Plafond d'usage par composition : ~1.5x la part equitable, min 2.
+  // Empeche qu'une seule composition soit reutilisee pour tous les defis.
+  const maxUsagePerComposition = Math.max(
+    2, Math.ceil((totalCount / params.compositions.length) * 1.5)
+  );
 
   const toRegenerateList = [...toRegenerate].sort((a, b) => a - b);
 
   for (const num of toRegenerateList) {
     let generated = false;
-    while (!generated && attempts < maxAttempts) {
+    let attempts = 0;
+    while (!generated && attempts < maxAttemptsPerDefi) {
       attempts++;
-      const c = generateOneChallenge(level, num, usedSolutions, usedChallenges, compositionUsageCount);
+      const c = generateOneChallenge(
+        level, num, usedSolutions, usedChallenges, compositionUsageCount, maxUsagePerComposition
+      );
       if (c) {
         newChallenges.push(c);
         generated = true;
@@ -460,7 +508,7 @@ function regenerateLevel(level: DifficultyLevel, defiNumbers: number[] | null): 
       }
     }
     if (!generated) {
-      console.warn(`  ✗ Defi ${num} : echec apres ${maxAttempts} tentatives — defi original conserve`);
+      console.warn(`  ✗ Defi ${num} : echec apres ${maxAttemptsPerDefi} tentatives — defi original conserve`);
       const original = existing.find(c => c.challengeNumber === num);
       if (original) newChallenges.push(original);
     }

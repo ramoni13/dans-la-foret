@@ -17,8 +17,8 @@ export const board9cellsV1: BoardDefinition = {
     [1, 2, 5],       // case 0 — haut centre
     [0, 3],          // case 1 — gauche haut
     [0, 4],          // case 2 — droite haut
-    [1, 4, 5, 6],    // case 3 — gauche milieu
-    [2, 3, 5, 7],    // case 4 — droite milieu
+    [1, 5, 6],       // case 3 — gauche milieu (PAS de lien direct vers 4 : la case 5 est entre les deux)
+    [2, 5, 7],       // case 4 — droite milieu (PAS de lien direct vers 3 : la case 5 est entre les deux)
     [0, 3, 4, 6, 7], // case 5 — centre milieu
     [3, 5, 8],       // case 6 — gauche bas (+8 vs board_8)
     [4, 5, 8],       // case 7 — droite bas (+8 vs board_8)
