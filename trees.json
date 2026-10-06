@@ -1,0 +1,1802 @@
+[
+  {
+    "id": 1,
+    "challenge_id": 1,
+    "name_fr": "Chêne pédonculé",
+    "name_latin": "Quercus robur",
+    "region": "France métropolitaine",
+    "anecdote": "Il peut vivre plus de 500 ans et abrite plus de 300 espèces d'insectes différentes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_robur_Mittelrheingau_01.jpg"
+  },
+  {
+    "id": 2,
+    "challenge_id": 2,
+    "name_fr": "Hêtre commun",
+    "name_latin": "Fagus sylvatica",
+    "region": "France métropolitaine",
+    "anecdote": "Son écorce reste lisse toute sa vie. Ses fruits riches en huile s'appellent des faînes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fagus_sylvatica_J%C3%A4gerstein_01.jpg"
+  },
+  {
+    "id": 3,
+    "challenge_id": 3,
+    "name_fr": "Mélèze d'Europe",
+    "name_latin": "Larix decidua",
+    "region": "France métropolitaine",
+    "anecdote": "C'est l'un des rares résineux d'Europe à perdre ses aiguilles dorées en hiver.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Larix_decidua_Val_Roseg_01.jpg"
+  },
+  {
+    "id": 4,
+    "challenge_id": 4,
+    "name_fr": "Pin sylvestre",
+    "name_latin": "Pinus sylvestris",
+    "region": "France métropolitaine",
+    "anecdote": "Reconnaissable à son écorce ocre et orange dans sa partie supérieure.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_sylvestris_Vosges_01.jpg"
+  },
+  {
+    "id": 5,
+    "challenge_id": 5,
+    "name_fr": "Châtaignier commun",
+    "name_latin": "Castanea sativa",
+    "region": "France métropolitaine",
+    "anecdote": "Surnommé 'l'arbre à pain' car ses châtaignes ont nourri des générations en montagne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Castanea_sativa_01.jpg"
+  },
+  {
+    "id": 6,
+    "challenge_id": 6,
+    "name_fr": "Sorbier des oiseleurs",
+    "name_latin": "Sorbus aucuparia",
+    "region": "France métropolitaine",
+    "anecdote": "Ses baies rouges en grappes sont une réserve de nourriture essentielle pour les oiseaux en hiver.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aucuparia_01.jpg"
+  },
+  {
+    "id": 7,
+    "challenge_id": 7,
+    "name_fr": "Sapin pectiné",
+    "name_latin": "Abies alba",
+    "region": "France métropolitaine",
+    "anecdote": "Ses cônes dressés vers le ciel se désagrègent directement sur l'arbre à maturité.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_alba_Vosges_01.jpg"
+  },
+  {
+    "id": 8,
+    "challenge_id": 8,
+    "name_fr": "Épicéa commun",
+    "name_latin": "Picea abies",
+    "region": "France métropolitaine",
+    "anecdote": "Ses cônes pendent vers le bas contrairement au sapin, et son bois sert à fabriquer des violons.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Picea_abies_01.jpg"
+  },
+  {
+    "id": 9,
+    "challenge_id": 9,
+    "name_fr": "Chêne vert",
+    "name_latin": "Quercus ilex",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles coriaces et piquantes gardent l'eau pendant les étés méditerranéens.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_ilex_01.jpg"
+  },
+  {
+    "id": 10,
+    "challenge_id": 10,
+    "name_fr": "Chêne liège",
+    "name_latin": "Quercus suber",
+    "region": "France métropolitaine",
+    "anecdote": "Son écorce est récoltée tous les 9 à 12 ans pour fabriquer des bouchons sans couper l'arbre.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_suber_Portugal_01.jpg"
+  },
+  {
+    "id": 11,
+    "challenge_id": 11,
+    "name_fr": "Frêne élevé",
+    "name_latin": "Fraxinus excelsior",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois souple et résistant est historiquement utilisé pour les manches d'outils et les rames.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fraxinus_excelsior_01.jpg"
+  },
+  {
+    "id": 12,
+    "challenge_id": 12,
+    "name_fr": "Bouleau verruqueux",
+    "name_latin": "Betula pendula",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre pionnier dont l'écorce blanche réfléchit la lumière pour se protéger du gel.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Betula_pendula_01.jpg"
+  },
+  {
+    "id": 13,
+    "challenge_id": 13,
+    "name_fr": "Charme commun",
+    "name_latin": "Carpinus betulus",
+    "region": "France métropolitaine",
+    "anecdote": "Son feuillage est marcescent : ses feuilles séchées restent accrochées aux branches tout l'hiver.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Carpinus_betulus_01.jpg"
+  },
+  {
+    "id": 14,
+    "challenge_id": 14,
+    "name_fr": "Pin maritime",
+    "name_latin": "Pinus pinaster",
+    "region": "France métropolitaine",
+    "anecdote": "Emblématique du massif des Landes de Gascogne, planté pour fixer les dunes au XIXe siècle.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinaster_Landes_01.jpg"
+  },
+  {
+    "id": 15,
+    "challenge_id": 15,
+    "name_fr": "Tilleul à grandes feuilles",
+    "name_latin": "Tilia platyphyllos",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fleurs très parfumées et mellifères sont réputées en infusion apaisante.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_platyphyllos_01.jpg"
+  },
+  {
+    "id": 16,
+    "challenge_id": 16,
+    "name_fr": "Érable champêtre",
+    "name_latin": "Acer campestre",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits munis de deux ailes (disamares) tournoient comme des hélicoptères en tombant.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_campestre_01.jpg"
+  },
+  {
+    "id": 17,
+    "challenge_id": 17,
+    "name_fr": "Orme champêtre",
+    "name_latin": "Ulmus minor",
+    "region": "France métropolitaine",
+    "anecdote": "Autrefois très fréquent au bord des chemins, il a été fragilisé par la maladie de la graphiose.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ulmus_minor_01.jpg"
+  },
+  {
+    "id": 18,
+    "challenge_id": 18,
+    "name_fr": "Aulne glutineux",
+    "name_latin": "Alnus glutinosa",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois immergé ne pourrit pas ; il a servi à fabriquer les pieux des fondations de Venise.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_01.jpg"
+  },
+  {
+    "id": 19,
+    "challenge_id": 19,
+    "name_fr": "Pin d'Alep",
+    "name_latin": "Pinus halepensis",
+    "region": "France métropolitaine",
+    "anecdote": "Très fréquent en Provence, ses pommes de pin restent fermées jusqu'au passage d'un incendie.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_halepensis_01.jpg"
+  },
+  {
+    "id": 20,
+    "challenge_id": 20,
+    "name_fr": "Alisier torminal",
+    "name_latin": "Sorbus torminalis",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois est l'un des plus précieux d'Europe, très prisé en ébénisterie et lutherie.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_torminalis_01.jpg"
+  },
+  {
+    "id": 21,
+    "challenge_id": 21,
+    "name_fr": "Noyer commun",
+    "name_latin": "Juglans regia",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles sécrètent une substance qui empêche les autres plantes de pousser à son pied.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juglans_regia_01.jpg"
+  },
+  {
+    "id": 22,
+    "challenge_id": 22,
+    "name_fr": "Platane d'Orient",
+    "name_latin": "Platanus orientalis",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre majestueux d'alignement dont l'écorce se détache en plaques multicolores.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Platanus_orientalis_01.jpg"
+  },
+  {
+    "id": 23,
+    "challenge_id": 23,
+    "name_fr": "Mésangeau / Cormier",
+    "name_latin": "Sorbus domestica",
+    "region": "France métropolitaine",
+    "anecdote": "Produit des cormes, de petits fruits anciens ressemblant à de petites poires.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_domestica_01.jpg"
+  },
+  {
+    "id": 24,
+    "challenge_id": 24,
+    "name_fr": "Poirier sauvage",
+    "name_latin": "Pyrus pyraster",
+    "region": "France métropolitaine",
+    "anecdote": "Ancêtre de nos poiriers cultivés, ses rameaux portent de petites épines.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pyrus_pyraster_01.jpg"
+  },
+  {
+    "id": 25,
+    "challenge_id": 25,
+    "name_fr": "Pommier sauvage",
+    "name_latin": "Malus sylvestris",
+    "region": "France métropolitaine",
+    "anecdote": "Ses petites pommes acides sont une source de nourriture précieuse pour la faune forestière.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malus_sylvestris_01.jpg"
+  },
+  {
+    "id": 26,
+    "challenge_id": 26,
+    "name_fr": "Merisier",
+    "name_latin": "Prunus avium",
+    "region": "France métropolitaine",
+    "anecdote": "Ancêtre du cerisier, sa floraison printanière blanche illumine le bord des forêts.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_avium_01.jpg"
+  },
+  {
+    "id": 27,
+    "challenge_id": 27,
+    "name_fr": "Alisier blanc",
+    "name_latin": "Sorbus aria",
+    "region": "France métropolitaine",
+    "anecdote": "Le dessous de ses feuilles est recouvert d'un duvet blanc feutré qui capte la lumière.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aria_01.jpg"
+  },
+  {
+    "id": 28,
+    "challenge_id": 28,
+    "name_fr": "Érable sycomore",
+    "name_latin": "Acer pseudoplatanus",
+    "region": "France métropolitaine",
+    "anecdote": "Apprécié en lutherie pour fabriquer le dos des violons et des violoncelles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_pseudoplatanus_01.jpg"
+  },
+  {
+    "id": 29,
+    "challenge_id": 29,
+    "name_fr": "Érable plane",
+    "name_latin": "Acer platanoides",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles prennent une couleur jaune d'or éclatante dès le début de l'automne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_platanoides_01.jpg"
+  },
+  {
+    "id": 30,
+    "challenge_id": 30,
+    "name_fr": "Pin cembre / Arolle",
+    "name_latin": "Pinus cembra",
+    "region": "France métropolitaine",
+    "anecdote": "Vit en haute montagne ; ses graines sont dispersées par un oiseau nommé le Cassenoix.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_cembra_01.jpg"
+  },
+  {
+    "id": 31,
+    "challenge_id": 31,
+    "name_fr": "Pin à crochets",
+    "name_latin": "Pinus uncinata",
+    "region": "France métropolitaine",
+    "anecdote": "Ses écailles d'écorce se terminent par un petit crochet dirigé vers la base du cône.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_uncinata_01.jpg"
+  },
+  {
+    "id": 32,
+    "challenge_id": 32,
+    "name_fr": "Pin noir d'Autriche",
+    "name_latin": "Pinus nigra",
+    "region": "France métropolitaine",
+    "anecdote": "Traces sombres sur son écorce et grande résistance aux sols calcaires difficiles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_01.jpg"
+  },
+  {
+    "id": 33,
+    "challenge_id": 33,
+    "name_fr": "Pin pignon / Parasol",
+    "name_latin": "Pinus pinea",
+    "region": "France métropolitaine",
+    "anecdote": "Emblématique des côtes méditerranéennes, il produit les pignons de pin comestibles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinea_01.jpg"
+  },
+  {
+    "id": 34,
+    "challenge_id": 34,
+    "name_fr": "Cyprès de Provence",
+    "name_latin": "Cupressus sempervirens",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre élancé typique du paysage provençal, souvent planté comme brise-vent.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cupressus_sempervirens_01.jpg"
+  },
+  {
+    "id": 35,
+    "challenge_id": 35,
+    "name_fr": "Genévrier cade",
+    "name_latin": "Juniperus oxycedrus",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois odorant produit l'huile de cade utilisée autrefois en médecine populaire.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_oxycedrus_01.jpg"
+  },
+  {
+    "id": 36,
+    "challenge_id": 36,
+    "name_fr": "Genévrier commun",
+    "name_latin": "Juniperus communis",
+    "region": "France métropolitaine",
+    "anecdote": "Ses baies bleu-noir mettent deux ans à mûrir et parfument la choucroute.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_communis_01.jpg"
+  },
+  {
+    "id": 37,
+    "challenge_id": 37,
+    "name_fr": "If commun",
+    "name_latin": "Taxus baccata",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre très longévif pouvant dépasser 1000 ans ; toutes ses parties sont toxiques sauf la chair rouge du fruit.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Taxus_baccata_01.jpg"
+  },
+  {
+    "id": 38,
+    "challenge_id": 38,
+    "name_fr": "Houx commun",
+    "name_latin": "Ilex aquifolium",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles du bas sont piquantes contre les herbivores, mais deviennent lisses en hauteur.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ilex_aquifolium_01.jpg"
+  },
+  {
+    "id": 39,
+    "challenge_id": 39,
+    "name_fr": "Buis commun",
+    "name_latin": "Buxus sempervirens",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois est si dense et lourd qu'il coule dans l'eau.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Buxus_sempervirens_01.jpg"
+  },
+  {
+    "id": 40,
+    "challenge_id": 40,
+    "name_fr": "Marronnier d'Inde",
+    "name_latin": "Aesculus hippocastanum",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits (marrons) ne sont pas comestibles, contrairement aux châtaignes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Aesculus_hippocastanum_01.jpg"
+  },
+  {
+    "id": 41,
+    "challenge_id": 41,
+    "name_fr": "Tilleul à petites feuilles",
+    "name_latin": "Tilia cordata",
+    "region": "France métropolitaine",
+    "anecdote": "Reconnaissable à ses petites feuilles en forme de cœur avec des touffes de poils roux au verso.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_cordata_01.jpg"
+  },
+  {
+    "id": 42,
+    "challenge_id": 42,
+    "name_fr": "Aulne blanc",
+    "name_latin": "Alnus incana",
+    "region": "France métropolitaine",
+    "anecdote": "Colonise les bords de torrents en montagne et aide à stabiliser les berges.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_incana_01.jpg"
+  },
+  {
+    "id": 43,
+    "challenge_id": 43,
+    "name_fr": "Saule blanc",
+    "name_latin": "Salix alba",
+    "region": "France métropolitaine",
+    "anecdote": "Son écorce contient de la salicine, molécule à l'origine de l'aspirine.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_alba_01.jpg"
+  },
+  {
+    "id": 44,
+    "challenge_id": 44,
+    "name_fr": "Saule marsault",
+    "name_latin": "Salix caprea",
+    "region": "France métropolitaine",
+    "anecdote": "Ses chatons du printemps apportent l'un des premiers pollens aux abeilles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_caprea_01.jpg"
+  },
+  {
+    "id": 45,
+    "challenge_id": 45,
+    "name_fr": "Peuplier noir",
+    "name_latin": "Populus nigra",
+    "region": "France métropolitaine",
+    "anecdote": "Grand arbre des zones humides au tronc souvent recouvert de grosses loupes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_nigra_01.jpg"
+  },
+  {
+    "id": 46,
+    "challenge_id": 46,
+    "name_fr": "Peuplier tremble",
+    "name_latin": "Populus tremula",
+    "region": "France métropolitaine",
+    "anecdote": "Le pétiole aplati de ses feuilles fait qu'elles 'remblent' à la moindre brise.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_tremula_01.jpg"
+  },
+  {
+    "id": 47,
+    "challenge_id": 47,
+    "name_fr": "Peuplier blanc",
+    "name_latin": "Populus alba",
+    "region": "France métropolitaine",
+    "anecdote": "Le dessous de ses feuilles est d'un blanc cotonneux très lumineux.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_alba_01.jpg"
+  },
+  {
+    "id": 48,
+    "challenge_id": 48,
+    "name_fr": "Chêne pubescent",
+    "name_latin": "Quercus pubescens",
+    "region": "France métropolitaine",
+    "anecdote": "Le dessous de ses feuilles est couvert de petits poils doux pour limiter la transpiration.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pubescens_01.jpg"
+  },
+  {
+    "id": 49,
+    "challenge_id": 49,
+    "name_fr": "Chêne tauzin",
+    "name_latin": "Quercus pyrenaica",
+    "region": "France métropolitaine",
+    "anecdote": "Très présent dans le Sud-Ouest, adapté aux sols sableux et pauvres.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pyrenaica_01.jpg"
+  },
+  {
+    "id": 50,
+    "challenge_id": 50,
+    "name_fr": "Chêne chevelu",
+    "name_latin": "Quercus cerris",
+    "region": "France métropolitaine",
+    "anecdote": "La cupule de son gland est recouverte d'écailles allongées comme des cheveux.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_cerris_01.jpg"
+  },
+  {
+    "id": 51,
+    "challenge_id": 51,
+    "name_fr": "Nyssa / Copalme",
+    "name_latin": "Liquidambar styraciflua",
+    "region": "France métropolitaine",
+    "anecdote": "Célèbre pour le spectacle de ses feuilles qui deviennent rouge écarlate à l'automne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_styraciflua_01.jpg"
+  },
+  {
+    "id": 52,
+    "challenge_id": 52,
+    "name_fr": "Robinier faux-acacia",
+    "name_latin": "Robinia pseudoacacia",
+    "region": "France métropolitaine",
+    "anecdote": "Importé d'Amérique en 1601, ses fleurs blanches en grappes donnent un miel délicieux.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Robinia_pseudoacacia_01.jpg"
+  },
+  {
+    "id": 53,
+    "challenge_id": 53,
+    "name_fr": "Sophora du Japon",
+    "name_latin": "Styphnolobium japonicum",
+    "region": "France métropolitaine",
+    "anecdote": "Souvent planté dans les parcs pour son ombre et sa floraison estivale tardive.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Styphnolobium_japonicum_01.jpg"
+  },
+  {
+    "id": 54,
+    "challenge_id": 54,
+    "name_fr": "Févier d'Amérique",
+    "name_latin": "Gleditsia triacanthos",
+    "region": "France métropolitaine",
+    "anecdote": "Son tronc porte de redoutables épines ramifiées à trois pointes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Gleditsia_triacanthos_01.jpg"
+  },
+  {
+    "id": 55,
+    "challenge_id": 55,
+    "name_fr": "Sureau noir",
+    "name_latin": "Sambucus nigra",
+    "region": "France métropolitaine",
+    "anecdote": "Ses ombrelles de fleurs blanches donnent des baies utilisées en sirop et gelée.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_nigra_01.jpg"
+  },
+  {
+    "id": 56,
+    "challenge_id": 56,
+    "name_fr": "Sureau à grappes",
+    "name_latin": "Sambucus racemosa",
+    "region": "France métropolitaine",
+    "anecdote": "Aruste de montagne dont les baies rouge vif mûrissent en été.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_racemosa_01.jpg"
+  },
+  {
+    "id": 57,
+    "challenge_id": 57,
+    "name_fr": "Viorne obier",
+    "name_latin": "Viburnum opulus",
+    "region": "France métropolitaine",
+    "anecdote": "Surnommée 'boule de neige' en raison de ses grosses inflorescences blanches.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_opulus_01.jpg"
+  },
+  {
+    "id": 58,
+    "challenge_id": 58,
+    "name_fr": "Viorne lantane",
+    "name_latin": "Viburnum lantana",
+    "region": "France métropolitaine",
+    "anecdote": "Ses jeunes rameaux très souples servaient autrefois de liens pour les fagos.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_lantana_01.jpg"
+  },
+  {
+    "id": 59,
+    "challenge_id": 59,
+    "name_fr": "Cornouiller sanguin",
+    "name_latin": "Cornus sanguinea",
+    "region": "France métropolitaine",
+    "anecdote": "Ses jeunes branches deviennent rouge sang en automne et en hiver.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_sanguinea_01.jpg"
+  },
+  {
+    "id": 60,
+    "challenge_id": 60,
+    "name_fr": "Cornouiller mâle",
+    "name_latin": "Cornus mas",
+    "region": "France métropolitaine",
+    "anecdote": "Fleurit en jaune dès le mois de février avant l'apparition de ses feuilles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_mas_01.jpg"
+  },
+  {
+    "id": 61,
+    "challenge_id": 61,
+    "name_fr": "Fusain d'Europe",
+    "name_latin": "Euonymus europaeus",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits roses et oranges appelés 'bonnets d'évêque' sont très decoratifs.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Euonymus_europaeus_01.jpg"
+  },
+  {
+    "id": 62,
+    "challenge_id": 62,
+    "name_fr": "Nisetier / Noisetier",
+    "name_latin": "Corylus avellana",
+    "region": "France métropolitaine",
+    "anecdote": "Arbrisseau buissonnant dont le bois souple servait à fabriquer les baguettes de sourcier.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Corylus_avellana_01.jpg"
+  },
+  {
+    "id": 63,
+    "challenge_id": 63,
+    "name_fr": "Prunellier / Épine noire",
+    "name_latin": "Prunus spinosa",
+    "region": "France métropolitaine",
+    "anecdote": "Ses baies bleues très astringentes servent à fabriquer la liqueur de prunelle.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_spinosa_01.jpg"
+  },
+  {
+    "id": 64,
+    "challenge_id": 64,
+    "name_fr": "Aubépine à un style",
+    "name_latin": "Crataegus monogyna",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre d'aménageant des haies bocagères, ses fleurs blanches soutiennent la biodiversité.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Crataegus_monogyna_01.jpg"
+  },
+  {
+    "id": 65,
+    "challenge_id": 65,
+    "name_fr": "Troène commun",
+    "name_latin": "Ligustrum vulgare",
+    "region": "France métropolitaine",
+    "anecdote": "Arbusculte des lisières aux fleurs très odorantes et baies noires toxiques.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ligustrum_vulgare_01.jpg"
+  },
+  {
+    "id": 66,
+    "challenge_id": 66,
+    "name_fr": "Argousier",
+    "name_latin": "Hippophae rhamnoides",
+    "region": "France métropolitaine",
+    "anecdote": "Ses petites baies oranges sont extrêmement riches en vitamine C.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Hippophae_rhamnoides_01.jpg"
+  },
+  {
+    "id": 67,
+    "challenge_id": 67,
+    "name_fr": "Arbousier",
+    "name_latin": "Arbutus unedo",
+    "region": "France métropolitaine",
+    "anecdote": "Surnommé 'arbre à fraises', il porte fleurs et fruits mûrs en même temps à l'automne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Arbutus_unedo_01.jpg"
+  },
+  {
+    "id": 68,
+    "challenge_id": 68,
+    "name_fr": "Olivier sauvage / Oleastre",
+    "name_latin": "Olea europaea var. sylvestris",
+    "region": "France métropolitaine",
+    "anecdote": "Ancêtre rustique de l'olivier cultivé, très résistant à la sécheresse.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Olea_europaea_01.jpg"
+  },
+  {
+    "id": 69,
+    "challenge_id": 69,
+    "name_fr": "Terebinthe / Pistachier",
+    "name_latin": "Pistacia terebinthus",
+    "region": "France métropolitaine",
+    "anecdote": "Arbrisseau méditerranéen dont la résine dégage une odeur de térébenthine.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_terebinthus_01.jpg"
+  },
+  {
+    "id": 70,
+    "challenge_id": 70,
+    "name_fr": "Pistachier lentisque",
+    "name_latin": "Pistacia lentiscus",
+    "region": "France métropolitaine",
+    "anecdote": "Feuillage persistant de la garrigue, il produit le mastic de Chios.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_lentiscus_01.jpg"
+  },
+  {
+    "id": 71,
+    "challenge_id": 71,
+    "name_fr": "Filaria à larges feuilles",
+    "name_latin": "Phillyrea latifolia",
+    "region": "France métropolitaine",
+    "anecdote": "Aruste méditerranéen coriace poussant dans le maquis et la garrigue.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phillyrea_latifolia_01.jpg"
+  },
+  {
+    "id": 72,
+    "challenge_id": 72,
+    "name_fr": "Rhamnus / Nerprun alaterne",
+    "name_latin": "Rhamnus alaternus",
+    "region": "France métropolitaine",
+    "anecdote": "Feuillage vert brillant persistant, très apprécié des chenilles de papillons.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Rhamnus_alaternus_01.jpg"
+  },
+  {
+    "id": 73,
+    "challenge_id": 73,
+    "name_fr": "Bourdaine",
+    "name_latin": "Frangula alnus",
+    "region": "France métropolitaine",
+    "anecdote": "Son charbon de bois de grande qualité servait autrefois à la fabrication de la poudre à canon.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Frangula_alnus_01.jpg"
+  },
+  {
+    "id": 74,
+    "challenge_id": 74,
+    "name_fr": "Érable à feuilles de frêne",
+    "name_latin": "Acer negundo",
+    "region": "France métropolitaine",
+    "anecdote": "Originaire d'Amérique du Nord, ses feuilles ressemblent à celles du frêne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_negundo_01.jpg"
+  },
+  {
+    "id": 75,
+    "challenge_id": 75,
+    "name_fr": "Érable de Montpellier",
+    "name_latin": "Acer monspessulanum",
+    "region": "France métropolitaine",
+    "anecdote": "Ses petites feuilles à trois lobes sont typiques des zones chaudes du Sud.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_monspessulanum_01.jpg"
+  },
+  {
+    "id": 76,
+    "challenge_id": 76,
+    "name_fr": "Érable à feuilles d'obier",
+    "name_latin": "Acer opalus",
+    "region": "France métropolitaine",
+    "anecdote": "Espèce des montagnes méditerranéennes et du sud de la France.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_opalus_01.jpg"
+  },
+  {
+    "id": 77,
+    "challenge_id": 77,
+    "name_fr": "Ailante glanduleux",
+    "name_latin": "Ailanthus altissima",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre à croissance très rapide, originaire d'Asie et très résistant à la pollution.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ailanthus_altissima_01.jpg"
+  },
+  {
+    "id": 78,
+    "challenge_id": 78,
+    "name_fr": "Phellodendron / Arbre à liège",
+    "name_latin": "Phellodendron amurense",
+    "region": "France métropolitaine",
+    "anecdote": "Son écorce spongieuse rappelle celle du chêne liège.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phellodendron_amurense_01.jpg"
+  },
+  {
+    "id": 79,
+    "challenge_id": 79,
+    "name_fr": "Paulownia tomentosa",
+    "name_latin": "Paulownia tomentosa",
+    "region": "France métropolitaine",
+    "anecdote": "Grandes feuilles douces et magnifiques grappes de fleurs violettes au printemps.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Paulownia_tomentosa_01.jpg"
+  },
+  {
+    "id": 80,
+    "challenge_id": 80,
+    "name_fr": "Catalpa commun",
+    "name_latin": "Catalpa bignonioides",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits longs et pendants ressemblent à de grands haricots.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Catalpa_bignonioides_01.jpg"
+  },
+  {
+    "id": 81,
+    "challenge_id": 81,
+    "name_fr": "Ginkgo biloba",
+    "name_latin": "Ginkgo biloba",
+    "region": "France métropolitaine",
+    "anecdote": "Considéré comme 'l'arbre aux quarante écus', c'est la plus ancienne espèce d'arbre vivante.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ginkgo_biloba_01.jpg"
+  },
+  {
+    "id": 82,
+    "challenge_id": 82,
+    "name_fr": "Cèdre de l'Atlas",
+    "name_latin": "Cedrus atlantica",
+    "region": "France métropolitaine",
+    "anecdote": "Introduit au XIXe siècle dans le Luberon et le Ventoux pour reboiser les montagnes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_atlantica_01.jpg"
+  },
+  {
+    "id": 83,
+    "challenge_id": 83,
+    "name_fr": "Cèdre du Liban",
+    "name_latin": "Cedrus libani",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre majestueux à port étalé et bois très odorant.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_libani_01.jpg"
+  },
+  {
+    "id": 84,
+    "challenge_id": 84,
+    "name_fr": "Cèdre de l'Himalaya",
+    "name_latin": "Cedrus deodara",
+    "region": "France métropolitaine",
+    "anecdote": "Ses branches retombantes lui donnent une silhouette très élégante.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_deodara_01.jpg"
+  },
+  {
+    "id": 85,
+    "challenge_id": 85,
+    "name_fr": "Douglas",
+    "name_latin": "Pseudotsuga menziesii",
+    "region": "France métropolitaine",
+    "anecdote": "Grand résineux originaire d'Amérique, très utilisé pour le bois de charpente en France.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pseudotsuga_menziesii_01.jpg"
+  },
+  {
+    "id": 86,
+    "challenge_id": 86,
+    "name_fr": "Sapin de Nordmann",
+    "name_latin": "Abies nordmanniana",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre de Noël star car ses aiguilles douces ne tombent pas facilement.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_nordmanniana_01.jpg"
+  },
+  {
+    "id": 87,
+    "challenge_id": 87,
+    "name_fr": "Sapin de grandis",
+    "name_latin": "Abies grandis",
+    "region": "France métropolitaine",
+    "anecdote": "Ses aiguilles écrasées dégagent une agréable odeur de citron.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_grandis_01.jpg"
+  },
+  {
+    "id": 88,
+    "challenge_id": 88,
+    "name_fr": "Sapin de Numidie",
+    "name_latin": "Abies numidica",
+    "region": "France métropolitaine",
+    "anecdote": "Résineux rustique bien adapté aux sols calcaires et secs.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_numidica_01.jpg"
+  },
+  {
+    "id": 89,
+    "challenge_id": 89,
+    "name_fr": "Pin strobus / Weymouth",
+    "name_latin": "Pinus strobus",
+    "region": "France métropolitaine",
+    "anecdote": "Ses aiguilles fines et douces sont regroupées par paquets de cinq.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_strobus_01.jpg"
+  },
+  {
+    "id": 90,
+    "challenge_id": 90,
+    "name_fr": "Pin taeda",
+    "name_latin": "Pinus taeda",
+    "region": "France métropolitaine",
+    "anecdote": "Utilisé dans certaines plantations du Sud-Ouest pour sa croissance rapide.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_taeda_01.jpg"
+  },
+  {
+    "id": 91,
+    "challenge_id": 91,
+    "name_fr": "Pin laricio de Corse",
+    "name_latin": "Pinus nigra ssp. laricio",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre élancé des montagnes corses, son bois servait autrefois pour les mâts de bateaux.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_laricio_01.jpg"
+  },
+  {
+    "id": 92,
+    "challenge_id": 92,
+    "name_fr": "Séquoia géant",
+    "name_latin": "Sequoiadendron giganteum",
+    "region": "France métropolitaine",
+    "anecdote": "Peut atteindre des dimensions colossales et vivre plus de 3000 ans.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoiadendron_giganteum_01.jpg"
+  },
+  {
+    "id": 93,
+    "challenge_id": 93,
+    "name_fr": "Séquoia toujours vert",
+    "name_latin": "Sequoia sempervirens",
+    "region": "France métropolitaine",
+    "anecdote": "Comprend les arbres les plus hauts de la planète, dépassant 110 mètres.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoia_sempervirens_01.jpg"
+  },
+  {
+    "id": 94,
+    "challenge_id": 94,
+    "name_fr": "Cyprès de Lawson",
+    "name_latin": "Chamaecyparis lawsoniana",
+    "region": "France métropolitaine",
+    "anecdote": "Trés fréquemment utilisé en horticulture et pour former des haies brise-vent.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Chamaecyparis_lawsoniana_01.jpg"
+  },
+  {
+    "id": 95,
+    "challenge_id": 95,
+    "name_fr": "Thuya géant",
+    "name_latin": "Thuja plicata",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois de cèdre rouge est naturellement imputrescible.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Thuja_plicata_01.jpg"
+  },
+  {
+    "id": 96,
+    "challenge_id": 96,
+    "name_fr": "Cryptomeria / Cèdre du Japon",
+    "name_latin": "Cryptomeria japonica",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre sacré au Japon, souvent planté autour des temples.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cryptomeria_japonica_01.jpg"
+  },
+  {
+    "id": 97,
+    "challenge_id": 97,
+    "name_fr": "Magnolia à grandes fleurs",
+    "name_latin": "Magnolia grandiflora",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fleurs blanches de la taille d'une assiette exhalent un parfum suave.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Magnolia_grandiflora_01.jpg"
+  },
+  {
+    "id": 98,
+    "challenge_id": 98,
+    "name_fr": "Tulipier de Virginie",
+    "name_latin": "Liriodendron tulipifera",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles ont une forme originale de silhouette de tulipe.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liriodendron_tulipifera_01.jpg"
+  },
+  {
+    "id": 99,
+    "challenge_id": 99,
+    "name_fr": "Liquidambar oriental",
+    "name_latin": "Liquidambar orientalis",
+    "region": "France métropolitaine",
+    "anecdote": "Produit un baume odorant utilisé en parfumerie.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_orientalis_01.jpg"
+  },
+  {
+    "id": 100,
+    "challenge_id": 100,
+    "name_fr": "Persimon / Plaqueminier",
+    "name_latin": "Diospyros kaki",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits (kakis) restent accrochés aux branches découvertes à la fin de l'automne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Diospyros_kaki_01.jpg"
+  },
+  {
+    "id": 101,
+    "challenge_id": 101,
+    "name_fr": "Chêne pédonculé (Variété 2)",
+    "name_latin": "Quercus robur",
+    "region": "France métropolitaine",
+    "anecdote": "Il peut vivre plus de 500 ans et abrite plus de 300 espèces d'insectes différentes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_robur_Mittelrheingau_01.jpg"
+  },
+  {
+    "id": 102,
+    "challenge_id": 102,
+    "name_fr": "Hêtre commun (Variété 2)",
+    "name_latin": "Fagus sylvatica",
+    "region": "France métropolitaine",
+    "anecdote": "Son écorce reste lisse toute sa vie. Ses fruits riches en huile s'appellent des faînes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fagus_sylvatica_J%C3%A4gerstein_01.jpg"
+  },
+  {
+    "id": 103,
+    "challenge_id": 103,
+    "name_fr": "Mélèze d'Europe (Variété 2)",
+    "name_latin": "Larix decidua",
+    "region": "France métropolitaine",
+    "anecdote": "C'est l'un des rares résineux d'Europe à perdre ses aiguilles dorées en hiver.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Larix_decidua_Val_Roseg_01.jpg"
+  },
+  {
+    "id": 104,
+    "challenge_id": 104,
+    "name_fr": "Pin sylvestre (Variété 2)",
+    "name_latin": "Pinus sylvestris",
+    "region": "France métropolitaine",
+    "anecdote": "Reconnaissable à son écorce ocre et orange dans sa partie supérieure.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_sylvestris_Vosges_01.jpg"
+  },
+  {
+    "id": 105,
+    "challenge_id": 105,
+    "name_fr": "Châtaignier commun (Variété 2)",
+    "name_latin": "Castanea sativa",
+    "region": "France métropolitaine",
+    "anecdote": "Surnommé 'l'arbre à pain' car ses châtaignes ont nourri des générations en montagne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Castanea_sativa_01.jpg"
+  },
+  {
+    "id": 106,
+    "challenge_id": 106,
+    "name_fr": "Sorbier des oiseleurs (Variété 2)",
+    "name_latin": "Sorbus aucuparia",
+    "region": "France métropolitaine",
+    "anecdote": "Ses baies rouges en grappes sont une réserve de nourriture essentielle pour les oiseaux en hiver.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aucuparia_01.jpg"
+  },
+  {
+    "id": 107,
+    "challenge_id": 107,
+    "name_fr": "Sapin pectiné (Variété 2)",
+    "name_latin": "Abies alba",
+    "region": "France métropolitaine",
+    "anecdote": "Ses cônes dressés vers le ciel se désagrègent directement sur l'arbre à maturité.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_alba_Vosges_01.jpg"
+  },
+  {
+    "id": 108,
+    "challenge_id": 108,
+    "name_fr": "Épicéa commun (Variété 2)",
+    "name_latin": "Picea abies",
+    "region": "France métropolitaine",
+    "anecdote": "Ses cônes pendent vers le bas contrairement au sapin, et son bois sert à fabriquer des violons.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Picea_abies_01.jpg"
+  },
+  {
+    "id": 109,
+    "challenge_id": 109,
+    "name_fr": "Chêne vert (Variété 2)",
+    "name_latin": "Quercus ilex",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles coriaces et piquantes gardent l'eau pendant les étés méditerranéens.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_ilex_01.jpg"
+  },
+  {
+    "id": 110,
+    "challenge_id": 110,
+    "name_fr": "Chêne liège (Variété 2)",
+    "name_latin": "Quercus suber",
+    "region": "France métropolitaine",
+    "anecdote": "Son écorce est récoltée tous les 9 à 12 ans pour fabriquer des bouchons sans couper l'arbre.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_suber_Portugal_01.jpg"
+  },
+  {
+    "id": 111,
+    "challenge_id": 111,
+    "name_fr": "Frêne élevé (Variété 2)",
+    "name_latin": "Fraxinus excelsior",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois souple et résistant est historiquement utilisé pour les manches d'outils et les rames.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fraxinus_excelsior_01.jpg"
+  },
+  {
+    "id": 112,
+    "challenge_id": 112,
+    "name_fr": "Bouleau verruqueux (Variété 2)",
+    "name_latin": "Betula pendula",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre pionnier dont l'écorce blanche réfléchit la lumière pour se protéger du gel.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Betula_pendula_01.jpg"
+  },
+  {
+    "id": 113,
+    "challenge_id": 113,
+    "name_fr": "Charme commun (Variété 2)",
+    "name_latin": "Carpinus betulus",
+    "region": "France métropolitaine",
+    "anecdote": "Son feuillage est marcescent : ses feuilles séchées restent accrochées aux branches tout l'hiver.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Carpinus_betulus_01.jpg"
+  },
+  {
+    "id": 114,
+    "challenge_id": 114,
+    "name_fr": "Pin maritime (Variété 2)",
+    "name_latin": "Pinus pinaster",
+    "region": "France métropolitaine",
+    "anecdote": "Emblématique du massif des Landes de Gascogne, planté pour fixer les dunes au XIXe siècle.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinaster_Landes_01.jpg"
+  },
+  {
+    "id": 115,
+    "challenge_id": 115,
+    "name_fr": "Tilleul à grandes feuilles (Variété 2)",
+    "name_latin": "Tilia platyphyllos",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fleurs très parfumées et mellifères sont réputées en infusion apaisante.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_platyphyllos_01.jpg"
+  },
+  {
+    "id": 116,
+    "challenge_id": 116,
+    "name_fr": "Érable champêtre (Variété 2)",
+    "name_latin": "Acer campestre",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits munis de deux ailes (disamares) tournoient comme des hélicoptères en tombant.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_campestre_01.jpg"
+  },
+  {
+    "id": 117,
+    "challenge_id": 117,
+    "name_fr": "Orme champêtre (Variété 2)",
+    "name_latin": "Ulmus minor",
+    "region": "France métropolitaine",
+    "anecdote": "Autrefois très fréquent au bord des chemins, il a été fragilisé par la maladie de la graphiose.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ulmus_minor_01.jpg"
+  },
+  {
+    "id": 118,
+    "challenge_id": 118,
+    "name_fr": "Aulne glutineux (Variété 2)",
+    "name_latin": "Alnus glutinosa",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois immergé ne pourrit pas ; il a servi à fabriquer les pieux des fondations de Venise.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_01.jpg"
+  },
+  {
+    "id": 119,
+    "challenge_id": 119,
+    "name_fr": "Pin d'Alep (Variété 2)",
+    "name_latin": "Pinus halepensis",
+    "region": "France métropolitaine",
+    "anecdote": "Très fréquent en Provence, ses pommes de pin restent fermées jusqu'au passage d'un incendie.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_halepensis_01.jpg"
+  },
+  {
+    "id": 120,
+    "challenge_id": 120,
+    "name_fr": "Alisier torminal (Variété 2)",
+    "name_latin": "Sorbus torminalis",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois est l'un des plus précieux d'Europe, très prisé en ébénisterie et lutherie.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_torminalis_01.jpg"
+  },
+  {
+    "id": 121,
+    "challenge_id": 121,
+    "name_fr": "Noyer commun (Variété 2)",
+    "name_latin": "Juglans regia",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles sécrètent une substance qui empêche les autres plantes de pousser à son pied.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juglans_regia_01.jpg"
+  },
+  {
+    "id": 122,
+    "challenge_id": 122,
+    "name_fr": "Platane d'Orient (Variété 2)",
+    "name_latin": "Platanus orientalis",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre majestueux d'alignement dont l'écorce se détache en plaques multicolores.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Platanus_orientalis_01.jpg"
+  },
+  {
+    "id": 123,
+    "challenge_id": 123,
+    "name_fr": "Mésangeau / Cormier (Variété 2)",
+    "name_latin": "Sorbus domestica",
+    "region": "France métropolitaine",
+    "anecdote": "Produit des cormes, de petits fruits anciens ressemblant à de petites poires.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_domestica_01.jpg"
+  },
+  {
+    "id": 124,
+    "challenge_id": 124,
+    "name_fr": "Poirier sauvage (Variété 2)",
+    "name_latin": "Pyrus pyraster",
+    "region": "France métropolitaine",
+    "anecdote": "Ancêtre de nos poiriers cultivés, ses rameaux portent de petites épines.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pyrus_pyraster_01.jpg"
+  },
+  {
+    "id": 125,
+    "challenge_id": 125,
+    "name_fr": "Pommier sauvage (Variété 2)",
+    "name_latin": "Malus sylvestris",
+    "region": "France métropolitaine",
+    "anecdote": "Ses petites pommes acides sont une source de nourriture précieuse pour la faune forestière.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malus_sylvestris_01.jpg"
+  },
+  {
+    "id": 126,
+    "challenge_id": 126,
+    "name_fr": "Merisier (Variété 2)",
+    "name_latin": "Prunus avium",
+    "region": "France métropolitaine",
+    "anecdote": "Ancêtre du cerisier, sa floraison printanière blanche illumine le bord des forêts.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_avium_01.jpg"
+  },
+  {
+    "id": 127,
+    "challenge_id": 127,
+    "name_fr": "Alisier blanc (Variété 2)",
+    "name_latin": "Sorbus aria",
+    "region": "France métropolitaine",
+    "anecdote": "Le dessous de ses feuilles est recouvert d'un duvet blanc feutré qui capte la lumière.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aria_01.jpg"
+  },
+  {
+    "id": 128,
+    "challenge_id": 128,
+    "name_fr": "Érable sycomore (Variété 2)",
+    "name_latin": "Acer pseudoplatanus",
+    "region": "France métropolitaine",
+    "anecdote": "Apprécié en lutherie pour fabriquer le dos des violons et des violoncelles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_pseudoplatanus_01.jpg"
+  },
+  {
+    "id": 129,
+    "challenge_id": 129,
+    "name_fr": "Érable plane (Variété 2)",
+    "name_latin": "Acer platanoides",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles prennent une couleur jaune d'or éclatante dès le début de l'automne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_platanoides_01.jpg"
+  },
+  {
+    "id": 130,
+    "challenge_id": 130,
+    "name_fr": "Pin cembre / Arolle (Variété 2)",
+    "name_latin": "Pinus cembra",
+    "region": "France métropolitaine",
+    "anecdote": "Vit en haute montagne ; ses graines sont dispersées par un oiseau nommé le Cassenoix.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_cembra_01.jpg"
+  },
+  {
+    "id": 131,
+    "challenge_id": 131,
+    "name_fr": "Pin à crochets (Variété 2)",
+    "name_latin": "Pinus uncinata",
+    "region": "France métropolitaine",
+    "anecdote": "Ses écailles d'écorce se terminent par un petit crochet dirigé vers la base du cône.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_uncinata_01.jpg"
+  },
+  {
+    "id": 132,
+    "challenge_id": 132,
+    "name_fr": "Pin noir d'Autriche (Variété 2)",
+    "name_latin": "Pinus nigra",
+    "region": "France métropolitaine",
+    "anecdote": "Traces sombres sur son écorce et grande résistance aux sols calcaires difficiles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_01.jpg"
+  },
+  {
+    "id": 133,
+    "challenge_id": 133,
+    "name_fr": "Pin pignon / Parasol (Variété 2)",
+    "name_latin": "Pinus pinea",
+    "region": "France métropolitaine",
+    "anecdote": "Emblématique des côtes méditerranéennes, il produit les pignons de pin comestibles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinea_01.jpg"
+  },
+  {
+    "id": 134,
+    "challenge_id": 134,
+    "name_fr": "Cyprès de Provence (Variété 2)",
+    "name_latin": "Cupressus sempervirens",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre élancé typique du paysage provençal, souvent planté comme brise-vent.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cupressus_sempervirens_01.jpg"
+  },
+  {
+    "id": 135,
+    "challenge_id": 135,
+    "name_fr": "Genévrier cade (Variété 2)",
+    "name_latin": "Juniperus oxycedrus",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois odorant produit l'huile de cade utilisée autrefois en médecine populaire.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_oxycedrus_01.jpg"
+  },
+  {
+    "id": 136,
+    "challenge_id": 136,
+    "name_fr": "Genévrier commun (Variété 2)",
+    "name_latin": "Juniperus communis",
+    "region": "France métropolitaine",
+    "anecdote": "Ses baies bleu-noir mettent deux ans à mûrir et parfument la choucroute.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_communis_01.jpg"
+  },
+  {
+    "id": 137,
+    "challenge_id": 137,
+    "name_fr": "If commun (Variété 2)",
+    "name_latin": "Taxus baccata",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre très longévif pouvant dépasser 1000 ans ; toutes ses parties sont toxiques sauf la chair rouge du fruit.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Taxus_baccata_01.jpg"
+  },
+  {
+    "id": 138,
+    "challenge_id": 138,
+    "name_fr": "Houx commun (Variété 2)",
+    "name_latin": "Ilex aquifolium",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles du bas sont piquantes contre les herbivores, mais deviennent lisses en hauteur.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ilex_aquifolium_01.jpg"
+  },
+  {
+    "id": 139,
+    "challenge_id": 139,
+    "name_fr": "Buis commun (Variété 2)",
+    "name_latin": "Buxus sempervirens",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois est si dense et lourd qu'il coule dans l'eau.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Buxus_sempervirens_01.jpg"
+  },
+  {
+    "id": 140,
+    "challenge_id": 140,
+    "name_fr": "Marronnier d'Inde (Variété 2)",
+    "name_latin": "Aesculus hippocastanum",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits (marrons) ne sont pas comestibles, contrairement aux châtaignes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Aesculus_hippocastanum_01.jpg"
+  },
+  {
+    "id": 141,
+    "challenge_id": 141,
+    "name_fr": "Tilleul à petites feuilles (Variété 2)",
+    "name_latin": "Tilia cordata",
+    "region": "France métropolitaine",
+    "anecdote": "Reconnaissable à ses petites feuilles en forme de cœur avec des touffes de poils roux au verso.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_cordata_01.jpg"
+  },
+  {
+    "id": 142,
+    "challenge_id": 142,
+    "name_fr": "Aulne blanc (Variété 2)",
+    "name_latin": "Alnus incana",
+    "region": "France métropolitaine",
+    "anecdote": "Colonise les bords de torrents en montagne et aide à stabiliser les berges.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_incana_01.jpg"
+  },
+  {
+    "id": 143,
+    "challenge_id": 143,
+    "name_fr": "Saule blanc (Variété 2)",
+    "name_latin": "Salix alba",
+    "region": "France métropolitaine",
+    "anecdote": "Son écorce contient de la salicine, molécule à l'origine de l'aspirine.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_alba_01.jpg"
+  },
+  {
+    "id": 144,
+    "challenge_id": 144,
+    "name_fr": "Saule marsault (Variété 2)",
+    "name_latin": "Salix caprea",
+    "region": "France métropolitaine",
+    "anecdote": "Ses chatons du printemps apportent l'un des premiers pollens aux abeilles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_caprea_01.jpg"
+  },
+  {
+    "id": 145,
+    "challenge_id": 145,
+    "name_fr": "Peuplier noir (Variété 2)",
+    "name_latin": "Populus nigra",
+    "region": "France métropolitaine",
+    "anecdote": "Grand arbre des zones humides au tronc souvent recouvert de grosses loupes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_nigra_01.jpg"
+  },
+  {
+    "id": 146,
+    "challenge_id": 146,
+    "name_fr": "Peuplier tremble (Variété 2)",
+    "name_latin": "Populus tremula",
+    "region": "France métropolitaine",
+    "anecdote": "Le pétiole aplati de ses feuilles fait qu'elles 'remblent' à la moindre brise.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_tremula_01.jpg"
+  },
+  {
+    "id": 147,
+    "challenge_id": 147,
+    "name_fr": "Peuplier blanc (Variété 2)",
+    "name_latin": "Populus alba",
+    "region": "France métropolitaine",
+    "anecdote": "Le dessous de ses feuilles est d'un blanc cotonneux très lumineux.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_alba_01.jpg"
+  },
+  {
+    "id": 148,
+    "challenge_id": 148,
+    "name_fr": "Chêne pubescent (Variété 2)",
+    "name_latin": "Quercus pubescens",
+    "region": "France métropolitaine",
+    "anecdote": "Le dessous de ses feuilles est couvert de petits poils doux pour limiter la transpiration.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pubescens_01.jpg"
+  },
+  {
+    "id": 149,
+    "challenge_id": 149,
+    "name_fr": "Chêne tauzin (Variété 2)",
+    "name_latin": "Quercus pyrenaica",
+    "region": "France métropolitaine",
+    "anecdote": "Très présent dans le Sud-Ouest, adapté aux sols sableux et pauvres.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pyrenaica_01.jpg"
+  },
+  {
+    "id": 150,
+    "challenge_id": 150,
+    "name_fr": "Chêne chevelu (Variété 2)",
+    "name_latin": "Quercus cerris",
+    "region": "France métropolitaine",
+    "anecdote": "La cupule de son gland est recouverte d'écailles allongées comme des cheveux.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_cerris_01.jpg"
+  },
+  {
+    "id": 151,
+    "challenge_id": 151,
+    "name_fr": "Nyssa / Copalme (Variété 2)",
+    "name_latin": "Liquidambar styraciflua",
+    "region": "France métropolitaine",
+    "anecdote": "Célèbre pour le spectacle de ses feuilles qui deviennent rouge écarlate à l'automne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_styraciflua_01.jpg"
+  },
+  {
+    "id": 152,
+    "challenge_id": 152,
+    "name_fr": "Robinier faux-acacia (Variété 2)",
+    "name_latin": "Robinia pseudoacacia",
+    "region": "France métropolitaine",
+    "anecdote": "Importé d'Amérique en 1601, ses fleurs blanches en grappes donnent un miel délicieux.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Robinia_pseudoacacia_01.jpg"
+  },
+  {
+    "id": 153,
+    "challenge_id": 153,
+    "name_fr": "Sophora du Japon (Variété 2)",
+    "name_latin": "Styphnolobium japonicum",
+    "region": "France métropolitaine",
+    "anecdote": "Souvent planté dans les parcs pour son ombre et sa floraison estivale tardive.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Styphnolobium_japonicum_01.jpg"
+  },
+  {
+    "id": 154,
+    "challenge_id": 154,
+    "name_fr": "Févier d'Amérique (Variété 2)",
+    "name_latin": "Gleditsia triacanthos",
+    "region": "France métropolitaine",
+    "anecdote": "Son tronc porte de redoutables épines ramifiées à trois pointes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Gleditsia_triacanthos_01.jpg"
+  },
+  {
+    "id": 155,
+    "challenge_id": 155,
+    "name_fr": "Sureau noir (Variété 2)",
+    "name_latin": "Sambucus nigra",
+    "region": "France métropolitaine",
+    "anecdote": "Ses ombrelles de fleurs blanches donnent des baies utilisées en sirop et gelée.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_nigra_01.jpg"
+  },
+  {
+    "id": 156,
+    "challenge_id": 156,
+    "name_fr": "Sureau à grappes (Variété 2)",
+    "name_latin": "Sambucus racemosa",
+    "region": "France métropolitaine",
+    "anecdote": "Aruste de montagne dont les baies rouge vif mûrissent en été.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_racemosa_01.jpg"
+  },
+  {
+    "id": 157,
+    "challenge_id": 157,
+    "name_fr": "Viorne obier (Variété 2)",
+    "name_latin": "Viburnum opulus",
+    "region": "France métropolitaine",
+    "anecdote": "Surnommée 'boule de neige' en raison de ses grosses inflorescences blanches.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_opulus_01.jpg"
+  },
+  {
+    "id": 158,
+    "challenge_id": 158,
+    "name_fr": "Viorne lantane (Variété 2)",
+    "name_latin": "Viburnum lantana",
+    "region": "France métropolitaine",
+    "anecdote": "Ses jeunes rameaux très souples servaient autrefois de liens pour les fagos.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_lantana_01.jpg"
+  },
+  {
+    "id": 159,
+    "challenge_id": 159,
+    "name_fr": "Cornouiller sanguin (Variété 2)",
+    "name_latin": "Cornus sanguinea",
+    "region": "France métropolitaine",
+    "anecdote": "Ses jeunes branches deviennent rouge sang en automne et en hiver.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_sanguinea_01.jpg"
+  },
+  {
+    "id": 160,
+    "challenge_id": 160,
+    "name_fr": "Cornouiller mâle (Variété 2)",
+    "name_latin": "Cornus mas",
+    "region": "France métropolitaine",
+    "anecdote": "Fleurit en jaune dès le mois de février avant l'apparition de ses feuilles.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_mas_01.jpg"
+  },
+  {
+    "id": 161,
+    "challenge_id": 161,
+    "name_fr": "Fusain d'Europe (Variété 2)",
+    "name_latin": "Euonymus europaeus",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits roses et oranges appelés 'bonnets d'évêque' sont très decoratifs.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Euonymus_europaeus_01.jpg"
+  },
+  {
+    "id": 162,
+    "challenge_id": 162,
+    "name_fr": "Nisetier / Noisetier (Variété 2)",
+    "name_latin": "Corylus avellana",
+    "region": "France métropolitaine",
+    "anecdote": "Arbrisseau buissonnant dont le bois souple servait à fabriquer les baguettes de sourcier.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Corylus_avellana_01.jpg"
+  },
+  {
+    "id": 163,
+    "challenge_id": 163,
+    "name_fr": "Prunellier / Épine noire (Variété 2)",
+    "name_latin": "Prunus spinosa",
+    "region": "France métropolitaine",
+    "anecdote": "Ses baies bleues très astringentes servent à fabriquer la liqueur de prunelle.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_spinosa_01.jpg"
+  },
+  {
+    "id": 164,
+    "challenge_id": 164,
+    "name_fr": "Aubépine à un style (Variété 2)",
+    "name_latin": "Crataegus monogyna",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre d'aménageant des haies bocagères, ses fleurs blanches soutiennent la biodiversité.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Crataegus_monogyna_01.jpg"
+  },
+  {
+    "id": 165,
+    "challenge_id": 165,
+    "name_fr": "Troène commun (Variété 2)",
+    "name_latin": "Ligustrum vulgare",
+    "region": "France métropolitaine",
+    "anecdote": "Arbusculte des lisières aux fleurs très odorantes et baies noires toxiques.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ligustrum_vulgare_01.jpg"
+  },
+  {
+    "id": 166,
+    "challenge_id": 166,
+    "name_fr": "Argousier (Variété 2)",
+    "name_latin": "Hippophae rhamnoides",
+    "region": "France métropolitaine",
+    "anecdote": "Ses petites baies oranges sont extrêmement riches en vitamine C.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Hippophae_rhamnoides_01.jpg"
+  },
+  {
+    "id": 167,
+    "challenge_id": 167,
+    "name_fr": "Arbousier (Variété 2)",
+    "name_latin": "Arbutus unedo",
+    "region": "France métropolitaine",
+    "anecdote": "Surnommé 'arbre à fraises', il porte fleurs et fruits mûrs en même temps à l'automne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Arbutus_unedo_01.jpg"
+  },
+  {
+    "id": 168,
+    "challenge_id": 168,
+    "name_fr": "Olivier sauvage / Oleastre (Variété 2)",
+    "name_latin": "Olea europaea var. sylvestris",
+    "region": "France métropolitaine",
+    "anecdote": "Ancêtre rustique de l'olivier cultivé, très résistant à la sécheresse.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Olea_europaea_01.jpg"
+  },
+  {
+    "id": 169,
+    "challenge_id": 169,
+    "name_fr": "Terebinthe / Pistachier (Variété 2)",
+    "name_latin": "Pistacia terebinthus",
+    "region": "France métropolitaine",
+    "anecdote": "Arbrisseau méditerranéen dont la résine dégage une odeur de térébenthine.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_terebinthus_01.jpg"
+  },
+  {
+    "id": 170,
+    "challenge_id": 170,
+    "name_fr": "Pistachier lentisque (Variété 2)",
+    "name_latin": "Pistacia lentiscus",
+    "region": "France métropolitaine",
+    "anecdote": "Feuillage persistant de la garrigue, il produit le mastic de Chios.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_lentiscus_01.jpg"
+  },
+  {
+    "id": 171,
+    "challenge_id": 171,
+    "name_fr": "Filaria à larges feuilles (Variété 2)",
+    "name_latin": "Phillyrea latifolia",
+    "region": "France métropolitaine",
+    "anecdote": "Aruste méditerranéen coriace poussant dans le maquis et la garrigue.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phillyrea_latifolia_01.jpg"
+  },
+  {
+    "id": 172,
+    "challenge_id": 172,
+    "name_fr": "Rhamnus / Nerprun alaterne (Variété 2)",
+    "name_latin": "Rhamnus alaternus",
+    "region": "France métropolitaine",
+    "anecdote": "Feuillage vert brillant persistant, très apprécié des chenilles de papillons.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Rhamnus_alaternus_01.jpg"
+  },
+  {
+    "id": 173,
+    "challenge_id": 173,
+    "name_fr": "Bourdaine (Variété 2)",
+    "name_latin": "Frangula alnus",
+    "region": "France métropolitaine",
+    "anecdote": "Son charbon de bois de grande qualité servait autrefois à la fabrication de la poudre à canon.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Frangula_alnus_01.jpg"
+  },
+  {
+    "id": 174,
+    "challenge_id": 174,
+    "name_fr": "Érable à feuilles de frêne (Variété 2)",
+    "name_latin": "Acer negundo",
+    "region": "France métropolitaine",
+    "anecdote": "Originaire d'Amérique du Nord, ses feuilles ressemblent à celles du frêne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_negundo_01.jpg"
+  },
+  {
+    "id": 175,
+    "challenge_id": 175,
+    "name_fr": "Érable de Montpellier (Variété 2)",
+    "name_latin": "Acer monspessulanum",
+    "region": "France métropolitaine",
+    "anecdote": "Ses petites feuilles à trois lobes sont typiques des zones chaudes du Sud.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_monspessulanum_01.jpg"
+  },
+  {
+    "id": 176,
+    "challenge_id": 176,
+    "name_fr": "Érable à feuilles d'obier (Variété 2)",
+    "name_latin": "Acer opalus",
+    "region": "France métropolitaine",
+    "anecdote": "Espèce des montagnes méditerranéennes et du sud de la France.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_opalus_01.jpg"
+  },
+  {
+    "id": 177,
+    "challenge_id": 177,
+    "name_fr": "Ailante glanduleux (Variété 2)",
+    "name_latin": "Ailanthus altissima",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre à croissance très rapide, originaire d'Asie et très résistant à la pollution.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ailanthus_altissima_01.jpg"
+  },
+  {
+    "id": 178,
+    "challenge_id": 178,
+    "name_fr": "Phellodendron / Arbre à liège (Variété 2)",
+    "name_latin": "Phellodendron amurense",
+    "region": "France métropolitaine",
+    "anecdote": "Son écorce spongieuse rappelle celle du chêne liège.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phellodendron_amurense_01.jpg"
+  },
+  {
+    "id": 179,
+    "challenge_id": 179,
+    "name_fr": "Paulownia tomentosa (Variété 2)",
+    "name_latin": "Paulownia tomentosa",
+    "region": "France métropolitaine",
+    "anecdote": "Grandes feuilles douces et magnifiques grappes de fleurs violettes au printemps.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Paulownia_tomentosa_01.jpg"
+  },
+  {
+    "id": 180,
+    "challenge_id": 180,
+    "name_fr": "Catalpa commun (Variété 2)",
+    "name_latin": "Catalpa bignonioides",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits longs et pendants ressemblent à de grands haricots.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Catalpa_bignonioides_01.jpg"
+  },
+  {
+    "id": 181,
+    "challenge_id": 181,
+    "name_fr": "Ginkgo biloba (Variété 2)",
+    "name_latin": "Ginkgo biloba",
+    "region": "France métropolitaine",
+    "anecdote": "Considéré comme 'l'arbre aux quarante écus', c'est la plus ancienne espèce d'arbre vivante.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ginkgo_biloba_01.jpg"
+  },
+  {
+    "id": 182,
+    "challenge_id": 182,
+    "name_fr": "Cèdre de l'Atlas (Variété 2)",
+    "name_latin": "Cedrus atlantica",
+    "region": "France métropolitaine",
+    "anecdote": "Introduit au XIXe siècle dans le Luberon et le Ventoux pour reboiser les montagnes.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_atlantica_01.jpg"
+  },
+  {
+    "id": 183,
+    "challenge_id": 183,
+    "name_fr": "Cèdre du Liban (Variété 2)",
+    "name_latin": "Cedrus libani",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre majestueux à port étalé et bois très odorant.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_libani_01.jpg"
+  },
+  {
+    "id": 184,
+    "challenge_id": 184,
+    "name_fr": "Cèdre de l'Himalaya (Variété 2)",
+    "name_latin": "Cedrus deodara",
+    "region": "France métropolitaine",
+    "anecdote": "Ses branches retombantes lui donnent une silhouette très élégante.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_deodara_01.jpg"
+  },
+  {
+    "id": 185,
+    "challenge_id": 185,
+    "name_fr": "Douglas (Variété 2)",
+    "name_latin": "Pseudotsuga menziesii",
+    "region": "France métropolitaine",
+    "anecdote": "Grand résineux originaire d'Amérique, très utilisé pour le bois de charpente en France.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pseudotsuga_menziesii_01.jpg"
+  },
+  {
+    "id": 186,
+    "challenge_id": 186,
+    "name_fr": "Sapin de Nordmann (Variété 2)",
+    "name_latin": "Abies nordmanniana",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre de Noël star car ses aiguilles douces ne tombent pas facilement.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_nordmanniana_01.jpg"
+  },
+  {
+    "id": 187,
+    "challenge_id": 187,
+    "name_fr": "Sapin de grandis (Variété 2)",
+    "name_latin": "Abies grandis",
+    "region": "France métropolitaine",
+    "anecdote": "Ses aiguilles écrasées dégagent une agréable odeur de citron.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_grandis_01.jpg"
+  },
+  {
+    "id": 188,
+    "challenge_id": 188,
+    "name_fr": "Sapin de Numidie (Variété 2)",
+    "name_latin": "Abies numidica",
+    "region": "France métropolitaine",
+    "anecdote": "Résineux rustique bien adapté aux sols calcaires et secs.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_numidica_01.jpg"
+  },
+  {
+    "id": 189,
+    "challenge_id": 189,
+    "name_fr": "Pin strobus / Weymouth (Variété 2)",
+    "name_latin": "Pinus strobus",
+    "region": "France métropolitaine",
+    "anecdote": "Ses aiguilles fines et douces sont regroupées par paquets de cinq.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_strobus_01.jpg"
+  },
+  {
+    "id": 190,
+    "challenge_id": 190,
+    "name_fr": "Pin taeda (Variété 2)",
+    "name_latin": "Pinus taeda",
+    "region": "France métropolitaine",
+    "anecdote": "Utilisé dans certaines plantations du Sud-Ouest pour sa croissance rapide.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_taeda_01.jpg"
+  },
+  {
+    "id": 191,
+    "challenge_id": 191,
+    "name_fr": "Pin laricio de Corse (Variété 2)",
+    "name_latin": "Pinus nigra ssp. laricio",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre élancé des montagnes corses, son bois servait autrefois pour les mâts de bateaux.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_laricio_01.jpg"
+  },
+  {
+    "id": 192,
+    "challenge_id": 192,
+    "name_fr": "Séquoia géant (Variété 2)",
+    "name_latin": "Sequoiadendron giganteum",
+    "region": "France métropolitaine",
+    "anecdote": "Peut atteindre des dimensions colossales et vivre plus de 3000 ans.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoiadendron_giganteum_01.jpg"
+  },
+  {
+    "id": 193,
+    "challenge_id": 193,
+    "name_fr": "Séquoia toujours vert (Variété 2)",
+    "name_latin": "Sequoia sempervirens",
+    "region": "France métropolitaine",
+    "anecdote": "Comprend les arbres les plus hauts de la planète, dépassant 110 mètres.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoia_sempervirens_01.jpg"
+  },
+  {
+    "id": 194,
+    "challenge_id": 194,
+    "name_fr": "Cyprès de Lawson (Variété 2)",
+    "name_latin": "Chamaecyparis lawsoniana",
+    "region": "France métropolitaine",
+    "anecdote": "Trés fréquemment utilisé en horticulture et pour former des haies brise-vent.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Chamaecyparis_lawsoniana_01.jpg"
+  },
+  {
+    "id": 195,
+    "challenge_id": 195,
+    "name_fr": "Thuya géant (Variété 2)",
+    "name_latin": "Thuja plicata",
+    "region": "France métropolitaine",
+    "anecdote": "Son bois de cèdre rouge est naturellement imputrescible.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Thuja_plicata_01.jpg"
+  },
+  {
+    "id": 196,
+    "challenge_id": 196,
+    "name_fr": "Cryptomeria / Cèdre du Japon (Variété 2)",
+    "name_latin": "Cryptomeria japonica",
+    "region": "France métropolitaine",
+    "anecdote": "Arbre sacré au Japon, souvent planté autour des temples.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cryptomeria_japonica_01.jpg"
+  },
+  {
+    "id": 197,
+    "challenge_id": 197,
+    "name_fr": "Magnolia à grandes fleurs (Variété 2)",
+    "name_latin": "Magnolia grandiflora",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fleurs blanches de la taille d'une assiette exhalent un parfum suave.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Magnolia_grandiflora_01.jpg"
+  },
+  {
+    "id": 198,
+    "challenge_id": 198,
+    "name_fr": "Tulipier de Virginie (Variété 2)",
+    "name_latin": "Liriodendron tulipifera",
+    "region": "France métropolitaine",
+    "anecdote": "Ses feuilles ont une forme originale de silhouette de tulipe.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liriodendron_tulipifera_01.jpg"
+  },
+  {
+    "id": 199,
+    "challenge_id": 199,
+    "name_fr": "Liquidambar oriental (Variété 2)",
+    "name_latin": "Liquidambar orientalis",
+    "region": "France métropolitaine",
+    "anecdote": "Produit un baume odorant utilisé en parfumerie.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_orientalis_01.jpg"
+  },
+  {
+    "id": 200,
+    "challenge_id": 200,
+    "name_fr": "Persimon / Plaqueminier (Variété 2)",
+    "name_latin": "Diospyros kaki",
+    "region": "France métropolitaine",
+    "anecdote": "Ses fruits (kakis) restent accrochés aux branches découvertes à la fin de l'automne.",
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Diospyros_kaki_01.jpg"
+  }
+]

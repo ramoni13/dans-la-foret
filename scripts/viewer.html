@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Herbier de la Forêt — Visionneuse de Cartes</title>
+  <style>
+    :root {
+      --primary: #1B5E20;
+      --primary-light: #2E7D32;
+      --bg: #E8F5E9;
+      --card-bg: #FFFFFF;
+      --text: #212121;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: var(--primary);
+      font-size: 1.8rem;
+    }
+
+    p.subtitle {
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    .scene {
+      width: 320px;
+      height: 480px;
+      perspective: 1000px;
+      margin: 10px 0;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .card.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 20px;
+      padding: 20px;
+      background: var(--card-bg);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 3px solid var(--primary-light);
+    }
+
+    .card-front {
+      align-items: center;
+      text-align: center;
+    }
+
+    .card-number {
+      align-self: flex-start;
+      background: var(--bg);
+      color: var(--primary);
+      font-weight: bold;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+    }
+
+    .illustration-placeholder {
+      width: 180px;
+      height: 200px;
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #F1F8E9;
+      border-radius: 16px;
+      border: 2px dashed #A5D6A7;
+    }
+
+    .illustration-icon {
+      font-size: 5rem;
+    }
+
+    .tree-title-fr {
+      font-size: 1.4rem;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .flip-hint {
+      font-size: 0.8rem;
+      color: #757575;
+      margin-top: 10px;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+      background: #FAFAFA;
+      border-color: var(--primary);
+    }
+
+    .real-photo {
+      width: 100%;
+      height: 190px;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid #DDD;
+      background-color: #EEE;
+    }
+
+    .info-group {
+      margin-top: 10px;
+    }
+
+    .tree-title-latin {
+      font-style: italic;
+      font-weight: bold;
+      color: #333;
+      font-size: 1.1rem;
+    }
+
+    .region-badge {
+      font-size: 0.85rem;
+      color: #555;
+      margin: 6px 0;
+    }
+
+    .anecdote {
+      font-size: 0.85rem;
+      color: var(--primary);
+      line-height: 1.35;
+      background: #E8F5E9;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-top: 6px;
+    }
+
+    .onf-tag {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: var(--primary);
+      text-align: center;
+      margin-top: auto;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 25px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    button:hover {
+      background: var(--primary-light);
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    button:disabled {
+      background: #BDBDBD;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .counter {
+      font-weight: bold;
+      color: var(--primary);
+      font-size: 1rem;
+      min-width: 80px;
+      text-align: center;
+    }
+  </style>
+
+  <!-- Inclusion directe des données JS sans bloquer le CORS -->
+  <script src="treesData.js"></script>
+</head>
+<body>
+
+  <header>
+    <h1>🌲 Herbier de la Forêt</h1>
+    <p class="subtitle">Clique sur la carte pour basculer Recto / Verso</p>
+  </header>
+
+  <div class="scene">
+    <div class="card" id="card" onclick="flipCard()">
+      <!-- RECTO -->
+      <div class="card-face card-front">
+        <span class="card-number" id="card-id"># 1</span>
+        <div class="illustration-placeholder">
+          <span class="illustration-icon">🌳</span>
+        </div>
+        <div>
+          <h2 class="tree-title-fr" id="tree-name-fr">Chargement...</h2>
+        </div>
+        <span class="flip-hint">🔄 Cliquez pour voir la vraie photo</span>
+      </div>
+
+      <!-- VERSO -->
+      <div class="card-face card-back">
+        <img src="" alt="Photo réelle de l'arbre" class="real-photo" id="tree-photo" />
+        <div class="info-group">
+          <div class="tree-title-latin" id="tree-name-latin">...</div>
+          <div class="region-badge">📍 <span id="tree-region">France métropolitaine</span></div>
+          <div class="anecdote" id="tree-anecdote">...</div>
+        </div>
+        <div class="onf-tag">Partenaire ONF — Agir pour la forêt 🌲</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btn-prev" onclick="navigate(-1)">◄ Précédent</button>
+    <span class="counter" id="counter">0 / 0</span>
+    <button id="btn-next" onclick="navigate(1)">Suivant ►</button>
+  </div>
+
+  <script>
+    let trees = window.TREES_DATA || [];
+    let currentIndex = 0;
+
+    const card = document.getElementById('card');
+    const cardId = document.getElementById('card-id');
+    const treeNameFr = document.getElementById('tree-name-fr');
+    const treeNameLatin = document.getElementById('tree-name-latin');
+    const treeRegion = document.getElementById('tree-region');
+    const treeAnecdote = document.getElementById('tree-anecdote');
+    const treePhoto = document.getElementById('tree-photo');
+    const counter = document.getElementById('counter');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+
+    function flipCard() {
+      card.classList.toggle('is-flipped');
+    }
+
+    function updateUI() {
+      if (!trees || trees.length === 0) {
+        alert("Données introuvables. Exécutez 'node ./scripts/genereJsonTrees.js' d'abord.");
+        return;
+      }
+
+      const currentTree = trees[currentIndex];
+      card.classList.remove('is-flipped');
+
+      setTimeout(() => {
+        cardId.textContent = `# ${currentTree.id}`;
+        treeNameFr.textContent = currentTree.name_fr;
+        treeNameLatin.textContent = currentTree.name_latin;
+        treeRegion.textContent = currentTree.region || "France métropolitaine";
+        treeAnecdote.textContent = `💡 ${currentTree.anecdote}`;
+        treePhoto.src = currentTree.wikimedia_image_url;
+
+        counter.textContent = `${currentIndex + 1} / ${trees.length}`;
+        btnPrev.disabled = currentIndex === 0;
+        btnNext.disabled = currentIndex === trees.length - 1;
+      }, 150);
+    }
+
+    function navigate(direction) {
+      const newIndex = currentIndex + direction;
+      if (newIndex >= 0 && newIndex < trees.length) {
+        currentIndex = newIndex;
+        updateUI();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') navigate(1);
+      if (e.key === 'ArrowLeft') navigate(-1);
+      if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        flipCard();
+      }
+    });
+
+    // Démarrage
+    updateUI();
+  </script>
+</body>
+</html>
