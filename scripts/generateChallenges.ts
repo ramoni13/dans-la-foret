@@ -28,7 +28,10 @@ const elementDefs: Record<string, ElementDefinition> = {
   },
   ours: {
     id: 'ours', label: 'Ours', icon: ICON, color: '#6B4226', maxPerBoard: 4,
-    constraints: [{ type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' }],
+    constraints: [
+      { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
+      { type: 'neighbor_specific', targetElementId: 'ruche', mode: 'require', scope: 'neighbor', minCount: 1, onlyIfTargetOnBoard: true },
+    ],
   },
   mouton: {
     id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4,
@@ -39,9 +42,7 @@ const elementDefs: Record<string, ElementDefinition> = {
   },
   ruche: {
     id: 'ruche', label: 'Ruche', icon: ICON, color: '#F5A623', maxPerBoard: 1,
-    constraints: [
-      { type: 'neighbor_specific', targetElementId: 'ours', mode: 'require', scope: 'neighbor', minCount: 1 },
-    ],
+    constraints: [],
   },
   chien: {
     id: 'chien', label: 'Chien', icon: ICON, color: '#D2691E', maxPerBoard: 4,
@@ -72,7 +73,7 @@ const elementDefs: Record<string, ElementDefinition> = {
     ],
   },
   tas_buches: {
-    id: 'tas_buches', label: 'Tas de buches', icon: ICON, color: '#6D4C2A', maxPerBoard: 4,
+    id: 'tas_buches', label: 'Bûches', icon: ICON, color: '#6D4C2A', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_specific_chain', targetElementId: 'bucheron', chainTargetElementId: 'chalet', mode: 'require', scope: 'neighbor' },
     ],
@@ -246,19 +247,19 @@ const boards: Record<string, BoardDefinition> = {
     specialCells: { corners: [0, 2, 7, 9], center: [3, 6, 10], edges: [1, 4, 5, 8] },
   },
 
-  // Nouvelle map lisible — niveaux 11, 12
+  // Nouvelle map lisible — niveaux 9, 10, 11
   board_11_v2: {
     id: 'board_11_v2', label: 'Sous-bois Profond', cellCount: 11,
     connections: [
-      [2],           // 0 — coin haut-gauche
-      [2],           // 1 — coin haut-droite
-      [0, 1, 3, 5],  // 2 — haut-centre
-      [2, 4, 6],     // 3 — milieu-haut-gauche
+      [2, 3],        // 0 — coin haut-gauche (2 voisins)
+      [2, 5],        // 1 — coin haut-droite (2 voisins)
+      [0, 1, 3, 5],  // 2 — haut-centre (hub)
+      [0, 2, 4, 6],  // 3 — milieu-haut-gauche (4 voisins)
       [3, 5, 6, 7],  // 4 — centre (hub)
-      [2, 4, 7],     // 5 — milieu-haut-droite
+      [1, 2, 4, 7],  // 5 — milieu-haut-droite (4 voisins)
       [3, 4, 8, 9],  // 6 — milieu-bas-gauche
       [4, 5, 8, 10], // 7 — milieu-bas-droite
-      [6, 7, 9, 10], // 8 — bas-centre
+      [6, 7, 9, 10], // 8 — bas-centre (hub)
       [6, 8],        // 9 — coin bas-gauche
       [7, 8],        // 10 — coin bas-droite
     ],

@@ -81,7 +81,10 @@ const elementDefs: Record<string, ElementDefinition> = {
   },
   ours: {
     id: 'ours', label: 'Ours', icon: ICON, color: '#6B4226', maxPerBoard: 4,
-    constraints: [{ type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' }],
+    constraints: [
+      { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
+      { type: 'neighbor_specific', targetElementId: 'ruche', mode: 'require', scope: 'neighbor', minCount: 1, onlyIfTargetOnBoard: true },
+    ],
   },
   mouton: {
     id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4,
@@ -92,9 +95,7 @@ const elementDefs: Record<string, ElementDefinition> = {
   },
   ruche: {
     id: 'ruche', label: 'Ruche', icon: ICON, color: '#F5A623', maxPerBoard: 1,
-    constraints: [
-      { type: 'neighbor_specific', targetElementId: 'ours', mode: 'require', scope: 'neighbor', minCount: 1 },
-    ],
+    constraints: [],
   },
   chien: {
     id: 'chien', label: 'Chien', icon: ICON, color: '#D2691E', maxPerBoard: 4,
@@ -125,7 +126,7 @@ const elementDefs: Record<string, ElementDefinition> = {
     ],
   },
   tas_buches: {
-    id: 'tas_buches', label: 'Tas de buches', icon: ICON, color: '#6D4C2A', maxPerBoard: 4,
+    id: 'tas_buches', label: 'Bûches', icon: ICON, color: '#6D4C2A', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_specific_chain', targetElementId: 'bucheron', chainTargetElementId: 'chalet', mode: 'require', scope: 'neighbor' },
     ],
@@ -209,7 +210,7 @@ const boards: Record<string, BoardDefinition> = {
   board_11_v2: {
     id: 'board_11_v2', label: 'Sous-bois Profond', cellCount: 11,
     connections: [
-      [2], [2], [0, 1, 3, 5], [2, 4, 6], [3, 5, 6, 7], [2, 4, 7],
+      [2, 3], [2, 5], [0, 1, 3, 5], [0, 2, 4, 6], [3, 5, 6, 7], [1, 2, 4, 7],
       [3, 4, 8, 9], [4, 5, 8, 10], [6, 7, 9, 10], [6, 8], [7, 8],
     ],
     cellPositions: [

@@ -10,16 +10,17 @@ const elementDefs: Record<string, ElementDefinition> = {
   bucheron: { id: 'bucheron', label: 'Bucheron', icon: ICON, color: '#8B4513', maxPerBoard: 4,
     constraints: [{ type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' }] },
   ours: { id: 'ours', label: 'Ours', icon: ICON, color: '#6B4226', maxPerBoard: 4,
-    constraints: [{ type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' }] },
+    constraints: [
+      { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
+      { type: 'neighbor_specific', targetElementId: 'ruche', mode: 'require', scope: 'neighbor', minCount: 1, onlyIfTargetOnBoard: true },
+    ] },
   mouton: { id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'renard' },
     ] },
   ruche: { id: 'ruche', label: 'Ruche', icon: ICON, color: '#F5A623', maxPerBoard: 1,
-    constraints: [
-      { type: 'neighbor_specific', targetElementId: 'ours', mode: 'require', scope: 'neighbor', minCount: 1 },
-    ] },
+    constraints: [] },
   chien: { id: 'chien', label: 'Chien', icon: ICON, color: '#D2691E', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'require', scope: 'neighbor', minCount: 1 },
