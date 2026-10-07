@@ -3,7 +3,7 @@
 // Progression globale + dernier défi joué + stats rapides
 // ============================================================
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,15 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 
 const native = Platform.OS !== 'web';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { usePlayerStore } from '../../src/store/playerStore';
+import { getDailyDateString } from '../../src/services/dailyChallengeService';
+import { formatTime } from '../../src/utils/boardUtils';
 
 // Toutes les collections de défis pour calculer la progression globale
 import niveau1  from '../../src/data/challenges/niveau_1.json';
@@ -79,6 +82,27 @@ export default function HomeScreen() {
     return next ?? ALL_CHALLENGES[0];
   }, [player.completedChallenges]);
 
+  // ── Defi du Jour — statut (hooks avant les early returns) ─────────────────
+  const todayStr = useMemo(() => getDailyDateString(new Date()), []);
+  const dailyStatus = player.dailyChallengeStatus;
+  const dailyLastDate = player.lastDailyChallengeDate;
+  const isDailyToday = dailyLastDate === todayStr;
+  const dailyStreak = player.dailyChallengeStreak;
+
+  // Animation pulsante pour la carte "non jouee"
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (isDailyToday && dailyStatus) return; // Deja joue, pas de pulse
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.03, duration: 1200, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(pulseAnim, { toValue: 1,    duration: 1200, useNativeDriver: Platform.OS !== 'web' }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isDailyToday, dailyStatus]);
+
   // ── Garde : Firebase pas encore répondu ─────────────────────────────────────
   if (!authReady) {
     return (
@@ -134,6 +158,103 @@ export default function HomeScreen() {
             <Text style={styles.seedsHeroText}>🌱 {player.seeds} graines</Text>
           </View>
         </View>
+
+        {/* ── Carte Defi du Jour ── */}
+        {(() => {
+          const DAILY_UNLOCK_LEVEL = 12;
+          const dailyUnlocked = player.currentLevel >= DAILY_UNLOCK_LEVEL;
+
+          // Verrouille : carte grisee non cliquable
+          if (!dailyUnlocked) {
+            return (
+              <View style={styles.dailyCardLocked}>
+                <View style={styles.dailyLeft}>
+                  <Text style={[styles.dailyIcon, { opacity: 0.4 }]}>{'\uD83D\uDD12'}</Text>
+                </View>
+                <View style={styles.dailyCenter}>
+                  <Text style={styles.dailyTitleLocked}>Defi du Jour</Text>
+                  <Text style={styles.dailySubLocked}>
+                    Disponible au niveau {DAILY_UNLOCK_LEVEL}
+                  </Text>
+                </View>
+              </View>
+            );
+          }
+
+          // Non joue aujourd'hui : carte doree pulsante
+          if (!isDailyToday || !dailyStatus) {
+            return (
+              <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                <TouchableOpacity
+                  style={styles.dailyCard}
+                  onPress={() => router.push('/game/daily')}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.dailyLeft}>
+                    <Text style={styles.dailyIcon}>{'\uD83C\uDF05'}</Text>
+                  </View>
+                  <View style={styles.dailyCenter}>
+                    <Text style={styles.dailyAction}>NOUVEAU</Text>
+                    <Text style={styles.dailyTitle}>Defi du Jour</Text>
+                    <Text style={styles.dailySub}>Clairiere Secrete {'\u00B7'} 15 cases</Text>
+                  </View>
+                  <Text style={styles.dailyArrow}>{'\u2192'}</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          }
+          // Reussi : carte verte + bouton Rejouer (dev only)
+          if (dailyStatus === 'success') {
+            return (
+              <View style={styles.dailyDoneRow}>
+                <View style={[styles.dailyCardSuccess, { flex: 1 }]}>
+                  <View style={styles.dailyLeft}>
+                    <Text style={styles.dailyIcon}>{'\u2705'}</Text>
+                  </View>
+                  <View style={styles.dailyCenter}>
+                    <Text style={styles.dailyActionDone}>REUSSI</Text>
+                    <Text style={styles.dailyTitleDone}>Defi du Jour</Text>
+                    {dailyStreak > 1 && (
+                      <Text style={styles.dailySub}>Serie : {dailyStreak} jours</Text>
+                    )}
+                  </View>
+                </View>
+                {player.username === 'Ramoni' && (
+                  <TouchableOpacity
+                    style={styles.dailyReplayBtn}
+                    onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.dailyReplayText}>Rejouer</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          }
+          // Echoue : carte grise + bouton Rejouer (ramoni only)
+          return (
+            <View style={styles.dailyDoneRow}>
+              <View style={[styles.dailyCardFailed, { flex: 1 }]}>
+                <View style={styles.dailyLeft}>
+                  <Text style={styles.dailyIcon}>{'\uD83D\uDCA4'}</Text>
+                </View>
+                <View style={styles.dailyCenter}>
+                  <Text style={styles.dailyActionFailed}>ECHOUE</Text>
+                  <Text style={styles.dailyTitleFailed}>Rendez-vous demain</Text>
+                </View>
+              </View>
+              {player.username === 'Ramoni' && (
+                <TouchableOpacity
+                  style={styles.dailyReplayBtn}
+                  onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.dailyReplayText}>Rejouer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })()}
 
         {/* ── Carte Prochain défi ── */}
         <TouchableOpacity
@@ -385,6 +506,136 @@ const styles = StyleSheet.create({
   btnTertiaryText: {
     color: Colors.ui.textLight,
     fontSize: 14,
+  },
+
+  // Carte Defi du Jour (non jouee — doree)
+  dailyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D4A017',
+    borderRadius: 20,
+    padding: 20,
+    gap: 12,
+    shadowColor: '#D4A017',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#E8B830',
+  },
+  dailyCardLocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#5A5A5A',
+    borderRadius: 20,
+    padding: 20,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: '#6E6E6E',
+    opacity: 0.7,
+  },
+  dailyTitleLocked: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.5)',
+  },
+  dailySubLocked: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+  },
+  dailyCardSuccess: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2E7D32',
+    borderRadius: 20,
+    padding: 20,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: '#43A047',
+  },
+  dailyCardFailed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#9E9E9E',
+    borderRadius: 20,
+    padding: 20,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: '#BDBDBD',
+  },
+  dailyLeft: {
+    width: 44,
+    alignItems: 'center',
+  },
+  dailyIcon: {
+    fontSize: 32,
+  },
+  dailyCenter: {
+    flex: 1,
+    gap: 3,
+  },
+  dailyAction: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.8)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  dailyActionDone: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  dailyActionFailed: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  dailyTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  dailyTitleDone: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  dailyTitleFailed: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  dailySub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  dailyArrow: {
+    fontSize: 22,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  dailyDoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dailyReplayBtn: {
+    backgroundColor: '#D4A017',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    borderWidth: 2,
+    borderColor: '#E8B830',
+  },
+  dailyReplayText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
   },
 
   // Stats

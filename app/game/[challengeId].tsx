@@ -1,7 +1,7 @@
 // ============================================================
 // ÉCRAN DE JEU — [challengeId].tsx
 // Assemble BoardRenderer + ElementPalette + HintOverlay
-// Gère le drag & drop de bout en bout
+// Interaction tap-tap : sélectionner un jeton, taper une case
 // ============================================================
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,6 +11,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { useAudioStore } from '../../src/store/audioStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,8 +25,9 @@ import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { FailModal } from '../../src/components/Game/FailModal';
 import { LevelBriefingModal } from '../../src/components/LevelBriefing/LevelBriefingModal';
 import { useGame } from '../../src/hooks/useGame';
-import { useDragDrop } from '../../src/hooks/useDragDrop';
-import { usePlayerStore } from '../../src/store/playerStore';
+import { usePlayerStore, isChallengeOnCooldown, getChallengeElapsed } from '../../src/store/playerStore';
+import { AbandonConfirmModal } from '../../src/components/Game/AbandonConfirmModal';
+import { CooldownScreen } from '../../src/components/Game/CooldownScreen';
 import { auth } from '../../src/services/firebase';
 import { getPlayer, markCompleted, updateSeeds } from '../../src/services/playerService';
 import { awardBadgesFirestore } from '../../src/services/badgeService';
@@ -37,15 +39,12 @@ import {
 import { upsertLeaderboardEntry } from '../../src/services/leaderboardService';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
-import { findNearestCell } from '../../src/utils/boardUtils';
 import { formatTime } from '../../src/utils/boardUtils';
 import { Colors } from '../../src/constants/colors';
-import { CELL_SIZE } from '../../src/components/Board/Cell';
 import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { LEVEL_META } from '../../src/data/levelMeta';
 import { calculateSeedReward } from '../../src/core/engine/hintEngine';
 import { evaluateBadges, getClosestBadges, GameContext } from '../../src/core/engine/badgeEngine';
-import { MobileDragGhost } from '../../src/components/Elements/MobileDragGhost';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 
@@ -95,7 +94,6 @@ export default function GameScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-
   const game = useGame();
   const player = usePlayerStore();
   const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
@@ -109,10 +107,16 @@ export default function GameScreen() {
     const wasFirstOpen = !briefingDone;
     setBriefingDone(true);
     setBriefingForcedOpen(false);
-    if (wasFirstOpen) {
-      game.startTimer();
+    if (wasFirstOpen && challengeId) {
+      const pState = usePlayerStore.getState();
+      const priorElapsed = getChallengeElapsed(
+        pState.challengeStartedAt,
+        pState.challengeAbandonedAt,
+        challengeId,
+      );
+      game.startTimer(priorElapsed);
     }
-  }, [game, briefingDone]);
+  }, [game, briefingDone, challengeId]);
 
   // ── Badges toast queue ────────────────────────────────────
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
@@ -120,46 +124,78 @@ export default function GameScreen() {
   const [closestBadges, setClosestBadges] = useState<ReturnType<typeof getClosestBadges>>([]);
   // Ref pour éviter le double-appel du useEffect isVictory
   const badgesEvaluatedRef = useRef(false);
-  // Compteur d'échecs de validation pendant la partie en cours (reset au chargement d'un défi)
-  // Distinct de game.validationResult.errorCount (qui est 0 à la victoire par définition)
+  // Compteur d'échecs de validation pendant la partie en cours
   const failCountForGameRef = useRef(0);
+
+  // ── Abandon / Anti-triche ────────────────────────────────
+  const [showAbandonModal, setShowAbandonModal] = useState(false);
+  const [cooldownRemainingMs, setCooldownRemainingMs] = useState<number | null>(null);
+
+  const handleAbandon = useCallback(() => {
+    setShowAbandonModal(true);
+  }, []);
+
+  const handleAbandonConfirm = useCallback(() => {
+    if (challengeId) {
+      player.markChallengeAbandoned(challengeId);
+    }
+    setShowAbandonModal(false);
+    game.resetGame();
+    router.replace('/(tabs)/levels');
+  }, [challengeId, player, game, router]);
+
+  // ── BackHandler Android ────────────────────────────────────
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleAbandon();
+      return true; // empêche la navigation par défaut
+    });
+    return () => sub.remove();
+  }, [handleAbandon]);
 
   // ── Record mondial ────────────────────────────────────────
   const [worldRecord, setWorldRecord] = useState<WorldRecord | null>(null);
   const [isNewWorldRecord, setIsNewWorldRecord] = useState(false);
+  const [previousRecordHolder, setPreviousRecordHolder] = useState<string | null>(null);
 
-  // Confettis — hook dans le composant racine, rendu hors du Modal
+  // Confettis
   const confettiPieces = useConfetti(game.isVictory);
-
-  // Dimensions et position du plateau
-  const [boardSize, setBoardSize] = useState({ width: 0, height: 0 });
-  const boardContainerRef = useRef<View>(null);
-  const boardOffsetRef = useRef({ x: 0, y: 0 });
-  const [availableArea, setAvailableArea] = useState({ width: 0, height: 0 });
-
-  // ── Ghost natif mobile ─────────────────────────────────────
-  const [ghostState, setGhostState] = useState<{
-    visible: boolean;
-    elementId: string | null;
-    x: number;
-    y: number;
-  }>({ visible: false, elementId: null, x: 0, y: 0 });
 
   // ── Chargement du défi ─────────────────────────────────────
   useEffect(() => {
+    if (!challengeId) return;
+
+    // Vérifier le cooldown avant de charger
+    const pState = usePlayerStore.getState();
+    const cooldown = isChallengeOnCooldown(pState.challengeAbandonedAt, challengeId);
+    if (cooldown.onCooldown) {
+      setCooldownRemainingMs(cooldown.remainingMs);
+      return;
+    }
+    setCooldownRemainingMs(null);
+
     let found: Challenge | undefined;
     for (const challenges of Object.values(ALL_CHALLENGES)) {
       found = challenges.find(c => c.id === challengeId);
       if (found) break;
     }
     if (found) {
+      // Calculer l'offset de temps accumulé (reprises après abandon)
+      const priorElapsed = getChallengeElapsed(
+        pState.challengeStartedAt,
+        pState.challengeAbandonedAt,
+        challengeId,
+      );
+
       game.loadChallenge(found);
       player.setLastPlayed(found.id);
-      badgesEvaluatedRef.current = false;  // Reset pour la nouvelle partie
-      failCountForGameRef.current = 0;     // Reset du compteur d'échecs
+      player.markChallengeStarted(found.id);
+      badgesEvaluatedRef.current = false;
+      failCountForGameRef.current = 0;
       setIsNewWorldRecord(false);
+      setPreviousRecordHolder(null);
       if (found.challengeNumber !== 1) {
-        setTimeout(() => game.startTimer(), 50);
+        setTimeout(() => game.startTimer(priorElapsed), 50);
         setBriefingDone(true);
       } else {
         setBriefingDone(false);
@@ -187,58 +223,15 @@ export default function GameScreen() {
     return new Set(challenge.fixedPlacements.map(fp => fp.cellIndex));
   }, [challenge]);
 
-  const findNearest = useCallback((x: number, y: number) => {
-    if (!boardDef || boardSize.width === 0) return null;
-    const relX = x - boardOffsetRef.current.x;
-    const relY = y - boardOffsetRef.current.y;
-    const snapRadius = Platform.OS === 'web' ? 80 : 60;
-    return findNearestCell(relX, relY, boardDef, boardSize.width, boardSize.height, CELL_SIZE, snapRadius);
-  }, [boardDef, boardSize]);
-
-  const [draggingElement, setDraggingElement] = useState<string | null>(null);
-
-  const highlightElement = game.highlightValidCellsActive
-    ? (draggingElement ?? game.selectedElement)
-    : null;
-
-  const { hoveredCell, handleDragStart, handleDragMove, handleDragEnd } = useDragDrop({
-    onDrop: (cellIndex, elementId) => {
-      game.tryPlaceElement(cellIndex, elementId);
-      setDraggingElement(null);
-    },
-    findNearestCell: findNearest,
-  });
-
-  const mobileDragCallbacks = React.useMemo(() => ({
-    onGhostMove: (x: number, y: number) => {
-      setGhostState(prev => ({ ...prev, visible: true, x, y }));
-    },
-    onGhostEnd: () => {
-      setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    },
-  }), []);
-
-  const wrappedDragStart = useCallback((elementId: string) => {
-    setDraggingElement(elementId);
-    setGhostState({ visible: false, elementId, x: 0, y: 0 });
-    if (Platform.OS !== 'web' && boardContainerRef.current) {
-      boardContainerRef.current.measureInWindow((x, y) => {
-        boardOffsetRef.current = { x, y };
-      });
-    }
-    handleDragStart(elementId);
-  }, [handleDragStart]);
-
-  const wrappedDragEnd = useCallback((x: number, y: number) => {
-    setDraggingElement(null);
-    setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    handleDragEnd(x, y);
-  }, [handleDragEnd]);
-
+  // ── Tap sur une case du plateau ───────────────────────────
   const handleCellPress = useCallback((cellIndex: number) => {
     if (game.selectedElement) {
+      // Un jeton est sélectionné dans la palette → le placer
       game.tryPlaceElement(cellIndex, game.selectedElement);
+      // Désélectionner après placement
+      game.selectElement(null);
     } else if (game.playerBoard[cellIndex] && !fixedCells.has(cellIndex)) {
+      // Case occupée par un jeton joueur → retirer
       game.removeElement(cellIndex);
     }
   }, [game, fixedCells]);
@@ -259,20 +252,16 @@ export default function GameScreen() {
   // ── Victoire : enregistrer la progression (local + Firestore) + évaluer badges ──
   useEffect(() => {
     if (!game.isVictory || !challenge) return;
-    if (badgesEvaluatedRef.current) return; // Idempotence : exécuté une seule fois
+    if (badgesEvaluatedRef.current) return;
     badgesEvaluatedRef.current = true;
 
-    // failCountForGameRef = nb de fois où "Valider" a échoué pendant cette partie
-    // (distinct de validationResult.errorCount qui est toujours 0 à la victoire)
     const failsDuringGame = failCountForGameRef.current;
 
     // 1. Mise à jour locale immédiate (store Zustand)
-    // On passe failsDuringGame comme errorCount pour que noErrorStreak soit
-    // incrémenté uniquement si la partie s'est terminée sans aucun échec.
     player.markChallengeCompleted(challenge.id, game.elapsedTime, failsDuringGame);
     player.addSeeds(seedsEarned);
 
-    // 2. Évaluation des badges — APRÈS markChallengeCompleted (stats déjà mises à jour)
+    // 2. Évaluation des badges — APRÈS markChallengeCompleted
     const storeState = usePlayerStore.getState();
     const completedLevels = computeCompletedLevels(storeState.completedChallenges);
 
@@ -297,22 +286,17 @@ export default function GameScreen() {
       playedAt:          new Date(),
       sameChallengePlays: storeState.stats.sameChallengePlays,
       seasonalChallengesPlayed: storeState.stats.seasonalChallengesPlayed,
-      // Les badges WR sont évalués après la transaction Firestore (callback ci-dessous)
       isWorldRecord: false,
       isFirstRecord: false,
     };
 
     const newBadges = evaluateBadges(ctx);
-
-    // Attribuer TOUS les badges en UN SEUL set() Zustand — zéro re-render intermédiaire
     player.awardBadges(newBadges);
 
-    // Déclencher la file de toasts
     if (newBadges.length > 0) {
       setBadgeQueue(newBadges);
     }
 
-    // Calculer les badges proches pour la VictoryModal
     const updatedState = usePlayerStore.getState();
     setClosestBadges(getClosestBadges({
       ...ctx,
@@ -324,11 +308,10 @@ export default function GameScreen() {
     const username = auth.currentUser?.displayName ?? 'Joueur';
     const isAnonymous = auth.currentUser?.isAnonymous ?? true;
     if (uid && !isAnonymous) {
-      // 3a. Record mondial (transaction atomique)
       trySetWorldRecord(challenge.id, uid, username, game.elapsedTime).then(wrResult => {
         if (wrResult.isNewRecord) {
           setIsNewWorldRecord(true);
-          // Réévaluer les badges WR après confirmation Firestore
+          setPreviousRecordHolder(wrResult.previousRecord?.username ?? null);
           const wrNewBadges: string[] = [];
           const currentEarned = usePlayerStore.getState().earnedBadges;
           if (wrResult.previousRecord === null && !currentEarned.includes('record_first')) {
@@ -337,7 +320,6 @@ export default function GameScreen() {
           if (wrResult.previousRecord !== null && !currentEarned.includes('record_mondial')) {
             wrNewBadges.push('record_mondial');
           }
-          // Un seul set() pour les badges WR
           player.awardBadges(wrNewBadges);
           if (wrNewBadges.length > 0) {
             setBadgeQueue(prev => [...prev, ...wrNewBadges]);
@@ -346,17 +328,14 @@ export default function GameScreen() {
         }
       }).catch(() => {});
 
-      // 3b. Progression + graines + badges classiques + leaderboard
       getPlayer(uid).then(async profile => {
         if (profile) {
           await markCompleted(uid, challenge.id, game.elapsedTime, profile);
           const newSeeds = profile.seeds + seedsEarned;
           await updateSeeds(uid, newSeeds);
-          // Synchronisation badges (atomique)
           if (newBadges.length > 0) {
             await awardBadgesFirestore(uid, newBadges);
           }
-          // Mise à jour du classement mondial
           const updatedCompleted = profile.completedChallenges.includes(challenge.id)
             ? profile.completedChallenges.length
             : profile.completedChallenges.length + 1;
@@ -369,17 +348,15 @@ export default function GameScreen() {
             newSeeds,
           );
         }
-      }).catch(() => {
-        // Silencieux : la progression locale est déjà sauvegardée
-      });
+      }).catch(() => {});
     }
   }, [game.isVictory]);
 
-  // ── Enregistrer les échecs de validation (pour noErrorStreak + badge "Acharnement") ──
+  // ── Enregistrer les échecs de validation ──
   useEffect(() => {
     if (game.validationResult.status === 'failure' && challenge) {
-      failCountForGameRef.current += 1;        // compteur local pour cette partie
-      player.recordChallengeFailure(challenge.id); // pour le store (badge acharnement)
+      failCountForGameRef.current += 1;
+      player.recordChallengeFailure(challenge.id);
     }
   }, [game.validationResult.status]);
 
@@ -387,13 +364,31 @@ export default function GameScreen() {
     ? (LEVEL_PARAMS[challenge.level]?.bonusDisabled ?? false)
     : false;
 
-  const hasCountErrorsBonus = game.bonusUsed.includes('count_errors');
-
   const allFilled = challenge
     ? game.playerBoard.every((el, i) =>
         el !== null || challenge.fixedPlacements.some(fp => fp.cellIndex === i)
       )
     : false;
+
+  // Au moins un élément posé par le joueur (hors fixedPlacements)
+  const fixedIndices = challenge
+    ? new Set(challenge.fixedPlacements.map(fp => fp.cellIndex))
+    : new Set<number>();
+  const hasPlacedElements = game.playerBoard.some(
+    (el, i) => el !== null && !fixedIndices.has(i)
+  );
+
+  // ── Cooldown actif : afficher l'écran d'attente au lieu du jeu ──
+  if (cooldownRemainingMs != null) {
+    return (
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <CooldownScreen
+          remainingMs={cooldownRemainingMs}
+          onBack={() => router.replace('/(tabs)/levels')}
+        />
+      </View>
+    );
+  }
 
   if (!challenge || !boardDef) {
     return (
@@ -404,18 +399,16 @@ export default function GameScreen() {
   }
 
   return (
-    <GestureHandlerRootView
-      style={styles.root}
-    >
-      {/* ── Feuilles qui tombent — au niveau root pour couvrir tout l'écran ── */}
+    <GestureHandlerRootView style={styles.root}>
+      {/* ── Feuilles qui tombent ── */}
       <FallingLeaves />
 
       <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>← Retour</Text>
+            <TouchableOpacity onPress={handleAbandon} style={styles.backBtn}>
+              <Text style={styles.backText}>{'\u2190'} Abandonner</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setBriefingForcedOpen(true)}
@@ -441,7 +434,6 @@ export default function GameScreen() {
                 </Text>
               )}
             </View>
-            {/* Bouton haut-parleur — remplace le bouton Valider dans le header */}
             <TouchableOpacity
               style={styles.speakerBtn}
               onPress={() => setIngameEnabled(!audioIngameEnabled)}
@@ -463,9 +455,13 @@ export default function GameScreen() {
           bonusDisabled={bonusDisabled}
           onActivateBonus={game.activateBonus}
           unlockedBonuses={player.unlockedBonuses}
+          highlightDeadline={game.highlightDeadline}
+          instinctDeadline={game.instinctDeadline}
+          highlightActive={game.highlightActive}
+          hasPlacedElements={hasPlacedElements}
         />
 
-        {/* ── Bouton Valider (sous la barre de bonus) ── */}
+        {/* ── Bouton Valider ── */}
         <View style={styles.validateRow}>
           <TouchableOpacity
             style={[
@@ -481,55 +477,18 @@ export default function GameScreen() {
         </View>
 
         {/* ── Plateau ── */}
-        <View
-          style={styles.boardArea}
-          onLayout={e => {
-            const { width, height } = e.nativeEvent.layout;
-            setAvailableArea({ width, height });
-          }}
-        >
-          {availableArea.width > 0 && (() => {
-            const side = Math.min(availableArea.width, availableArea.height) - 16;
-            return (
-              <View
-                ref={boardContainerRef}
-                style={[
-                  styles.boardContainer,
-                  { width: side, height: side },
-                ]}
-                onLayout={e => {
-                  const { width, height } = e.nativeEvent.layout;
-                  setBoardSize({ width, height });
-                  if (boardContainerRef.current) {
-                    if (Platform.OS === 'web') {
-                      const node = boardContainerRef.current as unknown as HTMLElement;
-                      const rect = node.getBoundingClientRect();
-                      boardOffsetRef.current = { x: rect.left, y: rect.top };
-                    } else {
-                      requestAnimationFrame(() => {
-                        boardContainerRef.current?.measureInWindow((x, y) => {
-                          boardOffsetRef.current = { x, y };
-                        });
-                      });
-                    }
-                  }
-                }}
-              >
-                <BoardRenderer
-                  boardDef={boardDef}
-                  playerBoard={game.playerBoard}
-                  fixedCells={fixedCells}
-                  hintCells={game.hintCells}
-                  hintType={null}
-                  selectedElement={game.selectedElement}
-                  hoveredCell={hoveredCell}
-                  getCellColor={(idx) => game.getCellColor(idx, highlightElement)}
-                  onCellPress={handleCellPress}
-                  onDrop={(cellIndex, elementId) => game.tryPlaceElement(cellIndex, elementId)}
-                />
-              </View>
-            );
-          })()}
+        <View style={styles.boardArea}>
+          <View style={styles.boardContainer}>
+            <BoardRenderer
+              boardDef={boardDef}
+              playerBoard={game.playerBoard}
+              fixedCells={fixedCells}
+              selectedElement={game.selectedElement}
+              highlightActive={game.validHintCells.length > 0 || game.errorHintCells.length > 0}
+              getCellColor={(idx) => game.getCellColor(idx)}
+              onCellPress={handleCellPress}
+            />
+          </View>
         </View>
 
         {/* ── Palette ── */}
@@ -539,21 +498,7 @@ export default function GameScreen() {
           fixedCells={fixedCells}
           selectedElement={game.selectedElement}
           onSelectElement={game.selectElement}
-          onDragStart={wrappedDragStart}
-          onDragMove={handleDragMove}
-          onDragEnd={wrappedDragEnd}
-          mobileDragCallbacks={Platform.OS !== 'web' ? mobileDragCallbacks : undefined}
         />
-
-        {/* ── Ghost natif mobile ── */}
-        {Platform.OS !== 'web' && (
-          <MobileDragGhost
-            elementId={ghostState.elementId}
-            x={ghostState.x}
-            y={ghostState.y}
-            visible={ghostState.visible}
-          />
-        )}
 
         {/* ── Modal victoire ── */}
         <VictoryModal
@@ -568,6 +513,7 @@ export default function GameScreen() {
           onBadgeQueueEmpty={() => setBadgeQueue([])}
           worldRecord={isNewWorldRecord ? null : worldRecord}
           isNewWorldRecord={isNewWorldRecord}
+          previousRecordHolder={previousRecordHolder}
           onNextChallenge={() => {
             const nextNum = String(challenge.challengeNumber + 1).padStart(3, '0');
             const nextId = `${challenge.level}_${nextNum}`;
@@ -589,14 +535,18 @@ export default function GameScreen() {
         {/* ── Modal échec ── */}
         <FailModal
           visible={game.validationResult.status === 'failure'}
-          errorCount={game.validationResult.errorCount}
-          totalCells={challenge.solution.length}
-          showErrorCount={hasCountErrorsBonus}
           onRetry={game.dismissValidation}
           onGiveUp={() => {
             game.resetGame();
             router.replace('/(tabs)/levels');
           }}
+        />
+
+        {/* ── Modal confirmation d'abandon ── */}
+        <AbandonConfirmModal
+          visible={showAbandonModal}
+          onContinue={() => setShowAbandonModal(false)}
+          onAbandon={handleAbandonConfirm}
         />
       </View>
 
@@ -701,7 +651,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 1,
   },
-  // Bouton haut-parleur dans le header
   speakerBtn: {
     width: 36,
     height: 36,
@@ -715,7 +664,6 @@ const styles = StyleSheet.create({
   speakerIcon: {
     fontSize: 18,
   },
-  // Rangée du bouton Valider (sous la barre de bonus)
   validateRow: {
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -747,6 +695,10 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   boardContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
+    aspectRatio: 1,
     borderRadius: 16,
   },
 });

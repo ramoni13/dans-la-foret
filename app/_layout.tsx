@@ -98,6 +98,10 @@ export default function RootLayout() {
           name="game/[challengeId]"
           options={{ animation: 'slide_from_right' }}
         />
+        <Stack.Screen
+          name="game/daily"
+          options={{ animation: 'slide_from_right' }}
+        />
       </Stack>
     </GestureHandlerRootView>
   );

@@ -27,19 +27,16 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
-import { MobileDragGhost } from '../../src/components/Elements/MobileDragGhost';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { FailModal } from '../../src/components/Game/FailModal';
 
 import { useGame } from '../../src/hooks/useGame';
-import { useDragDrop } from '../../src/hooks/useDragDrop';
 import { usePlayerStore } from '../../src/store/playerStore';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
-import { findNearestCell, formatTime } from '../../src/utils/boardUtils';
+import { formatTime } from '../../src/utils/boardUtils';
 import { Colors } from '../../src/constants/colors';
-import { CELL_SIZE } from '../../src/components/Board/Cell';
 import { Challenge } from '../../src/core/models/Challenge';
 import {
   FriendChallengeData,
@@ -266,68 +263,17 @@ export default function FriendChallengeScreen() {
     }
   }, []);
 
-  // ── Dimensions plateau ──────────────────────────────────────────────────────
-  const [boardSize, setBoardSize]         = useState({ width: 0, height: 0 });
-  const [availableArea, setAvailableArea] = useState({ width: 0, height: 0 });
-  const boardContainerRef                 = useRef<View>(null);
-  const boardOffsetRef                    = useRef({ x: 0, y: 0 });
-
-  // Ghost natif mobile
-  const [ghostState, setGhostState] = useState<{
-    visible: boolean; elementId: string | null; x: number; y: number;
-  }>({ visible: false, elementId: null, x: 0, y: 0 });
-
-  const mobileDragCallbacks = React.useMemo(() => ({
-    onGhostMove: (x: number, y: number) => {
-      setGhostState(prev => ({ ...prev, visible: true, x, y }));
-    },
-    onGhostEnd: () => {
-      setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    },
-  }), []);
-
-  // ── Drag & Drop ─────────────────────────────────────────────────────────────
-  const findNearest = useCallback((x: number, y: number) => {
-    if (!boardDef || boardSize.width === 0) return null;
-    const relX = x - boardOffsetRef.current.x;
-    const relY = y - boardOffsetRef.current.y;
-    return findNearestCell(
-      relX, relY, boardDef, boardSize.width, boardSize.height,
-      CELL_SIZE, Platform.OS === 'web' ? 80 : 60,
-    );
-  }, [boardDef, boardSize]);
-
-  const { hoveredCell, handleDragStart, handleDragMove, handleDragEnd } = useDragDrop({
-    onDrop: (cellIndex, elementId) => {
-      game.tryPlaceElement(cellIndex, elementId);
-    },
-    findNearestCell: findNearest,
-  });
-
-  const wrappedDragStart = useCallback((elementId: string) => {
-    setGhostState({ visible: false, elementId, x: 0, y: 0 });
-    if (Platform.OS !== 'web' && boardContainerRef.current) {
-      boardContainerRef.current.measureInWindow((x, y) => {
-        boardOffsetRef.current = { x, y };
-      });
-    }
-    handleDragStart(elementId);
-  }, [handleDragStart]);
-
-  const wrappedDragEnd = useCallback((x: number, y: number) => {
-    setGhostState({ visible: false, elementId: null, x: 0, y: 0 });
-    handleDragEnd(x, y);
-  }, [handleDragEnd]);
-
   // ── Cases fixes ─────────────────────────────────────────────────────────────
   const fixedCells = React.useMemo(() => {
     if (!challenge) return new Set<number>();
     return new Set(challenge.fixedPlacements.map(fp => fp.cellIndex));
   }, [challenge]);
 
+  // ── Tap sur une case du plateau ─────────────────────────────────────────────
   const handleCellPress = useCallback((cellIndex: number) => {
     if (game.selectedElement) {
       game.tryPlaceElement(cellIndex, game.selectedElement);
+      game.selectElement(null);
     } else if (game.playerBoard[cellIndex] && !fixedCells.has(cellIndex)) {
       game.removeElement(cellIndex);
     }
@@ -370,14 +316,13 @@ export default function FriendChallengeScreen() {
         // Récompense : 15 graines au vainqueur
         if (iWon) {
           player.addSeeds(CHALLENGE_WINNER_SEEDS);
-          // Sync Firestore (non-anonyme)
           const currentUser = auth.currentUser;
           if (currentUser && !currentUser.isAnonymous) {
             updateSeeds(params.opponentUid!, player.seeds + CHALLENGE_WINNER_SEEDS).catch(() => {});
           }
         }
       } catch {
-        // Silencieux — le résultat est affiché quand même
+        // Silencieux
       }
     };
 
@@ -465,52 +410,18 @@ export default function FriendChallengeScreen() {
         </View>
 
         {/* Plateau */}
-        <View
-          style={styles.boardArea}
-          onLayout={e => {
-            const { width, height } = e.nativeEvent.layout;
-            setAvailableArea({ width, height });
-          }}
-        >
-          {availableArea.width > 0 && (() => {
-            const side = Math.min(availableArea.width, availableArea.height) - 16;
-            return (
-              <View
-                ref={boardContainerRef}
-                style={[styles.boardContainer, { width: side, height: side }]}
-                onLayout={e => {
-                  const { width, height } = e.nativeEvent.layout;
-                  setBoardSize({ width, height });
-                  if (boardContainerRef.current) {
-                    if (Platform.OS === 'web') {
-                      const node = boardContainerRef.current as unknown as HTMLElement;
-                      const rect = node.getBoundingClientRect();
-                      boardOffsetRef.current = { x: rect.left, y: rect.top };
-                    } else {
-                      requestAnimationFrame(() => {
-                        boardContainerRef.current?.measureInWindow((x, y) => {
-                          boardOffsetRef.current = { x, y };
-                        });
-                      });
-                    }
-                  }
-                }}
-              >
-                <BoardRenderer
-                  boardDef={boardDef}
-                  playerBoard={game.playerBoard}
-                  fixedCells={fixedCells}
-                  hintCells={[]}
-                  hintType={null}
-                  selectedElement={game.selectedElement}
-                  hoveredCell={hoveredCell}
-                  getCellColor={(idx) => game.getCellColor(idx, null)}
-                  onCellPress={handleCellPress}
-                  onDrop={(cellIndex, elementId) => game.tryPlaceElement(cellIndex, elementId)}
-                />
-              </View>
-            );
-          })()}
+        <View style={styles.boardArea}>
+          <View style={styles.boardContainer}>
+            <BoardRenderer
+              boardDef={boardDef}
+              playerBoard={game.playerBoard}
+              fixedCells={fixedCells}
+              selectedElement={game.selectedElement}
+              highlightActive={false}
+              getCellColor={(idx) => game.getCellColor(idx)}
+              onCellPress={handleCellPress}
+            />
+          </View>
         </View>
 
         {/* Palette */}
@@ -520,20 +431,7 @@ export default function FriendChallengeScreen() {
           fixedCells={fixedCells}
           selectedElement={game.selectedElement}
           onSelectElement={game.selectElement}
-          onDragStart={wrappedDragStart}
-          onDragMove={handleDragMove}
-          onDragEnd={wrappedDragEnd}
-          mobileDragCallbacks={Platform.OS !== 'web' ? mobileDragCallbacks : undefined}
         />
-
-        {Platform.OS !== 'web' && (
-          <MobileDragGhost
-            elementId={ghostState.elementId}
-            x={ghostState.x}
-            y={ghostState.y}
-            visible={ghostState.visible}
-          />
-        )}
 
         {/* Modal résultat Joueur A */}
         {isChallenger && (
@@ -580,9 +478,6 @@ export default function FriendChallengeScreen() {
         {/* Modal échec */}
         <FailModal
           visible={game.validationResult.status === 'failure'}
-          errorCount={game.validationResult.errorCount}
-          totalCells={challenge.solution.length}
-          showErrorCount={false}
           onRetry={game.dismissValidation}
           onGiveUp={handleClose}
         />
@@ -741,5 +636,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 8,
   },
-  boardContainer: { borderRadius: 16 },
+  boardContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 500,
+    aspectRatio: 1,
+    borderRadius: 16,
+  },
 });

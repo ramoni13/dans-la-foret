@@ -3,7 +3,7 @@
 // Navigation niveau par niveau avec flèches gauche/droite
 // ============================================================
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,9 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { DifficultyLevel } from '../../src/core/models/Challenge';
 import { usePlayerStore } from '../../src/store/playerStore';
+import { WorldRecord, subscribeAllWorldRecords } from '../../src/services/worldRecordService';
+import { formatTime } from '../../src/utils/boardUtils';
+import { getDailyDateString } from '../../src/services/dailyChallengeService';
 
 
 import niveau1  from '../../src/data/challenges/niveau_1.json';
@@ -46,19 +49,19 @@ const LEVELS: Array<{
 }> = [
   { id: 'niveau_1',  label: 'Niveau 1',  emoji: '🌱', description: '6 cases · 3 vides · Bucheron/Ours/Mouton',       isPremium: false, color: '#A5D6A7' },
   { id: 'niveau_2',  label: 'Niveau 2',  emoji: '🌿', description: '7 cases · 4 vides · Bucheron/Ours/Mouton',       isPremium: false, color: '#81C784' },
-  { id: 'niveau_3',  label: 'Niveau 3',  emoji: '🌳', description: '8 cases · 3 vides · + Chien',                    isPremium: false, color: '#66BB6A' },
-  { id: 'niveau_4',  label: 'Niveau 4',  emoji: '🦊', description: '8 cases · 4 vides · + Chien',                    isPremium: false, color: '#4CAF50' },
-  { id: 'niveau_5',  label: 'Niveau 5',  emoji: '🏕️', description: '8 cases · 5 vides · + Cerf/Biche',               isPremium: true,  color: '#43A047' },
-  { id: 'niveau_6',  label: 'Niveau 6',  emoji: '🦌', description: '9 cases · 4 vides · + Cerf/Biche',               isPremium: true,  color: '#388E3C' },
-  { id: 'niveau_7',  label: 'Niveau 7',  emoji: '🌲', description: '9 cases · 5 vides · Cerf/Biche',                isPremium: true,  color: '#2E7D32' },
-  { id: 'niveau_8',  label: 'Niveau 8',  emoji: '🐺', description: '9 cases · 5 vides · + Renard',                  isPremium: true,  color: '#1B5E20' },
-  { id: 'niveau_9',  label: 'Niveau 9',  emoji: '🏔️', description: '10 cases · 6 vides · Renard',                    isPremium: true,  color: '#33691E' },
-  { id: 'niveau_10', label: 'Niveau 10', emoji: '🐾', description: '11 cases · 5 vides · Renard',                    isPremium: true,  color: '#558B2F' },
-  { id: 'niveau_11', label: 'Niveau 11', emoji: '🏹', description: '12 cases · 5 vides · + Tas de bûches',           isPremium: true,  color: '#827717' },
-  { id: 'niveau_12', label: 'Niveau 12', emoji: '🪵', description: '12 cases · 6 vides · Tas de bûches',             isPremium: true,  color: '#6D4C41' },
-  { id: 'niveau_13', label: 'Niveau 13', emoji: '🏠', description: '12 cases · 7 vides · + Chalet',                  isPremium: true,  color: '#4E342E' },
-  { id: 'niveau_14', label: 'Niveau 14', emoji: '⚡',  description: '12 cases · 8 vides · Chalet',                    isPremium: true,  color: '#E65100' },
-  { id: 'niveau_15', label: 'Niveau 15', emoji: '💀', description: '12 cases · 9 vides · Sans bonus',                isPremium: true,  color: '#3E2723' },
+  { id: 'niveau_3',  label: 'Niveau 3',  emoji: '🌳', description: '8 cases · 4 vides · + Chien',                    isPremium: false, color: '#66BB6A' },
+  { id: 'niveau_4',  label: 'Niveau 4',  emoji: '🦊', description: '8 cases · 5 vides · Chien',                      isPremium: false, color: '#4CAF50' },
+  { id: 'niveau_5',  label: 'Niveau 5',  emoji: '🏕️', description: '9 cases · 5 vides · + Renard',                    isPremium: true,  color: '#43A047' },
+  { id: 'niveau_6',  label: 'Niveau 6',  emoji: '🦌', description: '9 cases · 6 vides · Renard',                     isPremium: true,  color: '#388E3C' },
+  { id: 'niveau_7',  label: 'Niveau 7',  emoji: '🌲', description: '10 cases · 6 vides · + Ruche',                   isPremium: true,  color: '#2E7D32' },
+  { id: 'niveau_8',  label: 'Niveau 8',  emoji: '🐺', description: '10 cases · 7 vides · Ruche',                     isPremium: true,  color: '#1B5E20' },
+  { id: 'niveau_9',  label: 'Niveau 9',  emoji: '🏔️', description: '11 cases · 7 vides · + Cerf/Biche',               isPremium: true,  color: '#33691E' },
+  { id: 'niveau_10', label: 'Niveau 10', emoji: '🐾', description: '11 cases · 7 vides · Cerf/Biche',                isPremium: true,  color: '#558B2F' },
+  { id: 'niveau_11', label: 'Niveau 11', emoji: '🏹', description: '11 cases · 7 vides · + Bûches',           isPremium: true,  color: '#827717' },
+  { id: 'niveau_12', label: 'Niveau 12', emoji: '🪵', description: '12 cases · 7 vides · + Chalet',                  isPremium: true,  color: '#6D4C41' },
+  { id: 'niveau_13', label: 'Niveau 13', emoji: '🏠', description: '12 cases · 7 vides · Chalet',                    isPremium: true,  color: '#4E342E' },
+  { id: 'niveau_14', label: 'Niveau 14', emoji: '⚡',  description: '12 cases · 8 vides · Expert',                     isPremium: true,  color: '#E65100' },
+  { id: 'niveau_15', label: 'Niveau 15', emoji: '💀', description: '12 cases · 8 vides · Sans bonus',                isPremium: true,  color: '#3E2723' },
 ];
 
 const ALL_CHALLENGES: Record<string, any[]> = {
@@ -91,6 +94,29 @@ export default function LevelsScreen() {
     LEVELS.length - 1,
   );
   const [levelIndex, setLevelIndex] = useState(initialIndex);
+
+  // ── Prochain défi non complété (toutes niveaux confondus) ───────────────
+  const nextChallenge = useMemo(() => {
+    for (const level of LEVELS) {
+      const list = ALL_CHALLENGES[level.id] ?? [];
+      const next = list.find((c: any) => !player.completedChallenges.includes(c.id));
+      if (next) return { challenge: next, level };
+    }
+    // Tout terminé → premier défi du premier niveau
+    const first = (ALL_CHALLENGES[LEVELS[0].id] ?? [])[0];
+    return first ? { challenge: first, level: LEVELS[0] } : null;
+  }, [player.completedChallenges]);
+
+  const totalCompleted  = player.completedChallenges.length;
+  const totalChallenges = LEVELS.reduce((sum, l) => sum + (ALL_CHALLENGES[l.id]?.length ?? 0), 0);
+  const allCompleted = totalCompleted >= totalChallenges;
+
+  // ── Records mondiaux (temps réel) ──────────────────────────────────────────
+  const [worldRecords, setWorldRecords] = useState<Map<string, WorldRecord>>(new Map());
+  useEffect(() => {
+    const unsub = subscribeAllWorldRecords(setWorldRecords);
+    return () => unsub();
+  }, []);
 
   // ── Garde : Firebase pas encore répondu ─────────────────────────────────────
   if (!authReady) {
@@ -167,6 +193,111 @@ export default function LevelsScreen() {
           <Text style={styles.seedsText}>🌱 {player.seeds} graines</Text>
         </View>
       </View>
+
+      {/* ── Bouton Defi du Jour ── */}
+      {(() => {
+        const DAILY_UNLOCK_LEVEL = 12;
+        const dailyUnlocked = player.currentLevel >= DAILY_UNLOCK_LEVEL;
+
+        // Verrouille : bouton grise non cliquable
+        if (!dailyUnlocked) {
+          return (
+            <View style={styles.dailyBtnLocked}>
+              <Text style={[styles.dailyBtnIcon, { opacity: 0.4 }]}>{'\uD83D\uDD12'}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dailyBtnTextLocked}>Defi du Jour</Text>
+                <Text style={styles.dailyBtnSubLocked}>
+                  Disponible au niveau {DAILY_UNLOCK_LEVEL}
+                </Text>
+              </View>
+            </View>
+          );
+        }
+
+        const todayStr = getDailyDateString(new Date());
+        const status = player.dailyChallengeStatus;
+        const lastDate = player.lastDailyChallengeDate;
+        const played = lastDate === todayStr && !!status;
+
+        if (!played) {
+          return (
+            <TouchableOpacity
+              style={styles.dailyBtn}
+              onPress={() => router.push('/game/daily')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.dailyBtnIcon}>{'\uD83C\uDF05'}</Text>
+              <Text style={styles.dailyBtnText}>Defi du Jour</Text>
+              <Text style={styles.dailyBtnArrow}>{'\u2192'}</Text>
+            </TouchableOpacity>
+          );
+        }
+
+        if (status === 'success') {
+          return (
+            <View style={styles.dailyBtnDoneRow}>
+              <View style={styles.dailyBtnDone}>
+                <Text style={styles.dailyBtnIcon}>{'\u2705'}</Text>
+                <Text style={styles.dailyBtnTextDone}>Defi du Jour reussi</Text>
+              </View>
+              {player.username === 'ramoni' && (
+                <TouchableOpacity
+                  style={styles.dailyReplayBtn}
+                  onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.dailyReplayText}>Rejouer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        }
+
+        return (
+          <View style={styles.dailyBtnDoneRow}>
+            <View style={styles.dailyBtnFailed}>
+                <Text style={styles.dailyBtnIcon}>{'\uD83D\uDCA4'}</Text>
+              <Text style={styles.dailyBtnTextFailed}>Rendez-vous demain</Text>
+            </View>
+            {player.username === 'ramoni' && (
+              <TouchableOpacity
+                style={styles.dailyReplayBtn}
+                onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dailyReplayText}>Rejouer</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      })()}
+
+      {/* ── Carte Continuer ── */}
+      {nextChallenge && (
+        <TouchableOpacity
+          style={styles.resumeCard}
+          onPress={() => router.push(`/game/${nextChallenge.challenge.id}`)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.resumeLeft}>
+            <Text style={styles.resumeIcon}>
+              {allCompleted ? '🏆' : totalCompleted === 0 ? '🌱' : '▶️'}
+            </Text>
+          </View>
+          <View style={styles.resumeCenter}>
+            <Text style={styles.resumeAction}>
+              {allCompleted ? 'Tout terminé ! Recommencer' : totalCompleted === 0 ? 'Commencer' : 'Continuer'}
+            </Text>
+            <Text style={styles.resumeLevel}>
+              {nextChallenge.level.emoji} {nextChallenge.level.label}
+            </Text>
+            <Text style={styles.resumeChallenge}>
+              Défi n°{nextChallenge.challenge.challengeNumber}
+            </Text>
+          </View>
+          <Text style={styles.resumeArrow}>→</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── Navigateur de niveau avec flèches ── */}
       <View style={styles.levelNavigator}>
@@ -276,6 +407,7 @@ export default function LevelsScreen() {
               const isCompleted = player.completedChallenges.includes(challenge.id);
               const unlocked    = isChallengeUnlocked(idx);
               const bestTime    = player.stats.bestTimes[challenge.id];
+              const wr          = worldRecords.get(challenge.id);
 
               return (
                 <TouchableOpacity
@@ -303,13 +435,22 @@ export default function LevelsScreen() {
                     ]}>
                       {unlocked ? `Défi ${challenge.challengeNumber}` : '🔒 Verrouillé'}
                     </Text>
-                    {unlocked && (bestTime ? (
-                      <Text style={styles.challengeBestTime}>
-                        ⏱ {Math.floor(bestTime / 60000)}:{String(Math.floor((bestTime % 60000) / 1000)).padStart(2, '0')}
-                      </Text>
-                    ) : (
-                      <Text style={styles.challengeNew}>Nouveau</Text>
-                    ))}
+                    {unlocked && (
+                      <View style={styles.challengeTimes}>
+                        {bestTime ? (
+                          <Text style={styles.challengeBestTime}>
+                            ⏱ {formatTime(bestTime)}
+                          </Text>
+                        ) : (
+                          <Text style={styles.challengeNew}>Nouveau</Text>
+                        )}
+                        {wr && (
+                          <Text style={styles.challengeWr} numberOfLines={1}>
+                            🌍 {formatTime(wr.timeMs)} · {wr.username}
+                          </Text>
+                        )}
+                      </View>
+                    )}
                   </View>
                   {isCompleted
                     ? <Text style={styles.checkmark}>✓</Text>
@@ -367,6 +508,158 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+
+  // ── Bouton Defi du Jour ──
+  dailyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D4A017',
+    borderRadius: 14,
+    padding: 14,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: '#E8B830',
+  },
+  dailyBtnLocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#5A5A5A',
+    borderRadius: 14,
+    padding: 14,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: '#6E6E6E',
+    opacity: 0.7,
+  },
+  dailyBtnTextLocked: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.5)',
+  },
+  dailyBtnSubLocked: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.4)',
+    marginTop: 2,
+  },
+  dailyBtnDone: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2E7D32',
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: '#43A047',
+  },
+  dailyBtnFailed: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#9E9E9E',
+    borderRadius: 14,
+    padding: 14,
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: '#BDBDBD',
+  },
+  dailyBtnIcon: {
+    fontSize: 22,
+  },
+  dailyBtnText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  dailyBtnTextDone: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  dailyBtnTextFailed: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  dailyBtnArrow: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  dailyBtnDoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    gap: 8,
+  },
+  dailyReplayBtn: {
+    backgroundColor: '#D4A017',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderColor: '#E8B830',
+  },
+  dailyReplayText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+
+  // ── Carte Continuer ──
+  resumeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.forest.dark,
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    gap: 12,
+    shadowColor: Colors.forest.dark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  resumeLeft: {
+    width: 40,
+    alignItems: 'center',
+  },
+  resumeIcon: {
+    fontSize: 28,
+  },
+  resumeCenter: {
+    flex: 1,
+    gap: 2,
+  },
+  resumeAction: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  resumeLevel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  resumeChallenge: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  resumeArrow: {
+    fontSize: 20,
+    color: 'rgba(255,255,255,0.9)',
   },
 
   // ── Header ──
@@ -597,15 +890,21 @@ const styles = StyleSheet.create({
     color: Colors.ui.textLight,
     fontStyle: 'italic',
   },
+  challengeTimes: {
+    gap: 2,
+    marginTop: 2,
+  },
   challengeBestTime: {
     fontSize: 12,
     color: Colors.forest.medium,
-    marginTop: 2,
+  },
+  challengeWr: {
+    fontSize: 10,
+    color: Colors.ui.textLight,
   },
   challengeNew: {
     fontSize: 11,
     color: Colors.ui.border,
-    marginTop: 2,
     fontStyle: 'italic',
   },
   checkmark: {

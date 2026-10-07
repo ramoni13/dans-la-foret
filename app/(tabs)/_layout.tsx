@@ -134,6 +134,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="rules"
+        options={{
+          title: 'R\u00e8gles',
+          tabBarIcon: ({ focused }) => <TabIcon emoji={'\uD83D\uDCD6'} focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="challenge"
         options={{
           title: 'Amis',
