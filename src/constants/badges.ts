@@ -36,7 +36,6 @@ export type RarityUnlockId =
   | 'seeds_10'
   | 'seeds_50'
   | 'bonus_instinct'
-  | 'bonus_flash'
   | 'theme_automne'
   | 'theme_hiver'
   | 'theme_foret_mystique'
@@ -59,7 +58,6 @@ export const RARITY_UNLOCKS: RarityUnlock[] = [
   { rarity: 'bois',    count: 9,  unlock: 'defi_journalier',    label: 'Défi journalier débloqué' },
   // ── Pierre (9 badges pierre) ──────────────────────────────
   { rarity: 'pierre',  count: 3,  unlock: 'theme_automne',      label: 'Thème Automne débloqué' },
-  { rarity: 'pierre',  count: 5,  unlock: 'bonus_flash',        label: 'Bonus Flash débloqué' },
   { rarity: 'pierre',  count: 7,  unlock: 'seeds_50',           label: '+50 Graines offertes' },
   { rarity: 'pierre',  count: 9,  unlock: 'theme_hiver',        label: 'Thème Hiver débloqué' },
   // ── Or (14 badges or) ─────────────────────────────────────
@@ -463,6 +461,42 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: 'Bats le record mondial de temps sur un défi',
     rarity: 'cristal', category: 'exploration', isSecret: false, isSeasonal: false,
     translations: { en: { label: 'World Record', description: 'Beat the world record time on a puzzle' } },
+  },
+
+  // ══════════════════════════════════════════════════════════
+  // DÉFI JOURNALIER (4 badges)
+  // ══════════════════════════════════════════════════════════
+  {
+    id: 'daily_first',
+    emoji: '🌅',
+    label: 'Premier Pas Quotidien',
+    description: 'Réussis ton premier défi journalier',
+    rarity: 'bois', category: 'regularite', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'First Daily Step', description: 'Complete your first daily challenge' } },
+  },
+  {
+    id: 'daily_week',
+    emoji: '📅',
+    label: 'Semaine Parfaite',
+    description: 'Réussis 7 défis journaliers consécutifs',
+    rarity: 'pierre', category: 'regularite', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Perfect Week', description: 'Complete 7 consecutive daily challenges' } },
+  },
+  {
+    id: 'daily_month',
+    emoji: '🗓️',
+    label: 'Forestier Assidu',
+    description: 'Réussis 30 défis journaliers consécutifs',
+    rarity: 'or', category: 'regularite', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Dedicated Forester', description: 'Complete 30 consecutive daily challenges' } },
+  },
+  {
+    id: 'daily_champion',
+    emoji: '👑',
+    label: 'Champion du Jour',
+    description: 'Termine #1 mondial sur un défi journalier',
+    rarity: 'cristal', category: 'regularite', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Daily Champion', description: 'Finish #1 worldwide on a daily challenge' } },
   },
 ];
 

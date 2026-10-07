@@ -13,11 +13,16 @@ import { ElementDefinition } from '../models/Element';
 import { FixedPlacement, TokenCount } from '../models/Challenge';
 import { isPlacementValid, getConnectedGroup } from './validator';
 
+/** Fonction RNG : retourne un nombre dans [0, 1) */
+export type RngFunction = () => number;
+
 export interface SolverInput {
   boardDef: BoardDefinition;
   fixedPlacements: FixedPlacement[];
   availableTokens: TokenCount[];
   elementDefs: Record<string, ElementDefinition>;
+  /** PRNG optionnel — si omis, utilise Math.random(). Permet la génération déterministe. */
+  rng?: RngFunction;
 }
 
 export interface SolverResult {
@@ -32,7 +37,8 @@ export interface SolverResult {
  * S'arrête dès que 2 solutions sont trouvées (pour détecter l'unicité).
  */
 export function solve(input: SolverInput): SolverResult {
-  const { boardDef, fixedPlacements, availableTokens, elementDefs } = input;
+  const { boardDef, fixedPlacements, availableTokens, elementDefs, rng } = input;
+  const rngFn = rng ?? Math.random;
 
   // Initialiser le plateau avec les jetons fixes
   const initialBoard: (string | null)[] = Array(boardDef.cellCount).fill(null);
@@ -49,7 +55,7 @@ export function solve(input: SolverInput): SolverResult {
   const rawSolutions: string[][] = [];
 
   // Lancer le backtracking
-  backtrack(initialBoard, tokenInventory, boardDef, elementDefs, rawSolutions);
+  backtrack(initialBoard, tokenInventory, boardDef, elementDefs, rawSolutions, rngFn);
 
   // Dédupliquer les solutions canoniquement :
   // Deux solutions sont identiques du point de vue du joueur si elles
@@ -99,11 +105,12 @@ function canonicalKey(solution: string[]): string {
 /**
  * Mélange Fisher-Yates sur les entrées d'un Record<string, number>.
  * Utilisé pour randomiser l'ordre d'essai des éléments dans le backtracking.
+ * Accepte un RNG optionnel pour la génération déterministe.
  */
-function shuffleEntries(obj: Record<string, number>): [string, number][] {
+function shuffleEntries(obj: Record<string, number>, rng: RngFunction = Math.random): [string, number][] {
   const entries = Object.entries(obj);
   for (let i = entries.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [entries[i], entries[j]] = [entries[j], entries[i]];
   }
   return entries;
@@ -146,6 +153,17 @@ function canStillSatisfyRequireConstraints(
       if (constraint.type === 'neighbor_specific') {
         const targetId = constraint.targetElementId;
         if (!targetId) continue;
+        // Si conditionnel, vérifier si le target est sur le board ou en inventaire
+        if (constraint.onlyIfTargetOnBoard) {
+          const targetOnBoard = board.some(el => el === targetId);
+          const targetInInventory = (inventory[targetId] ?? 0) > 0;
+          // Si le target n'est ni sur le board ni en inventaire, la contrainte
+          // ne sera jamais active → skip
+          if (!targetOnBoard && !targetInInventory) continue;
+          // Si le target n'est pas encore sur le board (seulement en inventaire),
+          // on ne peut pas encore vérifier → skip (sera vérifié plus tard)
+          if (!targetOnBoard) continue;
+        }
         const minCount = constraint.minCount ?? 1;
         const alreadySatisfied = neighbors.filter(n => board[n] === targetId).length;
         if (alreadySatisfied >= minCount) continue;
@@ -181,7 +199,8 @@ function backtrack(
   inventory: Record<string, number>,
   boardDef: BoardDefinition,
   elementDefs: Record<string, ElementDefinition>,
-  solutions: string[][]
+  solutions: string[][],
+  rng: RngFunction = Math.random
 ): void {
   // Optimisation : arrêter si on a déjà trouvé 2 solutions
   // (on cherche uniquement à détecter l'unicité : 0, 1 ou 2+)
@@ -204,7 +223,7 @@ function backtrack(
   // retourne toujours les clés dans l'ordre d'insertion en V8, ce qui fait
   // que le premier élément de l'inventaire se retrouve systématiquement
   // placé dans les cases de faible index).
-  for (const [elementId, count] of shuffleEntries(inventory)) {
+  for (const [elementId, count] of shuffleEntries(inventory, rng)) {
     if (count <= 0) continue;
 
     // Vérifier si le placement est valide (contraintes forbid)
@@ -219,7 +238,7 @@ function backtrack(
     // Élagage précoce : vérifier si les contraintes 'require' sont
     // encore satisfaisables avant de continuer la récursion
     if (canStillSatisfyRequireConstraints(board, inventory, boardDef, elementDefs)) {
-      backtrack(board, inventory, boardDef, elementDefs, solutions);
+      backtrack(board, inventory, boardDef, elementDefs, solutions, rng);
     }
 
     // Annuler le placement (backtrack)
@@ -274,6 +293,11 @@ function isCompleteSolutionValid(
             const hasForbiddenNeighbor = neighbors.some(n => board[n] === targetId);
             if (hasForbiddenNeighbor) return false;
           } else if (constraint.mode === 'require') {
+            // Si conditionnel, skip si le target n'existe pas sur le plateau
+            if (constraint.onlyIfTargetOnBoard) {
+              const targetOnBoard = board.some(el => el === targetId);
+              if (!targetOnBoard) break;
+            }
             const minCount = constraint.minCount ?? 1;
             const targetCount = neighbors.filter(n => board[n] === targetId).length;
             if (targetCount < minCount) return false;
@@ -300,6 +324,34 @@ function isCompleteSolutionValid(
         default:
           break;
       }
+    }
+  }
+
+  // ── Passe 1b : règles de placement (placementRules) ─────────────────────
+  for (let i = 0; i < board.length; i++) {
+    const elementId = board[i];
+    const elementDef = elementDefs[elementId];
+    if (!elementDef?.placementRules) continue;
+
+    for (const rule of elementDef.placementRules) {
+      let allowed: number[];
+      switch (rule.type) {
+        case 'center_only':
+          allowed = rule.allowedCells ?? boardDef.specialCells?.center ?? [];
+          break;
+        case 'edge_only':
+          allowed = rule.allowedCells ?? boardDef.specialCells?.edges ?? [];
+          break;
+        case 'corner_only':
+          allowed = rule.allowedCells ?? boardDef.specialCells?.corners ?? [];
+          break;
+        case 'cell_whitelist':
+          allowed = rule.allowedCells ?? [];
+          break;
+        default:
+          allowed = [];
+      }
+      if (!allowed.includes(i)) return false;
     }
   }
 

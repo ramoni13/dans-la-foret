@@ -20,18 +20,12 @@ import { notificationError } from '../../utils/haptics';
 
 interface FailModalProps {
   visible: boolean;
-  errorCount: number;
-  totalCells: number;
-  showErrorCount: boolean; // bonus count_errors activé
   onRetry: () => void;     // Ferme le modal, le joueur continue
   onGiveUp: () => void;    // Retour au menu
 }
 
 export const FailModal: React.FC<FailModalProps> = ({
   visible,
-  errorCount,
-  totalCells,
-  showErrorCount,
   onRetry,
   onGiveUp,
 }) => {
@@ -78,20 +72,6 @@ export const FailModal: React.FC<FailModalProps> = ({
     }
   }, [visible]);
 
-  // Message selon le nombre d'erreurs
-  const getMessage = () => {
-    if (!showErrorCount) return 'Ce n\'est pas tout à fait ça…';
-    if (errorCount === 1) return '1 case incorrecte !';
-    return `${errorCount} cases incorrectes !`;
-  };
-
-  const getEmoji = () => {
-    if (!showErrorCount) return '❌';
-    if (errorCount <= 2) return '😅';
-    if (errorCount <= 5) return '😬';
-    return '😰';
-  };
-
   return (
     <Modal
       visible={visible}
@@ -116,28 +96,9 @@ export const FailModal: React.FC<FailModalProps> = ({
             <Text style={styles.crossText}>✕</Text>
           </Animated.View>
 
-          <Text style={styles.emoji}>{getEmoji()}</Text>
+          <Text style={styles.emoji}>❌</Text>
           <Text style={styles.title}>Pas encore…</Text>
-          <Text style={styles.message}>{getMessage()}</Text>
-
-          {/* Barre de progression erreurs (si bonus actif) */}
-          {showErrorCount && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${Math.round(((totalCells - errorCount) / totalCells) * 100)}%`,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={styles.progressLabel}>
-                {totalCells - errorCount}/{totalCells} cases correctes
-              </Text>
-            </View>
-          )}
+          <Text style={styles.message}>Ce n'est pas tout à fait ça…</Text>
 
           {/* Actions */}
           <TouchableOpacity
@@ -211,29 +172,6 @@ const styles = StyleSheet.create({
     color: Colors.ui.textLight,
     textAlign: 'center',
     marginBottom: 20,
-  },
-  progressContainer: {
-    width: '100%',
-    marginBottom: 20,
-    alignItems: 'center',
-    gap: 6,
-  },
-  progressBar: {
-    width: '100%',
-    height: 10,
-    backgroundColor: '#F4433622',
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.forest.medium,
-    borderRadius: 5,
-  },
-  progressLabel: {
-    fontSize: 13,
-    color: Colors.ui.textLight,
-    fontWeight: '600',
   },
   btnRetry: {
     backgroundColor: Colors.forest.medium,

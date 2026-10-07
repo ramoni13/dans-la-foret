@@ -1,37 +1,209 @@
 // ============================================================
 // ELEMENTPALETTE — Palette de jetons disponibles
-// Affiche les jetons restants à placer avec leur compteur
-// Web : intègre DragGhost + useWebDrag pour le drag natif
+// Tap pour sélectionner un jeton → tap sur une case pour placer
+// Animations : spring scale-up + halo pulsant sur le jeton sélectionné
 // ============================================================
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  useWindowDimensions,
+  Animated,
+  Platform,
+} from 'react-native';
 
-import { ElementToken, TOKEN_SIZE, MobileDragCallbacks } from './ElementToken';
-import { DragGhost } from './DragGhost';
-import { useWebDrag } from '../../hooks/useWebDrag';
+import { ElementToken, TOKEN_SIZE } from './ElementToken';
 import { ElementRegistry } from '../../elements/ElementRegistry';
 import { TokenCount } from '../../core/models/Challenge';
 import { Colors } from '../../constants/colors';
+import { impactLight } from '../../utils/haptics';
 
 // Taille minimale en dessous de laquelle le jeton devient illisible
 const TOKEN_MIN_SIZE = 44;
-// Marges horizontales du conteneur (paddingHorizontal * 2 + scroll padding * 2)
+// Marges horizontales du conteneur
 const PALETTE_H_PADDING = (8 + 4) * 2;
-// Espace réservé au badge (+8 autour du jeton) + gap entre jetons
-const TOKEN_WRAPPER_EXTRA = 8; // selectedRing padding
+// Espace réservé au badge + gap entre jetons
+const TOKEN_WRAPPER_EXTRA = 8;
 const GAP = 12;
 
+// ── Composant wrapper animé pour chaque jeton ───────────────────────────────
+interface AnimatedTokenWrapperProps {
+  elementId: string;
+  elementColor: string;
+  isSelected: boolean;
+  isEmpty: boolean;
+  remaining: number;
+  tokenSize: number;
+  onSelect: () => void;
+  label: string;
+  elementDef: any;
+}
+
+const AnimatedTokenWrapper: React.FC<AnimatedTokenWrapperProps> = ({
+  elementId,
+  elementColor,
+  isSelected,
+  isEmpty,
+  remaining,
+  tokenSize,
+  onSelect,
+  label,
+  elementDef,
+}) => {
+  const wrapperSize = tokenSize + TOKEN_WRAPPER_EXTRA;
+
+  // ── Animations (Animated API RN — compatible web + mobile) ──
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const haloOpacity = useRef(new Animated.Value(0)).current;
+  const haloScale = useRef(new Animated.Value(1)).current;
+  const badgeScale = useRef(new Animated.Value(1)).current;
+  const haloLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  // Ref pour détecter le changement de remaining (bounce du badge)
+  const prevRemainingRef = useRef(remaining);
+
+  // ── Animation de sélection / désélection ────────────────────
+  useEffect(() => {
+    if (isSelected) {
+      // Scale-up spring
+      Animated.spring(scaleAnim, {
+        toValue: 1.15,
+        friction: 5,
+        tension: 200,
+        useNativeDriver: Platform.OS !== 'web',
+      }).start();
+
+      // Halo pulsant : apparaît puis pulse
+      haloOpacity.setValue(0);
+      haloScale.setValue(0.8);
+      Animated.timing(haloOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: Platform.OS !== 'web',
+      }).start();
+
+      haloLoopRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(haloScale, {
+            toValue: 1.25,
+            duration: 800,
+            useNativeDriver: Platform.OS !== 'web',
+          }),
+          Animated.timing(haloScale, {
+            toValue: 1.05,
+            duration: 800,
+            useNativeDriver: Platform.OS !== 'web',
+          }),
+        ])
+      );
+      haloLoopRef.current.start();
+    } else {
+      // Retour à la normale
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 180,
+        useNativeDriver: Platform.OS !== 'web',
+      }).start();
+
+      haloLoopRef.current?.stop();
+      haloLoopRef.current = null;
+      Animated.timing(haloOpacity, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: Platform.OS !== 'web',
+      }).start();
+    }
+
+    return () => { haloLoopRef.current?.stop(); };
+  }, [isSelected]);
+
+  // ── Bounce du badge quand remaining change (retour de jeton) ──
+  useEffect(() => {
+    if (remaining !== prevRemainingRef.current) {
+      prevRemainingRef.current = remaining;
+      Animated.sequence([
+        Animated.timing(badgeScale, {
+          toValue: 1.4,
+          duration: 120,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+        Animated.spring(badgeScale, {
+          toValue: 1,
+          friction: 4,
+          tension: 200,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+      ]).start();
+    }
+  }, [remaining]);
+
+  const handleTap = () => {
+    if (!isEmpty) {
+      impactLight();
+      onSelect();
+    }
+  };
+
+  return (
+    <View style={[styles.tokenWrapper, { width: wrapperSize }]}>
+      {/* Halo pulsant (derrière le jeton) */}
+      <Animated.View
+        style={[
+          styles.halo,
+          {
+            width: wrapperSize + 8,
+            height: wrapperSize + 8,
+            borderRadius: (wrapperSize + 8) / 2,
+            backgroundColor: elementColor + '25',
+            borderColor: elementColor + '50',
+            opacity: haloOpacity,
+            transform: [{ scale: haloScale }],
+          },
+        ]}
+        pointerEvents="none"
+      />
+
+      {/* Jeton avec scale animé */}
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <ElementToken
+          elementDef={elementDef}
+          isFixed={isEmpty}
+          size={tokenSize}
+          onTap={handleTap}
+        />
+      </Animated.View>
+
+      {/* Badge compteur avec bounce */}
+      <Animated.View style={[
+        styles.badge,
+        {
+          backgroundColor: isEmpty ? Colors.ui.border : elementColor,
+          transform: [{ scale: badgeScale }],
+        },
+      ]}>
+        <Text style={styles.badgeText}>{remaining}</Text>
+      </Animated.View>
+
+      <Text style={[styles.label, isEmpty && styles.labelEmpty]} numberOfLines={1}>
+        {label}
+      </Text>
+
+      {isEmpty && <View style={[styles.emptyOverlay, { borderRadius: tokenSize / 2 }]} />}
+    </View>
+  );
+};
+
+// ── Composant principal ─────────────────────────────────────────────────────
 interface ElementPaletteProps {
   availableTokens: TokenCount[];
   playerBoard: (string | null)[];
-  fixedCells: Set<number>;          // ← cases fixes à exclure du décompte
+  fixedCells: Set<number>;
   selectedElement: string | null;
   onSelectElement: (elementId: string | null) => void;
-  onDragStart: (elementId: string) => void;
-  onDragMove: (x: number, y: number) => void;
-  onDragEnd: (x: number, y: number) => void;
-  mobileDragCallbacks?: MobileDragCallbacks; // ghost natif mobile
 }
 
 export const ElementPalette: React.FC<ElementPaletteProps> = ({
@@ -40,38 +212,19 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
   fixedCells,
   selectedElement,
   onSelectElement,
-  onDragStart,
-  onDragMove,
-  onDragEnd,
-  mobileDragCallbacks,
 }) => {
-  const isWeb = Platform.OS === 'web';
   const { width: screenWidth } = useWindowDimensions();
 
-  // Calcule la taille de jeton adaptée pour que tous les jetons tiennent
-  // sans scroll horizontal sur l'écran courant.
   const tokenSize = React.useMemo(() => {
     const tokenCount = availableTokens.length;
     if (tokenCount === 0) return TOKEN_SIZE;
-    // Largeur disponible = écran - marges palette
     const availableWidth = screenWidth - PALETTE_H_PADDING;
-    // Chaque wrapper = taille + TOKEN_WRAPPER_EXTRA, séparés par GAP
-    // totalWidth = tokenCount * (size + TOKEN_WRAPPER_EXTRA) + (tokenCount - 1) * GAP
     const maxSize = Math.floor(
       (availableWidth - (tokenCount - 1) * GAP) / tokenCount - TOKEN_WRAPPER_EXTRA
     );
     return Math.max(TOKEN_MIN_SIZE, Math.min(TOKEN_SIZE, maxSize));
   }, [availableTokens.length, screenWidth]);
 
-  // ── Ghost web ───────────────────────────────────────────────
-  const { webDragState, startWebDrag } = useWebDrag({
-    onDragStart,
-    onDragMove,
-    onDragEnd,
-  });
-
-  // Ne compter que les jetons posés par le JOUEUR (cases non-fixes)
-  // Les fixedPlacements sont déjà sur le plateau et ne viennent pas de la palette
   const placedCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     playerBoard.forEach((el, i) => {
@@ -84,16 +237,6 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Ghost web : rendu dans document.body via portail */}
-      {isWeb && (
-        <DragGhost
-          elementId={webDragState.elementId}
-          x={webDragState.ghostX}
-          y={webDragState.ghostY}
-          visible={webDragState.isDragging}
-        />
-      )}
-
       <Text style={styles.title}>Jetons disponibles</Text>
       <ScrollView
         horizontal
@@ -104,50 +247,24 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
           const elementDef = ElementRegistry[elementId];
           if (!elementDef) return null;
 
-          const placed     = placedCounts[elementId] ?? 0;
-          const remaining  = count - placed;
+          const placed    = placedCounts[elementId] ?? 0;
+          const remaining = count - placed;
           const isSelected = selectedElement === elementId;
           const isEmpty    = remaining <= 0;
 
-          // Styles dynamiques basés sur tokenSize calculé
-          const wrapperSize = tokenSize + TOKEN_WRAPPER_EXTRA;
-          const ringStyle = {
-            position: 'absolute' as const,
-            top: -4,
-            left: -4,
-            width: wrapperSize,
-            height: wrapperSize,
-            borderRadius: wrapperSize / 2,
-            borderWidth: 3,
-            borderColor: elementDef.color,
-            zIndex: 0,
-          };
-
           return (
-            <View key={elementId} style={[styles.tokenWrapper, { width: wrapperSize }]}>
-              {isSelected && <View style={ringStyle} />}
-              <ElementToken
-                elementDef={elementDef}
-                isFixed={isEmpty}
-                size={tokenSize}
-                onDragStart={!isEmpty ? onDragStart : undefined}
-                onDragMove={!isEmpty ? onDragMove : undefined}
-                onDragEnd={!isEmpty ? onDragEnd : undefined}
-                mobileDragCallbacks={!isWeb && !isEmpty ? mobileDragCallbacks : undefined}
-                onWebMouseDown={isWeb && !isEmpty ? startWebDrag : undefined}
-                onTap={!isEmpty ? () => onSelectElement(isSelected ? null : elementId) : undefined}
-              />
-              <View style={[
-                styles.badge,
-                { backgroundColor: isEmpty ? Colors.ui.border : elementDef.color },
-              ]}>
-                <Text style={styles.badgeText}>{remaining}</Text>
-              </View>
-              <Text style={[styles.label, isEmpty && styles.labelEmpty]} numberOfLines={1}>
-                {elementDef.label}
-              </Text>
-              {isEmpty && <View style={[styles.emptyOverlay, { borderRadius: tokenSize / 2 }]} />}
-            </View>
+            <AnimatedTokenWrapper
+              key={elementId}
+              elementId={elementId}
+              elementColor={elementDef.color}
+              isSelected={isSelected}
+              isEmpty={isEmpty}
+              remaining={remaining}
+              tokenSize={tokenSize}
+              onSelect={() => onSelectElement(isSelected ? null : elementId)}
+              label={elementDef.label}
+              elementDef={elementDef}
+            />
           );
         })}
       </ScrollView>
@@ -166,9 +283,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
-    elevation: 2,         // ← réduit pour ne pas écraser le jeton dragé (elevation 999)
-    zIndex: 2,            // ← au-dessus du plateau (1) mais sous le jeton dragé (999)
-    overflow: 'visible',  // ← laisse le jeton sortir vers le haut pendant le drag
+    elevation: 2,
+    zIndex: 2,
   },
   title: {
     fontSize: 11,
@@ -176,22 +292,27 @@ const styles = StyleSheet.create({
     color: Colors.ui.textLight,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 14, // ← plus d'espace pour que la pastille ne soit pas coupée
+    marginBottom: 14,
     marginLeft: 4,
   },
   scroll: {
     flexDirection: 'row',
     alignItems: 'center',
-    // gap est passé dynamiquement via style inline
     paddingHorizontal: 4,
-    paddingTop: 8, // ← espace pour la pastille en haut
+    paddingTop: 12, // espace pour le halo
   },
   tokenWrapper: {
     alignItems: 'center',
     position: 'relative',
-    // width est passé dynamiquement (tokenSize + TOKEN_WRAPPER_EXTRA)
-    overflow: 'visible',  // ← le jeton doit pouvoir sortir du wrapper pendant le drag
+    overflow: 'visible',
     zIndex: 100,
+  },
+  halo: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    borderWidth: 2,
+    zIndex: -1,
   },
   badge: {
     position: 'absolute',
@@ -223,7 +344,6 @@ const styles = StyleSheet.create({
   emptyOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(255,255,255,0.6)',
-    // borderRadius est passé dynamiquement (tokenSize / 2)
-    pointerEvents: 'none' as any, // ne bloque pas le drag même quand vide
+    pointerEvents: 'none' as any,
   },
 });

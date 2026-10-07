@@ -43,6 +43,8 @@ interface VictoryModalProps {
   worldRecord?: WorldRecord | null;
   /** true = le joueur vient de battre (ou créer) le record mondial */
   isNewWorldRecord?: boolean;
+  /** Nom de l'ancien détenteur du record (null = premier record jamais posé) */
+  previousRecordHolder?: string | null;
 }
 
 // Libelles pour chaque niveau
@@ -76,6 +78,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   onBadgeQueueEmpty,
   worldRecord = null,
   isNewWorldRecord = false,
+  previousRecordHolder = null,
 }) => {
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -144,6 +147,11 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               <View style={styles.wrBannerText}>
                 <Text style={styles.wrBannerTitle}>Nouveau record mondial !</Text>
                 <Text style={styles.wrBannerTime}>{formatTime(elapsedTime)}</Text>
+                {previousRecordHolder && (
+                  <Text style={styles.wrPreviousHolder}>
+                    Record battu de {previousRecordHolder}
+                  </Text>
+                )}
               </View>
             </View>
           ) : worldRecord ? (
@@ -316,6 +324,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     color: Colors.forest.dark,
+  },
+  wrPreviousHolder: {
+    fontSize: 11,
+    color: Colors.badges.or,
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   wrInfo: {
     backgroundColor: Colors.ui.background,

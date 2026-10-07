@@ -258,6 +258,55 @@ export function evaluateBadges(ctx: GameContext): string[] {
   return newBadges;
 }
 
+// ── Contexte spécifique au défi journalier ────────────────────────────────────
+
+export interface DailyGameContext {
+  dailyChallengeStreak: number;   // Jours consécutifs de défis journaliers réussis (APRÈS mise à jour)
+  rank: number;                    // Classement du joueur dans le leaderboard journalier (1 = premier)
+  earnedBadges: string[];          // Badges déjà obtenus (AVANT cette partie)
+}
+
+/**
+ * Évalue les badges liés au défi journalier.
+ * Appelé après une victoire sur le défi journalier.
+ *
+ * @param ctx Contexte du défi journalier terminé
+ * @returns Liste des badgeId à décerner (peut être vide)
+ */
+export function evaluateDailyBadges(ctx: DailyGameContext): string[] {
+  const earned = new Set(ctx.earnedBadges);
+  const newBadges: string[] = [];
+
+  function award(badgeId: string) {
+    if (!earned.has(badgeId)) {
+      earned.add(badgeId);
+      newBadges.push(badgeId);
+    }
+  }
+
+  // Premier défi journalier réussi (streak >= 1)
+  if (ctx.dailyChallengeStreak >= 1) {
+    award('daily_first');
+  }
+
+  // 7 jours consécutifs
+  if (ctx.dailyChallengeStreak >= 7) {
+    award('daily_week');
+  }
+
+  // 30 jours consécutifs
+  if (ctx.dailyChallengeStreak >= 30) {
+    award('daily_month');
+  }
+
+  // #1 mondial
+  if (ctx.rank === 1) {
+    award('daily_champion');
+  }
+
+  return newBadges;
+}
+
 // ── Calcul de la progression vers les badges non encore obtenus ───────────────
 
 export interface BadgeProgress {

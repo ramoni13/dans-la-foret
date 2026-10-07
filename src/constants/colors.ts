@@ -8,16 +8,17 @@ export const Colors = {
     bark: '#5C3D1E',
   },
 
-  // États des cases pendant le drag & drop
+  // États des cases
   cell: {
     empty: '#F5F0E8', // Case vide
-    valid: '#4CAF50', // Vert — placement valide (solution[i] === elementId)
+    valid: '#2E7D32', // Vert foncé — case valide (bonus highlight)
+    validGlow: '#66BB6A', // Vert clair — halo / overlay de la pulsation cases valides
     invalid: '#F44336', // Rouge — placement invalide
     hint: '#FF9800', // Orange — case indice bonus
     fixed: '#B0BEC5', // Gris bleuté — jeton fixe non déplaçable
     selected: '#2196F3', // Bleu — case sélectionnée
-    correct: '#66BB6A', // Vert clair — case correcte (bonus vérification)
-    wrong: '#EF5350', // Rouge clair — case incorrecte (bonus vérification)
+    wrong: '#EF5350', // Rouge clair — case en erreur (bonus Instinct)
+    wrongGlow: '#F44336', // Rouge — halo pulsation erreur Instinct
   },
 
   // Couleurs des éléments

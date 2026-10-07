@@ -20,6 +20,11 @@ export interface ConstraintDefinition {
   scope: 'neighbor' | 'board'; // Voisin direct / Tout le plateau
   minCount?: number;           // Minimum requis (ex: chien: 1 voisin chien)
   //
+  // Contrainte conditionnelle : si true, la contrainte 'require' n'est
+  // active que si targetElementId est déjà présent quelque part sur le plateau.
+  // Ex : ours doit être voisin de ruche, SEULEMENT si une ruche existe.
+  onlyIfTargetOnBoard?: boolean;
+  //
   // Champ additionnel pour 'neighbor_specific_chain' :
   // Si chainTargetElementId est présent sur le plateau, cet élément
   // doit aussi en être voisin (contrainte conditionnelle).

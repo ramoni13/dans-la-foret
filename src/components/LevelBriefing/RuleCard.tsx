@@ -17,6 +17,9 @@ import { ConnectedGroupAnim } from './RuleAnimations/ConnectedGroupAnim';
 import { PairedAnim } from './RuleAnimations/PairedAnim';
 import { ChainAnim } from './RuleAnimations/ChainAnim';
 import { SingletonAnim } from './RuleAnimations/SingletonAnim';
+import { RequireAllNeighborAnim } from './RuleAnimations/RequireAllNeighborAnim';
+import { PairedExclusiveAnim } from './RuleAnimations/PairedExclusiveAnim';
+import { CenterOnlyAnim } from './RuleAnimations/CenterOnlyAnim';
 
 interface RuleCardProps {
   rule: RuleCardData;
@@ -30,16 +33,22 @@ function RuleAnimation({ rule, a11yLabel }: { rule: RuleCardData; a11yLabel: str
       return <NoSameNeighborAnim rule={rule} accessibilityLabel={a11yLabel} />;
     case 'require_neighbor':
       return <RequireNeighborAnim rule={rule} accessibilityLabel={a11yLabel} />;
+    case 'require_all_neighbor':
+      return <RequireAllNeighborAnim rule={rule} accessibilityLabel={a11yLabel} />;
     case 'forbid_neighbor':
       return <ForbidNeighborAnim rule={rule} accessibilityLabel={a11yLabel} />;
     case 'connected_group':
       return <ConnectedGroupAnim rule={rule} accessibilityLabel={a11yLabel} />;
     case 'paired':
       return <PairedAnim rule={rule} accessibilityLabel={a11yLabel} />;
+    case 'paired_exclusive':
+      return <PairedExclusiveAnim rule={rule} accessibilityLabel={a11yLabel} />;
     case 'chain':
       return <ChainAnim rule={rule} accessibilityLabel={a11yLabel} />;
     case 'singleton':
       return <SingletonAnim rule={rule} accessibilityLabel={a11yLabel} />;
+    case 'center_only':
+      return <CenterOnlyAnim rule={rule} accessibilityLabel={a11yLabel} />;
     default:
       return null;
   }

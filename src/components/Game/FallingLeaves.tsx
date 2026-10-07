@@ -1,24 +1,26 @@
 // ============================================================
-// FALINGLEAVES — Feuilles qui tombent en arrière-plan du jeu
+// FALINGLEAVES — Particules en arrière-plan du jeu
+// Thèmes : feuilles (défaut), papillons, oiseaux
 // 100% Animated natif, aucune dépendance externe
-// Rendu en position absolute au niveau GestureHandlerRootView
-// pour couvrir tout l'écran depuis le haut (y compris safe area)
 // ============================================================
 
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet, Dimensions, Platform } from 'react-native';
+import { usePlayerStore, VisualEffect } from '../../store/playerStore';
 
 const native = Platform.OS !== 'web';
 
-// On utilise 'screen' pour avoir les dimensions physiques réelles
-// (inclut la status bar et la barre de navigation)
-let SCREEN_W = Dimensions.get('screen').width;
-let SCREEN_H = Dimensions.get('screen').height;
+// ── Emojis par thème ─────────────────────────────────────────
+const THEME_EMOJIS: Record<VisualEffect, string[]> = {
+  leaves:      ['🍃', '🍂', '🌿', '🍁'],
+  butterflies: ['🦋', '🦋', '🌸', '🪻'],
+  birds:       ['🐦', '🕊️', '🐦‍⬛', '🪶'],
+  none:        [],
+};
 
-const LEAF_EMOJIS = ['🍃', '🍂', '🌿', '🍁'];
-const LEAF_COUNT  = native ? 12 : 8;
+const PARTICLE_COUNT = native ? 12 : 8;
 
-interface Leaf {
+interface Particle {
   x:       Animated.Value;
   y:       Animated.Value;
   rotate:  Animated.Value;
@@ -30,14 +32,14 @@ interface Leaf {
   duration: number;
 }
 
-function createLeaf(i: number): Leaf {
-  const { width } = Dimensions.get('screen'); // dimensions physiques réelles
+function createParticle(i: number, emojis: string[]): Particle {
+  const { width } = Dimensions.get('screen');
   return {
     x:        new Animated.Value(0),
     y:        new Animated.Value(-60),
     rotate:   new Animated.Value(0),
     opacity:  new Animated.Value(0),
-    emoji:    LEAF_EMOJIS[i % LEAF_EMOJIS.length],
+    emoji:    emojis[i % emojis.length],
     size:     native ? 20 + Math.floor(Math.random() * 14) : 16 + Math.floor(Math.random() * 12),
     startX:   Math.random() * width,
     delay:    i * 1200 + Math.random() * 800,
@@ -45,45 +47,44 @@ function createLeaf(i: number): Leaf {
   };
 }
 
-function animateLeaf(leaf: Leaf, onDone: () => void) {
-  const { width, height } = Dimensions.get('screen'); // 'screen' = dimensions physiques réelles
+function animateParticle(particle: Particle, onDone: () => void) {
+  const { width, height } = Dimensions.get('screen');
   const swayX = (Math.random() - 0.5) * 100;
-  // Recalcule startX aléatoire à chaque cycle
-  leaf.startX = Math.random() * width;
+  particle.startX = Math.random() * width;
 
-  leaf.x.setValue(0);
-  leaf.y.setValue(-80); // démarre au-dessus du haut de l'écran
-  leaf.rotate.setValue(0);
-  leaf.opacity.setValue(0);
+  particle.x.setValue(0);
+  particle.y.setValue(-80);
+  particle.rotate.setValue(0);
+  particle.opacity.setValue(0);
 
   Animated.sequence([
-    Animated.delay(leaf.delay),
+    Animated.delay(particle.delay),
     Animated.parallel([
-      Animated.timing(leaf.opacity, {
+      Animated.timing(particle.opacity, {
         toValue: native ? 0.9 : 0.75,
         duration: 500,
         useNativeDriver: native,
       }),
-      Animated.timing(leaf.y, {
-        toValue: height + 100, // tombe jusqu'en dessous du bas de l'écran
-        duration: leaf.duration,
+      Animated.timing(particle.y, {
+        toValue: height + 100,
+        duration: particle.duration,
         useNativeDriver: native,
       }),
       Animated.sequence([
-        Animated.timing(leaf.x, { toValue: swayX,      duration: leaf.duration / 3, useNativeDriver: native }),
-        Animated.timing(leaf.x, { toValue: -swayX / 2, duration: leaf.duration / 3, useNativeDriver: native }),
-        Animated.timing(leaf.x, { toValue: swayX / 3,  duration: leaf.duration / 3, useNativeDriver: native }),
+        Animated.timing(particle.x, { toValue: swayX,      duration: particle.duration / 3, useNativeDriver: native }),
+        Animated.timing(particle.x, { toValue: -swayX / 2, duration: particle.duration / 3, useNativeDriver: native }),
+        Animated.timing(particle.x, { toValue: swayX / 3,  duration: particle.duration / 3, useNativeDriver: native }),
       ]),
-      Animated.timing(leaf.rotate, {
+      Animated.timing(particle.rotate, {
         toValue: 4,
-        duration: leaf.duration,
+        duration: particle.duration,
         useNativeDriver: native,
       }),
       Animated.sequence([
-        Animated.delay(leaf.duration * 0.8),
-        Animated.timing(leaf.opacity, {
+        Animated.delay(particle.duration * 0.8),
+        Animated.timing(particle.opacity, {
           toValue: 0,
-          duration: leaf.duration * 0.2,
+          duration: particle.duration * 0.2,
           useNativeDriver: native,
         }),
       ]),
@@ -92,19 +93,32 @@ function animateLeaf(leaf: Leaf, onDone: () => void) {
 }
 
 export function FallingLeaves() {
-  const leaves = useRef<Leaf[]>(
-    Array.from({ length: LEAF_COUNT }, (_, i) => createLeaf(i))
+  const visualEffect = usePlayerStore(s => s.visualEffect);
+
+  const emojis = THEME_EMOJIS[visualEffect] ?? THEME_EMOJIS.leaves;
+  const particles = useRef<Particle[]>(
+    emojis.length > 0
+      ? Array.from({ length: PARTICLE_COUNT }, (_, i) => createParticle(i, emojis))
+      : []
   ).current;
 
+  // Re-assign emojis when theme changes (within same ref lifecycle)
   useEffect(() => {
-    // Lance chaque feuille en boucle infinie avec un délai initial échelonné
+    if (emojis.length === 0) return;
+    particles.forEach((p, i) => {
+      p.emoji = emojis[i % emojis.length];
+    });
+  }, [visualEffect]);
+
+  useEffect(() => {
+    if (emojis.length === 0 || particles.length === 0) return;
+
     const timeouts: ReturnType<typeof setTimeout>[] = [];
-    leaves.forEach((leaf, i) => {
-      // Délai initial échelonné pour éviter que toutes les feuilles partent en même temps
+    particles.forEach((particle, i) => {
       const initialDelay = i * 600;
       const t = setTimeout(() => {
-        leaf.delay = 0; // Pas de délai supplémentaire après le premier cycle
-        const loop = () => animateLeaf(leaf, loop);
+        particle.delay = 0;
+        const loop = () => animateParticle(particle, loop);
         loop();
       }, initialDelay);
       timeouts.push(t);
@@ -112,30 +126,33 @@ export function FallingLeaves() {
 
     return () => {
       timeouts.forEach(clearTimeout);
-      leaves.forEach(leaf => {
-        leaf.x.stopAnimation();
-        leaf.y.stopAnimation();
-        leaf.rotate.stopAnimation();
-        leaf.opacity.stopAnimation();
+      particles.forEach(p => {
+        p.x.stopAnimation();
+        p.y.stopAnimation();
+        p.rotate.stopAnimation();
+        p.opacity.stopAnimation();
       });
     };
   }, []);
 
+  // Si désactivé, ne rien rendre
+  if (visualEffect === 'none' || emojis.length === 0) return null;
+
   return (
     <View style={styles.container} pointerEvents="none">
-      {leaves.map((leaf, i) => (
+      {particles.map((particle, i) => (
         <Animated.Text
           key={i}
           style={[
-            styles.leaf,
+            styles.particle,
             {
-              left:     leaf.startX,
-              fontSize: leaf.size,
-              opacity:  leaf.opacity,
+              left:     particle.startX,
+              fontSize: particle.size,
+              opacity:  particle.opacity,
               transform: [
-                { translateX: leaf.x },
-                { translateY: leaf.y },
-                { rotate: leaf.rotate.interpolate({
+                { translateX: particle.x },
+                { translateY: particle.y },
+                { rotate: particle.rotate.interpolate({
                   inputRange:  [0, 3],
                   outputRange: ['0deg', '540deg'],
                 })},
@@ -143,7 +160,7 @@ export function FallingLeaves() {
             },
           ]}
         >
-          {leaf.emoji}
+          {particle.emoji}
         </Animated.Text>
       ))}
     </View>
@@ -152,13 +169,11 @@ export function FallingLeaves() {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
-    // zIndex 5 : au-dessus du fond/plateau mais sous les modals et boutons
-    // pointerEvents="none" (sur le composant) empêche tout blocage d'interaction
+    ...StyleSheet.absoluteFill,
     zIndex: 5,
-    elevation: 5, // Android
+    elevation: 5,
   },
-  leaf: {
+  particle: {
     position: 'absolute',
     top: 0,
   },

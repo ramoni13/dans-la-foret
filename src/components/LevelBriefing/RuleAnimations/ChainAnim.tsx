@@ -1,7 +1,9 @@
 // ============================================================
-// ChainAnim — bucheron → flèche → tas_buches (→ chalet conditionnel)
+// ChainAnim — element1 → fleche → element2 (→ element3 optionnel)
+// Supporte 2 ou 3 elements dans rule.elements :
+//   2 elements : bucheron → bûches (niveau 11)
+//   3 elements : bûches → chalet (niveau 12+)
 // API Animated (legacy) — compatible web + native
-// Cycle : 2200ms
 // ============================================================
 
 import React, { useEffect, useRef } from 'react';
@@ -18,10 +20,11 @@ const native = Platform.OS !== 'web';
 const TOKEN_SIZE = 42;
 
 export const ChainAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
-  const [e1Id, e2Id] = rule.elements;
-  const def1    = ElementRegistry[e1Id];   // bucheron
-  const def2    = ElementRegistry[e2Id];   // tas_buches
-  const defChal = ElementRegistry['chalet'];
+  const [e1Id, e2Id, e3Id] = rule.elements;
+  const def1    = ElementRegistry[e1Id];   // bucheron (or tas_buches)
+  const def2    = ElementRegistry[e2Id];   // tas_buches (or chalet)
+  // 3e element optionnel : si present dans la regle, on l'affiche
+  const defChal = e3Id ? ElementRegistry[e3Id] : null;
 
   const arrow1Op  = useRef(new Animated.Value(0)).current;
   const tasGlowOp = useRef(new Animated.Value(0)).current;
@@ -30,42 +33,52 @@ export const ChainAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
   const chalOp    = useRef(new Animated.Value(0)).current;
   const chalGlowOp = useRef(new Animated.Value(0)).current;
 
+  const hasThird = !!defChal;
+
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        // Phase 1 (0→500) : flèche 1
-        Animated.timing(arrow1Op, { toValue: 1, duration: 400, useNativeDriver: native }),
-        // Phase 2 (500→800) : tas glow
-        Animated.parallel([
-          Animated.timing(tasGlowOp, { toValue: 1,   duration: 200, useNativeDriver: native }),
-          Animated.timing(tasScale,  { toValue: 1.1, duration: 200, useNativeDriver: native }),
-        ]),
-        Animated.parallel([
-          Animated.timing(tasGlowOp, { toValue: 0, duration: 100, useNativeDriver: native }),
-          Animated.timing(tasScale,  { toValue: 1, duration: 100, useNativeDriver: native }),
-        ]),
-        // Phase 3 (800→1200) : flèche 2 + chalet apparaissent (conditionnels, opacity 0.6)
+    const steps: Animated.CompositeAnimation[] = [
+      // Phase 1 : fleche 1
+      Animated.timing(arrow1Op, { toValue: 1, duration: 400, useNativeDriver: native }),
+      // Phase 2 : element 2 glow
+      Animated.parallel([
+        Animated.timing(tasGlowOp, { toValue: 1,   duration: 200, useNativeDriver: native }),
+        Animated.timing(tasScale,  { toValue: 1.1, duration: 200, useNativeDriver: native }),
+      ]),
+      Animated.parallel([
+        Animated.timing(tasGlowOp, { toValue: 0, duration: 100, useNativeDriver: native }),
+        Animated.timing(tasScale,  { toValue: 1, duration: 100, useNativeDriver: native }),
+      ]),
+    ];
+
+    if (hasThird) {
+      // Phase 3 : fleche 2 + 3e element apparaissent
+      steps.push(
         Animated.parallel([
           Animated.timing(arrow2Op, { toValue: 0.6, duration: 400, useNativeDriver: native }),
           Animated.timing(chalOp,   { toValue: 0.6, duration: 400, useNativeDriver: native }),
         ]),
-        // Phase 4 (1200→1800) : chalet glow
-        Animated.parallel([
-          Animated.timing(chalGlowOp, { toValue: 0.7, duration: 300, useNativeDriver: native }),
-        ]),
+        // Phase 4 : 3e element glow
+        Animated.timing(chalGlowOp, { toValue: 0.7, duration: 300, useNativeDriver: native }),
         Animated.timing(chalGlowOp, { toValue: 0, duration: 200, useNativeDriver: native }),
-        // Phase 5 (1800→2200) : pause + reset
-        Animated.parallel([
-          Animated.timing(arrow1Op,  { toValue: 0, duration: 100, useNativeDriver: native }),
-          Animated.timing(arrow2Op,  { toValue: 0, duration: 100, useNativeDriver: native }),
-          Animated.timing(chalOp,    { toValue: 0, duration: 100, useNativeDriver: native }),
-        ]),
-        Animated.delay(300),
-      ])
-    );
+      );
+    }
+
+    // Phase finale : reset + pause
+    const resets = [
+      Animated.timing(arrow1Op, { toValue: 0, duration: 100, useNativeDriver: native }),
+    ];
+    if (hasThird) {
+      resets.push(
+        Animated.timing(arrow2Op, { toValue: 0, duration: 100, useNativeDriver: native }),
+        Animated.timing(chalOp,   { toValue: 0, duration: 100, useNativeDriver: native }),
+      );
+    }
+    steps.push(Animated.parallel(resets), Animated.delay(300));
+
+    const loop = Animated.loop(Animated.sequence(steps));
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [hasThird]);
 
   if (!def1 || !def2) return null;
 
@@ -81,7 +94,7 @@ export const ChainAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
         <Text style={styles.arrow}>→</Text>
       </Animated.View>
 
-      {/* Tas de bûches */}
+      {/* Bûches */}
       <Animated.View style={{ transform: [{ scale: tasScale }] }}>
         <View style={[styles.token, { backgroundColor: def2.color + '20', borderColor: def2.color + '60' }]}>
           <Image source={def2.icon} style={styles.image} resizeMode="contain" />

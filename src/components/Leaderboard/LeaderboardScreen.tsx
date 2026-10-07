@@ -18,16 +18,19 @@ import {
 } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { LeaderboardEntry, subscribeLeaderboard } from '../../services/leaderboardService';
+import { RecordHolderEntry, subscribeRecordHolders } from '../../services/worldRecordService';
+import { computePlayerLevel } from '../../services/playerService';
 import { auth } from '../../services/firebase';
 
 // ── Onglets ──────────────────────────────────────────────────────────────────
 
-type Tab = 'global' | 'badges' | 'seeds';
+type Tab = 'global' | 'badges' | 'seeds' | 'records';
 
 const TABS: { key: Tab; label: string; emoji: string }[] = [
   { key: 'global',  label: 'Niveau',   emoji: '🌲' },
   { key: 'badges',  label: 'Badges',   emoji: '🏅' },
   { key: 'seeds',   label: 'Graines',  emoji: '🌱' },
+  { key: 'records', label: 'Records',  emoji: '🏆' },
 ];
 
 // ── Médailles podium ─────────────────────────────────────────────────────────
@@ -63,7 +66,9 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
           {entry.username}{isMe ? ' (toi)' : ''}
         </Text>
         <Text style={styles.subinfo}>
-          Niv. {entry.level} · {entry.completedCount} défis
+          {tab === 'records'
+            ? `🏆 ${(entry as any).recordCount ?? 0} records mondiaux`
+            : `Niv. ${entry.level} · ${entry.completedCount} défis`}
         </Text>
       </View>
 
@@ -80,6 +85,9 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
         {tab === 'seeds' && (
           <Text style={styles.valueText}>🌱 {entry.seeds}</Text>
         )}
+        {tab === 'records' && (
+          <Text style={styles.valueText}>🏆 {(entry as any).recordCount ?? 0}</Text>
+        )}
       </View>
     </View>
   );
@@ -90,40 +98,56 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
 export const LeaderboardScreen: React.FC = () => {
   const [tab, setTab]             = useState<Tab>('global');
   const [entries, setEntries]     = useState<LeaderboardEntry[]>([]);
+  const [recordHolders, setRecordHolders] = useState<RecordHolderEntry[]>([]);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const myUid = auth.currentUser?.uid ?? null;
 
-  // Tri selon l'onglet actif (les données brutes arrivent déjà triées par score,
-  // mais on les retrie côté client pour les sous-onglets Badges et Graines)
+  // Tri selon l'onglet actif
+  // Le niveau est recalculé côté client → on retrie systématiquement
   const sorted = useMemo((): LeaderboardEntry[] => {
+    if (tab === 'records') return []; // géré séparément via recordHolders
     const copy = [...entries];
-    if (tab === 'badges') {
+    if (tab === 'global') {
+      // Retrier par niveau (recalculé) > badges > graines
+      copy.sort((a, b) => b.level - a.level || b.badgeCount - a.badgeCount || b.seeds - a.seeds);
+    } else if (tab === 'badges') {
       copy.sort((a, b) => b.badgeCount - a.badgeCount || b.seeds - a.seeds || b.level - a.level);
     } else if (tab === 'seeds') {
       copy.sort((a, b) => b.seeds - a.seeds || b.badgeCount - a.badgeCount || b.level - a.level);
     }
-    // tab === 'global' : déjà trié par score desc depuis Firestore
     return copy;
   }, [entries, tab]);
 
   // Ma position dans le classement courant
   const myRank = useMemo(() => {
     if (!myUid) return null;
+    if (tab === 'records') {
+      const idx = recordHolders.findIndex(e => e.userId === myUid);
+      return idx === -1 ? null : idx + 1;
+    }
     const idx = sorted.findIndex(e => e.userId === myUid);
     return idx === -1 ? null : idx + 1;
-  }, [sorted, myUid]);
+  }, [sorted, recordHolders, tab, myUid]);
 
-  // Abonnement Firestore temps-réel
+  // Abonnement Firestore temps-réel (leaderboard + records)
   useEffect(() => {
     setLoading(true);
-    const unsub = subscribeLeaderboard(100, data => {
-      setEntries(data);
+    const unsubLeaderboard = subscribeLeaderboard(100, data => {
+      // Recalculer le niveau côté client pour corriger les entrées Firestore obsolètes
+      const normalized = data.map(e => ({
+        ...e,
+        level: computePlayerLevel(e.completedCount),
+      }));
+      setEntries(normalized);
       setLoading(false);
       setRefreshing(false);
     });
-    return () => unsub();
+    const unsubRecords = subscribeRecordHolders(data => {
+      setRecordHolders(data);
+    });
+    return () => { unsubLeaderboard(); unsubRecords(); };
   }, []);
 
   const handleRefresh = () => {
@@ -132,8 +156,25 @@ export const LeaderboardScreen: React.FC = () => {
     setTimeout(() => setRefreshing(false), 1500);
   };
 
+  // Données affichées dans la FlatList (leaderboard ou records convertis)
+  const displayData = useMemo((): LeaderboardEntry[] => {
+    if (tab !== 'records') return sorted;
+    // Convertir RecordHolderEntry → LeaderboardEntry pour réutiliser LeaderboardRow
+    return recordHolders.map(rh => ({
+      userId: rh.userId,
+      username: rh.username,
+      level: 0,
+      badgeCount: 0,
+      seeds: 0,
+      completedCount: 0,
+      score: 0,
+      recordCount: rh.recordCount,
+    } as LeaderboardEntry & { recordCount: number }));
+  }, [tab, sorted, recordHolders]);
+
   // ── Rendu header fixe (ma position) ──────────────────────────────────────
   const myEntry = myUid ? entries.find(e => e.userId === myUid) : null;
+  const myRecordEntry = myUid ? recordHolders.find(e => e.userId === myUid) : null;
 
   return (
     <View style={styles.container}>
@@ -154,14 +195,16 @@ export const LeaderboardScreen: React.FC = () => {
       </View>
 
       {/* Ma position */}
-      {myRank && myEntry && (
+      {myRank != null && (tab === 'records' ? myRecordEntry : myEntry) && (
         <View style={styles.myRankBar}>
           <Text style={styles.myRankText}>
             Ta position : <Text style={styles.myRankValue}>#{myRank}</Text>
             {'  '}·{'  '}
-            Niv. {myEntry.level}{'  '}
-            🏅 {myEntry.badgeCount}{'  '}
-            🌱 {myEntry.seeds}
+            {tab === 'records' ? (
+              `🏆 ${myRecordEntry?.recordCount ?? 0} records`
+            ) : (
+              `Niv. ${myEntry!.level}  🏅 ${myEntry!.badgeCount}  🌱 ${myEntry!.seeds}`
+            )}
           </Text>
         </View>
       )}
@@ -172,7 +215,7 @@ export const LeaderboardScreen: React.FC = () => {
           <ActivityIndicator size="large" color={Colors.forest.medium} />
           <Text style={styles.loadingText}>Chargement du classement…</Text>
         </View>
-      ) : sorted.length === 0 ? (
+      ) : displayData.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyEmoji}>🌲</Text>
           <Text style={styles.emptyText}>Aucun joueur pour l'instant.</Text>
@@ -180,7 +223,7 @@ export const LeaderboardScreen: React.FC = () => {
         </View>
       ) : (
         <FlatList
-          data={sorted}
+          data={displayData}
           keyExtractor={item => item.userId}
           renderItem={({ item, index }) => (
             <LeaderboardRow

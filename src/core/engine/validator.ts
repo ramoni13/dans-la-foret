@@ -117,6 +117,12 @@ export function validateBoard(
             });
           }
           if (constraint.mode === 'require') {
+            // Si la contrainte est conditionnelle (onlyIfTargetOnBoard),
+            // on la skip si le target n'existe pas sur le plateau.
+            if (constraint.onlyIfTargetOnBoard) {
+              const targetOnBoard = board.some(el => el === targetId);
+              if (!targetOnBoard) break;
+            }
             const minCount = constraint.minCount ?? 1;
             if (targetNeighbors.length < minCount) {
               violations.push({
@@ -321,6 +327,32 @@ export function isPlacementValid(
 ): boolean {
   const elementDef = elementDefs[elementId];
   if (!elementDef) return false;
+
+  // ── Vérification des règles de placement (placementRules) ────────────
+  // Rejet précoce si l'élément ne peut pas être placé sur cette case.
+  // Ex : champignon → center_only → uniquement sur specialCells.center.
+  if (elementDef.placementRules) {
+    for (const rule of elementDef.placementRules) {
+      let allowed: number[];
+      switch (rule.type) {
+        case 'center_only':
+          allowed = rule.allowedCells ?? boardDef.specialCells?.center ?? [];
+          break;
+        case 'edge_only':
+          allowed = rule.allowedCells ?? boardDef.specialCells?.edges ?? [];
+          break;
+        case 'corner_only':
+          allowed = rule.allowedCells ?? boardDef.specialCells?.corners ?? [];
+          break;
+        case 'cell_whitelist':
+          allowed = rule.allowedCells ?? [];
+          break;
+        default:
+          allowed = [];
+      }
+      if (!allowed.includes(cellIndex)) return false;
+    }
+  }
 
   const neighbors = boardDef.connections[cellIndex];
 

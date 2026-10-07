@@ -17,15 +17,17 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
 import { AudioPlayer } from 'expo-audio';
 
 import { Colors } from '../../constants/colors';
 import { useAudioStore } from '../../store/audioStore';
-import { usePlayerStore } from '../../store/playerStore';
+import { usePlayerStore, VisualEffect } from '../../store/playerStore';
 import { MUSIC_CATALOG, MusicTrack, MUSIC_UNLOCK_COST } from '../../constants/music';
 import { audioService } from '../../services/audioService';
 import { MusicUnlockModal } from './MusicUnlockModal';
+import { useT } from '../../i18n';
 
 // Slider natif ou fallback web
 let Slider: any = null;
@@ -197,6 +199,7 @@ const rowStyles = StyleSheet.create({
 // ── Composant principal MusicPanel ────────────────────────────
 
 export function MusicPanel() {
+  const t = useT();
   const audioStore  = useAudioStore();
   const player      = usePlayerStore();
 
@@ -355,6 +358,50 @@ export function MusicPanel() {
           ))}
         </View>
       </View>
+
+      {/* ── Effets visuels ── */}
+      <View style={styles.divider} />
+      <Text style={styles.effectsTitle}>{t('settings_visual_effects')}</Text>
+      <View style={styles.effectsRow}>
+        {([
+          { id: 'leaves'      as VisualEffect, emoji: '🍃', labelKey: 'effect_leaves' },
+          { id: 'butterflies' as VisualEffect, emoji: '🦋', labelKey: 'effect_butterflies' },
+          { id: 'birds'       as VisualEffect, emoji: '🐦', labelKey: 'effect_birds' },
+          { id: 'none'        as VisualEffect, emoji: '❌', labelKey: 'effect_none' },
+        ]).map(opt => (
+          <TouchableOpacity
+            key={opt.id}
+            style={[
+              styles.effectBtn,
+              player.visualEffect === opt.id && styles.effectBtnActive,
+            ]}
+            onPress={() => player.setVisualEffect(opt.id)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.effectEmoji}>{opt.emoji}</Text>
+            <Text style={[
+              styles.effectLabel,
+              player.visualEffect === opt.id && styles.effectLabelActive,
+            ]}>
+              {t(opt.labelKey)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* ── Réactiver les aides bonus ── */}
+      <View style={styles.divider} />
+      <TouchableOpacity
+        style={styles.resetTutorialsBtn}
+        onPress={() => {
+          player.resetBonusTutorials();
+          Alert.alert('', t('settings_reset_tutorials_done'));
+        }}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.resetTutorialsIcon}>💡</Text>
+        <Text style={styles.resetTutorialsText}>{t('settings_reset_tutorials')}</Text>
+      </TouchableOpacity>
 
       {/* Section "À débloquer" */}
       {lockedTracks.length > 0 && (
@@ -542,5 +589,61 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '700',
+  },
+  // ── Effets visuels ──
+  effectsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.ui.text,
+    marginBottom: 8,
+  },
+  effectsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  effectBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.ui.border,
+    backgroundColor: Colors.ui.background,
+    minWidth: 68,
+    gap: 4,
+  },
+  effectBtnActive: {
+    borderColor: Colors.forest.medium,
+    backgroundColor: Colors.forest.dark + '12',
+  },
+  effectEmoji: {
+    fontSize: 22,
+  },
+  effectLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.ui.textLight,
+  },
+  effectLabelActive: {
+    color: Colors.forest.dark,
+    fontWeight: '700',
+  },
+  // ── Réactiver les aides bonus ──
+  resetTutorialsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  resetTutorialsIcon: {
+    fontSize: 18,
+  },
+  resetTutorialsText: {
+    fontSize: 14,
+    color: Colors.forest.light,
+    fontWeight: '600',
   },
 });

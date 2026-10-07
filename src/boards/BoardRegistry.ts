@@ -13,6 +13,7 @@ import { board9cellsV1 } from './board_9cells_v1';
 import { board10cellsV3 } from './board_10cells_v3';
 import { board11cellsV1 } from './board_11cells_v1';
 import { board11cellsV2 } from './board_11cells_v2';
+import { board15cellsDaily } from './board_15cells_daily';
 
 export const BoardRegistry: Record<string, BoardDefinition> = {
   board_6_v1: board6cellsV1,   //  6 cases — Clairière
@@ -23,5 +24,6 @@ export const BoardRegistry: Record<string, BoardDefinition> = {
   board_11_v1: board11cellsV1, // 11 cases — Sous-bois Profond v1 (obsolète)
   board_11_v2: board11cellsV2, // 11 cases — Sous-bois Profond v2 (niveaux 11-12, nouvelle map lisible)
   board_12: board12cells,      // 12 cases — Forêt Profonde (niveaux 13-15)
-  // 👇 Ajouter un nouveau plateau ici
+  // ── Défi journalier ──────────────────────────────────────────────────
+  board_15_daily: board15cellsDaily, // 15 cases — Clairière Secrète (défi journalier)
 };

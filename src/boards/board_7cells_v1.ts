@@ -30,7 +30,7 @@ export const board7cellsV1: BoardDefinition = {
     { x: 50, y: 88 }, // case 6 — bas centre
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
-  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+  availableElements: ['bucheron', 'ours', 'mouton'],
   specialCells: {
     corners: [0, 6],
     edges: [1, 2, 4, 5],

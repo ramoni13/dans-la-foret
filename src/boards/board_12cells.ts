@@ -33,7 +33,7 @@ export const board12cells: BoardDefinition = {
     { x: 93, y: 93 }, // case 11 — coin bas droite  (écarté)
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
-  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'renard', 'ruche', 'cerf', 'biche', 'tas_buches', 'chalet'],
   specialCells: {
     corners: [0, 1, 10, 11],
     edges: [2, 3, 4, 5, 6, 7, 8, 9],

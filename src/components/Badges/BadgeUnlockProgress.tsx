@@ -44,7 +44,6 @@ const UNLOCK_ICONS: Record<string, string> = {
   seeds_10:           '🌱',
   seeds_50:           '🌱',
   bonus_instinct:     '🔴',
-  bonus_flash:        '⚡',
   theme_automne:      '🍂',
   theme_hiver:        '❄️',
   theme_foret_mystique: '🌙',
@@ -72,7 +71,6 @@ export const BadgeUnlockProgress: React.FC<BadgeUnlockProgressProps> = ({
   // Vérifie si un unlock est déjà débloqué
   function isUnlocked(unlockId: string): boolean {
     if (unlockId === 'bonus_instinct') return unlockedBonuses.includes('instinct');
-    if (unlockId === 'bonus_flash')    return unlockedBonuses.includes('flash');
     if (unlockId === 'theme_automne')  return unlockedThemes.includes('automne');
     if (unlockId === 'theme_hiver')    return unlockedThemes.includes('hiver');
     if (unlockId === 'theme_foret_mystique') return unlockedThemes.includes('foret_mystique');

@@ -16,23 +16,20 @@ interface BoardRendererProps {
   boardDef: BoardDefinition;
   playerBoard: (string | null)[];
   fixedCells: Set<number>;
-  hintCells: number[];
-  hintType: 'valid' | 'invalid' | 'correct' | 'wrong' | null;
   selectedElement: string | null;
-  hoveredCell?: number | null;
+  highlightActive: boolean;   // un bonus visuel est actif → pas de pulsation cases vides
   getCellColor: (cellIndex: number) => string;
   onCellPress: (cellIndex: number) => void;
-  onDrop: (cellIndex: number, elementId: string) => void;
 }
 
 export const BoardRenderer: React.FC<BoardRendererProps> = ({
   boardDef,
   playerBoard,
   fixedCells,
+  selectedElement,
+  highlightActive,
   getCellColor,
   onCellPress,
-  onDrop,
-  hoveredCell = null,
 }) => {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
@@ -40,6 +37,11 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     const { width, height } = e.nativeEvent.layout;
     setContainerSize({ width, height });
   }, []);
+
+  // Quand le bonus highlight est actif, les cases valides ont leur propre
+  // indicateur (bordure + badge ✓ + pulsation verte) — les cases vides
+  // non valides ne doivent PAS pulser pour éviter le bruit visuel.
+  const hasSelection = selectedElement !== null && !highlightActive;
 
   // ── Connexions dédupliquées ────────────────────────────────
   const connections = React.useMemo(() => {
@@ -72,9 +74,8 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         elementId={playerBoard[idx] ?? null}
         isFixed={fixedCells.has(idx)}
         backgroundColor={getCellColor(idx)}
-        isDragTarget={hoveredCell === idx}
+        hasSelection={hasSelection}
         onPress={onCellPress}
-        onDrop={onDrop}
         positionStyle={{ left: x, top: y }}
       />
     );
@@ -117,8 +118,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
-    zIndex: 1,      // plateau en dessous du jeton dragé (zIndex 999)
-    elevation: 1,   // Android
+    zIndex: 1,
+    elevation: 1,
   },
   backgroundImage: {
     borderRadius: 16,
