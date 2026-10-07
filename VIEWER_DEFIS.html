@@ -1,0 +1,923 @@
+﻿<!DOCTYPE html>
+<!-- ═══════════════════════════════════════════════════════════════
+     VIEWER_DEFIS.html — Viewer des défis Dans la Forêt
+     Ce fichier NE CONTIENT AUCUNE DONNÉE.
+     Les données sont dans VIEWER_DATA.js (généré automatiquement).
+
+     Workflow :
+       1. npm run generate         → régénère les JSON dans src/data/challenges/
+       2. npm run generate:viewer  → régénère VIEWER_DATA.js
+       3. Ouvrir VIEWER_DEFIS.html dans le navigateur
+
+     Raccourcis clavier :
+       ←/→  défi précédent/suivant
+       ↑/↓  niveau précédent/suivant
+       Espace  toggle défi ↔ solution
+     ═══════════════════════════════════════════════════════════════ -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🌲 Dans la Forêt — Viewer Défis</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brown:#7a4a1e;--brown2:#a06830;--gold:#d4a017;
+  --shadow:rgba(0,0,0,.22);
+}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(160deg,#2d5a1b 0%,#3d7a28 50%,#2a5218 100%);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:12px 8px 24px;
+}
+header{
+  width:100%;max-width:900px;
+  background:linear-gradient(135deg,var(--brown),var(--brown2));
+  border-radius:14px;padding:10px 20px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:0 4px 16px var(--shadow);margin-bottom:14px;
+}
+header h1{color:#fdf6e3;font-size:1.2rem;font-weight:700;flex:1}
+.badge{background:var(--gold);color:#333;font-size:.6rem;font-weight:800;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:1px}
+.error-banner{
+  width:100%;max-width:900px;
+  background:rgba(180,40,40,.9);color:#fff;
+  padding:14px 20px;border-radius:12px;margin-bottom:12px;
+  font-size:.9rem;text-align:center;line-height:1.6;display:none;
+}
+.error-banner code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:4px;font-size:.85rem}
+.card{width:100%;max-width:900px;background:rgba(255,255,255,.07);border-radius:18px;overflow:hidden;box-shadow:0 8px 32px var(--shadow);}
+.bar-niveau{background:linear-gradient(135deg,var(--brown),#b07840);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
+.bar-niveau h2{color:#fdf6e3;font-size:1rem;font-weight:700;text-align:center;flex:1}
+.bar-defi{background:rgba(255,255,255,.92);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid rgba(74,140,63,.3);}
+.bar-defi h3{color:#2d5a1b;font-size:.95rem;font-weight:700;text-align:center;flex:1}
+.defi-sub{color:#7a4a1e;font-size:.75rem;font-weight:600;text-align:center}
+.nav{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.4);color:#fdf6e3;width:40px;height:40px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.nav:hover:not(:disabled){background:rgba(255,255,255,.35);transform:scale(1.1)}
+.nav:disabled{opacity:.25;cursor:not-allowed}
+.nav.g{color:#2d5a1b;border-color:rgba(74,140,63,.5);background:rgba(74,140,63,.12)}
+.nav.g:hover:not(:disabled){background:rgba(74,140,63,.28)}
+.zone-plateau{background:rgba(255,255,255,.06);padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.mode-label{font-size:.7rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:4px 14px;border-radius:20px;}
+.mode-label.defi{background:rgba(45,90,27,.8);color:#a8e08a}
+.mode-label.sol{background:rgba(212,160,23,.85);color:#3a2800}
+.plateau-wrap{position:relative;flex-shrink:0;}
+.plateau-wrap svg{position:absolute;top:0;left:0;pointer-events:none}
+.node{position:absolute;transform:translate(-50%,-50%);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:default;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.3);}
+.node.fixed{background:#d4edda;border:3.5px solid #4a8c3f;box-shadow:0 3px 14px rgba(74,140,63,.45);}
+.node.sol-cell{background:#fff3cd;border:3.5px solid #d4a017;box-shadow:0 3px 14px rgba(212,160,23,.45);}
+.node.empty{background:rgba(255,255,255,.22);border:2.5px dashed rgba(255,255,255,.45);box-shadow:none;}
+.node img{object-fit:contain;pointer-events:none;display:block}
+.node-idx{position:absolute;top:2px;left:4px;font-size:.42rem;color:rgba(0,0,0,.28);font-weight:700;line-height:1;pointer-events:none;}
+.toggle-wrap{display:flex;align-items:center;gap:0;background:rgba(0,0,0,.25);border-radius:30px;padding:4px;box-shadow:0 3px 12px var(--shadow);}
+.toggle-opt{padding:9px 22px;border-radius:26px;border:none;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.4px;background:transparent;color:rgba(255,255,255,.5);}
+.toggle-opt.active-defi{background:linear-gradient(135deg,#4a8c3f,#7bbf6a);color:#fff;box-shadow:0 2px 8px rgba(74,140,63,.5);}
+.toggle-opt.active-sol{background:linear-gradient(135deg,#d4a017,#f0c040);color:#333;box-shadow:0 2px 8px rgba(212,160,23,.5);}
+.toggle-opt:not(.active-defi):not(.active-sol):hover{color:rgba(255,255,255,.85);}
+.meta{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:3px 10px;font-size:.68rem;color:rgba(255,255,255,.85);font-weight:600;}
+.bandeau{background:linear-gradient(135deg,rgba(30,60,20,.85),rgba(50,100,35,.85));padding:14px 16px;border-top:1px solid rgba(255,255,255,.1);}
+.bandeau-title{color:rgba(255,255,255,.6);font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;text-align:center;margin-bottom:10px;}
+.jetons-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.jeton{display:flex;flex-direction:column;align-items:center;gap:3px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:7px 10px;min-width:62px;transition:all .2s;}
+.jeton.has{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.45)}
+.jeton.none{opacity:.28}
+.jeton img{width:38px;height:38px;object-fit:contain}
+.jeton-name{font-size:.58rem;color:rgba(255,255,255,.8);font-weight:600;text-transform:capitalize}
+.jeton-badge{background:var(--gold);color:#333;font-size:.72rem;font-weight:800;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+.jeton-badge.z{background:rgba(255,255,255,.2);color:rgba(255,255,255,.45)}
+.empty-msg{text-align:center;padding:40px;color:rgba(255,255,255,.6);font-size:.9rem}
+/* ── Mode switcher (Classique / Daily) ─────────────────────── */
+.mode-switch{display:flex;gap:0;margin-bottom:14px;width:100%;max-width:900px;}
+.mode-btn{flex:1;padding:10px 16px;border:none;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.4px;color:rgba(255,255,255,.5);background:rgba(0,0,0,.25);}
+.mode-btn:first-child{border-radius:12px 0 0 12px}
+.mode-btn:last-child{border-radius:0 12px 12px 0}
+.mode-btn.active-classic{background:linear-gradient(135deg,#4a8c3f,#7bbf6a);color:#fff;box-shadow:0 2px 8px rgba(74,140,63,.5);}
+.mode-btn.active-daily{background:linear-gradient(135deg,#d4a017,#f0c040);color:#333;box-shadow:0 2px 8px rgba(212,160,23,.5);}
+.mode-btn:not(.active-classic):not(.active-daily):hover{color:rgba(255,255,255,.85);background:rgba(0,0,0,.35);}
+/* ── Daily-specific styles ─────────────────────────────────── */
+.daily-nav{background:rgba(255,255,255,.92);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid rgba(212,160,23,.3);}
+.daily-nav h3{color:#7a4a1e;font-size:.95rem;font-weight:700;text-align:center;flex:1}
+.daily-sub{color:#7a4a1e;font-size:.75rem;font-weight:600;text-align:center}
+.level-select{background:linear-gradient(135deg,rgba(212,160,23,.15),rgba(212,160,23,.08));padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:10px;border-bottom:1px solid rgba(212,160,23,.2);}
+.level-select label{color:#7a4a1e;font-size:.78rem;font-weight:700;}
+.level-select select{padding:5px 10px;border-radius:8px;border:2px solid rgba(212,160,23,.4);background:#fff;color:#333;font-size:.82rem;font-weight:600;cursor:pointer;}
+.check-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:6px 16px;background:rgba(0,0,0,.15);}
+.check-pill{font-size:.62rem;font-weight:700;padding:3px 9px;border-radius:12px;letter-spacing:.3px;}
+.check-pill.ok{background:rgba(74,140,63,.8);color:#fff;}
+.check-pill.ko{background:rgba(180,40,40,.85);color:#fff;}
+.check-pill.warn{background:rgba(212,160,23,.85);color:#333;}
+/* ── Regen bar ─────────────────────────────────────────────── */
+.regen-bar{background:linear-gradient(135deg,rgba(45,90,27,.25),rgba(45,90,27,.12));padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.1);}
+.regen-bar input[type=date]{padding:5px 10px;border-radius:8px;border:2px solid rgba(212,160,23,.4);background:#fff;color:#333;font-size:.82rem;font-weight:600;cursor:pointer;}
+.regen-btn{padding:7px 18px;border-radius:8px;border:none;background:linear-gradient(135deg,#4a8c3f,#7bbf6a);color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px;}
+.regen-btn:hover{transform:scale(1.05);box-shadow:0 2px 8px rgba(74,140,63,.5);}
+.regen-btn:active{transform:scale(0.97);}
+.regen-btn:disabled{opacity:.5;cursor:wait;}
+.regen-status{font-size:.72rem;color:rgba(255,255,255,.7);font-weight:600;}
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.6rem">🌲</span>
+  <h1>Dans la Forêt — Viewer Défis</h1>
+  <span class="badge">v5 · 15 niveaux + Daily</span>
+</header>
+
+<div id="error-banner" class="error-banner">
+  ⚠️ <strong>VIEWER_DATA.js introuvable.</strong><br>
+  Lancez <code>npm run generate:viewer</code> dans le dossier <code>dans-la-foret-app/</code>
+  puis rechargez cette page.
+</div>
+
+<!-- Mode switcher -->
+<div class="mode-switch">
+  <button class="mode-btn active-classic" id="mode-classic">🌲 Niveaux classiques</button>
+  <button class="mode-btn" id="mode-daily">☀️ Défi du Jour</button>
+</div>
+
+<!-- Card classique -->
+<div class="card" id="card-classic">
+  <div class="bar-niveau">
+    <button class="nav" id="pL">◀</button>
+    <h2 id="lvl-label">—</h2>
+    <button class="nav" id="nL">▶</button>
+  </div>
+  <div class="bar-defi">
+    <button class="nav g" id="pC">◀</button>
+    <div><h3 id="defi-title">—</h3><div class="defi-sub" id="defi-counter">—</div></div>
+    <button class="nav g" id="nC">▶</button>
+  </div>
+  <div class="zone-plateau">
+    <div class="mode-label defi" id="mode-label">🎯 DÉFI</div>
+    <div class="plateau-wrap" id="plateau-wrap"></div>
+    <div class="meta" id="meta-chips"></div>
+    <div class="toggle-wrap">
+      <button class="toggle-opt active-defi" id="tog-defi">🎯 Défi</button>
+      <button class="toggle-opt" id="tog-sol">✨ Solution</button>
+    </div>
+  </div>
+  <div class="bandeau">
+    <div class="bandeau-title" id="bandeau-title">🎲 Jetons à placer</div>
+    <div class="jetons-row" id="jetons-row"></div>
+  </div>
+</div>
+
+<!-- Card daily -->
+<div class="card" id="card-daily" style="display:none">
+  <div class="bar-niveau" style="background:linear-gradient(135deg,#b08620,#d4a017);">
+    <span style="font-size:1.3rem">☀️</span>
+    <h2 id="daily-title">—</h2>
+  </div>
+  <div class="daily-nav">
+    <button class="nav g" id="daily-pD">◀</button>
+    <div><h3 id="daily-date">—</h3><div class="daily-sub" id="daily-counter">—</div></div>
+    <button class="nav g" id="daily-nD">▶</button>
+  </div>
+  <div class="level-select">
+    <label for="daily-level-select">Niveau joueur :</label>
+    <select id="daily-level-select">
+      <option value="10">Niv 10-15 (expert)</option>
+      <option value="8">Niv 8-9</option>
+      <option value="6">Niv 6-7</option>
+      <option value="4">Niv 4-5</option>
+      <option value="2">Niv 2-3</option>
+      <option value="1">Niv 1 (débutant)</option>
+    </select>
+  </div>
+  <div class="regen-bar">
+    <input type="date" id="regen-date"/>
+    <button class="regen-btn" id="regen-btn">Régénérer</button>
+    <span class="regen-status" id="regen-status"></span>
+  </div>
+  <div class="check-row" id="daily-checks"></div>
+  <div class="zone-plateau">
+    <div class="mode-label defi" id="daily-mode-label">🎯 DÉFI</div>
+    <div class="plateau-wrap" id="daily-plateau-wrap"></div>
+    <div class="meta" id="daily-meta-chips"></div>
+    <div class="toggle-wrap">
+      <button class="toggle-opt active-defi" id="daily-tog-defi">🎯 Défi</button>
+      <button class="toggle-opt" id="daily-tog-sol">✨ Solution</button>
+    </div>
+  </div>
+  <div class="bandeau">
+    <div class="bandeau-title" id="daily-bandeau-title">🎲 Jetons à placer</div>
+    <div class="jetons-row" id="daily-jetons-row"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     VIEWER_DATA.js est chargé ici.
+     Régénérer avec : npm run generate:viewer
+     ═══════════════════════════════════════════════════════════════ -->
+<script src="VIEWER_DATA.js" onerror="
+  document.getElementById('error-banner').style.display='block';
+  document.querySelector('.card').style.opacity='0.3';
+  document.querySelector('.card').style.pointerEvents='none';
+"></script>
+
+<script>
+// ── Catalogue des 11 éléments ─────────────────────────────────
+const ELEMENTS = {
+  bucheron:  { label:'Bucheron',       emoji:'🪓', color:'#8B4513' },
+  ours:      { label:'Ours',           emoji:'🐻', color:'#6B4226' },
+  mouton:    { label:'Mouton',         emoji:'🐑', color:'#9E9E9E' },
+  ruche:     { label:'Ruche',          emoji:'🍯', color:'#F5A623' },
+  chien:     { label:'Chien',          emoji:'🐕', color:'#D2691E' },
+  cerf:      { label:'Cerf',           emoji:'🦌', color:'#8B6914' },
+  biche:     { label:'Biche',          emoji:'🦌', color:'#C8A96E' },
+  renard:    { label:'Renard',         emoji:'🦊', color:'#FF6B35' },
+  tas_buches:{ label:'Bûches',         emoji:'🪵', color:'#6D4C2A' },
+  chalet:    { label:'Chalet',         emoji:'🏠', color:'#A0522D' },
+  champignon:{ label:'Champignon',     emoji:'🍄', color:'#8B6914' },
+};
+const ELEMENT_ORDER = ['bucheron','ours','mouton','ruche','chien','cerf','biche','renard','tas_buches','chalet','champignon'];
+
+// ── Topologies des plateaux ───────────────────────────────────
+const BOARDS = {
+  board_6_v1:{
+    cellCount:6, size:220, nodeSize:52,
+    connections:[[1,3],[0,2,4,5],[1,3,4],[0,2,4,5],[1,2,3],[1,3]],
+    positions:[{x:43,y:8},{x:19,y:42},{x:43,y:29},{x:67,y:42},{x:43,y:56},{x:43,y:78}],
+  },
+  board_7_v1:{
+    cellCount:7, size:240, nodeSize:52,
+    connections:[[1,2],[0,3,4],[0,3,5],[1,2,4,5],[1,3,6],[2,3,6],[4,5]],
+    positions:[{x:50,y:10},{x:25,y:32},{x:75,y:32},{x:50,y:50},{x:25,y:68},{x:75,y:68},{x:50,y:88}],
+  },
+  board_8_v2:{
+    cellCount:8, size:260, nodeSize:52,
+    connections:[[1,2,5],[0,3],[0,4],[1,5,6],[2,5,7],[0,3,4,6,7],[3,5,7],[4,5,6]],
+    positions:[{x:50,y:12},{x:20,y:28},{x:80,y:28},{x:20,y:52},{x:80,y:52},{x:50,y:62},{x:20,y:80},{x:80,y:80}],
+  },
+  board_9_v1:{
+    cellCount:9, size:280, nodeSize:52,
+    connections:[[1,2,5],[0,3],[0,4],[1,4,5,6],[2,3,5,7],[0,3,4,6,7],[3,5,8],[4,5,8],[6,7]],
+    positions:[{x:50,y:12},{x:25,y:30},{x:75,y:30},{x:25,y:52},{x:75,y:52},{x:50,y:52},{x:25,y:78},{x:75,y:78},{x:50,y:93}],
+  },
+  board_10_v3:{
+    cellCount:10, size:300, nodeSize:52,
+    connections:[[3],[4,5],[3],[0,2,4,5,6],[1,3,6,8],[1,3,6,8],[3,4,5,7,9],[6],[4,5],[6]],
+    positions:[{x:10,y:8},{x:50,y:8},{x:88,y:8},{x:50,y:30},{x:22,y:50},{x:78,y:50},{x:50,y:68},{x:10,y:88},{x:50,y:88},{x:88,y:88}],
+  },
+  board_11_v1:{
+    cellCount:11, size:320, nodeSize:52,
+    connections:[[3],[4,5],[3],[0,2,4,5,6,10],[1,3,6,8,10],[1,3,6,8,10],[3,4,5,7,9,10],[6],[4,5],[6],[3,4,5,6]],
+    positions:[{x:12,y:7},{x:50,y:7},{x:88,y:7},{x:50,y:27},{x:28,y:46},{x:72,y:46},{x:50,y:65},{x:12,y:91},{x:50,y:91},{x:88,y:91},{x:50,y:46}],
+  },
+  board_11_v2:{
+    cellCount:11, size:320, nodeSize:52,
+    connections:[[2],[2],[0,1,3,5],[2,4,6],[3,5,6,7],[2,4,7],[3,4,8,9],[4,5,8,10],[6,7,9,10],[6,8],[7,8]],
+    positions:[{x:12,y:8},{x:88,y:8},{x:50,y:20},{x:25,y:38},{x:50,y:50},{x:75,y:38},{x:25,y:62},{x:75,y:62},{x:50,y:78},{x:12,y:92},{x:88,y:92}],
+  },
+  board_12:{
+    cellCount:12, size:340, nodeSize:52,
+    connections:[[1,3,4,10],[0,2,5,11],[1,3,4,9],[0,2,5,8],[0,2,6,7],[1,3,6,7],[4,5,8,10],[4,5,9,11],[3,6,9,11],[2,7,8,10],[0,6,9,11],[1,7,8,10]],
+    positions:[{x:4,y:3},{x:81,y:3},{x:31,y:15},{x:54,y:15},{x:15,y:32},{x:71,y:32},{x:15,y:55},{x:71,y:55},{x:31,y:72},{x:54,y:72},{x:4,y:84},{x:81,y:84}],
+  },
+  board_15_daily:{
+    cellCount:15, size:380, nodeSize:48,
+    connections:[[1,3,5],[0,2,7],[1,4,6],[0,5,7,10],[2,6,7,11],[0,3,8],[2,4,9],[1,3,4,10,11,13],[5,10,12],[6,11,14],[3,7,8,12],[4,7,9,14],[8,10,13],[7,12,14],[9,11,13]],
+    positions:[{x:12,y:5},{x:50,y:5},{x:88,y:5},{x:30,y:28},{x:70,y:28},{x:8,y:30},{x:92,y:30},{x:50,y:38},{x:8,y:62},{x:92,y:62},{x:30,y:62},{x:70,y:62},{x:12,y:90},{x:50,y:90},{x:88,y:90}],
+  },
+};
+
+// ── Libellés des niveaux ──────────────────────────────────────
+const LEVEL_LABELS = {
+  niveau_1: '🌱 Niveau 1 — Clairière (6 cases, 3 vides)',
+  niveau_2: '🌿 Niveau 2 — Clairière (7 cases, 4 vides)',
+  niveau_3: '🐕 Niveau 3 — Lisière · + Chien (8 cases, 3 vides)',
+  niveau_4: '🐕 Niveau 4 — Lisière (8 cases, 4 vides)',
+  niveau_5: '🦌 Niveau 5 — Lisière · + Cerf/Biche (8 cases, 5 vides)',
+  niveau_6: '🦌 Niveau 6 — Sentier (9 cases, 3 vides)',
+  niveau_7: '🦌 Niveau 7 — Sentier (9 cases, 4 vides)',
+  niveau_8: '🦊 Niveau 8 — Sentier · + Renard (9 cases, 5 vides)',
+  niveau_9: '🦊 Niveau 9 — Sous-bois (10 cases, 4 vides)',
+  niveau_10:'🦊 Niveau 10 — Sous-bois (10 cases, 5 vides)',
+  niveau_11:'🌲 Niveau 11 — Forêt (11 cases, 5 vides)',
+  niveau_12:'🪵 Niveau 12 — Forêt · + Bûches (11 cases, 6 vides)',
+  niveau_13:'🏠 Niveau 13 — Forêt Profonde · + Chalet (12 cases, 7 vides)',
+  niveau_14:'🏠 Niveau 14 — Forêt Profonde (12 cases, 8 vides)',
+  niveau_15:'💀 Niveau 15 — Légende (12 cases, 9 vides, sans bonus)',
+};
+const LEVEL_KEYS = Object.keys(LEVEL_LABELS);
+
+// ── État ──────────────────────────────────────────────────────
+let activeMode = 'classic'; // 'classic' | 'daily'
+let lvlIdx = 0, chalIdx = 0, showSol = false;
+let dailyIdx = 0, dailyShowSol = false, dailyPlayerLevel = 10;
+
+function lvl()  { return LEVEL_KEYS[lvlIdx]; }
+function chals(){ return (typeof ALL_DATA!=='undefined' && ALL_DATA[lvl()]) ? ALL_DATA[lvl()].challenges : []; }
+function chal() { return chals()[chalIdx] || null; }
+
+// Daily helpers
+let _liveDaily = null; // set by Régénérer button
+function dailyList() { return (typeof ALL_DATA!=='undefined' && ALL_DATA.daily_challenges) ? ALL_DATA.daily_challenges : []; }
+function dailyChal() { if(_liveDaily) return _liveDaily; return dailyList()[dailyIdx] || null; }
+function dailyPerLevel() {
+  const dc = dailyChal();
+  if (!dc) return null;
+  const lvlVal = dailyPlayerLevel;
+  // Find matching perLevel entry
+  return dc.perLevel.find(p => lvlVal >= p.playerLevelMin && lvlVal <= p.playerLevelMax)
+      || dc.perLevel.find(p => lvlVal >= p.playerLevelMin)
+      || dc.perLevel[0];
+}
+
+// ── Icône avec fallback emoji ─────────────────────────────────
+function makeIcon(id, size) {
+  const el = ELEMENTS[id];
+  if (!el) { const s=document.createElement('span'); s.style.fontSize=size*.55+'px'; s.textContent='❓'; return s; }
+  const img = document.createElement('img');
+  img.src = `src/assets/elements/${id}.png`;
+  img.width = img.height = size;
+  img.alt = el.label;
+  img.onerror = function(){
+    const s=document.createElement('span');
+    s.style.fontSize=size*.55+'px';
+    s.textContent=el.emoji;
+    this.replaceWith(s);
+  };
+  return img;
+}
+
+// ── Rendu plateau générique ───────────────────────────────────
+function renderPlateauGeneric(wrapId, boardId, fixedPlacements, solution, isSol) {
+  const wrap = document.getElementById(wrapId);
+  wrap.innerHTML = '';
+  const board = BOARDS[boardId];
+  if (!board) { wrap.innerHTML=`<div class="empty-msg">Plateau inconnu : ${boardId}</div>`; return; }
+
+  const S=board.size, NS=board.nodeSize;
+  wrap.style.width = wrap.style.height = S+'px';
+
+  // SVG connexions
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width',S); svg.setAttribute('height',S);
+  svg.setAttribute('viewBox','0 0 100 100'); svg.setAttribute('preserveAspectRatio','none');
+  const drawn=new Set();
+  board.connections.forEach((nb,i)=>{
+    const pi=board.positions[i];
+    nb.forEach(j=>{
+      const k=i<j?`${i}-${j}`:`${j}-${i}`;
+      if(drawn.has(k)) return; drawn.add(k);
+      const pj=board.positions[j];
+      const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1',pi.x); ln.setAttribute('y1',pi.y);
+      ln.setAttribute('x2',pj.x); ln.setAttribute('y2',pj.y);
+      ln.setAttribute('stroke','rgba(255,255,255,0.25)'); ln.setAttribute('stroke-width','1.2');
+      svg.appendChild(ln);
+    });
+  });
+  wrap.appendChild(svg);
+
+  // Maps
+  const fixedMap={};
+  (fixedPlacements||[]).forEach(fp=>{ fixedMap[fp.cellIndex]=fp.elementId; });
+  const sol=solution||[];
+
+  // Nodes
+  board.positions.forEach((pos,idx)=>{
+    const node=document.createElement('div');
+    node.className='node';
+    node.style.left=pos.x+'%'; node.style.top=pos.y+'%';
+    node.style.width=node.style.height=NS+'px';
+    const lbl=document.createElement('span'); lbl.className='node-idx'; lbl.textContent=idx;
+    node.appendChild(lbl);
+    const isFixed=idx in fixedMap, solEl=sol[idx];
+    if(isSol && solEl){
+      node.classList.add(isFixed?'fixed':'sol-cell');
+      node.appendChild(makeIcon(solEl,NS-10));
+    } else if(!isSol && isFixed){
+      node.classList.add('fixed');
+      node.appendChild(makeIcon(fixedMap[idx],NS-10));
+    } else {
+      node.classList.add('empty');
+    }
+    wrap.appendChild(node);
+  });
+}
+
+// ── Rendu bandeau générique ───────────────────────────────────
+function renderBandeauGeneric(rowId, titleId, availableTokens, solution, isSol) {
+  const row=document.getElementById(rowId);
+  const title=document.getElementById(titleId);
+  row.innerHTML='';
+
+  const counts={};
+  if(isSol){
+    title.textContent='✨ Solution complète';
+    (solution||[]).forEach(id=>{ counts[id]=(counts[id]||0)+1; });
+  } else {
+    title.textContent='🎲 Jetons à placer dans ce défi';
+    (availableTokens||[]).forEach(t=>{ counts[t.elementId]=t.count; });
+  }
+
+  ELEMENT_ORDER.forEach(id=>{
+    const n=counts[id]||0, el=ELEMENTS[id];
+    if(!el) return;
+    const jeton=document.createElement('div');
+    jeton.className=`jeton ${n>0?'has':'none'}`;
+    jeton.appendChild(makeIcon(id,38));
+    const name=document.createElement('div'); name.className='jeton-name'; name.textContent=el.label;
+    const badge=document.createElement('div'); badge.className=`jeton-badge${n===0?' z':''}`; badge.textContent=n;
+    jeton.appendChild(name); jeton.appendChild(badge);
+    row.appendChild(jeton);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── CLASSIQUE ────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+function renderClassic() {
+  const c=chal(), cs=chals(), l=lvl();
+  document.getElementById('lvl-label').textContent = LEVEL_LABELS[l]||l;
+  document.getElementById('defi-title').textContent = c?`Défi #${c.challengeNumber}`:'—';
+  document.getElementById('defi-counter').textContent = cs.length>0?`${chalIdx+1} / ${cs.length}`:'Aucun défi';
+  const ml=document.getElementById('mode-label');
+  ml.textContent=showSol?'✨ SOLUTION':'🎯 DÉFI'; ml.className=`mode-label ${showSol?'sol':'defi'}`;
+  document.getElementById('tog-defi').className=`toggle-opt ${!showSol?'active-defi':''}`;
+  document.getElementById('tog-sol').className=`toggle-opt ${showSol?'active-sol':''}`;
+  document.getElementById('pL').disabled=lvlIdx===0;
+  document.getElementById('nL').disabled=lvlIdx===LEVEL_KEYS.length-1;
+  document.getElementById('pC').disabled=chalIdx===0;
+  document.getElementById('nC').disabled=chalIdx>=cs.length-1;
+
+  if (c) {
+    renderPlateauGeneric('plateau-wrap', c.boardId, c.fixedPlacements, c.solution, showSol);
+    // Meta chips
+    const chips=document.getElementById('meta-chips');
+    chips.innerHTML='';
+    const board=BOARDS[c.boardId]||{};
+    const fixed=(c.fixedPlacements||[]).length;
+    const empty=(board.cellCount||0)-fixed;
+    const types=new Set(c.solution||[]).size;
+    const dur=c.estimatedDuration||0;
+    [{label:`📐 ${board.cellCount||'?'} cases`},{label:`🔒 ${fixed} fixes`},{label:`❓ ${empty} vides`},
+     {label:`🎨 ${types} types`},{label:`⏱ ~${Math.round(dur/60)} min`},{label:c.boardId}]
+    .forEach(d=>{ const ch=document.createElement('div'); ch.className='chip'; ch.textContent=d.label; chips.appendChild(ch); });
+    renderBandeauGeneric('jetons-row', 'bandeau-title', c.availableTokens, c.solution, showSol);
+  } else {
+    document.getElementById('plateau-wrap').innerHTML='<div class="empty-msg">Aucun défi disponible.</div>';
+    document.getElementById('meta-chips').innerHTML='';
+    document.getElementById('jetons-row').innerHTML='';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── DAILY ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+function renderDaily() {
+  const dc = dailyChal();
+  const dl = dailyList();
+  const pl = dailyPerLevel();
+
+  // Title & navigation
+  const isLive = !!_liveDaily;
+  document.getElementById('daily-title').textContent = '☀️ Défi du Jour — Clairière Secrète (15 cases)';
+  document.getElementById('daily-date').textContent = dc ? (isLive ? dc.date+' (live)' : dc.date) : '—';
+  document.getElementById('daily-counter').textContent = isLive ? 'Généré en live' : (dl.length>0 ? `${dailyIdx+1} / ${dl.length}` : 'Aucun défi');
+  document.getElementById('daily-pD').disabled = isLive || dailyIdx===0;
+  document.getElementById('daily-nD').disabled = isLive || dailyIdx>=dl.length-1;
+
+  const ml = document.getElementById('daily-mode-label');
+  ml.textContent = dailyShowSol ? '✨ SOLUTION' : '🎯 DÉFI';
+  ml.className = `mode-label ${dailyShowSol?'sol':'defi'}`;
+  document.getElementById('daily-tog-defi').className = `toggle-opt ${!dailyShowSol?'active-defi':''}`;
+  document.getElementById('daily-tog-sol').className = `toggle-opt ${dailyShowSol?'active-sol':''}`;
+
+  if (!dc || !pl) {
+    document.getElementById('daily-plateau-wrap').innerHTML='<div class="empty-msg">Aucun défi journalier. Lancez <code>npm run generate:viewer</code>.</div>';
+    document.getElementById('daily-meta-chips').innerHTML='';
+    document.getElementById('daily-jetons-row').innerHTML='';
+    document.getElementById('daily-checks').innerHTML='';
+    return;
+  }
+
+  // Checks pills
+  const checksEl = document.getElementById('daily-checks');
+  checksEl.innerHTML = '';
+  const pills = [
+    { label: pl.isUnique ? `✓ Unique (${pl.solutionCount} sol.)` : `✗ ${pl.solutionCount} solutions`, ok: pl.isUnique },
+    { label: pl.pedagogicallyValid ? '✓ Pédagogie' : '✗ Pédagogie', ok: pl.pedagogicallyValid },
+    { label: pl.narrativelyInteresting ? '✓ Narrative' : '✗ Narrative', ok: pl.narrativelyInteresting },
+    { label: dc.allUnique ? '✓ Unique tous niv.' : '⚠ Pas unique certains niv.', ok: dc.allUnique, warn: !dc.allUnique },
+    { label: `Compo #${dc.compositionIndex}` },
+    { label: `Base: ${dc.baseFixedCount} fixes` },
+  ];
+  pills.forEach(p => {
+    const pill = document.createElement('span');
+    pill.className = `check-pill ${p.ok===true?'ok':p.ok===false?'ko':p.warn?'warn':'ok'}`;
+    pill.textContent = p.label;
+    checksEl.appendChild(pill);
+  });
+
+  // Plateau
+  renderPlateauGeneric('daily-plateau-wrap', 'board_15_daily', pl.fixedPlacements, dc.solution, dailyShowSol);
+
+  // Meta chips
+  const chips = document.getElementById('daily-meta-chips');
+  chips.innerHTML = '';
+  const types = new Set(dc.solution||[]).size;
+  [{label:`📐 15 cases`},{label:`🔒 ${pl.fixedCount} fixes`},{label:`❓ ${pl.emptyCells} vides`},
+   {label:`🎨 ${types} types`},{label:`👤 Niv ${pl.playerLevelMin}-${pl.playerLevelMax}`},{label:'board_15_daily'}]
+  .forEach(d=>{ const ch=document.createElement('div'); ch.className='chip'; ch.textContent=d.label; chips.appendChild(ch); });
+
+  // Bandeau
+  renderBandeauGeneric('daily-jetons-row', 'daily-bandeau-title', pl.availableTokens, dc.solution, dailyShowSol);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── RENDU GLOBAL & ÉVÉNEMENTS ────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+function render() {
+  if (activeMode === 'classic') { renderClassic(); }
+  else { renderDaily(); }
+}
+
+function switchMode(mode) {
+  activeMode = mode;
+  document.getElementById('mode-classic').className = `mode-btn ${mode==='classic'?'active-classic':''}`;
+  document.getElementById('mode-daily').className = `mode-btn ${mode==='daily'?'active-daily':''}`;
+  document.getElementById('card-classic').style.display = mode==='classic' ? '' : 'none';
+  document.getElementById('card-daily').style.display = mode==='daily' ? '' : 'none';
+  render();
+}
+
+// Classic events
+document.getElementById('pL').addEventListener('click',()=>{ if(lvlIdx>0){lvlIdx--;chalIdx=0;render();} });
+document.getElementById('nL').addEventListener('click',()=>{ if(lvlIdx<LEVEL_KEYS.length-1){lvlIdx++;chalIdx=0;render();} });
+document.getElementById('pC').addEventListener('click',()=>{ if(chalIdx>0){chalIdx--;render();} });
+document.getElementById('nC').addEventListener('click',()=>{ if(chalIdx<chals().length-1){chalIdx++;render();} });
+document.getElementById('tog-defi').addEventListener('click',()=>{ showSol=false; render(); });
+document.getElementById('tog-sol').addEventListener('click',()=>{ showSol=true; render(); });
+
+// Daily events
+document.getElementById('daily-pD').addEventListener('click',()=>{ if(dailyIdx>0){_liveDaily=null;dailyIdx--;render();} });
+document.getElementById('daily-nD').addEventListener('click',()=>{ if(dailyIdx<dailyList().length-1){_liveDaily=null;dailyIdx++;render();} });
+document.getElementById('daily-tog-defi').addEventListener('click',()=>{ dailyShowSol=false; render(); });
+document.getElementById('daily-tog-sol').addEventListener('click',()=>{ dailyShowSol=true; render(); });
+document.getElementById('daily-level-select').addEventListener('change', function(){
+  dailyPlayerLevel = parseInt(this.value, 10);
+  render();
+});
+
+// Mode switcher
+document.getElementById('mode-classic').addEventListener('click',()=>switchMode('classic'));
+document.getElementById('mode-daily').addEventListener('click',()=>switchMode('daily'));
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  if (activeMode === 'classic') {
+    switch(e.key){
+      case 'ArrowLeft':  document.getElementById('pC').click(); e.preventDefault(); break;
+      case 'ArrowRight': document.getElementById('nC').click(); e.preventDefault(); break;
+      case 'ArrowUp':    document.getElementById('pL').click(); e.preventDefault(); break;
+      case 'ArrowDown':  document.getElementById('nL').click(); e.preventDefault(); break;
+      case ' ': showSol=!showSol; render(); e.preventDefault(); break;
+    }
+  } else {
+    switch(e.key){
+      case 'ArrowLeft':  document.getElementById('daily-pD').click(); e.preventDefault(); break;
+      case 'ArrowRight': document.getElementById('daily-nD').click(); e.preventDefault(); break;
+      case ' ': dailyShowSol=!dailyShowSol; render(); e.preventDefault(); break;
+    }
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// ── SOLVER / VALIDATOR / GÉNÉRATEUR EMBARQUÉS ────────────────
+// ══════════════════════════════════════════════════════════════
+
+// Element definitions (sans assets)
+const ELEM_DEFS = {
+  bucheron:   { id:'bucheron',   constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'}], placementRules:null },
+  ours:       { id:'ours',       constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'}], placementRules:null },
+  mouton:     { id:'mouton',     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'renard'}], placementRules:null },
+  ruche:      { id:'ruche',      constraints:[{type:'neighbor_specific',targetElementId:'ours',mode:'require',scope:'neighbor',minCount:1}], placementRules:null },
+  chien:      { id:'chien',      constraints:[{type:'neighbor_same',mode:'require',scope:'neighbor',minCount:1},{type:'connected_group',mode:'require',scope:'board'}], placementRules:null },
+  cerf:       { id:'cerf',       constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'paired_specific',targetElementId:'biche',mode:'require',scope:'board'}], placementRules:null },
+  biche:      { id:'biche',      constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'paired_specific',targetElementId:'cerf',mode:'require',scope:'board'}], placementRules:null },
+  renard:     { id:'renard',     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'mouton'}], placementRules:null },
+  tas_buches: { id:'tas_buches', constraints:[{type:'neighbor_specific_chain',targetElementId:'bucheron',chainTargetElementId:'chalet',mode:'require',scope:'neighbor'}], placementRules:null },
+  chalet:     { id:'chalet',     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'require',scope:'neighbor',targetElementId:'bucheron',minCount:1}], placementRules:null },
+  champignon: { id:'champignon', constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'}], placementRules:[{type:'center_only'}] },
+};
+
+const DAILY_BOARD = BOARDS.board_15_daily;
+DAILY_BOARD.specialCells = { corners:[0,2,12,14], center:[3,4,7,10,11], edges:[1,5,6,8,9,13] };
+
+// ── Validator: isPlacementValid ──────────────────────────────
+function _isPlacementValid(cellIndex, elementId, board, boardDef, elemDefs) {
+  const eDef = elemDefs[elementId]; if(!eDef) return false;
+  if(eDef.placementRules) {
+    for(const rule of eDef.placementRules) {
+      let allowed;
+      if(rule.type==='center_only') allowed = boardDef.specialCells?.center||[];
+      else if(rule.type==='edge_only') allowed = boardDef.specialCells?.edges||[];
+      else if(rule.type==='corner_only') allowed = boardDef.specialCells?.corners||[];
+      else allowed = rule.allowedCells||[];
+      if(!allowed.includes(cellIndex)) return false;
+    }
+  }
+  const neighbors = boardDef.connections[cellIndex];
+  for(const c of eDef.constraints) {
+    if(c.scope!=='neighbor') continue;
+    if(c.type==='neighbor_same' && c.mode==='forbid') { if(neighbors.some(n=>board[n]===elementId)) return false; }
+    if(c.type==='neighbor_specific' && c.mode==='forbid') { if(neighbors.some(n=>board[n]===c.targetElementId)) return false; }
+  }
+  for(const ni of neighbors) {
+    const nId=board[ni]; if(!nId) continue;
+    const nDef=elemDefs[nId]; if(!nDef) continue;
+    for(const c of nDef.constraints) {
+      if(c.scope!=='neighbor') continue;
+      if(c.type==='neighbor_specific' && c.targetElementId===elementId && c.mode==='forbid') return false;
+      if(c.type==='neighbor_same' && nId===elementId && c.mode==='forbid') return false;
+    }
+  }
+  return true;
+}
+
+// ── Validator: getConnectedGroup ─────────────────────────────
+function _getConnectedGroup(start, elementId, board, boardDef) {
+  const visited=new Set(); const queue=[start];
+  while(queue.length>0) {
+    const cur=queue.shift(); if(visited.has(cur)) continue; visited.add(cur);
+    for(const n of boardDef.connections[cur]) { if(!visited.has(n) && board[n]===elementId) queue.push(n); }
+  }
+  return visited;
+}
+
+// ── Solver: canStillSatisfy ──────────────────────────────────
+function _canStillSatisfy(board, inv, boardDef, elemDefs) {
+  for(let i=0;i<board.length;i++) {
+    const eId=board[i]; if(!eId) continue;
+    const eDef=elemDefs[eId]; if(!eDef) continue;
+    const nb=boardDef.connections[i];
+    for(const c of eDef.constraints) {
+      if(c.scope!=='neighbor'||c.mode!=='require') continue;
+      if(c.type==='neighbor_same') {
+        const min=c.minCount||1; if(nb.filter(n=>board[n]===eId).length>=min) continue;
+        if(nb.filter(n=>board[n]===null).length===0||(inv[eId]||0)===0) return false;
+      }
+      if(c.type==='neighbor_specific') {
+        const tId=c.targetElementId; if(!tId) continue;
+        const min=c.minCount||1; if(nb.filter(n=>board[n]===tId).length>=min) continue;
+        if(nb.filter(n=>board[n]===null).length===0||(inv[tId]||0)===0) return false;
+      }
+      if(c.type==='neighbor_specific_chain') {
+        const tId=c.targetElementId; if(!tId) continue;
+        if(nb.filter(n=>board[n]===tId).length>=1) continue;
+        if(nb.filter(n=>board[n]===null).length===0||(inv[tId]||0)===0) return false;
+      }
+    }
+  }
+  return true;
+}
+
+// ── Solver: isCompleteSolutionValid ──────────────────────────
+function _isCompleteSolutionValid(board, boardDef, elemDefs) {
+  for(let i=0;i<board.length;i++) {
+    const eId=board[i]; const eDef=elemDefs[eId]; if(!eDef) continue;
+    const nb=boardDef.connections[i];
+    for(const c of eDef.constraints) {
+      if(c.scope!=='neighbor') continue;
+      if(c.type==='neighbor_same') {
+        if(c.mode==='forbid' && nb.some(n=>board[n]===eId)) return false;
+        if(c.mode==='require' && nb.filter(n=>board[n]===eId).length<(c.minCount||1)) return false;
+      }
+      if(c.type==='neighbor_specific') {
+        const tId=c.targetElementId; if(!tId) continue;
+        if(c.mode==='forbid' && nb.some(n=>board[n]===tId)) return false;
+        if(c.mode==='require' && nb.filter(n=>board[n]===tId).length<(c.minCount||1)) return false;
+      }
+      if(c.type==='neighbor_specific_chain') {
+        const tId=c.targetElementId; if(!tId) continue;
+        if(!nb.some(n=>board[n]===tId)) return false;
+        const chId=c.chainTargetElementId;
+        if(chId && board.some(e=>e===chId) && !nb.some(n=>board[n]===chId)) return false;
+      }
+    }
+    if(eDef.placementRules) {
+      for(const r of eDef.placementRules) {
+        let al; if(r.type==='center_only') al=boardDef.specialCells?.center||[];
+        else if(r.type==='edge_only') al=boardDef.specialCells?.edges||[];
+        else al=r.allowedCells||[];
+        if(!al.includes(i)) return false;
+      }
+    }
+  }
+  const checked=new Set();
+  for(let i=0;i<board.length;i++) {
+    const eId=board[i]; if(checked.has(eId)) continue;
+    const eDef=elemDefs[eId]; if(!eDef) continue;
+    for(const c of eDef.constraints) {
+      if(c.type==='connected_group') {
+        const all=board.reduce((a,e,j)=>{if(e===eId)a.push(j);return a;},[]);
+        if(all.length>1 && _getConnectedGroup(all[0],eId,board,boardDef).size!==all.length) return false;
+        checked.add(eId);
+      }
+      if(c.type==='paired_specific') {
+        const pId=c.targetElementId; if(!pId) continue;
+        const myPos=board.reduce((a,e,j)=>{if(e===eId)a.push(j);return a;},[]);
+        const pPos=board.reduce((a,e,j)=>{if(e===pId)a.push(j);return a;},[]);
+        if(myPos.length!==pPos.length) return false;
+        for(const p of myPos) { if(boardDef.connections[p].filter(n=>board[n]===pId).length!==1) return false; }
+        checked.add(eId);
+      }
+    }
+  }
+  return true;
+}
+
+// ── Solver: solve ────────────────────────────────────────────
+function _shuffleEntries(obj, rng) {
+  const e=Object.entries(obj);
+  for(let i=e.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[e[i],e[j]]=[e[j],e[i]];}
+  return e;
+}
+function _canonicalKey(sol) {
+  const p={}; for(let i=0;i<sol.length;i++){if(!p[sol[i]])p[sol[i]]=[];p[sol[i]].push(i);}
+  return Object.keys(p).sort().map(e=>e+':'+p[e].sort((a,b)=>a-b).join(',')).join('|');
+}
+function _solve(boardDef, fixedPlacements, availableTokens, elemDefs, rng) {
+  rng = rng || Math.random;
+  const board = Array(boardDef.cellCount).fill(null);
+  for(const fp of fixedPlacements) board[fp.cellIndex]=fp.elementId;
+  const inv={}; for(const t of availableTokens) inv[t.elementId]=t.count;
+  const raw=[];
+  function bt() {
+    if(raw.length>=2) return;
+    const ei=board.findIndex(c=>c===null);
+    if(ei===-1) { if(_isCompleteSolutionValid(board,boardDef,elemDefs)) raw.push([...board]); return; }
+    for(const [eId,cnt] of _shuffleEntries(inv,rng)) {
+      if(cnt<=0) continue;
+      if(!_isPlacementValid(ei,eId,board,boardDef,elemDefs)) continue;
+      board[ei]=eId; inv[eId]--;
+      if(_canStillSatisfy(board,inv,boardDef,elemDefs)) bt();
+      board[ei]=null; inv[eId]++;
+    }
+  }
+  bt();
+  const seen=new Set(), sols=[];
+  for(const s of raw){const k=_canonicalKey(s);if(!seen.has(k)){seen.add(k);sols.push(s);}}
+  return { solutions:sols, solutionCount:sols.length, isUnique:sols.length===1 };
+}
+
+// ── PRNG / utils ─────────────────────────────────────────────
+function _mulberry32(seed) {
+  let s=seed|0;
+  return ()=>{s=(s+0x6D2B79F5)|0;let t=Math.imul(s^(s>>>15),1|s);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};
+}
+function _dateSeed(d){return d.getUTCFullYear()*10000+(d.getUTCMonth()+1)*100+d.getUTCDate();}
+function _seededShuffle(arr,rng){const r=[...arr];for(let i=r.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
+
+// ── Daily compositions ───────────────────────────────────────
+const _COMPS = [
+  {bucheron:3,ours:2,mouton:3,chien:2,renard:1,cerf:1,biche:1,champignon:2},
+  {bucheron:4,ours:2,mouton:2,chien:2,renard:1,cerf:1,biche:1,champignon:2},
+  {bucheron:2,ours:2,mouton:4,chien:2,renard:1,cerf:1,biche:1,champignon:2},
+  {bucheron:2,ours:2,mouton:2,chien:3,renard:1,cerf:1,biche:1,ruche:1,champignon:2},
+  {bucheron:3,ours:2,mouton:2,chien:2,ruche:1,renard:1,cerf:1,biche:1,champignon:2},
+  {bucheron:2,ours:2,mouton:3,chien:2,ruche:1,renard:1,cerf:1,biche:1,champignon:2},
+  {bucheron:3,ours:2,mouton:2,chien:2,chalet:1,renard:1,cerf:1,biche:1,champignon:2},
+  {bucheron:3,ours:1,mouton:2,chien:3,chalet:1,renard:1,cerf:1,biche:1,champignon:2},
+  {bucheron:3,ours:2,mouton:2,chien:3,tas_buches:1,renard:1,cerf:1,biche:1,champignon:1},
+  {bucheron:3,ours:1,mouton:3,chien:2,tas_buches:1,renard:1,cerf:1,biche:1,champignon:2},
+  {bucheron:3,ours:2,mouton:1,chien:2,chalet:1,renard:1,cerf:1,biche:1,tas_buches:1,champignon:2},
+  {bucheron:3,ours:2,mouton:1,chien:2,chalet:1,renard:1,cerf:1,biche:1,tas_buches:1,ruche:1,champignon:1},
+  {bucheron:3,ours:2,mouton:1,chien:2,renard:1,cerf:2,biche:2,champignon:2},
+  {bucheron:2,ours:2,mouton:1,chien:2,renard:1,cerf:3,biche:3,champignon:1},
+  {bucheron:2,ours:2,mouton:3,chien:2,renard:2,cerf:1,biche:1,champignon:2},
+  {bucheron:2,ours:1,mouton:4,chien:2,renard:2,cerf:1,biche:1,champignon:2},
+];
+const _TARGET_MAX_FIXED=6, _ATT_PER_COMP=5, _MIN_FIXED=4, _MAX_FIXED=9;
+const _PLAYER_RANGES=[{min:10,max:15},{min:8,max:9},{min:6,max:7},{min:4,max:5},{min:2,max:3},{min:1,max:1}];
+
+function _getPlayerFixed(lv){if(lv>=10)return _MIN_FIXED;if(lv>=8)return 5;if(lv>=6)return 6;if(lv>=4)return 7;if(lv>=2)return 8;return _MAX_FIXED;}
+
+function _computeAvail(sol,fps,full){
+  const fc={}; for(const fp of fps) fc[fp.elementId]=(fc[fp.elementId]||0)+1;
+  return full.map(t=>({elementId:t.elementId,count:t.count-(fc[t.elementId]||0)})).filter(t=>t.count>0);
+}
+function _isPedagoValid(avail,full){
+  const am=new Map(avail.map(t=>[t.elementId,t.count])),fm=new Map(full.map(t=>[t.elementId,t.count]));
+  const inF=id=>(fm.get(id)||0)>0, hasA=id=>(am.get(id)||0)>0;
+  if(!avail.length||avail.every(t=>t.count===0))return false;
+  if(inF('chalet')&&!hasA('chalet')&&!hasA('bucheron'))return false;
+  if(inF('renard')&&!hasA('renard')&&!hasA('mouton'))return false;
+  if(inF('ruche')&&!hasA('ruche')&&!hasA('ours'))return false;
+  if(inF('cerf')&&!hasA('cerf')&&!hasA('biche'))return false;
+  if(inF('biche')&&!hasA('biche')&&!hasA('cerf'))return false;
+  if(inF('tas_buches')&&!hasA('tas_buches')&&!hasA('bucheron'))return false;
+  if(inF('chien')&&!hasA('chien'))return false;
+  if(inF('champignon')&&!hasA('champignon'))return false;
+  return true;
+}
+function _isNarrCoherent(tc){
+  const has=id=>tc.some(t=>t.elementId===id&&t.count>0);
+  if(has('renard')&&!has('mouton'))return false; if(has('chalet')&&!has('bucheron'))return false;
+  if(has('tas_buches')&&!has('bucheron'))return false; return true;
+}
+function _isNarrInteresting(avail,full){
+  const has=id=>full.some(t=>t.elementId===id&&t.count>0), hasA=id=>avail.some(t=>t.elementId===id&&t.count>0);
+  if(has('renard')&&has('mouton')&&!hasA('renard')&&!hasA('mouton'))return false;
+  if(has('chalet')&&has('bucheron')&&!hasA('chalet')&&!hasA('bucheron'))return false;
+  if(has('tas_buches')&&has('bucheron')&&!hasA('tas_buches')&&!hasA('bucheron'))return false;
+  return true;
+}
+function _getRemovalStrategy(si,bd,rng){
+  const all=[...Array(bd.cellCount).keys()];
+  const byC=[...all].sort((a,b)=>bd.connections[a].length-bd.connections[b].length);
+  const ef=byC,cf=[...byC].reverse();
+  const alt=[];for(let i=0;i<all.length;i++){if(i%2===0)alt.push(ef[Math.floor(i/2)]);else alt.push(cf[Math.floor(i/2)]);}
+  const swg=(sorted)=>{const r=[];let gs=0;for(let i=1;i<=sorted.length;i++){if(i===sorted.length||bd.connections[sorted[i]].length!==bd.connections[sorted[i-1]].length){r.push(..._seededShuffle(sorted.slice(gs,i),rng));gs=i;}}return r;};
+  switch(si%4){case 0:return _seededShuffle(all,rng);case 1:return swg(ef);case 2:return swg(cf);case 3:return alt;default:return _seededShuffle(all,rng);}
+}
+
+// ── Génération live ──────────────────────────────────────────
+function _generateDailyLive(date) {
+  const seed=_dateSeed(date), rng=_mulberry32(seed), bd=DAILY_BOARD;
+  const compOrder=_seededShuffle(_COMPS.map((_,i)=>i),rng);
+  for(const ci of compOrder) {
+    const comp=_COMPS[ci];
+    const full=[]; for(const[k,v] of Object.entries(comp)){if(v>0)full.push({elementId:k,count:v});}
+    if(full.reduce((a,t)=>a+t.count,0)!==bd.cellCount) continue;
+    if(!_isNarrCoherent(full)) continue;
+    for(let att=0;att<_ATT_PER_COMP;att++) {
+      const as=seed+ci*7919+att*13, ar=_mulberry32(as);
+      const sr=_solve(bd,[],full,ELEM_DEFS,ar);
+      if(sr.solutionCount===0) continue;
+      const sol=sr.solutions[0];
+      const stRng=_mulberry32(as+31), ro=_getRemovalStrategy(att,bd,stRng);
+      let fps=sol.map((e,i)=>({cellIndex:i,elementId:e})), ec=0; const removed=[];
+      for(const idx of ro) {
+        const nf=fps.filter(fp=>fp.cellIndex!==idx);
+        const av=_computeAvail(sol,nf,full);
+        const cr=_solve(bd,nf,av,ELEM_DEFS,_mulberry32(as+idx*37));
+        if(cr.isUnique){fps=nf;ec++;removed.push(idx);}
+      }
+      const afc=bd.cellCount-ec;
+      if(afc>_TARGET_MAX_FIXED) continue;
+      const avail=_computeAvail(sol,fps,full);
+      if(!_isPedagoValid(avail,full)) continue;
+      if(!_isNarrInteresting(avail,full)) continue;
+      const fixedIndices=fps.map(fp=>fp.cellIndex);
+      const fixedOrder=[...fixedIndices,...[...removed].reverse()];
+      // Compute perLevel
+      const perLevel=[];let allUnique=true;
+      for(const range of _PLAYER_RANGES){
+        const tf=Math.max(_getPlayerFixed(range.min),afc);
+        const lfp=fixedOrder.slice(0,tf).map(c=>({cellIndex:c,elementId:sol[c]}));
+        const lav=_computeAvail(sol,lfp,full);
+        const uc=_solve(bd,lfp,lav,ELEM_DEFS);
+        const pl={playerLevelMin:range.min,playerLevelMax:range.max,fixedCount:tf,emptyCells:bd.cellCount-tf,
+          fixedPlacements:lfp,availableTokens:lav,solutionCount:uc.solutionCount,isUnique:uc.isUnique,
+          pedagogicallyValid:_isPedagoValid(lav,full),narrativelyInteresting:_isNarrInteresting(lav,full)};
+        perLevel.push(pl); if(!uc.isUnique) allUnique=false;
+      }
+      const ds=date.toISOString().split('T')[0];
+      return {date:ds,compositionIndex:ci,baseFixedCount:afc,solution:sol,fixedOrder,perLevel,allUnique};
+    }
+  }
+  return null;
+}
+
+// ── Bouton Régénérer ─────────────────────────────────────────
+document.getElementById('regen-btn').addEventListener('click', function() {
+  const btn=this, statusEl=document.getElementById('regen-status');
+  const dateStr=document.getElementById('regen-date').value;
+  if(!dateStr){statusEl.textContent='Choisir une date';return;}
+  const date=new Date(dateStr+'T00:00:00Z');
+  btn.disabled=true; statusEl.textContent='Génération en cours...';
+  // Use setTimeout to let UI update before heavy computation
+  setTimeout(()=>{
+    const t0=performance.now();
+    const result=_generateDailyLive(date);
+    const elapsed=Math.round(performance.now()-t0);
+    btn.disabled=false;
+    if(result){
+      _liveDaily=result;
+      statusEl.textContent=`OK en ${elapsed}ms — compo #${result.compositionIndex}, ${result.baseFixedCount} fixes, ${result.allUnique?'unique tous niv.':'⚠ pas unique'}`;
+      renderDaily();
+    } else {
+      _liveDaily=null;
+      statusEl.textContent=`Échec (${elapsed}ms) — aucun défi valide trouvé`;
+    }
+  }, 30);
+});
+
+// Init regen date to today
+document.getElementById('regen-date').value = new Date().toISOString().split('T')[0];
+
+// ── Init ──────────────────────────────────────────────────────
+if(typeof ALL_DATA!=='undefined'){ render(); }
+</script>
+</body>
+</html>
