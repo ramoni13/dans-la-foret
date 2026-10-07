@@ -31,12 +31,14 @@ app/
   _layout.tsx              ← Root : GestureHandlerRootView + StorageBridge + AudioBridge
   (tabs)/
     _layout.tsx            ← Tabs layout + UNIQUE onAuthChange Firebase + garde auth
-    index.tsx              ← Accueil (progression globale + prochain défi)
-    levels.tsx             ← Sélection des niveaux
+    index.tsx              ← Accueil (progression globale + prochain défi + carte daily)
+    levels.tsx             ← Sélection des niveaux + bouton daily
+    rules.tsx              ← Onglet Règles (éléments + animations briefing)
     challenge.tsx          ← Défis entre amis
     profile.tsx            ← Profil, auth, badges, classement
   game/
     [challengeId].tsx      ← Écran de jeu principal (drag & drop complet)
+    daily.tsx              ← Défi du Jour (15 cases, 1 validation, pas de bonus)
     friend-challenge.tsx   ← Défi ami
 ```
 
@@ -65,9 +67,11 @@ src/
     ElementRegistry.ts  ← Record<string, ElementDefinition> (source unique)
     bucheron.ts / ours.ts / mouton.ts / ruche.ts / chien.ts
     renard.ts / cerf.ts / biche.ts / chalet.ts / tas_buches.ts
+    champignon.ts       ← center_only, défi journalier uniquement
   boards/
     BoardRegistry.ts    ← Record<string, BoardDefinition>
     board_6cells_v1.ts … board_12cells.ts  (8 plateaux)
+    board_15cells_daily.ts ← 15 cases, Clairière Secrète (défi du jour)
   store/
     gameStore.ts    ← état partie en cours (Zustand)
     playerStore.ts  ← profil + progression + badges + graines
@@ -84,6 +88,7 @@ src/
     playerService.ts    ← CRUD Firestore profil joueur
     badgeService.ts     ← awardBadgesFirestore(), updateDailyStreak()
     challengeService.ts ← défis amis Firestore
+    dailyChallengeService.ts ← génération daily (PRNG, 16 compositions, solver), Firestore
     leaderboardService.ts
     worldRecordService.ts ← subscribeWorldRecord(), trySetWorldRecord()
     audioService.ts
@@ -325,10 +330,49 @@ Le générateur (`challengeGenerator.ts`) garantit :
 
 ---
 
+## Défi du Jour (daily challenge)
+
+- **Écran** : `app/game/daily.tsx` — 15 cases, 1 seule validation, aucun bonus
+- **Briefing** : `src/components/LevelBriefing/DailyBriefingModal.tsx` — 2 pages (champignon + récap)
+- **Génération** : `src/services/dailyChallengeService.ts` — PRNG déterministe (mulberry32), 16 compositions en 7 familles, solver backtracking, baseFixedCount ≤ 6, validation pédagogique/narrative
+- **Plateau** : `src/boards/board_15cells_daily.ts` — 15 cases, specialCells.center = [3,4,7,10,11]
+- **Élément exclusif** : `champignon` (center_only, ≠ voisin champignon, max 2 sur board_15_daily)
+- **Uniqueness** : `fixedOrder` du générateur ; `getDailyFixedPlacements` prend les N premiers (superset preserves uniqueness)
+- **Player level** : 6 tiers (niv 10+ → 4 fixes, niv 1 → 9 fixes)
+- **État** : `playerStore.dailyChallengeStatus` / `lastDailyChallengeDate` / `dailyChallengeStreak` + `gameStore.dailyValidationUsed`
+- **Reset** : `playerStore.resetDailyStatus()` — utilisé par le bouton "Rejouer" (`__DEV__` only) dans `index.tsx` et `levels.tsx`
+- **Viewer** : `VIEWER_DEFIS.html` + `VIEWER_DATA.js` — mode Classic/Daily, bouton "Régénérer" (solver embarqué en JS pur), `scripts/generateViewerData.ts`
+
+---
+
+## Onglet Règles
+
+- **Écran** : `app/(tabs)/rules.tsx` — 📖 dans la tab bar
+- **Contenu** : 10 éléments dans l'ordre d'apparition (bucheron→ours→mouton→ruche→chien→cerf→biche→renard→tas_buches→chalet)
+- **Débloqué** (`currentLevel >= introLevel`) : icône + nom + animations `RuleCard` du briefing (fond forêt sombre)
+- **Verrouillé** : icône grisée + nom grisé + "???" + "Débloqué au niveau X"
+- **RuleCards** : mapping explicite par `ruleIds` → index dans `ALL_RULES_BY_ID` (collecté depuis `LEVEL_META`)
+- **Pédagogie** : niveau 12 = `chain_tas_buches` (bûcheron→bûches seulement), niveau 13 = `chain_tas_buches_chalet` (bûches→chalet conditionnel) — chaîne séparée en 2 slides
+- **ChainAnim** : supporte 2 ou 3 éléments dans `rule.elements` (skip phases chalet si pas de 3e)
+
+---
+
+## Entités HTML dans React Native
+
+**Ne jamais utiliser** `&#xXXXX;` ou `&name;` dans `<Text>`. React Native ne les interprète pas.
+Utiliser des séquences Unicode JSX : `{'\uXXXX'}` ou `{'\uD83D\uDEAB'}` pour les emoji (paires de substitution).
+
+---
+
 ## TODOs avant publication
 
 ```ts
 // playerStore.ts
 seeds: 99,        // → 3
 isPremium: true,  // → false
+```
+
+```ts
+// app/(tabs)/levels.tsx + app/(tabs)/index.tsx
+// Retirer les boutons "Rejouer" (gardés par __DEV__, mais vérifier)
 ```
