@@ -4,13 +4,16 @@
 // ============================================================
 
 export type RuleCardType =
-  | 'no_same_neighbor'   // Interdit deux identiques voisins
-  | 'require_neighbor'   // Requiert un voisin spécifique
-  | 'forbid_neighbor'    // Interdit un voisin spécifique
-  | 'connected_group'    // Tous connexes (meute)
-  | 'paired'             // Égalité de quantité (cerf = biche)
-  | 'chain'              // Chaîne de voisinage (tas_buches←bucheron)
-  | 'singleton';         // Maximum 1 par défi (ruche)
+  | 'no_same_neighbor'      // Interdit deux identiques voisins
+  | 'require_neighbor'      // Requiert un voisin spécifique
+  | 'require_all_neighbor'  // TOUS les exemplaires doivent être voisins d'un élément
+  | 'forbid_neighbor'       // Interdit un voisin spécifique
+  | 'connected_group'       // Tous connexes (meute)
+  | 'paired'                // Égalité de quantité (cerf = biche)
+  | 'paired_exclusive'      // 1 cerf ↔ 1 biche seulement (pas 1→2)
+  | 'chain'                 // Chaîne de voisinage (bûches←bucheron)
+  | 'singleton'             // Maximum 1 par défi (ruche)
+  | 'center_only';          // Placement uniquement sur les cases centrales (champignon)
 
 export interface RuleCard {
   id: string;
@@ -55,12 +58,23 @@ const rNoSameMouton: RuleCard = {
   i18nKey: 'a11y_no_same',
   i18nVars: { element: 'mouton' },
 };
-const rRequireRucheOurs: RuleCard = {
-  id: 'require_ruche_ours',
+// Nouvelle règle ruche : c'est l'ours qui doit être voisin de la ruche
+// (inversé par rapport à l'ancien rRequireRucheOurs)
+const rRequireOursRuche: RuleCard = {
+  id: 'require_ours_ruche',
   type: 'require_neighbor',
-  elements: ['ruche', 'ours'],
+  elements: ['ours', 'ruche'],
   i18nKey: 'a11y_require_neighbor',
-  i18nVars: { e1: 'ruche', e2: 'ours' },
+  i18nVars: { e1: 'ours', e2: 'ruche' },
+};
+// Règle visuelle : TOUS les ours doivent être connectés à la ruche
+// Animation : 3 ours → flèches → 1 ruche centrale
+const rAllOursRuche: RuleCard = {
+  id: 'all_ours_ruche',
+  type: 'require_all_neighbor',
+  elements: ['ours', 'ours', 'ours', 'ruche'],
+  i18nKey: 'a11y_require_all_neighbor',
+  i18nVars: { e1: 'ours', e2: 'ruche' },
 };
 const rSingletonRuche: RuleCard = {
   id: 'singleton_ruche',
@@ -83,6 +97,20 @@ const rConnectedChien: RuleCard = {
   i18nKey: 'a11y_connected_group',
   i18nVars: { element: 'chien' },
 };
+const rNoSameRenard: RuleCard = {
+  id: 'no_same_renard',
+  type: 'no_same_neighbor',
+  elements: ['renard', 'renard'],
+  i18nKey: 'a11y_no_same',
+  i18nVars: { element: 'renard' },
+};
+const rForbidRenardMouton: RuleCard = {
+  id: 'forbid_renard_mouton',
+  type: 'forbid_neighbor',
+  elements: ['renard', 'mouton'],
+  i18nKey: 'a11y_forbid_neighbor',
+  i18nVars: { e1: 'renard', e2: 'mouton' },
+};
 const rNoSameCerf: RuleCard = {
   id: 'no_same_cerf',
   type: 'no_same_neighbor',
@@ -104,26 +132,37 @@ const rPairedCerfBiche: RuleCard = {
   i18nKey: 'a11y_paired',
   i18nVars: { e1: 'cerf', e2: 'biche' },
 };
-const rNoSameRenard: RuleCard = {
-  id: 'no_same_renard',
-  type: 'no_same_neighbor',
-  elements: ['renard', 'renard'],
-  i18nKey: 'a11y_no_same',
-  i18nVars: { element: 'renard' },
+// Règle exclusive cerf : 1 cerf ne peut pas être connecté à 2 biches
+const rPairedExclusiveCerf: RuleCard = {
+  id: 'paired_exclusive_cerf',
+  type: 'paired_exclusive',
+  elements: ['cerf', 'biche', 'biche'],
+  i18nKey: 'a11y_paired_exclusive',
+  i18nVars: { e1: 'cerf', e2: 'biche' },
 };
-const rForbidRenardMouton: RuleCard = {
-  id: 'forbid_renard_mouton',
-  type: 'forbid_neighbor',
-  elements: ['renard', 'mouton'],
-  i18nKey: 'a11y_forbid_neighbor',
-  i18nVars: { e1: 'renard', e2: 'mouton' },
+// Règle exclusive biche : 1 biche ne peut pas être connectée à 2 cerfs
+const rPairedExclusiveBiche: RuleCard = {
+  id: 'paired_exclusive_biche',
+  type: 'paired_exclusive',
+  elements: ['biche', 'cerf', 'cerf'],
+  i18nKey: 'a11y_paired_exclusive',
+  i18nVars: { e1: 'biche', e2: 'cerf' },
 };
+// Niveau 11 : tas_buches doit etre voisin d'un bucheron (pas de chalet encore)
 const rChainTasBuches: RuleCard = {
   id: 'chain_tas_buches',
   type: 'chain',
   elements: ['bucheron', 'tas_buches'],
   i18nKey: 'a11y_chain',
   i18nVars: { e1: 'tas_buches', e2: 'bucheron' },
+};
+// Niveau 12 : quand chalet est present, tas_buches doit aussi etre voisin du chalet
+const rChainTasBuchesChalet: RuleCard = {
+  id: 'chain_tas_buches_chalet',
+  type: 'chain',
+  elements: ['tas_buches', 'chalet'],
+  i18nKey: 'a11y_chain_chalet',
+  i18nVars: { e1: 'chalet', e2: 'tas_buches' },
 };
 const rNoSameChalet: RuleCard = {
   id: 'no_same_chalet',
@@ -141,26 +180,30 @@ const rRequireChaletBucheron: RuleCard = {
 };
 
 // ── LEVEL_META × 15 niveaux ──────────────────────────────────────────────────
+// Nouvel ordre d'introduction :
+//   Niv 1  : bucheron, ours, mouton
+//   Niv 3  : chien
+//   Niv 5  : renard
+//   Niv 7  : ruche
+//   Niv 9  : cerf, biche
+//   Niv 11 : tas_buches
+//   Niv 12 : chalet
 
 export const LEVEL_META: Record<number, LevelMeta> = {
   1: {
     levelNumber: 1,
     boardCellCount: 6,
     emptyCellsCount: 3,
-    newElements: ['bucheron', 'ours', 'mouton', 'ruche'],
+    newElements: ['bucheron', 'ours', 'mouton'],
     allRules: [
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
     ],
     newRules: [
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
     ],
   },
 
@@ -173,8 +216,6 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
     ],
     newRules: [],
   },
@@ -182,20 +223,15 @@ export const LEVEL_META: Record<number, LevelMeta> = {
   3: {
     levelNumber: 3,
     boardCellCount: 8,
-    emptyCellsCount: 3,
+    emptyCellsCount: 4,
     newElements: ['chien'],
     allRules: [
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
       rNoSameChien,
       rConnectedChien,
     ],
-    // La règle NOUVELLE et distinctive du chien = la meute connexe.
-    // no_same_chien n'est pas mis en avant : c'est la même règle que
-    // bucheron/ours/mouton, déjà connue du joueur depuis le niveau 1.
     newRules: [
       rConnectedChien,
     ],
@@ -204,14 +240,12 @@ export const LEVEL_META: Record<number, LevelMeta> = {
   4: {
     levelNumber: 4,
     boardCellCount: 8,
-    emptyCellsCount: 4,
+    emptyCellsCount: 5,
     newElements: [],
     allRules: [
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
       rNoSameChien,
       rConnectedChien,
     ],
@@ -220,70 +254,6 @@ export const LEVEL_META: Record<number, LevelMeta> = {
 
   5: {
     levelNumber: 5,
-    boardCellCount: 8,
-    emptyCellsCount: 5,
-    newElements: ['cerf', 'biche'],
-    allRules: [
-      rNoSameBucheron,
-      rNoSameOurs,
-      rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
-      rNoSameChien,
-      rConnectedChien,
-      rNoSameCerf,
-      rNoSameBiche,
-      rPairedCerfBiche,
-    ],
-    newRules: [
-      rNoSameCerf,
-      rNoSameBiche,
-      rPairedCerfBiche,
-    ],
-  },
-
-  6: {
-    levelNumber: 6,
-    boardCellCount: 9,
-    emptyCellsCount: 3,
-    newElements: [],
-    allRules: [
-      rNoSameBucheron,
-      rNoSameOurs,
-      rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
-      rNoSameChien,
-      rConnectedChien,
-      rNoSameCerf,
-      rNoSameBiche,
-      rPairedCerfBiche,
-    ],
-    newRules: [],
-  },
-
-  7: {
-    levelNumber: 7,
-    boardCellCount: 9,
-    emptyCellsCount: 4,
-    newElements: [],
-    allRules: [
-      rNoSameBucheron,
-      rNoSameOurs,
-      rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
-      rNoSameChien,
-      rConnectedChien,
-      rNoSameCerf,
-      rNoSameBiche,
-      rPairedCerfBiche,
-    ],
-    newRules: [],
-  },
-
-  8: {
-    levelNumber: 8,
     boardCellCount: 9,
     emptyCellsCount: 5,
     newElements: ['renard'],
@@ -291,13 +261,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
       rNoSameChien,
       rConnectedChien,
-      rNoSameCerf,
-      rNoSameBiche,
-      rPairedCerfBiche,
       rNoSameRenard,
       rForbidRenardMouton,
     ],
@@ -307,46 +272,119 @@ export const LEVEL_META: Record<number, LevelMeta> = {
     ],
   },
 
-  9: {
-    levelNumber: 9,
-    boardCellCount: 10,
-    emptyCellsCount: 4,
+  6: {
+    levelNumber: 6,
+    boardCellCount: 9,
+    emptyCellsCount: 6,
     newElements: [],
     allRules: [
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
       rNoSameChien,
       rConnectedChien,
-      rNoSameCerf,
-      rNoSameBiche,
-      rPairedCerfBiche,
       rNoSameRenard,
       rForbidRenardMouton,
     ],
     newRules: [],
   },
 
-  10: {
-    levelNumber: 10,
+  7: {
+    levelNumber: 7,
     boardCellCount: 10,
-    emptyCellsCount: 5,
+    emptyCellsCount: 6,
+    newElements: ['ruche'],
+    allRules: [
+      rNoSameBucheron,
+      rNoSameOurs,
+      rNoSameMouton,
+      rNoSameChien,
+      rConnectedChien,
+      rNoSameRenard,
+      rForbidRenardMouton,
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
+    ],
+    newRules: [
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
+    ],
+  },
+
+  8: {
+    levelNumber: 8,
+    boardCellCount: 10,
+    emptyCellsCount: 7,
     newElements: [],
     allRules: [
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
       rNoSameChien,
       rConnectedChien,
+      rNoSameRenard,
+      rForbidRenardMouton,
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
+    ],
+    newRules: [],
+  },
+
+  9: {
+    levelNumber: 9,
+    boardCellCount: 11,
+    emptyCellsCount: 7,
+    newElements: ['cerf', 'biche'],
+    allRules: [
+      rNoSameBucheron,
+      rNoSameOurs,
+      rNoSameMouton,
+      rNoSameChien,
+      rConnectedChien,
+      rNoSameRenard,
+      rForbidRenardMouton,
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
       rNoSameCerf,
       rNoSameBiche,
       rPairedCerfBiche,
+      rPairedExclusiveCerf,
+      rPairedExclusiveBiche,
+    ],
+    newRules: [
+      rNoSameCerf,
+      rNoSameBiche,
+      rPairedCerfBiche,
+      rPairedExclusiveCerf,
+      rPairedExclusiveBiche,
+    ],
+  },
+
+  10: {
+    levelNumber: 10,
+    boardCellCount: 11,
+    emptyCellsCount: 7,
+    newElements: [],
+    allRules: [
+      rNoSameBucheron,
+      rNoSameOurs,
+      rNoSameMouton,
+      rNoSameChien,
+      rConnectedChien,
       rNoSameRenard,
       rForbidRenardMouton,
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
+      rNoSameCerf,
+      rNoSameBiche,
+      rPairedCerfBiche,
+      rPairedExclusiveCerf,
+      rPairedExclusiveBiche,
     ],
     newRules: [],
   },
@@ -354,43 +392,24 @@ export const LEVEL_META: Record<number, LevelMeta> = {
   11: {
     levelNumber: 11,
     boardCellCount: 11,
-    emptyCellsCount: 5,
-    newElements: [],
-    allRules: [
-      rNoSameBucheron,
-      rNoSameOurs,
-      rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
-      rNoSameChien,
-      rConnectedChien,
-      rNoSameCerf,
-      rNoSameBiche,
-      rPairedCerfBiche,
-      rNoSameRenard,
-      rForbidRenardMouton,
-    ],
-    newRules: [],
-  },
-
-  12: {
-    levelNumber: 12,
-    boardCellCount: 11,
-    emptyCellsCount: 6,
+    emptyCellsCount: 7,
     newElements: ['tas_buches'],
     allRules: [
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
       rNoSameChien,
       rConnectedChien,
+      rNoSameRenard,
+      rForbidRenardMouton,
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
       rNoSameCerf,
       rNoSameBiche,
       rPairedCerfBiche,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rPairedExclusiveCerf,
+      rPairedExclusiveBiche,
       rChainTasBuches,
     ],
     newRules: [
@@ -398,8 +417,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
     ],
   },
 
-  13: {
-    levelNumber: 13,
+  12: {
+    levelNumber: 12,
     boardCellCount: 12,
     emptyCellsCount: 7,
     newElements: ['chalet'],
@@ -407,23 +426,57 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
       rNoSameChien,
       rConnectedChien,
+      rNoSameRenard,
+      rForbidRenardMouton,
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
       rNoSameCerf,
       rNoSameBiche,
       rPairedCerfBiche,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rPairedExclusiveCerf,
+      rPairedExclusiveBiche,
       rChainTasBuches,
+      rChainTasBuchesChalet,
       rNoSameChalet,
       rRequireChaletBucheron,
     ],
     newRules: [
+      rChainTasBuchesChalet,
       rNoSameChalet,
       rRequireChaletBucheron,
     ],
+  },
+
+  13: {
+    levelNumber: 13,
+    boardCellCount: 12,
+    emptyCellsCount: 7,
+    newElements: [],
+    allRules: [
+      rNoSameBucheron,
+      rNoSameOurs,
+      rNoSameMouton,
+      rNoSameChien,
+      rConnectedChien,
+      rNoSameRenard,
+      rForbidRenardMouton,
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
+      rNoSameCerf,
+      rNoSameBiche,
+      rPairedCerfBiche,
+      rPairedExclusiveCerf,
+      rPairedExclusiveBiche,
+      rChainTasBuches,
+      rChainTasBuchesChalet,
+      rNoSameChalet,
+      rRequireChaletBucheron,
+    ],
+    newRules: [],
   },
 
   14: {
@@ -435,16 +488,20 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
       rNoSameChien,
       rConnectedChien,
+      rNoSameRenard,
+      rForbidRenardMouton,
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
       rNoSameCerf,
       rNoSameBiche,
       rPairedCerfBiche,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rPairedExclusiveCerf,
+      rPairedExclusiveBiche,
       rChainTasBuches,
+      rChainTasBuchesChalet,
       rNoSameChalet,
       rRequireChaletBucheron,
     ],
@@ -454,22 +511,26 @@ export const LEVEL_META: Record<number, LevelMeta> = {
   15: {
     levelNumber: 15,
     boardCellCount: 12,
-    emptyCellsCount: 9,
+    emptyCellsCount: 8,
     newElements: [],
     allRules: [
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
-      rRequireRucheOurs,
-      rSingletonRuche,
       rNoSameChien,
       rConnectedChien,
+      rNoSameRenard,
+      rForbidRenardMouton,
+      rSingletonRuche,
+      rRequireOursRuche,
+      rAllOursRuche,
       rNoSameCerf,
       rNoSameBiche,
       rPairedCerfBiche,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rPairedExclusiveCerf,
+      rPairedExclusiveBiche,
       rChainTasBuches,
+      rChainTasBuchesChalet,
       rNoSameChalet,
       rRequireChaletBucheron,
     ],

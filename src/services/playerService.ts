@@ -57,7 +57,7 @@ export interface PlayerProfile {
 //   Niveau 2 : 10–19 défis complétés
 //   Niveau N : (N-1)*10 … N*10-1
 //   → formule : Math.floor(count / 10) + 1, plafonné à 15.
-// Exemples : 42 défis → Niv. 4, 50 défis → Niv. 5, 59 défis → Niv. 5.
+// Exemples : 0 défis → Niv. 1, 10 défis → Niv. 2, 42 défis → Niv. 5, 150 défis → Niv. 15.
 export function computePlayerLevel(completedCount: number): number {
   return Math.min(15, Math.floor(completedCount / 10) + 1);
 }

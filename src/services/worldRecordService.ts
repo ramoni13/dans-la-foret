@@ -121,14 +121,58 @@ export async function trySetWorldRecord(
 }
 
 // ── Récupérer les N meilleurs records mondiaux (multi-défis) ─────────────────
-// Utile pour un futur écran "Top records".
 export async function getTopWorldRecords(maxCount = 20): Promise<WorldRecord[]> {
   try {
     const ref  = collection(db, COLLECTION);
-    // Pas d'index composite nécessaire : on trie côté client après
     const snap = await getDocs(ref);
     return snap.docs.map(d => ({ challengeId: d.id, ...d.data() } as WorldRecord));
   } catch {
     return [];
   }
+}
+
+/** Écoute en temps réel tous les records mondiaux (indexés par challengeId) */
+export function subscribeAllWorldRecords(
+  onChange: (records: Map<string, WorldRecord>) => void,
+): Unsubscribe {
+  const ref = collection(db, COLLECTION);
+  return onSnapshot(ref, snap => {
+    const map = new Map<string, WorldRecord>();
+    for (const d of snap.docs) {
+      map.set(d.id, { challengeId: d.id, ...d.data() } as WorldRecord);
+    }
+    onChange(map);
+  }, () => onChange(new Map()));
+}
+
+// ── Classement par nombre de records détenus ─────────────────────────────────
+export interface RecordHolderEntry {
+  userId: string;
+  username: string;
+  recordCount: number;
+}
+
+/** Écoute en temps réel tous les records et agrège par joueur */
+export function subscribeRecordHolders(
+  onChange: (holders: RecordHolderEntry[]) => void,
+): Unsubscribe {
+  const ref = collection(db, COLLECTION);
+  return onSnapshot(ref, snap => {
+    const byUser = new Map<string, { username: string; count: number }>();
+    for (const d of snap.docs) {
+      const data = d.data() as Omit<WorldRecord, 'challengeId'>;
+      const existing = byUser.get(data.userId);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        byUser.set(data.userId, { username: data.username, count: 1 });
+      }
+    }
+    const holders: RecordHolderEntry[] = [];
+    for (const [userId, { username, count }] of byUser) {
+      holders.push({ userId, username, recordCount: count });
+    }
+    holders.sort((a, b) => b.recordCount - a.recordCount);
+    onChange(holders);
+  }, () => onChange([]));
 }

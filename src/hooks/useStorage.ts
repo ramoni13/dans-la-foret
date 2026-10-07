@@ -48,6 +48,17 @@ interface PersistedPlayerState {
   // Streak quotidien
   dailyStreak: number;
   lastPlayedDate: string;
+  // Tutoriels bonus masqués
+  bonusTutorialDismissed: string[];
+  // Effet visuel en jeu
+  visualEffect: string;
+  // Défi journalier
+  dailyChallengeStreak: number;
+  lastDailyChallengeDate: string;
+  dailyChallengeStatus: string | null;
+  // Anti-triche
+  challengeStartedAt: Record<string, number>;
+  challengeAbandonedAt: Record<string, number>;
 }
 
 /** Extrait le sous-ensemble persistable depuis l'état Zustand courant */
@@ -65,6 +76,13 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     unlockedThemes:      state.unlockedThemes,
     dailyStreak:         state.dailyStreak,
     lastPlayedDate:      state.lastPlayedDate,
+    bonusTutorialDismissed: state.bonusTutorialDismissed as string[],
+    visualEffect:          state.visualEffect,
+    dailyChallengeStreak:      state.dailyChallengeStreak,
+    lastDailyChallengeDate:    state.lastDailyChallengeDate,
+    dailyChallengeStatus:      state.dailyChallengeStatus,
+    challengeStartedAt:        state.challengeStartedAt,
+    challengeAbandonedAt:      state.challengeAbandonedAt,
   };
 }
 
@@ -99,6 +117,7 @@ export function useStorage() {
               failCount:                saved.stats?.failCount                ?? {},
               improvedChallengesCount:  saved.stats?.improvedChallengesCount  ?? 0,
               seasonalChallengesPlayed: saved.stats?.seasonalChallengesPlayed ?? 0,
+              abandonCount:             (saved.stats as any)?.abandonCount    ?? {},
             },
             earnedBadges:    saved.earnedBadges    ?? [],
             badgeShowcase:   (saved.badgeShowcase  ?? []) as [string?, string?, string?],
@@ -106,6 +125,13 @@ export function useStorage() {
             unlockedThemes:  saved.unlockedThemes  ?? [],
             dailyStreak:     saved.dailyStreak     ?? 0,
             lastPlayedDate:  saved.lastPlayedDate  ?? '',
+            bonusTutorialDismissed: (saved.bonusTutorialDismissed ?? []) as import('../constants/bonus').BonusId[],
+            visualEffect: (saved.visualEffect ?? 'leaves') as import('../store/playerStore').VisualEffect,
+            dailyChallengeStreak:   saved.dailyChallengeStreak   ?? 0,
+            lastDailyChallengeDate: saved.lastDailyChallengeDate ?? '',
+            dailyChallengeStatus:   (saved.dailyChallengeStatus  ?? null) as 'pending' | 'in_progress' | 'success' | 'failed' | null,
+            challengeStartedAt:     saved.challengeStartedAt     ?? {},
+            challengeAbandonedAt:   saved.challengeAbandonedAt   ?? {},
           });
         } catch {
           console.warn('[useStorage] Données corrompues, réinitialisation.');
@@ -140,7 +166,15 @@ export function useStorage() {
         newState.stats.totalFriendsInvited      !== prevState.stats.totalFriendsInvited      ||
         newState.stats.topDEJCount              !== prevState.stats.topDEJCount              ||
         newState.stats.improvedChallengesCount  !== prevState.stats.improvedChallengesCount  ||
-        newState.stats.seasonalChallengesPlayed !== prevState.stats.seasonalChallengesPlayed;
+        newState.stats.seasonalChallengesPlayed !== prevState.stats.seasonalChallengesPlayed ||
+        newState.bonusTutorialDismissed.length  !== prevState.bonusTutorialDismissed.length ||
+        newState.visualEffect                   !== prevState.visualEffect ||
+        newState.dailyChallengeStreak           !== prevState.dailyChallengeStreak ||
+        newState.lastDailyChallengeDate         !== prevState.lastDailyChallengeDate ||
+        newState.dailyChallengeStatus           !== prevState.dailyChallengeStatus ||
+        // Anti-triche : détecter changements dans les Records via nombre de clés + référence
+        newState.challengeStartedAt             !== prevState.challengeStartedAt ||
+        newState.challengeAbandonedAt           !== prevState.challengeAbandonedAt;
 
       if (!changed) return;
 

@@ -12,7 +12,7 @@ import { ElementDefinition } from '../core/models/Element';
 
 export const tasBuchesDef: ElementDefinition = {
   id: 'tas_buches',
-  label: 'Tas de bûches',
+  label: 'Bûches',
   icon: require('../../assets/elements/tas_buches.png'),
   color: '#6D4C2A',
   maxPerBoard: 4,

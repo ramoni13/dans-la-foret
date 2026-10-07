@@ -1,35 +1,50 @@
 // ============================================================
 // HOOK useGame
 // Logique de jeu centralisée — connecte le store au gameplay
+//
+// Bonus one-shot temporaires (indépendants, peuvent coexister) :
+// - highlight_valid_cells : MODE ACTIF 10s — recalcule dynamiquement
+//   les cases valides à chaque changement de sélection ou de plateau.
+//   Efface les cases quand aucun élément n'est sélectionné.
+// - instinct : snapshot figé 5s des cases en erreur
+//   → une case vidée perd son halo rouge (géré dans le store)
 // ============================================================
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { usePlayerStore } from '../store/playerStore';
 import { BoardRegistry } from '../boards/BoardRegistry';
 import { ElementRegistry } from '../elements/ElementRegistry';
 import {
   getValidCellsForElement,
-  calculateSeedReward,
+  getErrorCells,
 } from '../core/engine/hintEngine';
-import { BoardDefinition } from '../core/models/Board';
 import { BONUS_DEFINITIONS, BonusId } from '../constants/bonus';
 import { Colors } from '../constants/colors';
+
+/** Durée d'affichage des bonus (ms) */
+const HIGHLIGHT_DURATION_MS = 10_000;
+const INSTINCT_DURATION_MS  =  5_000;
 
 export function useGame() {
   const game = useGameStore();
   const player = usePlayerStore();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ── Timers indépendants pour chaque bonus ──────────────────
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const instinctTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Deadlines exposées à HintOverlay pour le countdown ─────
+  const [highlightDeadline, setHighlightDeadline] = useState<number | null>(null);
+  const [instinctDeadline, setInstinctDeadline]   = useState<number | null>(null);
+
   const boardDef = game.currentChallenge
     ? BoardRegistry[game.currentChallenge.boardId]
     : null;
 
-  // Démarrer le chronomètre quand une partie commence
-  // On dépend de game.currentChallenge?.id pour redémarrer proprement
-  // à chaque nouveau défi (même si startTime change peu)
+  // ── Chronomètre de la partie ──────────────────────────────
   useEffect(() => {
-    // Nettoyer l'ancien timer dans tous les cas
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -49,20 +64,45 @@ export function useGame() {
     };
   }, [game.currentChallenge?.id, game.startTime, game.isVictory]);
 
-  // Arrêter le chronomètre à la victoire
-  // Note : markChallengeCompleted et addSeeds sont gérés dans [challengeId].tsx
-  // pour éviter le double appel (useGame + écran)
   useEffect(() => {
     if (game.isVictory) {
       if (timerRef.current) clearInterval(timerRef.current);
     }
   }, [game.isVictory]);
 
-  /**
-   * Place un élément sur une case sans validation de règle.
-   * Le joueur est libre de placer où il veut — la validation
-   * se fait uniquement au moment du bouton "Valider".
-   */
+  // ── Cleanup des timers bonus au démontage ou reset ────────
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+      if (instinctTimerRef.current)  clearTimeout(instinctTimerRef.current);
+    };
+  }, [game.currentChallenge?.id]);
+
+  // ── Mode highlight actif : recalcul dynamique ─────────────
+  // Quand highlightActive=true :
+  //   - selectedElement change → recalculer les cases valides
+  //   - selectedElement=null (placement fait) → effacer les cases valides
+  //   - playerBoard change (= placement) → effacer (l'élément est désélectionné)
+  //     le prochain selectElement déclenchera un nouveau calcul
+  useEffect(() => {
+    if (!game.highlightActive || !boardDef) return;
+
+    if (game.selectedElement) {
+      const state = useGameStore.getState();
+      const validCells = getValidCellsForElement(
+        game.selectedElement,
+        state.playerBoard,
+        boardDef,
+        ElementRegistry
+      );
+      game.setValidHintCells(validCells);
+    } else {
+      // Pas d'élément sélectionné → effacer les cases valides
+      game.clearValidHint();
+    }
+  }, [game.highlightActive, game.selectedElement, game.playerBoard, boardDef]);
+
+  // ── Place un élément sur une case ─────────────────────────
   const tryPlaceElement = (cellIndex: number, elementId: string): boolean => {
     if (!game.currentChallenge) return false;
 
@@ -75,40 +115,14 @@ export function useGame() {
     return true;
   };
 
-  /**
-   * Retourne la couleur d'une case selon son état.
-   * @param cellIndex  Index de la case
-   * @param hoveredElementId  Élément survolé/sélectionné (pour le bonus highlight)
-   */
-  const getCellColor = (cellIndex: number, hoveredElementId?: string | null): string => {
-    const { hintCells, hintType } = game;
-
-    // Bonus highlight_valid_cells : cases où le placement est légalement possible
-    // (basé sur les règles, PAS sur la solution)
-    if (
-      game.highlightValidCellsActive &&
-      hoveredElementId &&
-      boardDef
-    ) {
-      const possibleCells = getValidCellsForElement(
-        hoveredElementId,
-        game.playerBoard,
-        boardDef,
-        ElementRegistry
-      );
-      if (possibleCells.includes(cellIndex)) {
-        return Colors.cell.valid;
-      }
+  // ── Couleur d'une case selon son état ─────────────────────
+  const getCellColor = (cellIndex: number): string => {
+    // Priorité : erreur (rouge) > valide (vert) > fixe > vide
+    if (game.errorHintCells.includes(cellIndex)) {
+      return Colors.cell.wrong;
     }
-
-    if (hintCells.includes(cellIndex)) {
-      switch (hintType) {
-        case 'valid': return Colors.cell.valid;
-        case 'invalid': return Colors.cell.invalid;
-        case 'correct': return Colors.cell.correct;
-        case 'wrong': return Colors.cell.wrong;
-        default: return Colors.cell.hint;
-      }
+    if (game.validHintCells.includes(cellIndex)) {
+      return Colors.cell.valid;
     }
 
     const isFixed = game.currentChallenge?.fixedPlacements.some(
@@ -119,11 +133,23 @@ export function useGame() {
     return Colors.cell.empty;
   };
 
-  /**
-   * Active un bonus si le joueur a assez de graines.
-   * Bonus 1 : highlight_valid_cells — activé en permanence jusqu'à la fin de partie
-   * Bonus 2 : count_errors — utilisé automatiquement lors de la validation
-   */
+  // ── Démarrer le mode highlight (timer 10s) ────────────────
+  const startHighlightMode = useCallback(() => {
+    game.setHighlightActive(true);
+
+    const deadline = Date.now() + HIGHLIGHT_DURATION_MS;
+    setHighlightDeadline(deadline);
+
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => {
+      game.setHighlightActive(false);
+      game.clearValidHint();
+      highlightTimerRef.current = null;
+      setHighlightDeadline(null);
+    }, HIGHLIGHT_DURATION_MS);
+  }, []);
+
+  // ── Activation d'un bonus ─────────────────────────────────
   const activateBonus = (bonusId: BonusId): boolean => {
     if (!game.currentChallenge) return false;
 
@@ -132,22 +158,34 @@ export function useGame() {
     if (!spent) return false;
 
     game.useBonus(bonusId);
-    // Les effets sont gérés dans le store et dans l'écran de jeu
-    return true;
-  };
 
-  /**
-   * Calcule les cases possibles pour un élément (bonus highlight).
-   * Basé sur les règles de jeu, PAS sur la solution.
-   */
-  const getHighlightCells = (elementId: string): number[] => {
-    if (!boardDef) return [];
-    return getValidCellsForElement(
-      elementId,
-      game.playerBoard,
-      boardDef,
-      ElementRegistry
-    );
+    if (bonusId === 'highlight_valid_cells') {
+      startHighlightMode();
+    }
+
+    if (bonusId === 'instinct') {
+      const fixedSet = new Set(
+        game.currentChallenge.fixedPlacements.map(fp => fp.cellIndex)
+      );
+      const errors = getErrorCells(
+        game.playerBoard,
+        game.currentChallenge.solution,
+        fixedSet
+      );
+      game.setErrorHintCells(errors);
+
+      const deadline = Date.now() + INSTINCT_DURATION_MS;
+      setInstinctDeadline(deadline);
+
+      if (instinctTimerRef.current) clearTimeout(instinctTimerRef.current);
+      instinctTimerRef.current = setTimeout(() => {
+        game.clearErrorHint();
+        instinctTimerRef.current = null;
+        setInstinctDeadline(null);
+      }, INSTINCT_DURATION_MS);
+    }
+
+    return true;
   };
 
   return {
@@ -157,18 +195,23 @@ export function useGame() {
     elapsedTime: game.elapsedTime,
     isVictory: game.isVictory,
     bonusUsed: game.bonusUsed,
-    hintCells: game.hintCells,
+    validHintCells: game.validHintCells,
+    errorHintCells: game.errorHintCells,
+    highlightActive: game.highlightActive,
     validationResult: game.validationResult,
-    highlightValidCellsActive: game.highlightValidCellsActive,
+    highlightDeadline,
+    instinctDeadline,
     boardDef,
     tryPlaceElement,
     getCellColor,
     activateBonus,
-    getHighlightCells,
     selectElement: game.selectElement,
     removeElement: game.removeElement,
     moveElement: game.moveElement,
     loadChallenge: game.loadChallenge,
+    loadDailyChallenge: game.loadDailyChallenge,
+    isDailyChallenge: game.isDailyChallenge,
+    dailyValidationUsed: game.dailyValidationUsed,
     startTimer: game.startTimer,
     validateChallenge: game.validateChallenge,
     dismissValidation: game.dismissValidation,

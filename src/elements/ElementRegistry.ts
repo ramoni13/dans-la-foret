@@ -14,6 +14,7 @@ import { rucheDef } from './ruche';
 import { cerfDef } from './cerf';
 import { bicheDef } from './biche';
 import { tasBuchesDef } from './tas_buches';
+import { champignonDef } from './champignon';
 
 export const ElementRegistry: Record<string, ElementDefinition> = {
   // ── Éléments de base (jeu physique Djeco) ──────────────────────────────
@@ -28,4 +29,6 @@ export const ElementRegistry: Record<string, ElementDefinition> = {
   cerf: cerfDef,         // paired_specific avec biche
   biche: bicheDef,       // paired_specific avec cerf
   tas_buches: tasBuchesDef, // neighbor_specific_chain (bucheron + chalet conditionnel)
+  // ── Défi journalier ──────────────────────────────────────────────────
+  champignon: champignonDef, // center_only, ≠ voisin champignon
 };

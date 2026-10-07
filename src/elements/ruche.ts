@@ -2,9 +2,9 @@ import { ElementDefinition } from '../core/models/Element';
 
 // ============================================================
 // RUCHE
-// Règle : doit être voisine d'au moins 1 ours (l'ours mange du miel).
-//         Un seul exemplaire max par défi (maxPerBoard = 1).
-//         Si plusieurs ours sur le plateau, 1 seul suffit à valider.
+// Règle : un seul exemplaire max par défi (maxPerBoard = 1).
+//         Tous les ours du plateau doivent être voisins directs de
+//         la ruche — la contrainte est portée par l'ours, pas la ruche.
 // ============================================================
 
 export const rucheDef: ElementDefinition = {
@@ -14,13 +14,8 @@ export const rucheDef: ElementDefinition = {
   color: '#F5A623',
   maxPerBoard: 1,
   constraints: [
-    {
-      // Doit être voisine d'au moins 1 ours
-      type: 'neighbor_specific',
-      targetElementId: 'ours',
-      mode: 'require',
-      scope: 'neighbor',
-      minCount: 1,
-    },
+    // La ruche n'a plus de contrainte de voisinage propre.
+    // C'est l'ours qui porte la contrainte conditionnelle :
+    // "si une ruche existe, je dois en être voisin".
   ],
 };

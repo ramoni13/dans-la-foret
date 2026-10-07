@@ -7,6 +7,9 @@ import { create } from 'zustand';
 import { PlayerProfile, computePlayerLevel } from '../services/playerService';
 import { Lang, getSystemLocale } from '../i18n/locale';
 import { BonusId } from '../constants/bonus';
+
+/** Type d'effet visuel en jeu (particules en arrière-plan) */
+export type VisualEffect = 'leaves' | 'butterflies' | 'birds' | 'none';
 import {
   BADGE_MAP,
   BADGE_SEED_REWARDS,
@@ -43,6 +46,7 @@ interface PlayerStats {
   failCount: Record<string, number>; // challengeId → nb d'échecs (validation ratée) pendant la partie en cours
   improvedChallengesCount: number;   // nb de défis différents dont le temps a été amélioré
   seasonalChallengesPlayed: number;  // défis joués pendant la saison en cours
+  abandonCount: Record<string, number>; // challengeId → nb d'abandons cumulés
 }
 
 interface PlayerState {
@@ -67,13 +71,29 @@ interface PlayerState {
 
   // ── Badges ──────────────────────────────────────────────────────────────────
   earnedBadges: string[];                   // IDs des badges obtenus
-  unlockedBonuses: BonusId[];               // bonus débloqués via badges (instinct, flash)
+  unlockedBonuses: BonusId[];               // bonus débloqués via badges (instinct)
   unlockedThemes: string[];                 // thèmes débloqués via badges
   badgeShowcase: [string?, string?, string?]; // 3 badges choisis pour la vitrine
 
   // ── Streak quotidien ────────────────────────────────────────────────────────
   dailyStreak: number;      // jours consécutifs joués
   lastPlayedDate: string;   // "YYYY-MM-DD" — date ISO de la dernière session de jeu
+
+  // ── Tutoriels bonus ────────────────────────────────────────────────────────
+  /** BonusId dont le joueur a coché "Ne plus me montrer" */
+  bonusTutorialDismissed: BonusId[];
+
+  // ── Effet visuel en jeu ─────────────────────────────────────────────────
+  visualEffect: VisualEffect;
+
+  // ── Défi journalier ────────────────────────────────────────────────────────
+  dailyChallengeStreak: number;                                      // Jours consécutifs réussis (indépendant du streak normal)
+  lastDailyChallengeDate: string;                                    // "YYYY-MM-DD" — date UTC du dernier défi journalier réussi
+  dailyChallengeStatus: 'pending' | 'in_progress' | 'success' | 'failed' | null; // Statut du jour en cours
+
+  // ── Anti-triche : timestamps d'abandon ────────────────────────────────────
+  challengeStartedAt: Record<string, number>;   // challengeId → Date.now() de première ouverture
+  challengeAbandonedAt: Record<string, number>; // challengeId → Date.now() du dernier abandon
 
   // ── Actions de base ─────────────────────────────────────────────────────────
   setAuthState: (ready: boolean, authenticated: boolean) => void;
@@ -105,8 +125,55 @@ interface PlayerState {
   recordFriendInvited: () => void;
   recordTopDEJ: () => void;
 
+  // ── Actions tutoriels bonus ──────────────────────────────────────────────────
+  dismissBonusTutorial: (bonusId: BonusId) => void;
+  resetBonusTutorials: () => void;
+
+  // ── Actions effet visuel ───────────────────────────────────────────────────
+  setVisualEffect: (effect: VisualEffect) => void;
+
   // ── Action quotidienne ───────────────────────────────────────────────────────
   checkDailyLogin: () => boolean; // Retourne true si c'est la première connexion du jour
+
+  // ── Actions défi journalier ─────────────────────────────────────────────────
+  submitDailyResult: (date: string, success: boolean) => void;
+  resetDailyStatus: () => void;
+
+  // ── Actions anti-triche ───────────────────────────────────────────────────
+  markChallengeStarted: (challengeId: string) => void;
+  markChallengeAbandoned: (challengeId: string) => void;
+  clearChallengeTimestamps: (challengeId: string) => void;
+}
+
+// ── Constante anti-triche ────────────────────────────────────────────────────
+
+/** Cooldown après abandon : 30 minutes */
+export const ABANDON_COOLDOWN_MS = 1_800_000;
+
+// ── Fonctions utilitaires anti-triche (hors store pour éviter stale closures) ─
+
+/** Vérifie si un défi est en cooldown après abandon. Appeler avec getState(). */
+export function isChallengeOnCooldown(
+  challengeAbandonedAt: Record<string, number>,
+  challengeId: string,
+): { onCooldown: boolean; remainingMs: number } {
+  const abandonedAt = challengeAbandonedAt[challengeId];
+  if (abandonedAt == null) return { onCooldown: false, remainingMs: 0 };
+  const elapsed = Date.now() - abandonedAt;
+  if (elapsed >= ABANDON_COOLDOWN_MS) return { onCooldown: false, remainingMs: 0 };
+  return { onCooldown: true, remainingMs: ABANDON_COOLDOWN_MS - elapsed };
+}
+
+/** Retourne le temps écoulé cumulé pour un défi (en ms). Appeler avec getState(). */
+export function getChallengeElapsed(
+  challengeStartedAt: Record<string, number>,
+  challengeAbandonedAt: Record<string, number>,
+  challengeId: string,
+): number {
+  const startedAt = challengeStartedAt[challengeId];
+  if (startedAt == null) return 0;
+  const endedAt = challengeAbandonedAt[challengeId] ?? Date.now();
+  return endedAt - startedAt;
 }
 
 // ── Calcul des bonus/thèmes débloqués depuis les badges ──────────────────────
@@ -125,7 +192,6 @@ function computeUnlockedBonuses(earnedBadges: string[]): BonusId[] {
     const count = rarityCount[unlock.rarity] ?? 0;
     if (count >= unlock.count) {
       if (unlock.unlock === 'bonus_instinct') bonuses.push('instinct');
-      if (unlock.unlock === 'bonus_flash')    bonuses.push('flash');
     }
   }
 
@@ -185,6 +251,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     failCount: {},
     improvedChallengesCount: 0,
     seasonalChallengesPlayed: 0,
+    abandonCount: {},
   },
 
   earnedBadges: [],
@@ -194,6 +261,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   dailyStreak: 0,
   lastPlayedDate: '',
+
+  bonusTutorialDismissed: [],
+  visualEffect: 'leaves' as VisualEffect,
+
+  dailyChallengeStreak: 0,
+  lastDailyChallengeDate: '',
+  dailyChallengeStatus: null,
+
+  challengeStartedAt: {},
+  challengeAbandonedAt: {},
 
   // ── setAuthState ──────────────────────────────────────────
   setAuthState: (ready, authenticated) => set({ authReady: ready, isAuthenticated: authenticated }),
@@ -278,6 +355,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         failCount:                profile.stats.failCount ?? {},
         improvedChallengesCount:  profile.stats.improvedChallengesCount ?? 0,
         seasonalChallengesPlayed: profile.stats.seasonalChallengesPlayed ?? 0,
+        abandonCount:             (profile.stats as any).abandonCount ?? {},
       },
       earnedBadges:    mergedEarned,
       unlockedBonuses: computeUnlockedBonuses(mergedEarned),
@@ -343,12 +421,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // seasonalChallengesPlayed : incrémente toujours (une partie = une saison)
       const newSeasonalCount = state.stats.seasonalChallengesPlayed + 1;
 
+      // Anti-triche : nettoyer les timestamps d'abandon à la victoire
+      const { [challengeId]: _s, ...restStarted } = state.challengeStartedAt;
+      const { [challengeId]: _a, ...restAbandoned } = state.challengeAbandonedAt;
+
       return {
         completedChallenges: newCompleted,
         currentLevel: computePlayerLevel(newCompleted.length),
         friendChallengeTokens: tokenEarned
           ? state.friendChallengeTokens + 1
           : state.friendChallengeTokens,
+        challengeStartedAt: restStarted,
+        challengeAbandonedAt: restAbandoned,
         stats: {
           ...state.stats,
           totalSolved: alreadyCompleted ? state.stats.totalSolved : state.stats.totalSolved + 1,
@@ -410,6 +494,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       failCount: {},
       improvedChallengesCount: 0,
       seasonalChallengesPlayed: 0,
+      abandonCount: {},
     },
     earnedBadges: [],
     unlockedBonuses: [],
@@ -417,6 +502,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     badgeShowcase: [undefined, undefined, undefined],
     dailyStreak: 0,
     lastPlayedDate: '',
+    dailyChallengeStreak: 0,
+    lastDailyChallengeDate: '',
+    dailyChallengeStatus: null,
+    challengeStartedAt: {},
+    challengeAbandonedAt: {},
   }),
 
   // ── awardBadge ────────────────────────────────────────────
@@ -493,4 +583,94 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({ dailyStreak: newStreak, lastPlayedDate: today });
     return true; // Première connexion de la journée
   },
+
+  // ── Tutoriels bonus ──────────────────────────────────────
+  dismissBonusTutorial: (bonusId) => set(state => ({
+    bonusTutorialDismissed: state.bonusTutorialDismissed.includes(bonusId)
+      ? state.bonusTutorialDismissed
+      : [...state.bonusTutorialDismissed, bonusId],
+  })),
+
+  resetBonusTutorials: () => set({ bonusTutorialDismissed: [] }),
+
+  // ── Effet visuel ─────────────────────────────────────────
+  setVisualEffect: (effect) => set({ visualEffect: effect }),
+
+  // ── Défi journalier ────────────────────────────────────────
+  submitDailyResult: (date, success) => {
+    set(state => {
+      if (success) {
+        // Succès : incrémenter le streak si c'est le jour suivant, sinon reset à 1
+        const isConsecutive = isNextDay(state.lastDailyChallengeDate, date);
+        const newStreak = isConsecutive
+          ? state.dailyChallengeStreak + 1
+          : 1;
+        return {
+          dailyChallengeStatus: 'success' as const,
+          lastDailyChallengeDate: date,
+          dailyChallengeStreak: newStreak,
+        };
+      } else {
+        // Échec : reset le streak, marquer comme échoué
+        return {
+          dailyChallengeStatus: 'failed' as const,
+          dailyChallengeStreak: 0,
+        };
+      }
+    });
+  },
+
+  resetDailyStatus: () => set({ dailyChallengeStatus: null }),
+
+  // ── Anti-triche : timestamps d'abandon ──────────────────────
+  markChallengeStarted: (challengeId) => {
+    set(state => {
+      // Ne pas écraser si déjà enregistré (reprise après abandon)
+      if (state.challengeStartedAt[challengeId] != null) return state;
+      return {
+        challengeStartedAt: {
+          ...state.challengeStartedAt,
+          [challengeId]: Date.now(),
+        },
+      };
+    });
+  },
+
+  markChallengeAbandoned: (challengeId) => {
+    set(state => ({
+      challengeAbandonedAt: {
+        ...state.challengeAbandonedAt,
+        [challengeId]: Date.now(),
+      },
+      stats: {
+        ...state.stats,
+        abandonCount: {
+          ...state.stats.abandonCount,
+          [challengeId]: (state.stats.abandonCount[challengeId] ?? 0) + 1,
+        },
+      },
+    }));
+  },
+
+  clearChallengeTimestamps: (challengeId) => {
+    set(state => {
+      const { [challengeId]: _s, ...restStarted } = state.challengeStartedAt;
+      const { [challengeId]: _a, ...restAbandoned } = state.challengeAbandonedAt;
+      return {
+        challengeStartedAt: restStarted,
+        challengeAbandonedAt: restAbandoned,
+      };
+    });
+  },
 }));
+
+// ── Helpers privés ────────────────────────────────────────────────────────────
+
+/** Vérifie si dateB est le jour suivant de dateA (format "YYYY-MM-DD") */
+function isNextDay(dateA: string, dateB: string): boolean {
+  if (!dateA || !dateB) return false;
+  const a = new Date(dateA + 'T00:00:00Z');
+  const b = new Date(dateB + 'T00:00:00Z');
+  const diffMs = b.getTime() - a.getTime();
+  return diffMs === 86400000; // Exactement 1 jour
+}
