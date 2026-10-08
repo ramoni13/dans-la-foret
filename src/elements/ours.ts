@@ -12,7 +12,7 @@ import { ElementDefinition } from '../core/models/Element';
 export const oursDef: ElementDefinition = {
   id: 'ours',
   label: 'Ours',
-  icon: require('../../assets/elements/ours.png'),
+  icon: require('../../assets/elements/pastilles/ours.png'),
   color: '#6B4226',
   maxPerBoard: 4,
   constraints: [

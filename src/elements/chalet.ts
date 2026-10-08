@@ -3,7 +3,7 @@ import { ElementDefinition } from '../core/models/Element';
 export const chaletDef: ElementDefinition = {
   id: 'chalet',
   label: 'Chalet',
-  icon: require('../../assets/elements/chalet.png'),
+  icon: require('../../assets/elements/pastilles/chalet.png'),
   color: '#A0522D',
   maxPerBoard: 4,
   constraints: [

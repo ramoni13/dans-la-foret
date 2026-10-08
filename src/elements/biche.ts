@@ -11,7 +11,7 @@ import { ElementDefinition } from '../core/models/Element';
 export const bicheDef: ElementDefinition = {
   id: 'biche',
   label: 'Biche',
-  icon: require('../../assets/elements/biche.png'),
+  icon: require('../../assets/elements/pastilles/biche.png'),
   color: '#C8A96E',
   maxPerBoard: 4,
   constraints: [

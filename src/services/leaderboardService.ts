@@ -33,7 +33,14 @@ export interface LeaderboardEntry {
   seeds: number;
   completedCount: number;      // total défis complétés
   score: number;               // score composite pour tri
+  dailyWins?: number;          // nb de records du jour détenus (cumulatif, jamais décrémenté)
   updatedAt?: any;
+}
+
+export interface DailyWinsEntry {
+  userId: string;
+  username: string;
+  dailyWins: number;
 }
 
 const COLLECTION = 'leaderboard';
@@ -92,6 +99,30 @@ export function subscribeLeaderboard(
   const q   = query(ref, orderBy('score', 'desc'), limit(maxCount));
   return onSnapshot(q, snap => {
     onChange(snap.docs.map(d => d.data() as LeaderboardEntry));
+  }, () => onChange([]));
+}
+
+// ── Classement "Défis du Jour" par nombre de victoires daily cumulées ─────────
+// Basé sur le champ dailyWins dans /leaderboard/{userId},
+// incrémenté par sealDailyRecord() chaque matin.
+export function subscribeDailyWinsLeaderboard(
+  maxCount = 100,
+  onChange: (entries: DailyWinsEntry[]) => void,
+): Unsubscribe {
+  const ref = collection(db, COLLECTION);
+  const q   = query(ref, orderBy('dailyWins', 'desc'), limit(maxCount));
+  return onSnapshot(q, snap => {
+    const entries: DailyWinsEntry[] = snap.docs
+      .map(d => {
+        const data = d.data() as LeaderboardEntry;
+        return {
+          userId:    data.userId,
+          username:  data.username,
+          dailyWins: data.dailyWins ?? 0,
+        };
+      })
+      .filter(e => e.dailyWins > 0); // n'affiche que ceux qui ont au moins 1 victoire
+    onChange(entries);
   }, () => onChange([]));
 }
 

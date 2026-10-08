@@ -95,6 +95,10 @@ interface PlayerState {
   challengeStartedAt: Record<string, number>;   // challengeId → Date.now() de première ouverture
   challengeAbandonedAt: Record<string, number>; // challengeId → Date.now() du dernier abandon
 
+  // ── Notifications amis ─────────────────────────────────────────────────────
+  /** Afficher le badge rouge sur l'onglet Amis quand un défi est en attente */
+  friendNotifBadgeEnabled: boolean;
+
   // ── Actions de base ─────────────────────────────────────────────────────────
   setAuthState: (ready: boolean, authenticated: boolean) => void;
   setUser: (userId: string, username: string) => void;
@@ -143,6 +147,9 @@ interface PlayerState {
   markChallengeStarted: (challengeId: string) => void;
   markChallengeAbandoned: (challengeId: string) => void;
   clearChallengeTimestamps: (challengeId: string) => void;
+
+  // ── Actions notifications amis ───────────────────────────────────────────
+  setFriendNotifBadgeEnabled: (enabled: boolean) => void;
 }
 
 // ── Constante anti-triche ────────────────────────────────────────────────────
@@ -271,6 +278,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   challengeStartedAt: {},
   challengeAbandonedAt: {},
+
+  friendNotifBadgeEnabled: true,
 
   // ── setAuthState ──────────────────────────────────────────
   setAuthState: (ready, authenticated) => set({ authReady: ready, isAuthenticated: authenticated }),
@@ -507,6 +516,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     dailyChallengeStatus: null,
     challengeStartedAt: {},
     challengeAbandonedAt: {},
+    friendNotifBadgeEnabled: true,
   }),
 
   // ── awardBadge ────────────────────────────────────────────
@@ -662,6 +672,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       };
     });
   },
+
+  // ── Notifications amis ────────────────────────────────────
+  setFriendNotifBadgeEnabled: (enabled) => set({ friendNotifBadgeEnabled: enabled }),
 }));
 
 // ── Helpers privés ────────────────────────────────────────────────────────────

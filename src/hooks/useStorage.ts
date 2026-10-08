@@ -59,6 +59,8 @@ interface PersistedPlayerState {
   // Anti-triche
   challengeStartedAt: Record<string, number>;
   challengeAbandonedAt: Record<string, number>;
+  // Notifications amis
+  friendNotifBadgeEnabled: boolean;
 }
 
 /** Extrait le sous-ensemble persistable depuis l'état Zustand courant */
@@ -83,6 +85,7 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     dailyChallengeStatus:      state.dailyChallengeStatus,
     challengeStartedAt:        state.challengeStartedAt,
     challengeAbandonedAt:      state.challengeAbandonedAt,
+    friendNotifBadgeEnabled:   state.friendNotifBadgeEnabled,
   };
 }
 
@@ -132,6 +135,7 @@ export function useStorage() {
             dailyChallengeStatus:   (saved.dailyChallengeStatus  ?? null) as 'pending' | 'in_progress' | 'success' | 'failed' | null,
             challengeStartedAt:     saved.challengeStartedAt     ?? {},
             challengeAbandonedAt:   saved.challengeAbandonedAt   ?? {},
+            friendNotifBadgeEnabled: saved.friendNotifBadgeEnabled ?? true,
           });
         } catch {
           console.warn('[useStorage] Données corrompues, réinitialisation.');
@@ -174,7 +178,8 @@ export function useStorage() {
         newState.dailyChallengeStatus           !== prevState.dailyChallengeStatus ||
         // Anti-triche : détecter changements dans les Records via nombre de clés + référence
         newState.challengeStartedAt             !== prevState.challengeStartedAt ||
-        newState.challengeAbandonedAt           !== prevState.challengeAbandonedAt;
+        newState.challengeAbandonedAt           !== prevState.challengeAbandonedAt ||
+        newState.friendNotifBadgeEnabled        !== prevState.friendNotifBadgeEnabled;
 
       if (!changed) return;
 

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // SERVICE DÉFI JOURNALIER
 // Génération déterministe (seed = date UTC) + Firestore
 //
@@ -14,13 +14,17 @@ import {
   doc,
   setDoc,
   getDoc,
+  updateDoc,
   collection,
+  collectionGroup,
   query,
   orderBy,
   limit,
+  getDocs,
   onSnapshot,
   Unsubscribe,
   serverTimestamp,
+  increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { board15cellsDaily } from '../boards/board_15cells_daily';
@@ -87,49 +91,49 @@ export function getDailyDateString(date: Date): string {
 const DAILY_COMPOSITIONS: Composition[] = [
   // ── Famille A : bases + champignon ─────────────────────────────────────────
   // A1 : classique variée (3+2+3+2+1+1+1+2=15)
-  { bucheron: 3, ours: 2, mouton: 3, chien: 2, renard: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 3, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 2 },
   // A2 : plus de bûcherons (4+2+2+2+1+1+1+2=15)
-  { bucheron: 4, ours: 2, mouton: 2, chien: 2, renard: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 4, ours: 2, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 2 },
   // A3 : plus de moutons (2+2+4+2+1+1+1+2=15)
-  { bucheron: 2, ours: 2, mouton: 4, chien: 2, renard: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 4, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 2 },
 
   // ── Famille B : avec ruche ─────────────────────────────────────────────────
   // B1 : ruche + chiens (2+2+2+3+1+1+1+1+2=15)
-  { bucheron: 2, ours: 2, mouton: 2, chien: 3, renard: 1, cerf: 1, biche: 1, ruche: 1, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 2, chien: 3, loup: 1, cerf: 1, biche: 1, ruche: 1, champignon: 2 },
   // B2 : ruche + équilibre (3+2+2+2+1+1+1+1+2=15)
-  { bucheron: 3, ours: 2, mouton: 2, chien: 2, ruche: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 2, chien: 2, ruche: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
   // B3 : ruche + gros moutons (2+2+3+2+1+1+1+1+2=15)
-  { bucheron: 2, ours: 2, mouton: 3, chien: 2, ruche: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 3, chien: 2, ruche: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
 
   // ── Famille C : avec chalet ────────────────────────────────────────────────
   // C1 : chalet simple (3+2+2+2+1+1+1+1+2=15)
-  { bucheron: 3, ours: 2, mouton: 2, chien: 2, chalet: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 2, chien: 2, chalet: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
   // C2 : chalet + gros chiens (3+1+2+3+1+1+1+1+2=15)
-  { bucheron: 3, ours: 1, mouton: 2, chien: 3, chalet: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 1, mouton: 2, chien: 3, chalet: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
 
   // ── Famille D : avec tas de bûches ─────────────────────────────────────────
   // D1 : tas_buches simple (3+2+2+3+1+1+1+1+1=15)
-  { bucheron: 3, ours: 2, mouton: 2, chien: 3, tas_buches: 1, renard: 1, cerf: 1, biche: 1, champignon: 1 },
+  { bucheron: 3, ours: 2, mouton: 2, chien: 3, tas_buches: 1, loup: 1, cerf: 1, biche: 1, champignon: 1 },
   // D2 : tas_buches + gros moutons (3+1+3+2+1+1+1+1+2=15)
-  { bucheron: 3, ours: 1, mouton: 3, chien: 2, tas_buches: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 1, mouton: 3, chien: 2, tas_buches: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
 
   // ── Famille E : full-house (chalet + tas_buches) ──────────────────────────
   // E1 : full-house classique (3+2+1+2+1+1+1+1+1+2=15)
-  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, renard: 1, cerf: 1, biche: 1, tas_buches: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, loup: 1, cerf: 1, biche: 1, tas_buches: 1, champignon: 2 },
   // E2 : full-house + ruche (3+2+1+2+1+1+1+1+1+1+1=15)
-  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, renard: 1, cerf: 1, biche: 1, tas_buches: 1, ruche: 1, champignon: 1 },
+  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, loup: 1, cerf: 1, biche: 1, tas_buches: 1, ruche: 1, champignon: 1 },
 
   // ── Famille F : gros cerfs/biches ──────────────────────────────────────────
   // F1 : double paires cerfs (3+2+1+2+1+2+2+2=15)
-  { bucheron: 3, ours: 2, mouton: 1, chien: 2, renard: 1, cerf: 2, biche: 2, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 2, biche: 2, champignon: 2 },
   // F2 : triple paires cerfs (2+2+1+2+1+3+3+1=15)
-  { bucheron: 2, ours: 2, mouton: 1, chien: 2, renard: 1, cerf: 3, biche: 3, champignon: 1 },
+  { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 3, biche: 3, champignon: 1 },
 
-  // ── Famille G : dominance mouton/renard ────────────────────────────────────
-  // G1 : beaucoup de moutons et renards (2+2+3+2+2+1+1+2=15)
-  { bucheron: 2, ours: 2, mouton: 3, chien: 2, renard: 2, cerf: 1, biche: 1, champignon: 2 },
-  // G2 : mouton/renard max (2+1+4+2+2+1+1+2=15)
-  { bucheron: 2, ours: 1, mouton: 4, chien: 2, renard: 2, cerf: 1, biche: 1, champignon: 2 },
+  // ── Famille G : dominance mouton/loup ────────────────────────────────────
+  // G1 : beaucoup de moutons et loups (2+2+3+2+2+1+1+2=15)
+  { bucheron: 2, ours: 2, mouton: 3, chien: 2, loup: 2, cerf: 1, biche: 1, champignon: 2 },
+  // G2 : mouton/loup max (2+1+4+2+2+1+1+2=15)
+  { bucheron: 2, ours: 1, mouton: 4, chien: 2, loup: 2, cerf: 1, biche: 1, champignon: 2 },
 ];
 
 // ── Utilitaire : mélange Fisher-Yates seeded ──────────────────────────────────
@@ -169,7 +173,7 @@ function isDailyPedagogicallyValid(
   // Règles relationnelles : au moins un des deux éléments d'une paire
   // doit être à poser pour que la relation soit visible et jouable.
   if (inFull('chalet') && !hasAvailable('chalet') && !hasAvailable('bucheron')) return false;
-  if (inFull('renard') && !hasAvailable('renard') && !hasAvailable('mouton')) return false;
+  if (inFull('loup') && !hasAvailable('loup') && !hasAvailable('mouton')) return false;
   if (inFull('ruche') && !hasAvailable('ruche') && !hasAvailable('ours')) return false;
   if (inFull('cerf') && !hasAvailable('cerf') && !hasAvailable('biche')) return false;
   if (inFull('biche') && !hasAvailable('biche') && !hasAvailable('cerf')) return false;
@@ -187,12 +191,12 @@ function isDailyPedagogicallyValid(
 
 /**
  * Vérifie que la composition est narrativement cohérente AVANT génération.
- * Si renard est présent, mouton doit l'être aussi (sinon aucune tension).
+ * Si loup est présent, mouton doit l'être aussi (sinon aucune tension).
  * Si chalet est présent, bucheron doit l'être aussi.
  */
 function isDailyNarrativelyCoherent(tokenCounts: TokenCount[]): boolean {
   const inCompo = (id: string) => tokenCounts.some(t => t.elementId === id && t.count > 0);
-  if (inCompo('renard') && !inCompo('mouton')) return false;
+  if (inCompo('loup') && !inCompo('mouton')) return false;
   if (inCompo('chalet') && !inCompo('bucheron')) return false;
   if (inCompo('tas_buches') && !inCompo('bucheron')) return false;
   return true;
@@ -200,7 +204,7 @@ function isDailyNarrativelyCoherent(tokenCounts: TokenCount[]): boolean {
 
 /**
  * Vérifie la tension narrative APRÈS création des cases fixes.
- * Les paires liées (renard/mouton, chalet/bucheron) ne doivent pas
+ * Les paires liées (loup/mouton, chalet/bucheron) ne doivent pas
  * être entièrement fixées — au moins l'un des deux doit être jouable.
  */
 function isDailyNarrativelyInteresting(
@@ -210,8 +214,8 @@ function isDailyNarrativelyInteresting(
   const inCompo = (id: string) => fullTokenCounts.some(t => t.elementId === id && t.count > 0);
   const hasAvailable = (id: string) => availableTokens.some(t => t.elementId === id && t.count > 0);
 
-  if (inCompo('renard') && inCompo('mouton')) {
-    if (!hasAvailable('renard') && !hasAvailable('mouton')) return false;
+  if (inCompo('loup') && inCompo('mouton')) {
+    if (!hasAvailable('loup') && !hasAvailable('mouton')) return false;
   }
   if (inCompo('chalet') && inCompo('bucheron')) {
     if (!hasAvailable('chalet') && !hasAvailable('bucheron')) return false;
@@ -671,4 +675,119 @@ export function calculateDailyReward(
   const total = baseSeeds + topPercentBonus + top3Bonus + firstPlaceBonus + streakBonus;
 
   return { baseSeeds, topPercentBonus, top3Bonus, firstPlaceBonus, streakBonus, total };
+}
+
+// ── Classement "records du jour" par joueur ───────────────────────────────────
+
+export interface DailyRecordHolder {
+  userId: string;
+  username: string;
+  dailyRecordCount: number;
+}
+
+/**
+ * Écoute en temps réel tous les résultats de toutes les dates
+ * via collectionGroup("results"), puis conserve pour chaque date
+ * uniquement le meilleur temps (rang 1). Agrège par joueur.
+ *
+ * Nécessite un index Firestore : collectionGroup "results" orderBy "timeMs" asc.
+ */
+export function subscribeDailyRecordHolders(
+  onChange: (holders: DailyRecordHolder[]) => void,
+): Unsubscribe {
+  // collectionGroup permet de requêter toutes les sous-collections "results"
+  // à travers tous les documents dailyChallenges/{date}/results/{userId}
+  const q = query(collectionGroup(db, 'results'), orderBy('timeMs', 'asc'));
+
+  return onSnapshot(q, snapshot => {
+    // Pour chaque date (id du parent), garder le meilleur (timeMs le plus petit)
+    const bestByDate = new Map<string, { userId: string; username: string }>();
+
+    snapshot.forEach(docSnap => {
+      // Le path est: dailyChallenges/{date}/results/{userId}
+      const dateId = docSnap.ref.parent.parent?.id;
+      if (!dateId) return;
+      const data = docSnap.data() as DailyResult;
+      // onSnapshot orderBy timeMs asc → le premier pour chaque date est le record
+      if (!bestByDate.has(dateId)) {
+        bestByDate.set(dateId, { userId: data.userId, username: data.username });
+      }
+    });
+
+    // Agréger par joueur
+    const byUser = new Map<string, { username: string; count: number }>();
+    for (const { userId, username } of bestByDate.values()) {
+      const existing = byUser.get(userId);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        byUser.set(userId, { username, count: 1 });
+      }
+    }
+
+    const holders: DailyRecordHolder[] = [];
+    for (const [userId, { username, count }] of byUser) {
+      holders.push({ userId, username, dailyRecordCount: count });
+    }
+    holders.sort((a, b) => b.dailyRecordCount - a.dailyRecordCount);
+    onChange(holders);
+  }, () => onChange([]));
+}
+
+// ── Scellement du record du jour précédent ────────────────────────────────────
+//
+// Appelé au démarrage de l'app quand on détecte un nouveau jour.
+// Pour la date `previousDate` :
+//   1. Lit le document /dailyChallenges/{previousDate} — si déjà scellé, stop.
+//   2. Lit le top 1 des résultats (timeMs asc).
+//   3. Incrémente atomiquement leaderboard/{userId}.dailyWins de +1.
+//   4. Marque /dailyChallenges/{previousDate}.sealed = true pour ne pas re-créditer.
+//
+// Idempotent : le champ `sealed` garantit qu'on ne crédite qu'une seule fois.
+
+export async function sealDailyRecord(previousDate: string): Promise<void> {
+  try {
+    const dailyDocRef = doc(db, DAILY_COLLECTION, previousDate);
+
+    // Vérifier si déjà scellé
+    const dailySnap = await getDoc(dailyDocRef);
+    if (dailySnap.exists() && dailySnap.data()?.sealed === true) {
+      return; // déjà crédité
+    }
+
+    // Lire le top 1 des résultats de ce jour
+    const resultsRef = collection(db, DAILY_COLLECTION, previousDate, 'results');
+    const q = query(resultsRef, orderBy('timeMs', 'asc'), limit(1));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      // Personne n'a joué ce jour — on scelle quand même pour ne pas retraiter
+      await setDoc(dailyDocRef, { sealed: true, sealedAt: serverTimestamp() }, { merge: true });
+      return;
+    }
+
+    const winner = snap.docs[0].data() as DailyResult;
+
+    // Incrémenter dailyWins dans /leaderboard/{userId} (atomique, sans race condition)
+    const leaderboardRef = doc(db, 'leaderboard', winner.userId);
+    await updateDoc(leaderboardRef, {
+      dailyWins: increment(1),
+      dailyWinsUsername: winner.username, // dénormalisation pour le classement
+    });
+
+    // Sceller le daily — stocke aussi le recordHolder pour l'affichage
+    await setDoc(dailyDocRef, {
+      sealed: true,
+      sealedAt: serverTimestamp(),
+      recordHolder: {
+        userId: winner.userId,
+        username: winner.username,
+        timeMs: winner.timeMs,
+      },
+    }, { merge: true });
+
+  } catch (e) {
+    // Silencieux : erreur réseau ou joueur non encore dans /leaderboard
+    console.warn('[sealDailyRecord] erreur:', e);
+  }
 }

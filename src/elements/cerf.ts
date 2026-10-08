@@ -11,7 +11,7 @@ import { ElementDefinition } from '../core/models/Element';
 export const cerfDef: ElementDefinition = {
   id: 'cerf',
   label: 'Cerf',
-  icon: require('../../assets/elements/cerf.png'),
+  icon: require('../../assets/elements/pastilles/cerf.png'),
   color: '#8B6914',
   maxPerBoard: 4,
   constraints: [

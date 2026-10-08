@@ -13,7 +13,7 @@ import { ElementDefinition } from '../core/models/Element';
 export const champignonDef: ElementDefinition = {
   id: 'champignon',
   label: 'Champignon',
-  icon: require('../../assets/elements/champignon.png'),
+  icon: require('../../assets/elements/pastilles/champignon.png'),
   color: '#8B6914',
   maxPerBoard: 3,
   constraints: [

@@ -10,7 +10,7 @@ import { ElementDefinition } from '../core/models/Element';
 export const rucheDef: ElementDefinition = {
   id: 'ruche',
   label: 'Ruche',
-  icon: require('../../assets/elements/ruche.png'),
+  icon: require('../../assets/elements/pastilles/ruche.png'),
   color: '#F5A623',
   maxPerBoard: 1,
   constraints: [

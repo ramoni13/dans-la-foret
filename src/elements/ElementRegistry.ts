@@ -9,7 +9,7 @@ import { oursDef } from './ours';
 import { moutonDef } from './mouton';
 import { chienDef } from './chien';
 import { chaletDef } from './chalet';
-import { renardDef } from './renard';
+import { renardDef as loupDef } from './renard';
 import { rucheDef } from './ruche';
 import { cerfDef } from './cerf';
 import { bicheDef } from './biche';
@@ -23,7 +23,7 @@ export const ElementRegistry: Record<string, ElementDefinition> = {
   mouton: moutonDef,
   chien: chienDef,       // meute connexe (connected_group)
   chalet: chaletDef,
-  renard: renardDef,
+  loup: loupDef,
   // ── Nouveaux éléments (application numérique) ────────────────────────
   ruche: rucheDef,       // singleton, voisin ours requis
   cerf: cerfDef,         // paired_specific avec biche

@@ -11,7 +11,7 @@ import { ElementDefinition } from '../core/models/Element';
 export const chienDef: ElementDefinition = {
   id: 'chien',
   label: 'Chien',
-  icon: require('../../assets/elements/chien.png'),
+  icon: require('../../assets/elements/pastilles/chien.png'),
   color: '#D2691E',
   maxPerBoard: 4,
   constraints: [

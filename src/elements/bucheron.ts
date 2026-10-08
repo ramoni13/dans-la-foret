@@ -3,7 +3,7 @@ import { ElementDefinition } from '../core/models/Element';
 export const bucheronDef: ElementDefinition = {
   id: 'bucheron',
   label: 'Bucheron',
-  icon: require('../../assets/elements/bucheron.png'),
+  icon: require('../../assets/elements/pastilles/bucheron.png'),
   color: '#8B4513',
   maxPerBoard: 4,
   constraints: [
