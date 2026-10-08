@@ -20,6 +20,7 @@ import {
   Modal,
   Animated,
   BackHandler,
+  useWindowDimensions,
 } from 'react-native';
 import { useAudioStore } from '../../src/store/audioStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -206,6 +207,7 @@ const failStyles = StyleSheet.create({
 export default function DailyGameScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const game = useGame();
   const player = usePlayerStore();
@@ -497,18 +499,16 @@ export default function DailyGameScreen() {
           </View>
         </View>
 
-        {/* Banniere validation unique */}
+        {/* Banniere validation unique + bouton Valider (bandeau unique) */}
         <View style={styles.dailyBanner}>
-          <Text style={styles.dailyBannerText}>
-            {game.dailyValidationUsed
-              ? '\u26A0\uFE0F Validation utilisee'
-              : '\u26A1 Une seule validation !'}
-          </Text>
-          <Text style={styles.dailyBannerSub}>Aucun bonus disponible</Text>
-        </View>
-
-        {/* Bouton Valider */}
-        <View style={styles.validateRow}>
+          <View style={styles.dailyBannerInfo}>
+            <Text style={styles.dailyBannerText}>
+              {game.dailyValidationUsed
+                ? '\u26A0\uFE0F Validation utilisee'
+                : '\u26A1 Une seule validation !'}
+            </Text>
+            <Text style={styles.dailyBannerSub}>Aucun bonus disponible</Text>
+          </View>
           <TouchableOpacity
             style={[
               styles.validateBtn,
@@ -519,14 +519,14 @@ export default function DailyGameScreen() {
             disabled={!allFilled || game.dailyValidationUsed}
           >
             <Text style={styles.validateBtnText}>
-              {game.dailyValidationUsed ? 'Validation utilisee' : 'Valider \u2713'}
+              {game.dailyValidationUsed ? 'Utilis\u00e9e' : 'Valider \u2713'}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Plateau */}
         <View style={styles.boardArea}>
-          <View style={styles.boardContainer}>
+          <View style={[styles.boardContainer, { maxHeight: Math.min(screenWidth, screenHeight * 0.48) }]}>
             <BoardRenderer
               boardDef={boardDef}
               playerBoard={game.playerBoard}
@@ -695,12 +695,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   dailyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#FFF3E0',
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#FFE0B2',
-    alignItems: 'center',
+  },
+  dailyBannerInfo: {
+    flex: 1,
+    marginRight: 12,
   },
   dailyBannerText: {
     fontSize: 13,
@@ -710,15 +716,7 @@ const styles = StyleSheet.create({
   dailyBannerSub: {
     fontSize: 11,
     color: '#BF360C',
-    marginTop: 2,
-  },
-  validateRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
-    alignItems: 'flex-end',
+    marginTop: 1,
   },
   validateBtn: {
     backgroundColor: '#D4A017',
@@ -743,7 +741,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   boardContainer: {
-    flex: 1,
     width: '100%',
     maxWidth: 500,
     aspectRatio: 1,

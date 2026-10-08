@@ -22,6 +22,7 @@ import { ElementRegistry } from '../../src/elements/ElementRegistry';
 import { useT } from '../../src/i18n';
 import { LEVEL_META, RuleCard as RuleCardData } from '../../src/data/levelMeta';
 import { RuleCard as RuleCardComponent } from '../../src/components/LevelBriefing/RuleCard';
+import { IntroSlide } from '../../src/components/LevelBriefing/IntroSlide';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const RULE_CARD_WIDTH = SCREEN_WIDTH - 32 - 32; // padding list + padding card
@@ -74,6 +75,11 @@ export default function RulesScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Slide intro : concept du jeu ── */}
+        <View style={styles.introCard}>
+          <IntroSlide />
+        </View>
+
         {ELEMENT_ORDER.map((entry) => {
           const unlocked = currentLevel >= entry.introLevel;
           const def = ElementRegistry[entry.id];
@@ -192,6 +198,17 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
     paddingBottom: 32,
+  },
+
+  // ── Slide intro ──
+  introCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(26, 58, 26, 0.96)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
   },
 
   // ── Carte element ──

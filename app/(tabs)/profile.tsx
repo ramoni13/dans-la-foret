@@ -292,37 +292,6 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          <View style={styles.separator}>
-            <View style={styles.separatorLine} />
-            <Text style={styles.separatorText}>ou</Text>
-            <View style={styles.separatorLine} />
-          </View>
-
-          {Platform.OS === 'web' && (
-            <TouchableOpacity style={styles.btnGoogle} onPress={handleGoogle} disabled={submitting} activeOpacity={0.8}>
-              <Text style={styles.btnGoogleText}>🔵 Continuer avec Google</Text>
-            </TouchableOpacity>
-          )}
-
-          <MusicPanel />
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Langue / Language</Text>
-            <View style={styles.langRow}>
-              {(['fr', 'en'] as Lang[]).map(lang => (
-                <TouchableOpacity
-                  key={lang}
-                  style={[styles.langBtn, player.language === lang && styles.langBtnActive]}
-                  onPress={() => player.setLanguage(lang)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.langBtnText, player.language === lang && styles.langBtnTextActive]}>
-                    {lang === 'fr' ? '🇫🇷 Français' : '🇬🇧 English'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
         </ScrollView>
       </View>
     );

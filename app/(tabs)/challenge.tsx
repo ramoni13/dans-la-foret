@@ -927,7 +927,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingLeft: 20,
+    paddingRight: 72, // réserve la place du bouton son flottant (40px + 16px marge + 16px espace)
     paddingVertical: 14,
     backgroundColor: Colors.ui.card,
     borderBottomWidth: 1,
