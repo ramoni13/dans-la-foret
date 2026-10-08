@@ -48,7 +48,7 @@
 
     .scene {
       width: 320px;
-      height: 480px;
+      height: 520px;
       perspective: 1000px;
       margin: 10px 0;
     }
@@ -72,7 +72,7 @@
       height: 100%;
       backface-visibility: hidden;
       border-radius: 20px;
-      padding: 20px;
+      padding: 18px;
       background: var(--card-bg);
       box-shadow: 0 10px 25px rgba(0,0,0,0.15);
       display: flex;
@@ -81,13 +81,20 @@
       border: 3px solid var(--primary-light);
     }
 
+    /* ── RECTO ─────────────────────────────────────────── */
     .card-front {
       align-items: center;
       text-align: center;
     }
 
+    .card-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
     .card-number {
-      align-self: flex-start;
       background: var(--bg);
       color: var(--primary);
       font-weight: bold;
@@ -96,34 +103,61 @@
       font-size: 0.85rem;
     }
 
-    .illustration-placeholder {
-      width: 180px;
-      height: 200px;
-      margin: 15px 0;
+    .image-type-badge {
+      font-size: 0.72rem;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .image-type-badge.fruit  { background: #FFF3E0; color: #E65100; }
+    .image-type-badge.feuille { background: #E8F5E9; color: #2E7D32; }
+    .image-type-badge.photo  { background: #E3F2FD; color: #1565C0; }
+
+    /* Image recto : fruit ou feuille */
+    .front-image-wrap {
+      width: 200px;
+      height: 210px;
+      margin: 10px auto;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #F1F8E9;
+      border: 2px solid #A5D6A7;
+      flex-shrink: 0;
+    }
+
+    .front-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Fallback si image absente */
+    .front-image-fallback {
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #F1F8E9;
-      border-radius: 16px;
-      border: 2px dashed #A5D6A7;
-    }
-
-    .illustration-icon {
       font-size: 5rem;
     }
 
     .tree-title-fr {
-      font-size: 1.4rem;
+      font-size: 1.35rem;
       color: var(--primary);
       font-weight: bold;
+      line-height: 1.2;
     }
 
     .flip-hint {
-      font-size: 0.8rem;
-      color: #757575;
-      margin-top: 10px;
+      font-size: 0.78rem;
+      color: #9E9E9E;
+      margin-top: 6px;
     }
 
+    /* ── VERSO ─────────────────────────────────────────── */
     .card-back {
       transform: rotateY(180deg);
       background: #FAFAFA;
@@ -132,48 +166,76 @@
 
     .real-photo {
       width: 100%;
-      height: 190px;
+      height: 175px;
       object-fit: cover;
       border-radius: 12px;
       border: 1px solid #DDD;
       background-color: #EEE;
+      flex-shrink: 0;
     }
 
     .info-group {
-      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+      overflow: hidden;
     }
 
     .tree-title-latin {
       font-style: italic;
       font-weight: bold;
       color: #333;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
     }
 
-    .region-badge {
-      font-size: 0.85rem;
-      color: #555;
-      margin: 6px 0;
+    /* Geo-location — remplace l'ancien region-badge */
+    .geo-badge {
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      font-size: 0.8rem;
+      color: #455A64;
+      line-height: 1.3;
+    }
+
+    .geo-badge .geo-icon {
+      flex-shrink: 0;
+      margin-top: 1px;
     }
 
     .anecdote {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--primary);
       line-height: 1.35;
       background: #E8F5E9;
-      padding: 8px 10px;
+      padding: 7px 9px;
       border-radius: 8px;
-      margin-top: 6px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
     }
 
-    .onf-tag {
-      font-size: 0.75rem;
-      font-weight: bold;
-      color: var(--primary);
-      text-align: center;
+    .back-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-top: auto;
     }
 
+    .onf-tag {
+      font-size: 0.72rem;
+      font-weight: bold;
+      color: var(--primary);
+    }
+
+    .img-credit {
+      font-size: 0.68rem;
+      color: #BDBDBD;
+    }
+
+    /* ── Contrôles ─────────────────────────────────────── */
     .controls {
       display: flex;
       align-items: center;
@@ -194,13 +256,8 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
 
-    button:hover {
-      background: var(--primary-light);
-    }
-
-    button:active {
-      transform: scale(0.95);
-    }
+    button:hover  { background: var(--primary-light); }
+    button:active { transform: scale(0.95); }
 
     button:disabled {
       background: #BDBDBD;
@@ -229,28 +286,49 @@
 
   <div class="scene">
     <div class="card" id="card" onclick="flipCard()">
-      <!-- RECTO -->
+
+      <!-- RECTO : image fruit/feuille + nom français -->
       <div class="card-face card-front">
-        <span class="card-number" id="card-id"># 1</span>
-        <div class="illustration-placeholder">
-          <span class="illustration-icon">🌳</span>
+        <div class="card-top-row">
+          <span class="card-number" id="card-id"># 1</span>
+          <span class="image-type-badge fruit" id="img-type-badge">fruit</span>
         </div>
+
+        <div class="front-image-wrap">
+          <img src="" alt="" class="front-image" id="front-img"
+               onerror="this.style.display='none'; document.getElementById('front-fallback').style.display='flex';" />
+          <div class="front-image-fallback" id="front-fallback" style="display:none;">🌳</div>
+        </div>
+
         <div>
           <h2 class="tree-title-fr" id="tree-name-fr">Chargement...</h2>
         </div>
-        <span class="flip-hint">🔄 Cliquez pour voir la vraie photo</span>
+
+        <span class="flip-hint">🔄 Cliquer pour la fiche complète</span>
       </div>
 
-      <!-- VERSO -->
+      <!-- VERSO : photo Wikimedia + nom latin + geo + anecdote -->
       <div class="card-face card-back">
-        <img src="" alt="Photo réelle de l'arbre" class="real-photo" id="tree-photo" />
+        <img src="" alt="Photo de l'arbre" class="real-photo" id="tree-photo"
+             onerror="this.style.opacity='0.3';" />
+
         <div class="info-group">
           <div class="tree-title-latin" id="tree-name-latin">...</div>
-          <div class="region-badge">📍 <span id="tree-region">France métropolitaine</span></div>
+
+          <div class="geo-badge">
+            <span class="geo-icon">📍</span>
+            <span id="tree-geo">France métropolitaine</span>
+          </div>
+
           <div class="anecdote" id="tree-anecdote">...</div>
         </div>
-        <div class="onf-tag">Partenaire ONF — Agir pour la forêt 🌲</div>
+
+        <div class="back-footer">
+          <span class="onf-tag">🌲 ONF — Agir pour la forêt</span>
+          <span class="img-credit" id="img-credit">© Wikimedia Commons</span>
+        </div>
       </div>
+
     </div>
   </div>
 
@@ -261,19 +339,24 @@
   </div>
 
   <script>
-    let trees = window.TREES_DATA || [];
+    const trees      = window.TREES_DATA || [];
     let currentIndex = 0;
 
-    const card = document.getElementById('card');
-    const cardId = document.getElementById('card-id');
-    const treeNameFr = document.getElementById('tree-name-fr');
-    const treeNameLatin = document.getElementById('tree-name-latin');
-    const treeRegion = document.getElementById('tree-region');
+    // Références DOM
+    const card         = document.getElementById('card');
+    const cardId       = document.getElementById('card-id');
+    const imgTypeBadge = document.getElementById('img-type-badge');
+    const frontImg     = document.getElementById('front-img');
+    const frontFallback= document.getElementById('front-fallback');
+    const treeNameFr   = document.getElementById('tree-name-fr');
+    const treeNameLatin= document.getElementById('tree-name-latin');
+    const treeGeo      = document.getElementById('tree-geo');
     const treeAnecdote = document.getElementById('tree-anecdote');
-    const treePhoto = document.getElementById('tree-photo');
-    const counter = document.getElementById('counter');
-    const btnPrev = document.getElementById('btn-prev');
-    const btnNext = document.getElementById('btn-next');
+    const treePhoto    = document.getElementById('tree-photo');
+    const imgCredit    = document.getElementById('img-credit');
+    const counter      = document.getElementById('counter');
+    const btnPrev      = document.getElementById('btn-prev');
+    const btnNext      = document.getElementById('btn-next');
 
     function flipCard() {
       card.classList.toggle('is-flipped');
@@ -281,21 +364,59 @@
 
     function updateUI() {
       if (!trees || trees.length === 0) {
-        alert("Données introuvables. Exécutez 'node ./scripts/genereJsonTrees.js' d'abord.");
+        treeNameFr.textContent = 'Données introuvables';
+        treeNameFr.style.color = 'red';
         return;
       }
 
-      const currentTree = trees[currentIndex];
+      const t = trees[currentIndex];
+
+      // Remettre la carte sur le recto avant la transition
       card.classList.remove('is-flipped');
 
       setTimeout(() => {
-        cardId.textContent = `# ${currentTree.id}`;
-        treeNameFr.textContent = currentTree.name_fr;
-        treeNameLatin.textContent = currentTree.name_latin;
-        treeRegion.textContent = currentTree.region || "France métropolitaine";
-        treeAnecdote.textContent = `💡 ${currentTree.anecdote}`;
-        treePhoto.src = currentTree.wikimedia_image_url;
+        // ── Recto ─────────────────────────────────────────────────────
+        cardId.textContent = `# ${t.id}`;
+        treeNameFr.textContent = t.name_fr;
 
+        // Badge de type d'image (fruit / feuille / photo)
+        const imgType = t.image_type || 'photo';
+        imgTypeBadge.textContent = imgType === 'fruit' ? '🍂 fruit'
+                                 : imgType === 'feuille' ? '🍃 feuille'
+                                 : '📷 photo';
+        imgTypeBadge.className = `image-type-badge ${imgType}`;
+
+        // Image recto (fruit ou feuille depuis ONF/Wikimedia)
+        const onfUrl = t.onf_image_url || '';
+        if (onfUrl) {
+          frontImg.src = onfUrl;
+          frontImg.alt = `${imgType === 'fruit' ? 'Fruit' : 'Feuille'} — ${t.name_fr}`;
+          frontImg.style.display = 'block';
+          frontFallback.style.display = 'none';
+        } else {
+          frontImg.style.display = 'none';
+          frontFallback.style.display = 'flex';
+        }
+
+        // ── Verso ──────────────────────────────────────────────────────
+        // Photo générale (ancienne image Wikimedia de l'arbre entier)
+        treePhoto.src = t.wikimedia_image_url || '';
+        treePhoto.alt = `Photo — ${t.name_fr}`;
+        treePhoto.style.opacity = '1';
+
+        treeNameLatin.textContent = t.name_latin;
+
+        // Géolocalisation (nouveau champ enrichi)
+        const geo = t.geo_location || t.region || 'France métropolitaine';
+        treeGeo.textContent = geo;
+
+        treeAnecdote.textContent = `💡 ${t.anecdote}`;
+
+        // Crédit source image
+        const srcLabel = { onf: 'ONF', wikimedia: 'Wikimedia Commons', local: 'Wikimedia Commons' };
+        imgCredit.textContent = `© ${srcLabel[t.image_source] || 'Wikimedia Commons'}`;
+
+        // Compteur et boutons
         counter.textContent = `${currentIndex + 1} / ${trees.length}`;
         btnPrev.disabled = currentIndex === 0;
         btnNext.disabled = currentIndex === trees.length - 1;
@@ -303,16 +424,16 @@
     }
 
     function navigate(direction) {
-      const newIndex = currentIndex + direction;
-      if (newIndex >= 0 && newIndex < trees.length) {
-        currentIndex = newIndex;
+      const next = currentIndex + direction;
+      if (next >= 0 && next < trees.length) {
+        currentIndex = next;
         updateUI();
       }
     }
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight') navigate(1);
-      if (e.key === 'ArrowLeft') navigate(-1);
+      if (e.key === 'ArrowLeft')  navigate(-1);
       if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault();
         flipCard();
