@@ -89,7 +89,7 @@ const ALL_CHALLENGES_BY_LEVEL: Record<string, any[]> = {
 const ALL_CHALLENGES_FLAT = LEVELS.flatMap(l => ALL_CHALLENGES_BY_LEVEL[l.id] ?? []);
 
 // ── Assets ─────────────────────────────────────────────────────────────────────
-const BG_IMAGE = require('../../assets/sprites/Gemini_Generated_Image_mhh6w8mhh6w8mhh6.jpg');
+const BG_IMAGE = require('../../assets/elements/sprites/fond-ecran.jpg');
 
 // ── Fond plein écran (dimensions dynamiques obligatoires pour Image RN) ────────
 function BgImage() {
