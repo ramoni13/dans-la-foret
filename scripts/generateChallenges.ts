@@ -1,10 +1,10 @@
-// ============================================================
+﻿// ============================================================
 // SCRIPT DE GENERATION DES DEFIS - V3
 // Refonte complete selon GENERATOR_REFONTE.md :
 //   Axe 0 : Unicite garantie (exactement 1 solution, ni 0 ni 2+)
 //   Axe 1 : Diversite des solutions (memoire par niveau)
 //   Axe 2 : Rotation garantie des compositions
-//   Axe 3 : Tension narrative (renard/mouton, chalet/bucheron, chien/meute)
+//   Axe 3 : Tension narrative (Loup/mouton, chalet/bucheron, chien/meute)
 //   Axe 4 : Compositions enrichies avec variations 0-4
 // Execution : npm run generate
 // ============================================================
@@ -37,7 +37,7 @@ const elementDefs: Record<string, ElementDefinition> = {
     id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
-      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'renard' },
+      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'loup' },
     ],
   },
   ruche: {
@@ -65,8 +65,8 @@ const elementDefs: Record<string, ElementDefinition> = {
       { type: 'paired_specific', targetElementId: 'cerf', mode: 'require', scope: 'board' },
     ],
   },
-  renard: {
-    id: 'renard', label: 'Renard', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
+  Loup: {
+    id: 'loup', label: 'loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'mouton' },
@@ -105,7 +105,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 67, y: 42 }, { x: 43, y: 56 }, { x: 43, y: 78 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
   },
 
   board_7_v1: {
@@ -125,7 +125,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 50, y: 88 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
   },
 
   board_8_v2: {
@@ -146,7 +146,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 20, y: 80 }, { x: 80, y: 80 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
   },
 
   board_10_v3: {
@@ -169,7 +169,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 50, y: 68 }, { x: 10, y: 88 }, { x: 50, y: 88 }, { x: 88, y: 88 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
   },
 
   board_12: {
@@ -194,7 +194,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 31, y: 72 }, { x: 54, y: 72 }, { x: 4, y: 84 }, { x: 81, y: 84 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
     specialCells: { corners: [0, 1, 10, 11], edges: [2, 3, 4, 5, 6, 7, 8, 9] },
   },
 
@@ -217,7 +217,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 25, y: 78 }, { x: 75, y: 78 }, { x: 50, y: 93 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'loup', 'ruche'],
     specialCells: { corners: [0, 8], edges: [1, 2, 3, 4], center: [5, 6, 7] },
   },
 
@@ -243,7 +243,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 50, y: 46 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche', 'tas_buches'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'loup', 'ruche', 'tas_buches'],
     specialCells: { corners: [0, 2, 7, 9], center: [3, 6, 10], edges: [1, 4, 5, 8] },
   },
 
@@ -270,7 +270,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 12, y: 92 }, { x: 88, y: 92 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche', 'tas_buches'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'loup', 'ruche', 'tas_buches'],
     specialCells: { corners: [0, 1, 9, 10], center: [4], edges: [2, 3, 5, 6, 7, 8] },
   },
 };
@@ -308,8 +308,8 @@ function isNarrativelyInteresting(
 
   // Regle B : si chalet present, au moins 1 bucheron doit etre a poser.
   // Le joueur doit decider ou placer le bucheron pour satisfaire le chalet.
-  // (La regle renard/mouton est deja couverte par isChallengePedagogicallyValid
-  // via la regle de diversite : si renard >= 2 ou mouton >= 2, au moins 1 reste a poser.)
+  // (La regle Loup/mouton est deja couverte par isChallengePedagogicallyValid
+  // via la regle de diversite : si Loup >= 2 ou mouton >= 2, au moins 1 reste a poser.)
   if (inCompo('chalet') && !availableIds.has('bucheron')) return false;
 
   return true;
@@ -341,8 +341,8 @@ function isChallengePedagogicallyValid(
   // Le joueur doit decider ou placer le bucheron pour satisfaire le chalet
   if (inCompo('chalet') && !availableIds.has('bucheron')) return false;
 
-  // Note : on n'exige plus que mouton soit a poser quand renard est present.
-  // mouton=0 avec renard est une composition valide (le joueur place le renard
+  // Note : on n'exige plus que mouton soit a poser quand Loup est present.
+  // mouton=0 avec Loup est une composition valide (le joueur place le Loup
   // en evitant les moutons fixes). La tension est assuree par les jetons fixes.
 
   // Regle ruche/ours : si ruche presente, ne pas fixer les deux simultanement.

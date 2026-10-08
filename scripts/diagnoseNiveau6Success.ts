@@ -1,4 +1,4 @@
-// Mesure le taux de succes reel (fixedPlacements -> solution unique) par composition
+﻿// Mesure le taux de succes reel (fixedPlacements -> solution unique) par composition
 import { BoardDefinition } from '../src/core/models/Board';
 import { ElementDefinition } from '../src/core/models/Element';
 import { solve } from '../src/core/engine/solver';
@@ -18,7 +18,7 @@ const elementDefs: Record<string, ElementDefinition> = {
   mouton: { id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
-      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'renard' },
+      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'loup' },
     ] },
   ruche: { id: 'ruche', label: 'Ruche', icon: ICON, color: '#F5A623', maxPerBoard: 1,
     constraints: [] },
@@ -37,7 +37,7 @@ const elementDefs: Record<string, ElementDefinition> = {
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'paired_specific', targetElementId: 'cerf', mode: 'require', scope: 'board' },
     ] },
-  renard: { id: 'renard', label: 'Renard', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
+  Loup: { id: 'loup', label: 'loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'mouton' },
@@ -52,7 +52,7 @@ const board_9_v1: BoardDefinition = {
   ],
   cellPositions: [],
   backgroundAsset: null as any,
-  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche'],
+  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'loup', 'ruche'],
   specialCells: { corners: [0, 8], edges: [1, 2, 3, 4], center: [5, 6, 7] },
 };
 

@@ -1,4 +1,4 @@
-// Diagnostic : pourquoi les niveaux 3, 12, 13 bloquent ?
+﻿// Diagnostic : pourquoi les niveaux 3, 12, 13 bloquent ?
 import { solve } from '../src/core/engine/solver';
 import { BoardDefinition } from '../src/core/models/Board';
 import { ElementDefinition } from '../src/core/models/Element';
@@ -12,12 +12,12 @@ const elementDefs: Record<string, ElementDefinition> = {
   ours: { id:'ours', label:'Ours', icon:ICON, color:'#6B4226', maxPerBoard:4,
     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'}] },
   mouton: { id:'mouton', label:'Mouton', icon:ICON, color:'#E8E8E8', maxPerBoard:4,
-    constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'renard'}] },
+    constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'loup'}] },
   chien: { id:'chien', label:'Chien', icon:ICON, color:'#D2691E', maxPerBoard:4,
     constraints:[{type:'neighbor_same',mode:'require',scope:'neighbor',minCount:1}] },
   chalet: { id:'chalet', label:'Chalet', icon:ICON, color:'#A0522D', maxPerBoard:4,
     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'require',scope:'neighbor',targetElementId:'bucheron',minCount:1}] },
-  renard: { id:'renard', label:'Renard', icon:ICON, color:'#FF6B35', maxPerBoard:4,
+  Loup: { id:'loup', label:'loup', icon:ICON, color:'#FF6B35', maxPerBoard:4,
     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'mouton'}] },
 };
 

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // GÉNÉRATEUR DE VIEWER_DATA.js
 // Lit tous les fichiers JSON de défis et produit un fichier JS
 // chargeable via <script src="VIEWER_DATA.js"> dans VIEWER_DEFIS.html.
@@ -48,7 +48,7 @@ const elementDefs: Record<string, ElementDefinition> = {
     id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
-      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'renard' },
+      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'loup' },
     ],
   },
   ruche: {
@@ -76,8 +76,8 @@ const elementDefs: Record<string, ElementDefinition> = {
       { type: 'paired_specific', targetElementId: 'cerf', mode: 'require', scope: 'board' },
     ],
   },
-  renard: {
-    id: 'renard', label: 'Renard', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
+  Loup: {
+    id: 'loup', label: 'loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'mouton' },
@@ -125,7 +125,7 @@ const board15cellsDaily: BoardDefinition = {
   ],
   backgroundAsset: null as any,
   availableElements: [
-    'bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard',
+    'bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup',
     'ruche', 'cerf', 'biche', 'tas_buches', 'champignon',
   ],
   specialCells: {
@@ -163,22 +163,22 @@ function seededShuffle<T>(arr: T[], rng: RngFunction): T[] {
 // ── Compositions daily (copie exacte de dailyChallengeService.ts) ────────────
 
 const DAILY_COMPOSITIONS: Composition[] = [
-  { bucheron: 3, ours: 2, mouton: 3, chien: 2, renard: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 4, ours: 2, mouton: 2, chien: 2, renard: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 2, ours: 2, mouton: 4, chien: 2, renard: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 2, ours: 2, mouton: 2, chien: 3, renard: 1, cerf: 1, biche: 1, ruche: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 2, chien: 2, ruche: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 2, ours: 2, mouton: 3, chien: 2, ruche: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 2, chien: 2, chalet: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 3, ours: 1, mouton: 2, chien: 3, chalet: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 2, chien: 3, tas_buches: 1, renard: 1, cerf: 1, biche: 1, champignon: 1 },
-  { bucheron: 3, ours: 1, mouton: 3, chien: 2, tas_buches: 1, renard: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, renard: 1, cerf: 1, biche: 1, tas_buches: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, renard: 1, cerf: 1, biche: 1, tas_buches: 1, ruche: 1, champignon: 1 },
-  { bucheron: 3, ours: 2, mouton: 1, chien: 2, renard: 1, cerf: 2, biche: 2, champignon: 2 },
-  { bucheron: 2, ours: 2, mouton: 1, chien: 2, renard: 1, cerf: 3, biche: 3, champignon: 1 },
-  { bucheron: 2, ours: 2, mouton: 3, chien: 2, renard: 2, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 2, ours: 1, mouton: 4, chien: 2, renard: 2, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 3, chien: 2, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 4, ours: 2, mouton: 2, chien: 2, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 4, chien: 2, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 2, chien: 3, Loup: 1, cerf: 1, biche: 1, ruche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 2, chien: 2, ruche: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 3, chien: 2, ruche: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 2, chien: 2, chalet: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 1, mouton: 2, chien: 3, chalet: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 2, chien: 3, tas_buches: 1, Loup: 1, cerf: 1, biche: 1, champignon: 1 },
+  { bucheron: 3, ours: 1, mouton: 3, chien: 2, tas_buches: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, Loup: 1, cerf: 1, biche: 1, tas_buches: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, Loup: 1, cerf: 1, biche: 1, tas_buches: 1, ruche: 1, champignon: 1 },
+  { bucheron: 3, ours: 2, mouton: 1, chien: 2, Loup: 1, cerf: 2, biche: 2, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 1, chien: 2, Loup: 1, cerf: 3, biche: 3, champignon: 1 },
+  { bucheron: 2, ours: 2, mouton: 3, chien: 2, Loup: 2, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 1, mouton: 4, chien: 2, Loup: 2, cerf: 1, biche: 1, champignon: 2 },
 ];
 
 const TARGET_MAX_FIXED = 6;
@@ -195,7 +195,7 @@ function isDailyPedagogicallyValid(availableTokens: TokenCount[], fullTokens: To
   const hasAvailable = (id: string) => (availableMap.get(id) ?? 0) > 0;
   if (availableTokens.length === 0 || availableTokens.every(t => t.count === 0)) return false;
   if (inFull('chalet') && !hasAvailable('chalet') && !hasAvailable('bucheron')) return false;
-  if (inFull('renard') && !hasAvailable('renard') && !hasAvailable('mouton')) return false;
+  if (inFull('loup') && !hasAvailable('loup') && !hasAvailable('mouton')) return false;
   if (inFull('ruche') && !hasAvailable('ruche') && !hasAvailable('ours')) return false;
   if (inFull('cerf') && !hasAvailable('cerf') && !hasAvailable('biche')) return false;
   if (inFull('biche') && !hasAvailable('biche') && !hasAvailable('cerf')) return false;
@@ -207,7 +207,7 @@ function isDailyPedagogicallyValid(availableTokens: TokenCount[], fullTokens: To
 
 function isDailyNarrativelyCoherent(tokenCounts: TokenCount[]): boolean {
   const inCompo = (id: string) => tokenCounts.some(t => t.elementId === id && t.count > 0);
-  if (inCompo('renard') && !inCompo('mouton')) return false;
+  if (inCompo('loup') && !inCompo('mouton')) return false;
   if (inCompo('chalet') && !inCompo('bucheron')) return false;
   if (inCompo('tas_buches') && !inCompo('bucheron')) return false;
   return true;
@@ -216,8 +216,8 @@ function isDailyNarrativelyCoherent(tokenCounts: TokenCount[]): boolean {
 function isDailyNarrativelyInteresting(availableTokens: TokenCount[], fullTokenCounts: TokenCount[]): boolean {
   const inCompo = (id: string) => fullTokenCounts.some(t => t.elementId === id && t.count > 0);
   const hasAvailable = (id: string) => availableTokens.some(t => t.elementId === id && t.count > 0);
-  if (inCompo('renard') && inCompo('mouton')) {
-    if (!hasAvailable('renard') && !hasAvailable('mouton')) return false;
+  if (inCompo('loup') && inCompo('mouton')) {
+    if (!hasAvailable('loup') && !hasAvailable('mouton')) return false;
   }
   if (inCompo('chalet') && inCompo('bucheron')) {
     if (!hasAvailable('chalet') && !hasAvailable('bucheron')) return false;

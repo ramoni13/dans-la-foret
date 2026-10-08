@@ -1,4 +1,4 @@
-// Script d'analyse des compositions pour le niveau_2
+﻿// Script d'analyse des compositions pour le niveau_2
 import { solve } from '../src/core/engine/solver';
 import { BoardDefinition } from '../src/core/models/Board';
 import { ElementDefinition } from '../src/core/models/Element';
@@ -8,7 +8,7 @@ const ICON: any = 'placeholder';
 const elementDefs: Record<string, ElementDefinition> = {
   bucheron: { id: 'bucheron', label: 'Bucheron', icon: ICON, color: '#8B4513', maxPerBoard: 4, constraints: [{ type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' }] },
   ours: { id: 'ours', label: 'Ours', icon: ICON, color: '#6B4226', maxPerBoard: 4, constraints: [{ type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' }] },
-  mouton: { id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4, constraints: [{ type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' }, { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'renard' }] },
+  mouton: { id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4, constraints: [{ type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' }, { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'loup' }] },
   chien: { id: 'chien', label: 'Chien', icon: ICON, color: '#D2691E', maxPerBoard: 4, constraints: [{ type: 'neighbor_same', mode: 'require', scope: 'neighbor', minCount: 1 }] },
 };
 

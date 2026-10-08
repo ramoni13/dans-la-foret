@@ -1,4 +1,4 @@
-// Diagnostic précis : combien de solutions UNIQUES existent avec les nouvelles règles ?
+﻿// Diagnostic précis : combien de solutions UNIQUES existent avec les nouvelles règles ?
 import { solve } from '../src/core/engine/solver';
 import { BoardDefinition } from '../src/core/models/Board';
 import { ElementDefinition } from '../src/core/models/Element';
@@ -11,12 +11,12 @@ const elementDefs: Record<string, ElementDefinition> = {
   ours: { id:'ours', label:'Ours', icon:ICON, color:'#6B4226', maxPerBoard:4,
     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'}] },
   mouton: { id:'mouton', label:'Mouton', icon:ICON, color:'#E8E8E8', maxPerBoard:4,
-    constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'renard'}] },
+    constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'loup'}] },
   chien: { id:'chien', label:'Chien', icon:ICON, color:'#D2691E', maxPerBoard:4,
     constraints:[{type:'neighbor_same',mode:'require',scope:'neighbor',minCount:1}] },
   chalet: { id:'chalet', label:'Chalet', icon:ICON, color:'#A0522D', maxPerBoard:4,
     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'require',scope:'neighbor',targetElementId:'bucheron',minCount:1}] },
-  renard: { id:'renard', label:'Renard', icon:ICON, color:'#FF6B35', maxPerBoard:4,
+  Loup: { id:'loup', label:'loup', icon:ICON, color:'#FF6B35', maxPerBoard:4,
     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'mouton'}] },
 };
 
@@ -52,12 +52,12 @@ for (const c of compos3) {
 
 console.log('\n=== NIVEAU_12 : compositions simplifiées (7 vides = 5 fixes) ===');
 const compos12 = [
-  {bucheron:2,ours:2,mouton:2,chien:2,chalet:2,renard:2},
-  {bucheron:3,ours:2,mouton:2,chien:2,chalet:1,renard:2},
-  {bucheron:3,ours:3,mouton:2,chien:2,chalet:0,renard:2},
-  {bucheron:4,ours:3,mouton:3,chien:0,chalet:0,renard:2},
-  {bucheron:3,ours:4,mouton:3,chien:0,chalet:0,renard:2},
-  {bucheron:4,ours:2,mouton:2,chien:2,chalet:0,renard:2},
+  {bucheron:2,ours:2,mouton:2,chien:2,chalet:2,Loup:2},
+  {bucheron:3,ours:2,mouton:2,chien:2,chalet:1,Loup:2},
+  {bucheron:3,ours:3,mouton:2,chien:2,chalet:0,Loup:2},
+  {bucheron:4,ours:3,mouton:3,chien:0,chalet:0,Loup:2},
+  {bucheron:3,ours:4,mouton:3,chien:0,chalet:0,Loup:2},
+  {bucheron:4,ours:2,mouton:2,chien:2,chalet:0,Loup:2},
 ];
 for (const c of compos12) {
   const tokens = Object.entries(c).filter(([,v])=>v>0).map(([id,count])=>({elementId:id,count:count as number}));

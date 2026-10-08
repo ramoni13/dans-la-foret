@@ -141,7 +141,7 @@ export default function GameScreen() {
     }
     setShowAbandonModal(false);
     game.resetGame();
-    router.replace('/(tabs)/levels');
+    router.replace('/(tabs)/');
   }, [challengeId, player, game, router]);
 
   // ── BackHandler Android ────────────────────────────────────
@@ -384,7 +384,7 @@ export default function GameScreen() {
       <View style={[styles.root, { paddingTop: insets.top }]}>
         <CooldownScreen
           remainingMs={cooldownRemainingMs}
-          onBack={() => router.replace('/(tabs)/levels')}
+          onBack={() => router.replace('/(tabs)/')}
         />
       </View>
     );
@@ -523,12 +523,12 @@ export default function GameScreen() {
             if (nextExists) {
               router.replace(`/game/${nextId}`);
             } else {
-              router.replace('/(tabs)/levels');
+              router.replace('/(tabs)/');
             }
           }}
           onBackToMenu={() => {
             game.resetGame();
-            router.replace('/(tabs)/levels');
+            router.replace('/(tabs)/');
           }}
         />
 
@@ -538,7 +538,7 @@ export default function GameScreen() {
           onRetry={game.dismissValidation}
           onGiveUp={() => {
             game.resetGame();
-            router.replace('/(tabs)/levels');
+            router.replace('/(tabs)/');
           }}
         />
 

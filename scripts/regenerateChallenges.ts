@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // SCRIPT DE REGENERATION CIBLEE DES DEFIS
 //
 // Usage :
@@ -90,7 +90,7 @@ const elementDefs: Record<string, ElementDefinition> = {
     id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
-      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'renard' },
+      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'loup' },
     ],
   },
   ruche: {
@@ -118,8 +118,8 @@ const elementDefs: Record<string, ElementDefinition> = {
       { type: 'paired_specific', targetElementId: 'cerf', mode: 'require', scope: 'board' },
     ],
   },
-  renard: {
-    id: 'renard', label: 'Renard', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
+  Loup: {
+    id: 'loup', label: 'loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'mouton' },
@@ -148,7 +148,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 43, y: 8 }, { x: 19, y: 42 }, { x: 43, y: 29 }, { x: 67, y: 42 }, { x: 43, y: 56 }, { x: 43, y: 78 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
   },
   board_7_v1: {
     id: 'board_7_v1', label: 'Clairiere', cellCount: 7,
@@ -157,7 +157,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 50, y: 10 }, { x: 25, y: 32 }, { x: 75, y: 32 }, { x: 50, y: 50 }, { x: 25, y: 68 }, { x: 75, y: 68 }, { x: 50, y: 88 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
   },
   board_8_v2: {
     id: 'board_8_v2', label: 'Lisiere', cellCount: 8,
@@ -166,7 +166,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 50, y: 12 }, { x: 20, y: 28 }, { x: 80, y: 28 }, { x: 20, y: 52 }, { x: 80, y: 52 }, { x: 50, y: 62 }, { x: 20, y: 80 }, { x: 80, y: 80 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
   },
   board_10_v3: {
     id: 'board_10_v3', label: 'Sous-bois', cellCount: 10,
@@ -176,7 +176,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 50, y: 68 }, { x: 10, y: 88 }, { x: 50, y: 88 }, { x: 88, y: 88 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
   },
     board_12: {
     id: 'board_12', label: 'Foret Profonde', cellCount: 12,
@@ -189,7 +189,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 15, y: 55 }, { x: 71, y: 55 }, { x: 31, y: 72 }, { x: 54, y: 72 }, { x: 4, y: 84 }, { x: 81, y: 84 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
     specialCells: { corners: [0, 1, 10, 11], edges: [2, 3, 4, 5, 6, 7, 8, 9] },
   },
   board_9_v1: {
@@ -204,7 +204,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 25, y: 78 }, { x: 75, y: 78 }, { x: 50, y: 93 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'loup', 'ruche'],
     specialCells: { corners: [0, 8], edges: [1, 2, 3, 4], center: [5, 6, 7] },
   },
   board_11_v2: {
@@ -220,7 +220,7 @@ const boards: Record<string, BoardDefinition> = {
       { x: 12, y: 92 }, { x: 88, y: 92 },
     ],
     backgroundAsset: null as any,
-    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche', 'tas_buches'],
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'loup', 'ruche', 'tas_buches'],
     specialCells: { corners: [0, 1, 9, 10], center: [4], edges: [2, 3, 5, 6, 7, 8] },
   },
 };

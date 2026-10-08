@@ -5,7 +5,7 @@
 
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { Text } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useRef, useState } from 'react';
 import { User } from 'firebase/auth';
@@ -13,15 +13,59 @@ import { usePlayerStore } from '../../src/store/playerStore';
 import { onAuthChange } from '../../src/services/authService';
 import { getPlayer } from '../../src/services/playerService';
 import { updateDailyStreak } from '../../src/services/badgeService';
-import { auth } from '../../src/services/firebase';
+import { getDailyDateString, sealDailyRecord } from '../../src/services/dailyChallengeService';
+import { auth, db } from '../../src/services/firebase';
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  Timestamp,
+} from 'firebase/firestore';
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
+// ── Icônes de navigation (images illustrées) ───────────────────────────────
+const TAB_ICONS = {
+  index:     require('../../assets/elements/boutons/Accueil.png'),
+  rules:     require('../../assets/elements/boutons/Règles.png'),
+  challenge: require('../../assets/elements/boutons/Défis.png'),
+  profile:   require('../../assets/elements/boutons/Parametres.png'),
+} as const;
+
+function TabIcon({ name, focused }: { name: keyof typeof TAB_ICONS; focused: boolean }) {
   return (
-    <Text style={{ fontSize: focused ? 26 : 22, opacity: focused ? 1 : 0.5 }}>
-      {emoji}
-    </Text>
+    <View style={[tabIconStyles.container, focused && tabIconStyles.focused]}>
+      <Image
+        source={TAB_ICONS[name]}
+        style={tabIconStyles.image}
+        resizeMode="contain"
+      />
+    </View>
   );
 }
+
+const tabIconStyles = StyleSheet.create({
+  container: {
+    width: 70,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 2,
+  },
+  focused: {
+    // halo vert forêt derrière l'icône active
+    backgroundColor: 'rgba(76,175,80,0.28)',
+    borderRadius: 16,
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  image: {
+    width: 66,
+    height: 60,
+  },
+});
 
 export default function TabsLayout() {
   const player   = usePlayerStore();
@@ -33,6 +77,9 @@ export default function TabsLayout() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   // Verrou anti-boucle : une seule redirection par changement d'état auth
   const redirectedRef = useRef(false);
+
+  // ── Compteur de défis amis en attente (badge onglet Amis) ──────────────────
+  const [pendingChallengesCount, setPendingChallengesCount] = useState(0);
 
   // ── Un seul abonnement Firebase Auth pour toute l'app ──────────────────────
   useEffect(() => {
@@ -53,15 +100,12 @@ export default function TabsLayout() {
     });
     return unsub;
   }, []); // [] garanti : onAuthChange est stable
+
   // Mémorise l'état précédent pour détecter la transition "vient de se connecter"
   const prevAuthenticatedRef = useRef<boolean | null>(null);
+
   // ── Garde d'authentification — sans boucle ─────────────────────────────────
   // Règle : si l'utilisateur n'est PAS connecté, il ne peut accéder qu'à /profile.
-  // On n'utilise PAS router.replace vers /(tabs)/ après connexion pour ne pas
-  // interférer avec la navigation normale de l'utilisateur.
-  // Règles :
-  //   1. Non connecté et pas sur /profile → forcer /profile
-  //   2. Transition non-connecté → connecté depuis /profile → aller à l'accueil
   useEffect(() => {
     if (user === undefined) return; // Firebase pas encore répondu
 
@@ -97,61 +141,95 @@ export default function TabsLayout() {
         const state = usePlayerStore.getState();
         updateDailyStreak(uid, state.dailyStreak, state.lastPlayedDate).catch(() => {});
       }
+
+      // Sceller le record du jour précédent → crédite dailyWins au gagnant
+      const yesterday = new Date();
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      sealDailyRecord(getDailyDateString(yesterday)).catch(() => {});
     }
   }, []); // Une seule fois au montage
 
-  const tabBarPaddingBottom = insets.bottom + 6;
-  const tabBarHeight = tabBarPaddingBottom + 44;
+  // ── Badge défis amis en attente (Firestore onSnapshot) ────────────────────
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    const isAnon = auth.currentUser?.isAnonymous ?? true;
+
+    if (!uid || isAnon || !player.friendNotifBadgeEnabled) {
+      setPendingChallengesCount(0);
+      return;
+    }
+
+    const now = Date.now();
+    const q = query(
+      collection(db, 'friendChallenges'),
+      where('opponentUid', '==', uid),
+      where('status', '==', 'pending'),
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      const count = snap.docs.filter(d => {
+        const exp = (d.data().expiresAt as Timestamp)?.toMillis() ?? Infinity;
+        return exp > now;
+      }).length;
+      setPendingChallengesCount(count);
+    }, () => {
+      // Erreur (permissions) → pas de badge
+      setPendingChallengesCount(0);
+    });
+
+    return () => unsub();
+  }, [user, player.friendNotifBadgeEnabled]);
+
+  const tabBarHeight = insets.bottom + 68;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.forest.medium,
-        tabBarInactiveTintColor: Colors.ui.textLight,
+        tabBarActiveTintColor: 'transparent',
+        tabBarInactiveTintColor: 'transparent',
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: Colors.ui.card,
-          borderTopColor: Colors.ui.border,
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0,
           height: tabBarHeight,
-          paddingBottom: tabBarPaddingBottom,
-          paddingTop: 6,
+          paddingBottom: insets.bottom,
+          paddingTop: 0,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="levels"
-        options={{
-          title: 'Défis',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🌲" focused={focused} />,
+          title: 'Jouer',
+          tabBarIcon: ({ focused }) => <TabIcon name="index" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="rules"
         options={{
           title: 'R\u00e8gles',
-          tabBarIcon: ({ focused }) => <TabIcon emoji={'\uD83D\uDCD6'} focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="rules" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="challenge"
         options={{
-          title: 'Amis',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="⚔️" focused={focused} />,
+          title: 'D\u00e9fis amis',
+          tabBarIcon: ({ focused }) => <TabIcon name="challenge" focused={focused} />,
+          tabBarBadge: player.friendNotifBadgeEnabled && pendingChallengesCount > 0
+            ? pendingChallengesCount
+            : undefined,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} />,
         }}
       />
     </Tabs>

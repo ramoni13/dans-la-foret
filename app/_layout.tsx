@@ -7,11 +7,12 @@
 
 import { Stack, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, TouchableOpacity, Text, View } from 'react-native';
 import React, { useCallback, useEffect } from 'react';
 import { useStorage } from '../src/hooks/useStorage';
 import { AudioController } from '../src/components/Audio/AudioController';
 import { useAudioStore } from '../src/store/audioStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 // ── Error Boundary audio ──────────────────────────────────────────────────────
@@ -85,6 +86,29 @@ function AudioBridge() {
   return <AudioController isInGame={isInGame} />;
 }
 
+// ── Bouton son flottant (visible uniquement sur les pages menu, pas en jeu) ──
+function SoundButton() {
+  const segments     = useSegments();
+  const menuEnabled  = useAudioStore(s => s.menuEnabled);
+  const setMenu      = useAudioStore(s => s.setMenuEnabled);
+  const insets       = useSafeAreaInsets();
+
+  // Visible uniquement sur les tabs, pas pendant le jeu
+  const isInGame = segments.length > 0 && segments[0] === 'game';
+  if (isInGame) return null;
+
+  return (
+    <TouchableOpacity
+      style={[styles.soundBtn, { top: insets.top + 10 }]}
+      onPress={() => setMenu(!menuEnabled)}
+      activeOpacity={0.75}
+      accessibilityLabel={menuEnabled ? 'Couper le son' : 'Activer le son'}
+    >
+      <Text style={styles.soundIcon}>{menuEnabled ? '🔊' : '🔇'}</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -103,10 +127,25 @@ export default function RootLayout() {
           options={{ animation: 'slide_from_right' }}
         />
       </Stack>
+      <SoundButton />
     </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  soundBtn: {
+    position: 'absolute',
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+  soundIcon: {
+    fontSize: 20,
+  },
 });

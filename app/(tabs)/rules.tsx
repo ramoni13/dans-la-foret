@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // ECRAN REGLES
 // Affiche tous les elements dans l'ordre d'apparition.
 // Elements debloques : icone + nom + animations des regles (memes que le briefing).
@@ -40,7 +40,7 @@ const ELEMENT_ORDER: ElementEntry[] = [
   { id: 'ours',       introLevel: 1,  nameKey: 'rules_element_ours',       ruleIds: ['no_same_ours'] },
   { id: 'mouton',     introLevel: 1,  nameKey: 'rules_element_mouton',     ruleIds: ['no_same_mouton'] },
   { id: 'chien',      introLevel: 3,  nameKey: 'rules_element_chien',      ruleIds: ['connected_chien'] },
-  { id: 'renard',     introLevel: 5,  nameKey: 'rules_element_renard',     ruleIds: ['no_same_renard', 'forbid_renard_mouton'] },
+  { id: 'loup',       introLevel: 5,  nameKey: 'rules_element_loup',       ruleIds: ['no_same_loup', 'forbid_loup_mouton'] },
   { id: 'ruche',      introLevel: 7,  nameKey: 'rules_element_ruche',      ruleIds: ['singleton_ruche', 'require_ours_ruche', 'all_ours_ruche'] },
   { id: 'cerf',       introLevel: 9,  nameKey: 'rules_element_cerf',       ruleIds: ['no_same_cerf', 'paired_cerf_biche', 'paired_exclusive_cerf'] },
   { id: 'biche',      introLevel: 9,  nameKey: 'rules_element_biche',      ruleIds: ['no_same_biche', 'paired_cerf_biche', 'paired_exclusive_biche'] },

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // TEST D'UNICITÉ DU DÉFI DU JOUR 2026-10-06
 // Vérifie que le solver trouve bien exactement 1 solution.
 // ============================================================
@@ -26,7 +26,7 @@ const elementDefs: Record<string, ElementDefinition> = {
     id: 'mouton', label: 'Mouton', icon: ICON, color: '#E8E8E8', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
-      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'renard' },
+      { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'loup' },
     ],
   },
   ruche: {
@@ -54,8 +54,8 @@ const elementDefs: Record<string, ElementDefinition> = {
       { type: 'paired_specific', targetElementId: 'cerf', mode: 'require', scope: 'board' },
     ],
   },
-  renard: {
-    id: 'renard', label: 'Renard', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
+  Loup: {
+    id: 'loup', label: 'loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'mouton' },
@@ -113,7 +113,7 @@ const board15cellsDaily: BoardDefinition = {
   ],
   backgroundAsset: null as any,
   availableElements: [
-    'bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard',
+    'bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup',
     'ruche', 'cerf', 'biche', 'tas_buches', 'champignon',
   ],
   specialCells: {
@@ -131,12 +131,12 @@ const solution = [
   'chien',       // 2
   'champignon',  // 3
   'mouton',      // 4
-  'renard',      // 5
+  'loup',      // 5
   'chien',       // 6
   'ours',        // 7
   'biche',       // 8
   'mouton',      // 9
-  'renard',      // 10
+  'loup',      // 10
   'champignon',  // 11
   'cerf',        // 12
   'mouton',      // 13
@@ -145,9 +145,9 @@ const solution = [
 
 // Cases fixes (niv 10+)
 const fixedPlacements: FixedPlacement[] = [
-  { cellIndex: 5, elementId: 'renard' },
+  { cellIndex: 5, elementId: 'loup' },
   { cellIndex: 7, elementId: 'ours' },
-  { cellIndex: 10, elementId: 'renard' },
+  { cellIndex: 10, elementId: 'loup' },
   { cellIndex: 11, elementId: 'champignon' },
   { cellIndex: 12, elementId: 'cerf' },
 ];
@@ -196,8 +196,8 @@ swapped[1] = 'bucheron';
 const case0Neighbors = board15cellsDaily.connections[0]; // [1, 3, 5]
 const case0NeighborElements = case0Neighbors.map(n => swapped[n]);
 console.log(`   Case 0 (mouton) : voisins = ${case0Neighbors.map(n => `${n}:${swapped[n]}`).join(', ')}`);
-const moutonForbidsRenard = case0NeighborElements.includes('renard');
-console.log(`   Mouton interdit voisin renard ? ${moutonForbidsRenard ? '⚠ OUI → renard en case 5 → INVALIDE' : 'Non → OK'}`);
+const moutonForbidsLoup = case0NeighborElements.includes('loup');
+console.log(`   Mouton interdit voisin Loup ? ${moutonForbidsLoup ? '⚠ OUI → Loup en case 5 → INVALIDE' : 'Non → OK'}`);
 
 // Vérifier contraintes pour case 1 = bucheron
 const case1Neighbors = board15cellsDaily.connections[1]; // [0, 2, 7]
@@ -206,7 +206,7 @@ console.log(`   Case 1 (bucheron) : voisins = ${case1Neighbors.map(n => `${n}:${
 const bucheronForbidsBucheron = case1NeighborElements.includes('bucheron');
 console.log(`   Bucheron interdit voisin bucheron ? ${bucheronForbidsBucheron ? '⚠ OUI → INVALIDE' : 'Non → OK'}`);
 
-console.log(`\n   → Échange valid ? ${!moutonForbidsRenard && !bucheronForbidsBucheron ? '✓ OUI (BUG!)' : '✗ NON (OK — pas un doublon)'}`);
+console.log(`\n   → Échange valid ? ${!moutonForbidsLoup && !bucheronForbidsBucheron ? '✓ OUI (BUG!)' : '✗ NON (OK — pas un doublon)'}`);
 
 // 3. Tester d'autres échanges possibles entre éléments non-fixes
 console.log('\n3. Recherche systématique d\'échanges valides...');

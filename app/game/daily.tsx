@@ -479,6 +479,11 @@ export default function DailyGameScreen() {
           <View style={styles.headerRight}>
             <View style={styles.timer}>
               <Text style={styles.timerText}>{formatTime(game.elapsedTime)}</Text>
+              {leaderboard.length > 0 && (
+                <Text style={styles.wrBadge}>
+                  {'\uD83C\uDFC6'} {leaderboard[0].username} {formatTime(leaderboard[0].timeMs)}
+                </Text>
+              )}
             </View>
             <TouchableOpacity
               style={styles.speakerBtn}
@@ -663,11 +668,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
+    alignItems: 'center',
   },
   timerText: {
     fontSize: 15,
     fontWeight: '700',
     color: Colors.forest.dark,
+  },
+  wrBadge: {
+    fontSize: 10,
+    color: '#D4A017',
+    fontWeight: '600',
+    marginTop: 1,
   },
   speakerBtn: {
     width: 36,
