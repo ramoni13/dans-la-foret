@@ -107,6 +107,7 @@ export const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
             rule={rCenterOnly}
             isNew
             width={SCREEN_WIDTH - 32}
+            animHeight={240}
           />
         </View>
       );

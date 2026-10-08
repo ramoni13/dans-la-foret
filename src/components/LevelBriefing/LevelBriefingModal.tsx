@@ -31,6 +31,7 @@ import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { RuleCard } from './RuleCard';
 import { BoardSummary } from './BoardSummary';
+import { IntroSlide } from './IntroSlide';
 
 interface LevelBriefingModalProps {
   challenge: Challenge;
@@ -51,19 +52,23 @@ export const LevelBriefingModal: React.FC<LevelBriefingModalProps> = ({
 
   const hasNewRules = levelMeta.newRules.length > 0;
   const isExpertMode = challenge.level === 'niveau_15';
+  const isFirstLevel = levelMeta.levelNumber === 1;
 
   // Chaque "page" = une RuleCard (nouvelle règle), puis la BoardSummary comme dernière
   // En mode RECAP : une seule page (BoardSummary)
+  // Au niveau 1 : une slide intro est ajoutée en première position
   type Page =
+    | { kind: 'intro' }
     | { kind: 'rule'; index: number }
     | { kind: 'summary' };
 
-  const pages: Page[] = hasNewRules
-    ? [
-        ...levelMeta.newRules.map((_, i) => ({ kind: 'rule' as const, index: i })),
-        { kind: 'summary' as const },
-      ]
-    : [{ kind: 'summary' as const }];
+  const pages: Page[] = [
+    ...(isFirstLevel ? [{ kind: 'intro' as const }] : []),
+    ...(hasNewRules
+      ? levelMeta.newRules.map((_, i) => ({ kind: 'rule' as const, index: i }))
+      : []),
+    { kind: 'summary' as const },
+  ];
 
   const totalPages = pages.length;
   const [currentPage, setCurrentPage] = useState(0);
@@ -89,6 +94,13 @@ export const LevelBriefingModal: React.FC<LevelBriefingModalProps> = ({
   const levelNumber = levelMeta.levelNumber;
 
   const renderPage = ({ item, index }: { item: Page; index: number }) => {
+    if (item.kind === 'intro') {
+      return (
+        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+          <IntroSlide />
+        </View>
+      );
+    }
     if (item.kind === 'rule') {
       const rule = levelMeta.newRules[item.index];
       return (

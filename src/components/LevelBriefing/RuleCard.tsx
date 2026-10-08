@@ -24,6 +24,7 @@ interface RuleCardProps {
   rule: RuleCardData;
   isNew: boolean;
   width: number;
+  animHeight?: number;
 }
 
 function RuleAnimation({ rule, a11yLabel }: { rule: RuleCardData; a11yLabel: string }) {
@@ -53,7 +54,7 @@ function RuleAnimation({ rule, a11yLabel }: { rule: RuleCardData; a11yLabel: str
   }
 }
 
-export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width }) => {
+export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width, animHeight }) => {
   const t = useT();
 
   const a11yLabel = t(rule.i18nKey, rule.i18nVars);
@@ -68,7 +69,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width }) => {
       )}
 
       {/* Zone animation */}
-      <View style={styles.animContainer}>
+      <View style={[styles.animContainer, animHeight !== undefined && { height: animHeight }]}>
         <RuleAnimation rule={rule} a11yLabel={a11yLabel} />
       </View>
 
