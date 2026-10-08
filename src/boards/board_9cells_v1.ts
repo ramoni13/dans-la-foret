@@ -1,4 +1,4 @@
-import { BoardDefinition } from '../core/models/Board';
+﻿import { BoardDefinition } from '../core/models/Board';
 
 // Topologie : extension du board 8 cases (board_8_v2) avec une case bas-centre
 // Disposition :
@@ -36,7 +36,7 @@ export const board9cellsV1: BoardDefinition = {
     { x: 50, y: 93 }, // case 8 — bas centre (NOUVELLE)
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
-  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'renard'],
+  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'loup'],
   specialCells: {
     corners: [0, 8],
     edges: [1, 2, 3, 4],

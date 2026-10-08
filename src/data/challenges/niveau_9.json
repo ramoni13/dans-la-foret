@@ -1,4 +1,4 @@
-{
+﻿{
   "challenges": [
     {
       "id": "niveau_9_001",
@@ -13,7 +13,7 @@
         },
         {
           "cellIndex": 2,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 7,
@@ -49,7 +49,7 @@
       "solution": [
         "bucheron",
         "cerf",
-        "renard",
+        "loup",
         "ours",
         "mouton",
         "biche",
@@ -76,7 +76,7 @@
         },
         {
           "cellIndex": 1,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 6,
@@ -107,7 +107,7 @@
       ],
       "solution": [
         "mouton",
-        "renard",
+        "loup",
         "cerf",
         "biche",
         "ours",
@@ -143,7 +143,7 @@
         },
         {
           "cellIndex": 4,
-          "elementId": "renard"
+          "elementId": "loup"
         }
       ],
       "availableTokens": [
@@ -173,7 +173,7 @@
         "cerf",
         "biche",
         "ours",
-        "renard",
+        "loup",
         "bucheron",
         "bucheron",
         "chien",
@@ -206,7 +206,7 @@
         },
         {
           "cellIndex": 0,
-          "elementId": "renard"
+          "elementId": "loup"
         }
       ],
       "availableTokens": [
@@ -232,7 +232,7 @@
         }
       ],
       "solution": [
-        "renard",
+        "loup",
         "ours",
         "ruche",
         "ours",
@@ -257,7 +257,7 @@
       "fixedPlacements": [
         {
           "cellIndex": 4,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 2,
@@ -299,7 +299,7 @@
         "mouton",
         "chien",
         "ours",
-        "renard",
+        "loup",
         "chien",
         "bucheron",
         "bucheron",
@@ -320,7 +320,7 @@
       "fixedPlacements": [
         {
           "cellIndex": 9,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 0,
@@ -363,7 +363,7 @@
         "bucheron",
         "chien",
         "ours",
-        "renard",
+        "loup",
         "bucheron"
       ],
       "solutionCount": 1,
@@ -400,7 +400,7 @@
           "count": 3
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 2
         },
         {
@@ -413,11 +413,11 @@
         }
       ],
       "solution": [
-        "renard",
+        "loup",
         "mouton",
         "ours",
         "bucheron",
-        "renard",
+        "loup",
         "bucheron",
         "biche",
         "cerf",
@@ -459,7 +459,7 @@
           "count": 3
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 2
         },
         {
@@ -473,10 +473,10 @@
       ],
       "solution": [
         "cerf",
-        "renard",
+        "loup",
         "ours",
         "biche",
-        "renard",
+        "loup",
         "bucheron",
         "bucheron",
         "cerf",
@@ -501,7 +501,7 @@
         },
         {
           "cellIndex": 9,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 1,
@@ -544,7 +544,7 @@
         "bucheron",
         "bucheron",
         "chien",
-        "renard",
+        "loup",
         "chien"
       ],
       "solutionCount": 1,
@@ -589,7 +589,7 @@
           "count": 2
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 1
         },
         {
@@ -612,7 +612,7 @@
         "ruche",
         "ours",
         "cerf",
-        "renard"
+        "loup"
       ],
       "solutionCount": 1,
       "estimatedDuration": 210,

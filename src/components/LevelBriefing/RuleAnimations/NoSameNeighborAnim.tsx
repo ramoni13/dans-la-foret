@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // NoSameNeighborAnim — deux tokens identiques s'approchent → ❌ → reculent
 // API Animated (legacy) — compatible web + native
 // Cycle : 1500ms
@@ -7,6 +7,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Text, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
+import { getSpriteOrIcon } from './sprites';
 import { RuleCard } from '../../../data/levelMeta';
 
 interface Props {
@@ -60,7 +61,7 @@ export const NoSameNeighborAnim: React.FC<Props> = ({ rule, accessibilityLabel }
     <View style={styles.container} accessibilityLabel={accessibilityLabel} accessible>
       {/* Token gauche (fixe) */}
       <View style={[styles.token, { backgroundColor: def.color + '20', borderColor: def.color + '60' }]}>
-        <Image source={def.icon} style={styles.image} resizeMode="contain" />
+        <Image source={getSpriteOrIcon(elementId, def.icon)} style={styles.image} resizeMode="contain" />
       </View>
 
       {/* Croix centrale */}
@@ -71,7 +72,7 @@ export const NoSameNeighborAnim: React.FC<Props> = ({ rule, accessibilityLabel }
       {/* Token droit (se déplace) */}
       <Animated.View style={{ transform: [{ translateX: rightX }, { scale: flashScale }] }}>
         <View style={[styles.token, { backgroundColor: def.color + '20', borderColor: def.color + '60' }]}>
-          <Image source={def.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(elementId, def.icon)} style={styles.image} resizeMode="contain" />
         </View>
       </Animated.View>
     </View>

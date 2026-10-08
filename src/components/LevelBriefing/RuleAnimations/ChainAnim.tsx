@@ -10,6 +10,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Image, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
 import { RuleCard } from '../../../data/levelMeta';
+import { getSpriteOrIcon } from './sprites';
 
 interface Props {
   rule: RuleCard;
@@ -86,7 +87,7 @@ export const ChainAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
     <View style={styles.container} accessibilityLabel={accessibilityLabel} accessible>
       {/* Bucheron */}
       <View style={[styles.token, { backgroundColor: def1.color + '20', borderColor: def1.color + '60' }]}>
-        <Image source={def1.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(e1Id, def1.icon)} style={styles.image} resizeMode="contain" />
       </View>
 
                         {/* Flèche 1 — Unicode pour éviter les IDs SVG globaux dupliqués sur le web */}
@@ -97,7 +98,7 @@ export const ChainAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
       {/* Bûches */}
       <Animated.View style={{ transform: [{ scale: tasScale }] }}>
         <View style={[styles.token, { backgroundColor: def2.color + '20', borderColor: def2.color + '60' }]}>
-          <Image source={def2.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(e2Id, def2.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.glowRing, { borderColor: '#4CAF50', opacity: tasGlowOp }]} />
       </Animated.View>
@@ -111,7 +112,7 @@ export const ChainAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
       {defChal && (
         <Animated.View style={{ opacity: chalOp }}>
           <View style={[styles.token, { backgroundColor: defChal.color + '20', borderColor: defChal.color + '40' }]}>
-            <Image source={defChal.icon} style={styles.image} resizeMode="contain" />
+            <Image source={getSpriteOrIcon(e3Id, defChal.icon)} style={styles.image} resizeMode="contain" />
           </View>
           <Animated.View style={[styles.glowRing, { borderColor: '#8BC34A', opacity: chalGlowOp }]} />
         </Animated.View>

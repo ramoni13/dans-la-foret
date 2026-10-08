@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // CATALOGUE DES BADGES — Dans la Forêt
 // 41 badges au total : 36 standard + 5 secrets
 // ============================================================
@@ -91,9 +91,9 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     translations: { en: { label: 'Turtle\'s Patience', description: 'Finish a puzzle in under 30 s (level 1) — threshold increases by 10 s per level' } },
   },
   {
-    id: 'vitesse_renard',
+    id: 'vitesse_Loup',
     emoji: '🦊',
-    label: 'Ruse du renard',
+    label: 'Ruse du Loup',
     description: 'Termine un défi en moins de 20 s (niveau 1) — le seuil augmente de 7 s par niveau',
     rarity: 'pierre', category: 'vitesse', isSecret: false, isSeasonal: false,
     translations: { en: { label: 'Fox\'s Cunning', description: 'Finish a puzzle in under 20 s (level 1) — threshold increases by 7 s per level' } },

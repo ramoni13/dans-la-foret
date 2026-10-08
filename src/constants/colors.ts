@@ -1,4 +1,4 @@
-export const Colors = {
+﻿export const Colors = {
   // Thème forêt
   forest: {
     dark: '#1A3A1A',
@@ -28,7 +28,7 @@ export const Colors = {
     mouton: '#90A4AE', // Gris-ardoise — distinct du gris UI 'désactivé'
     chien: '#D2691E',
     chalet: '#A0522D',
-    renard: '#FF6B35',
+    Loup: '#FF6B35',
   },
 
   // UI générale

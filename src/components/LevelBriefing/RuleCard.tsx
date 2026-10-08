@@ -8,7 +8,6 @@ import { View, Text, StyleSheet } from 'react-native';
 import { RuleCard as RuleCardData } from '../../data/levelMeta';
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
-import { ElementChips } from './ElementChips';
 
 import { NoSameNeighborAnim } from './RuleAnimations/NoSameNeighborAnim';
 import { RequireNeighborAnim } from './RuleAnimations/RequireNeighborAnim';
@@ -68,19 +67,12 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width }) => {
         </View>
       )}
 
-      {/* Zone animation (200×120 px) */}
+      {/* Zone animation */}
       <View style={styles.animContainer}>
         <RuleAnimation rule={rule} a11yLabel={a11yLabel} />
       </View>
 
-      {/* Miniatures des éléments concernés */}
-      <ElementChips
-        elementIds={rule.elements.filter((v, i, a) => a.indexOf(v) === i)}
-        size={32}
-        style={styles.chips}
-      />
-
-      {/* Texte d'accessibilité / fallback */}
+      {/* Texte explicatif */}
       <Text style={styles.a11yText} numberOfLines={2}>
         {a11yLabel}
       </Text>
@@ -96,6 +88,7 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    position: 'relative',
   },
   newBadge: {
     backgroundColor: Colors.forest.accent,
@@ -117,9 +110,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
-  },
-  chips: {
-    marginTop: 4,
   },
   a11yText: {
     fontSize: 16,

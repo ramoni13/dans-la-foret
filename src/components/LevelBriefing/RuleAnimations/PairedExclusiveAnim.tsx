@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // PairedExclusiveAnim — Montre qu'un élément ne peut être couplé
 // qu'à UN SEUL partenaire, pas deux.
 // Layout : [e1] → [e2] ✓   puis   [e1] → [e2] [e2] ✕
@@ -10,6 +10,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Image, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
+import { getSpriteOrIcon } from './sprites';
 import { RuleCard } from '../../../data/levelMeta';
 
 interface Props {
@@ -82,11 +83,11 @@ export const PairedExclusiveAnim: React.FC<Props> = ({ rule, accessibilityLabel 
       {/* ── Phase 1 : 1→1 OK ── */}
       <Animated.View style={[styles.phaseRow, { opacity: phase1Op }]}>
         <View style={[styles.token, { backgroundColor: sourceDef.color + '20', borderColor: sourceDef.color + '60' }]}>
-          <Image source={sourceDef.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(sourceId, sourceDef.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Text style={styles.arrow}>{'\u2194'}</Text>
         <View style={[styles.token, { backgroundColor: targetDef.color + '20', borderColor: targetDef.color + '60' }]}>
-          <Image source={targetDef.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(targetId, targetDef.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={{ opacity: checkOp }}>
           <Text style={styles.check}>{'\u2713'}</Text>
@@ -96,14 +97,14 @@ export const PairedExclusiveAnim: React.FC<Props> = ({ rule, accessibilityLabel 
       {/* ── Phase 2 : 1→2 INTERDIT ── */}
       <Animated.View style={[styles.phaseRow, { opacity: phase2Op, transform: [{ translateX: shakeX }] }]}>
         <View style={[styles.token, { backgroundColor: sourceDef.color + '20', borderColor: sourceDef.color + '60' }]}>
-          <Image source={sourceDef.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(sourceId, sourceDef.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Text style={styles.arrow}>{'\u2194'}</Text>
         <View style={[styles.token, { backgroundColor: targetDef.color + '20', borderColor: targetDef.color + '60' }]}>
-          <Image source={targetDef.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(targetId, targetDef.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <View style={[styles.token, { backgroundColor: targetDef.color + '20', borderColor: targetDef.color + '60' }]}>
-          <Image source={targetDef.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(targetId, targetDef.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.crossWrap, { opacity: crossOp }]}>
           <Text style={styles.cross}>{'\u2715'}</Text>

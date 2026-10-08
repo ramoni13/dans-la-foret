@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // LEVEL META — Métadonnées pédagogiques par niveau (1–15)
 // Source de vérité pour le briefing de niveau.
 // ============================================================
@@ -97,19 +97,19 @@ const rConnectedChien: RuleCard = {
   i18nKey: 'a11y_connected_group',
   i18nVars: { element: 'chien' },
 };
-const rNoSameRenard: RuleCard = {
-  id: 'no_same_renard',
+const rNoSameloup: RuleCard = {
+  id: 'no_same_loup',
   type: 'no_same_neighbor',
-  elements: ['renard', 'renard'],
+  elements: ['loup', 'loup'],
   i18nKey: 'a11y_no_same',
-  i18nVars: { element: 'renard' },
+  i18nVars: { element: 'loup' },
 };
-const rForbidRenardMouton: RuleCard = {
-  id: 'forbid_renard_mouton',
+const rForbidloupMouton: RuleCard = {
+  id: 'forbid_loup_mouton',
   type: 'forbid_neighbor',
-  elements: ['renard', 'mouton'],
+  elements: ['loup', 'mouton'],
   i18nKey: 'a11y_forbid_neighbor',
-  i18nVars: { e1: 'renard', e2: 'mouton' },
+  i18nVars: { e1: 'loup', e2: 'mouton' },
 };
 const rNoSameCerf: RuleCard = {
   id: 'no_same_cerf',
@@ -183,7 +183,7 @@ const rRequireChaletBucheron: RuleCard = {
 // Nouvel ordre d'introduction :
 //   Niv 1  : bucheron, ours, mouton
 //   Niv 3  : chien
-//   Niv 5  : renard
+//   Niv 5  : loup
 //   Niv 7  : ruche
 //   Niv 9  : cerf, biche
 //   Niv 11 : tas_buches
@@ -256,19 +256,19 @@ export const LEVEL_META: Record<number, LevelMeta> = {
     levelNumber: 5,
     boardCellCount: 9,
     emptyCellsCount: 5,
-    newElements: ['renard'],
+    newElements: ['loup'],
     allRules: [
       rNoSameBucheron,
       rNoSameOurs,
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
     ],
     newRules: [
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
     ],
   },
 
@@ -283,8 +283,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
     ],
     newRules: [],
   },
@@ -300,8 +300,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
       rSingletonRuche,
       rRequireOursRuche,
       rAllOursRuche,
@@ -324,8 +324,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
       rSingletonRuche,
       rRequireOursRuche,
       rAllOursRuche,
@@ -344,8 +344,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
       rSingletonRuche,
       rRequireOursRuche,
       rAllOursRuche,
@@ -375,8 +375,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
       rSingletonRuche,
       rRequireOursRuche,
       rAllOursRuche,
@@ -400,8 +400,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
       rSingletonRuche,
       rRequireOursRuche,
       rAllOursRuche,
@@ -428,8 +428,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
       rSingletonRuche,
       rRequireOursRuche,
       rAllOursRuche,
@@ -461,8 +461,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
       rSingletonRuche,
       rRequireOursRuche,
       rAllOursRuche,
@@ -490,8 +490,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
       rSingletonRuche,
       rRequireOursRuche,
       rAllOursRuche,
@@ -519,8 +519,8 @@ export const LEVEL_META: Record<number, LevelMeta> = {
       rNoSameMouton,
       rNoSameChien,
       rConnectedChien,
-      rNoSameRenard,
-      rForbidRenardMouton,
+      rNoSameloup,
+      rForbidloupMouton,
       rSingletonRuche,
       rRequireOursRuche,
       rAllOursRuche,

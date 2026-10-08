@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // GÉNÉRATEUR DE DÉFIS
 // Génère des défis avec solution unique pré-calculée.
 // Étape 1 : solution complète aléatoire valide (diversifiée)
@@ -102,7 +102,7 @@ export function generateChallenge(options: GeneratorOptions): Challenge | null {
     if (usedSolutionSignatures.has(solSig)) { dbgDupSol++; continue; }
 
     // Fix 3.6 : vérifier la tension narrative AVANT de retirer des jetons.
-    // Si la composition contient renard+mouton ou chalet+bucheron, la solution
+    // Si la composition contient Loup+mouton ou chalet+bucheron, la solution
     // doit en placer au moins un de chaque côté de la frontière fixe/disponible.
     // Ici on vérifie juste que les deux éléments sont présents dans la solution —
     // la tension sera vérifiée après la création du défi (une fois les cases fixes connues).
@@ -137,8 +137,8 @@ export function generateChallenge(options: GeneratorOptions): Challenge | null {
     // Vérifier la validité pédagogique
     if (!isPedagogicallyValid(availableTokens, tokenCounts)) { dbgNotPedago++; continue; }
 
-    // Fix 3.6 : tension narrative — rejeter si renard présent sans tension
-    // renard/mouton, ou chalet présent sans tension chalet/bucheron.
+    // Fix 3.6 : tension narrative — rejeter si Loup présent sans tension
+    // Loup/mouton, ou chalet présent sans tension chalet/bucheron.
     if (!isNarrativelyInteresting(availableTokens, fixedPlacements, tokenCounts)) { dbgNotNarrative++; continue; }
 
     // Vérifier la diversité structurelle : rejeter si trop similaire
@@ -211,7 +211,7 @@ function isPedagogicallyValid(
   // Règles relationnelles : au moins un des deux éléments d'une paire
   // doit être à poser pour que la relation soit visible et jouable.
   if (inFull('chalet') && !hasAvailable('chalet') && !hasAvailable('bucheron')) return false;
-  if (inFull('renard') && !hasAvailable('renard') && !hasAvailable('mouton')) return false;
+  if (inFull('loup') && !hasAvailable('loup') && !hasAvailable('mouton')) return false;
   if (inFull('ruche') && !hasAvailable('ruche') && !hasAvailable('ours')) return false;
   if (inFull('cerf') && !hasAvailable('cerf') && !hasAvailable('biche')) return false;
   if (inFull('biche') && !hasAvailable('biche') && !hasAvailable('cerf')) return false;
@@ -562,13 +562,13 @@ function solutionSignature(solution: string[]): string {
 
 /**
  * Vérifie que la composition est narrativement cohérente :
- * si renard est présent, mouton doit l'être aussi (sinon aucune tension possible).
+ * si Loup est présent, mouton doit l'être aussi (sinon aucune tension possible).
  * Si chalet est présent, bucheron doit l'être aussi.
  * Ce filtre est appliqué AVANT la génération pour éviter des tentatives inutiles.
  */
 function isNarrativelyCoherent(tokenCounts: TokenCount[]): boolean {
   const inCompo = (id: string) => tokenCounts.some(t => t.elementId === id && t.count > 0);
-  if (inCompo('renard') && !inCompo('mouton')) return false;
+  if (inCompo('loup') && !inCompo('mouton')) return false;
   if (inCompo('chalet') && !inCompo('bucheron')) return false;
   return true;
 }
@@ -576,7 +576,7 @@ function isNarrativelyCoherent(tokenCounts: TokenCount[]): boolean {
 /**
  * Fix 3.6 : vérifie la tension narrative APRÈS création des cases fixes.
  *
- * Règle A (dure) : si renard et mouton sont dans la composition, il ne faut PAS
+ * Règle A (dure) : si Loup et mouton sont dans la composition, il ne faut PAS
  * que les deux soient entièrement en cases fixes (aucune tension visible pour le joueur).
  * Si au moins l'un des deux est disponible → tension possible → OK.
  *
@@ -593,10 +593,10 @@ function isNarrativelyInteresting(
   const inCompo = (id: string) => fullTokenCounts.some(t => t.elementId === id && t.count > 0);
   const hasAvailable = (id: string) => availableTokens.some(t => t.elementId === id && t.count > 0);
 
-  // Règle A : si renard ET mouton sont dans la composition,
+  // Règle A : si Loup ET mouton sont dans la composition,
   // au moins l'un des deux doit être à placer (pas les deux entièrement fixés).
-  if (inCompo('renard') && inCompo('mouton')) {
-    if (!hasAvailable('renard') && !hasAvailable('mouton')) return false;
+  if (inCompo('loup') && inCompo('mouton')) {
+    if (!hasAvailable('loup') && !hasAvailable('mouton')) return false;
   }
 
   // Règle B : si chalet ET bucheron sont dans la composition,

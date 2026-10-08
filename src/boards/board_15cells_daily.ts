@@ -1,4 +1,4 @@
-import { BoardDefinition } from '../core/models/Board';
+﻿import { BoardDefinition } from '../core/models/Board';
 
 // ============================================================
 // PLATEAU JOURNALIER — Clairière Secrète (15 cases)
@@ -63,7 +63,7 @@ export const board15cellsDaily: BoardDefinition = {
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
   availableElements: [
-    'bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard',
+    'bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup',
     'ruche', 'cerf', 'biche', 'tas_buches', 'champignon',
   ],
   specialCells: {

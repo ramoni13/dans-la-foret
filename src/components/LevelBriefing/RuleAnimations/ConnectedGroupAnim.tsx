@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // ConnectedGroupAnim — 3 chiens toujours visibles, reliés par
 // des lignes pulsées bleues pour illustrer la meute connexe.
 // API Animated (legacy) — compatible web + native
@@ -8,6 +8,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
+import { getSpriteOrIcon } from './sprites';
 import { RuleCard } from '../../../data/levelMeta';
 
 interface Props {
@@ -75,7 +76,7 @@ export const ConnectedGroupAnim: React.FC<Props> = ({ rule, accessibilityLabel }
       {/* Token 1 */}
       <Animated.View style={{ transform: [{ scale: glowScale }] }}>
         <View style={[styles.token, { backgroundColor: tokenColor + '20', borderColor: '#2196F3' }]}>
-          <Image source={def.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(elementId, def.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.glowRing, { opacity: glowOp }]} />
       </Animated.View>
@@ -86,7 +87,7 @@ export const ConnectedGroupAnim: React.FC<Props> = ({ rule, accessibilityLabel }
       {/* Token 2 (central) */}
       <Animated.View style={{ transform: [{ scale: glowScale }] }}>
         <View style={[styles.token, { backgroundColor: tokenColor + '20', borderColor: '#2196F3' }]}>
-          <Image source={def.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(elementId, def.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.glowRing, { opacity: glowOp }]} />
       </Animated.View>
@@ -97,7 +98,7 @@ export const ConnectedGroupAnim: React.FC<Props> = ({ rule, accessibilityLabel }
       {/* Token 3 */}
       <Animated.View style={{ transform: [{ scale: glowScale }] }}>
         <View style={[styles.token, { backgroundColor: tokenColor + '20', borderColor: '#2196F3' }]}>
-          <Image source={def.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(elementId, def.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.glowRing, { opacity: glowOp }]} />
       </Animated.View>

@@ -1,4 +1,4 @@
-{
+﻿{
   "challenges": [
     {
       "id": "niveau_13_001",
@@ -174,7 +174,7 @@
           "count": 1
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 2
         },
         {
@@ -200,9 +200,9 @@
         "chalet",
         "bucheron",
         "bucheron",
-        "renard",
+        "loup",
         "bucheron",
-        "renard"
+        "loup"
       ],
       "solutionCount": 1,
       "estimatedDuration": 300,
@@ -233,7 +233,7 @@
         },
         {
           "cellIndex": 5,
-          "elementId": "renard"
+          "elementId": "loup"
         }
       ],
       "availableTokens": [
@@ -246,7 +246,7 @@
           "count": 2
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 1
         },
         {
@@ -261,10 +261,10 @@
       "solution": [
         "mouton",
         "bucheron",
-        "renard",
+        "loup",
         "chalet",
         "bucheron",
-        "renard",
+        "loup",
         "ours",
         "chalet",
         "bucheron",
@@ -314,7 +314,7 @@
           "count": 2
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 2
         },
         {
@@ -334,8 +334,8 @@
         "ours",
         "tas_buches",
         "bucheron",
-        "renard",
-        "renard",
+        "loup",
+        "loup",
         "chalet",
         "ours",
         "bucheron"
@@ -353,7 +353,7 @@
       "fixedPlacements": [
         {
           "cellIndex": 7,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 5,
@@ -382,7 +382,7 @@
           "count": 1
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 1
         },
         {
@@ -397,12 +397,12 @@
       "solution": [
         "chalet",
         "ruche",
-        "renard",
+        "loup",
         "tas_buches",
         "bucheron",
         "ours",
         "mouton",
-        "renard",
+        "loup",
         "bucheron",
         "chalet",
         "bucheron",
@@ -425,7 +425,7 @@
         },
         {
           "cellIndex": 2,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 5,
@@ -446,7 +446,7 @@
           "count": 3
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 1
         },
         {
@@ -461,12 +461,12 @@
       "solution": [
         "mouton",
         "ours",
-        "renard",
+        "loup",
         "chalet",
         "bucheron",
         "bucheron",
         "chalet",
-        "renard",
+        "loup",
         "bucheron",
         "chalet",
         "bucheron",
@@ -573,7 +573,7 @@
         },
         {
           "cellIndex": 4,
-          "elementId": "renard"
+          "elementId": "loup"
         }
       ],
       "availableTokens": [
@@ -586,7 +586,7 @@
           "count": 2
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 1
         },
         {
@@ -602,8 +602,8 @@
         "bucheron",
         "tas_buches",
         "ours",
-        "renard",
-        "renard",
+        "loup",
+        "loup",
         "bucheron",
         "chalet",
         "ours",
@@ -654,7 +654,7 @@
           "count": 1
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 2
         },
         {
@@ -669,8 +669,8 @@
         "chalet",
         "bucheron",
         "bucheron",
-        "renard",
-        "renard",
+        "loup",
+        "loup",
         "bucheron",
         "chalet",
         "bucheron",

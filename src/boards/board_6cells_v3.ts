@@ -1,4 +1,4 @@
-import { BoardDefinition } from '../core/models/Board';
+﻿import { BoardDefinition } from '../core/models/Board';
 
 export const board6cellsV3: BoardDefinition = {
   id: 'board_6_v3',
@@ -21,5 +21,5 @@ export const board6cellsV3: BoardDefinition = {
     { x: 43, y: 78 }, // case 5
   ],
   backgroundAsset: require('../../assets/boards/fond_6cells_v3.jpg'),
-  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'renard'],
+  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'chalet', 'loup'],
 };

@@ -1,4 +1,4 @@
-import { BoardDefinition } from '../core/models/Board';
+﻿import { BoardDefinition } from '../core/models/Board';
 
 // Topologie : extension du board 10 cases (board_10_v3) avec une case centre absolu
 // Disposition :
@@ -39,7 +39,7 @@ export const board11cellsV1: BoardDefinition = {
     { x: 50, y: 46 }, // case 10 — centre absolu (NOUVELLE)
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
-  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche', 'tas_buches'],
+  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'loup', 'ruche', 'tas_buches'],
   specialCells: {
     corners: [0, 2, 7, 9],
     center: [3, 6, 10],

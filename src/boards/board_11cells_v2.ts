@@ -1,4 +1,4 @@
-import { BoardDefinition } from '../core/models/Board';
+﻿import { BoardDefinition } from '../core/models/Board';
 
 // Nouvelle disposition — map lisible avec connexions claires (niveaux 9, 10, 11)
 //
@@ -54,7 +54,7 @@ export const board11cellsV2: BoardDefinition = {
     { x: 88, y: 92 }, // case 10 — coin bas-droite
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
-  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'renard', 'ruche', 'tas_buches'],
+  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'loup', 'ruche', 'tas_buches'],
   specialCells: {
     corners: [0, 1, 9, 10],
     center:  [4],

@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // MOTEUR D'ÉVALUATION DES BADGES
 // Fonction pure, idempotente, O(n) sur le catalogue.
 // ============================================================
@@ -92,7 +92,7 @@ export function evaluateBadges(ctx: GameContext): string[] {
   //
   //   Badge          | Niv 1 | +/niv | Niv 5 | Niv 10
   //   vitesse_tortue |  30 s |  +10  |  70 s | 120 s
-  //   vitesse_renard |  20 s |   +7  |  48 s |  83 s
+  //   vitesse_Loup |  20 s |   +7  |  48 s |  83 s
   //   vitesse_oiseau |  12 s |   +5  |  32 s |  57 s
   //   vitesse_eclair |   7 s |   +3  |  19 s |  34 s
   //   vitesse_tornade|   4 s |   +2  |  12 s |  22 s
@@ -100,13 +100,13 @@ export function evaluateBadges(ctx: GameContext): string[] {
   // levelNumber est garanti >= 1.
   const lvl = Math.max(1, ctx.levelNumber);
   const threshold_tortue  = 30 + (lvl - 1) * 10;
-  const threshold_renard  = 20 + (lvl - 1) * 7;
+  const threshold_Loup  = 20 + (lvl - 1) * 7;
   const threshold_oiseau  = 12 + (lvl - 1) * 5;
   const threshold_eclair  =  7 + (lvl - 1) * 3;
   const threshold_tornade =  4 + (lvl - 1) * 2;
 
   if (elapsedSec < threshold_tortue)  award('vitesse_tortue');
-  if (elapsedSec < threshold_renard)  award('vitesse_renard');
+  if (elapsedSec < threshold_Loup)  award('vitesse_Loup');
   if (elapsedSec < threshold_oiseau)  award('vitesse_oiseau');
   if (elapsedSec < threshold_eclair)  award('vitesse_eclair');
   if (elapsedSec < threshold_tornade) award('vitesse_tornade');
@@ -330,7 +330,7 @@ export function getClosestBadges(ctx: GameContext): BadgeProgress[] {
   // Seuils vitesse identiques à evaluateBadges (secondes, croissants par niveau)
   const lvl2        = Math.max(1, ctx.levelNumber);
   const t_tortue    = 30 + (lvl2 - 1) * 10;
-  const t_renard    = 20 + (lvl2 - 1) * 7;
+  const t_Loup    = 20 + (lvl2 - 1) * 7;
   const t_oiseau    = 12 + (lvl2 - 1) * 5;
   const t_eclair    =  7 + (lvl2 - 1) * 3;
   const t_tornade   =  4 + (lvl2 - 1) * 2;
@@ -341,7 +341,7 @@ export function getClosestBadges(ctx: GameContext): BadgeProgress[] {
   // Si elapsedSec < threshold → badge déjà décerné dans evaluateBadges (earnedSet).
   const speedBadges: Array<[string, number]> = [
     ['vitesse_tortue',  t_tortue],
-    ['vitesse_renard',  t_renard],
+    ['vitesse_Loup',  t_Loup],
     ['vitesse_oiseau',  t_oiseau],
     ['vitesse_eclair',  t_eclair],
     ['vitesse_tornade', t_tornade],

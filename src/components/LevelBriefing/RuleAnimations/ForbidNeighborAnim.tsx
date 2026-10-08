@@ -8,6 +8,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Text, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
 import { RuleCard } from '../../../data/levelMeta';
+import { getSpriteOrIcon } from './sprites';
 
 interface Props {
   rule: RuleCard;
@@ -66,7 +67,7 @@ export const ForbidNeighborAnim: React.FC<Props> = ({ rule, accessibilityLabel }
     <View style={styles.container} accessibilityLabel={accessibilityLabel} accessible>
       <Animated.View style={{ transform: [{ translateX: e1X }] }}>
         <View style={[styles.token, { backgroundColor: def1.color + '20', borderColor: def1.color + '60' }]}>
-          <Image source={def1.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(e1Id, def1.icon)} style={styles.image} resizeMode="contain" />
         </View>
       </Animated.View>
 
@@ -76,7 +77,7 @@ export const ForbidNeighborAnim: React.FC<Props> = ({ rule, accessibilityLabel }
 
       <Animated.View style={{ transform: [{ translateX: e2X }] }}>
         <View style={[styles.token, { backgroundColor: def2.color + '20', borderColor: def2.color + '60' }]}>
-          <Image source={def2.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(e2Id, def2.icon)} style={styles.image} resizeMode="contain" />
         </View>
       </Animated.View>
     </View>

@@ -1,4 +1,4 @@
-{
+﻿{
   "challenges": [
     {
       "id": "niveau_10_001",
@@ -38,7 +38,7 @@
           "count": 1
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 2
         },
         {
@@ -51,13 +51,13 @@
         "cerf",
         "chien",
         "chien",
-        "renard",
+        "loup",
         "biche",
         "bucheron",
         "bucheron",
         "ours",
         "mouton",
-        "renard"
+        "loup"
       ],
       "solutionCount": 1,
       "estimatedDuration": 255,
@@ -84,7 +84,7 @@
         },
         {
           "cellIndex": 4,
-          "elementId": "renard"
+          "elementId": "loup"
         }
       ],
       "availableTokens": [
@@ -114,7 +114,7 @@
         "bucheron",
         "ours",
         "cerf",
-        "renard",
+        "loup",
         "ruche",
         "bucheron",
         "bucheron",
@@ -135,7 +135,7 @@
       "fixedPlacements": [
         {
           "cellIndex": 10,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 9,
@@ -183,7 +183,7 @@
         "ruche",
         "ours",
         "mouton",
-        "renard"
+        "loup"
       ],
       "solutionCount": 1,
       "estimatedDuration": 255,
@@ -227,7 +227,7 @@
           "count": 1
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 2
         },
         {
@@ -236,7 +236,7 @@
         }
       ],
       "solution": [
-        "renard",
+        "loup",
         "ours",
         "bucheron",
         "ours",
@@ -246,7 +246,7 @@
         "bucheron",
         "chien",
         "chien",
-        "renard"
+        "loup"
       ],
       "solutionCount": 1,
       "estimatedDuration": 255,
@@ -261,7 +261,7 @@
       "fixedPlacements": [
         {
           "cellIndex": 2,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 9,
@@ -301,7 +301,7 @@
       "solution": [
         "biche",
         "ours",
-        "renard",
+        "loup",
         "cerf",
         "mouton",
         "bucheron",
@@ -345,7 +345,7 @@
           "count": 3
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 2
         },
         {
@@ -358,11 +358,11 @@
         }
       ],
       "solution": [
-        "renard",
+        "loup",
         "ours",
         "cerf",
         "bucheron",
-        "renard",
+        "loup",
         "biche",
         "biche",
         "bucheron",
@@ -395,7 +395,7 @@
         },
         {
           "cellIndex": 4,
-          "elementId": "renard"
+          "elementId": "loup"
         }
       ],
       "availableTokens": [
@@ -429,7 +429,7 @@
         "chien",
         "chien",
         "cerf",
-        "renard",
+        "loup",
         "ours",
         "bucheron",
         "ruche",
@@ -479,7 +479,7 @@
           "count": 2
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 1
         },
         {
@@ -497,7 +497,7 @@
         "bucheron",
         "chien",
         "chien",
-        "renard",
+        "loup",
         "bucheron"
       ],
       "solutionCount": 1,
@@ -534,7 +534,7 @@
           "count": 3
         },
         {
-          "elementId": "renard",
+          "elementId": "loup",
           "count": 2
         },
         {
@@ -549,14 +549,14 @@
       "solution": [
         "biche",
         "ours",
-        "renard",
+        "loup",
         "cerf",
         "mouton",
         "bucheron",
         "bucheron",
         "biche",
         "cerf",
-        "renard",
+        "loup",
         "bucheron"
       ],
       "solutionCount": 1,
@@ -576,7 +576,7 @@
         },
         {
           "cellIndex": 0,
-          "elementId": "renard"
+          "elementId": "loup"
         },
         {
           "cellIndex": 9,
@@ -610,7 +610,7 @@
         }
       ],
       "solution": [
-        "renard",
+        "loup",
         "mouton",
         "cerf",
         "bucheron",

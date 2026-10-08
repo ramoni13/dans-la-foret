@@ -8,6 +8,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Text, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
 import { RuleCard } from '../../../data/levelMeta';
+import { getSpriteOrIcon } from './sprites';
 
 interface Props {
   rule: RuleCard;
@@ -62,7 +63,7 @@ export const PairedAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
       {/* e1 (cerf) */}
       <Animated.View style={[styles.tokenWrapper, { opacity: op1 }]}>
         <View style={[styles.token, { backgroundColor: def1.color + '20', borderColor: def1.color + '60' }]}>
-          <Image source={def1.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(e1Id, def1.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={{ transform: [{ scale: counterScale }] }}>
           <Text style={styles.counter}>×1</Text>
@@ -77,7 +78,7 @@ export const PairedAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
       {/* e2 (biche) */}
       <Animated.View style={[styles.tokenWrapper, { opacity: op2 }]}>
         <View style={[styles.token, { backgroundColor: def2.color + '20', borderColor: def2.color + '60' }]}>
-          <Image source={def2.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(e2Id, def2.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={{ transform: [{ scale: counterScale }] }}>
           <Text style={styles.counter}>×1</Text>

@@ -8,6 +8,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Image, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
 import { RuleCard } from '../../../data/levelMeta';
+import { getSpriteOrIcon } from './sprites';
 
 interface Props {
   rule: RuleCard;
@@ -52,7 +53,7 @@ export const RequireNeighborAnim: React.FC<Props> = ({ rule, accessibilityLabel 
       {/* Token 1 */}
       <Animated.View style={{ transform: [{ scale: glowScale }] }}>
         <View style={[styles.token, { backgroundColor: def1.color + '20', borderColor: def1.color + '60' }]}>
-          <Image source={def1.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(e1Id, def1.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.glowRing, { borderColor: '#4CAF50', opacity: glowOpacity }]} />
       </Animated.View>
@@ -65,7 +66,7 @@ export const RequireNeighborAnim: React.FC<Props> = ({ rule, accessibilityLabel 
       {/* Token 2 */}
       <Animated.View style={{ transform: [{ scale: glowScale }] }}>
         <View style={[styles.token, { backgroundColor: def2.color + '20', borderColor: def2.color + '60' }]}>
-          <Image source={def2.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(e2Id, def2.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.glowRing, { borderColor: '#4CAF50', opacity: glowOpacity }]} />
       </Animated.View>

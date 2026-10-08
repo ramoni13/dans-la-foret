@@ -11,7 +11,7 @@
 //   Niv 2  : 7 cases,  4 vides  — (mêmes éléments, nouveau board)
 //   Niv 3  : 8 cases,  4 vides  — + chien (meute connexe)
 //   Niv 4  : 8 cases,  5 vides  — consolidation
-//   Niv 5  : 9 cases,  5 vides  — + renard (antagonisme mouton)
+//   Niv 5  : 9 cases,  5 vides  — + Loup (antagonisme mouton)
 //   Niv 6  : 9 cases,  6 vides  — consolidation
 //   Niv 7  : 10 cases, 6 vides  — + ruche (tous ours voisins si ruche)
 //   Niv 8  : 10 cases, 7 vides  — consolidation
@@ -26,7 +26,7 @@
 // Nouveaux éléments introduits progressivement :
 //   Niv 1    : Bucheron, Ours, Mouton
 //   Niv 3    : + Chien (meute connexe, chien >= 2 toujours)
-//   Niv 5    : + Renard (répulsion Renard/Mouton)
+//   Niv 5    : + Loup (répulsion Loup/Mouton)
 //   Niv 7    : + Ruche (singleton, tous les ours voisins si présente)
 //   Niv 9    : + Cerf + Biche (couples 1-pour-1)
 //   Niv 11   : + Bûches (voisin Bucheron, + voisin Chalet si présent)
@@ -54,11 +54,11 @@ export interface Composition {
   // ── Éléments de base (niv 1+) ──────────────────────────────
   bucheron?: number;   // ≠ voisin bucheron
   ours?: number;       // ≠ voisin ours · si ruche présente, doit être voisin ruche
-  mouton?: number;     // ≠ voisin mouton, ≠ voisin renard
+  mouton?: number;     // ≠ voisin mouton, ≠ voisin Loup
   // ── Introduits niv 3+ ───────────────────────────────────────
   chien?: number;      // = voisin chien (meute connexe) · TOUJOURS >= 2 si > 0 (I4)
   // ── Introduits niv 5+ ───────────────────────────────────────
-  renard?: number;     // ≠ voisin mouton, ≠ voisin renard
+  loup?: number;     // ≠ voisin mouton, ≠ voisin loup
   // ── Introduits niv 7+ ───────────────────────────────────────
   ruche?: number;      // MAX 1 PAR DÉFI (I2) · tous les ours doivent en être voisins
   // ── Introduits niv 9+ ───────────────────────────────────────
@@ -184,21 +184,21 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
   // ────────────────────────────────────────────────────────────────
 
   niveau_5: {
-    // 5 types : Bucheron, Ours, Mouton, Chien, Renard — 5 vides, 4 fixés
-    // Respiration (nouveau board) — renard↔mouton antagonisme. 4 fixés
+    // 5 types : Bucheron, Ours, Mouton, Chien, Loup — 5 vides, 4 fixés
+    // Respiration (nouveau board) — Loup↔mouton antagonisme. 4 fixés
     boardId: 'board_9_v1',
     cellCount: 9,
     compositions: [
-      { bucheron: 2, ours: 2, mouton: 2, renard: 1, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 3, ours: 2, mouton: 1, renard: 1, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 2, ours: 3, mouton: 1, renard: 1, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 3, ours: 1, mouton: 2, renard: 1, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 3, ours: 2, mouton: 2, renard: 2 },            // 9 I1✓ (sans chien)
-      { bucheron: 2, ours: 3, mouton: 2, renard: 2 },            // 9 I1✓
-      { bucheron: 2, ours: 2, mouton: 3, renard: 2 },            // 9 I1✓
-      { bucheron: 3, ours: 2, mouton: 1, renard: 3 },            // 9 I1✓ renard dominant
-      { bucheron: 2, ours: 1, mouton: 2, renard: 2, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 1, ours: 2, mouton: 2, renard: 2, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 2, ours: 2, mouton: 2, loup: 1, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 1, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 2, ours: 3, mouton: 1, loup: 1, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 3, ours: 1, mouton: 2, loup: 1, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2 },            // 9 I1✓ (sans chien)
+      { bucheron: 2, ours: 3, mouton: 2, loup: 2 },            // 9 I1✓
+      { bucheron: 2, ours: 2, mouton: 3, loup: 2 },            // 9 I1✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 3 },            // 9 I1✓ Loup dominant
+      { bucheron: 2, ours: 1, mouton: 2, loup: 2, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 1, ours: 2, mouton: 2, loup: 2, chien: 2 },  // 9 I1✓ I4✓
     ],
     emptyCellsRange: [5, 5],
     bonusDisabled: false,
@@ -206,21 +206,21 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
   },
 
   niveau_6: {
-    // 5 types : Bucheron, Ours, Mouton, Chien, Renard — 6 vides, 3 fixés
+    // 5 types : Bucheron, Ours, Mouton, Chien, Loup — 6 vides, 3 fixés
     // Accélération — même board, +1 vide, -1 fixé
     boardId: 'board_9_v1',
     cellCount: 9,
     compositions: [
-      { bucheron: 2, ours: 2, mouton: 2, renard: 1, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 3, ours: 2, mouton: 1, renard: 1, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 3, ours: 2, mouton: 2, renard: 2 },            // 9 I1✓ (sans chien)
-      { bucheron: 2, ours: 3, mouton: 2, renard: 2 },            // 9 I1✓
-      { bucheron: 2, ours: 2, mouton: 2, renard: 3 },            // 9 I1✓ renard dominant
-      { bucheron: 3, ours: 1, mouton: 2, renard: 1, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 1, ours: 3, mouton: 2, renard: 1, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 2, ours: 1, mouton: 2, renard: 2, chien: 2 },  // 9 I1✓ I4✓
-      { bucheron: 3, ours: 2, mouton: 1, renard: 3 },            // 9 I1✓ renard dominant
-      { bucheron: 2, ours: 3, mouton: 1, renard: 3 },            // 9 I1✓
+      { bucheron: 2, ours: 2, mouton: 2, loup: 1, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 1, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2 },            // 9 I1✓ (sans chien)
+      { bucheron: 2, ours: 3, mouton: 2, loup: 2 },            // 9 I1✓
+      { bucheron: 2, ours: 2, mouton: 2, loup: 3 },            // 9 I1✓ Loup dominant
+      { bucheron: 3, ours: 1, mouton: 2, loup: 1, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 1, ours: 3, mouton: 2, loup: 1, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 2, ours: 1, mouton: 2, loup: 2, chien: 2 },  // 9 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 3 },            // 9 I1✓ Loup dominant
+      { bucheron: 2, ours: 3, mouton: 1, loup: 3 },            // 9 I1✓
     ],
     emptyCellsRange: [6, 6],
     bonusDisabled: false,
@@ -232,23 +232,23 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
   // ────────────────────────────────────────────────────────────────
 
   niveau_7: {
-    // 6 types : Bucheron, Ours, Mouton, Chien, Renard, Ruche — 6 vides, 4 fixés
+    // 6 types : Bucheron, Ours, Mouton, Chien, Loup, Ruche — 6 vides, 4 fixés
     // Respiration (nouveau board) — ruche singleton + tous ours voisins. 4 fixés
     // ruche=1, ours ≤ 3 (I3b). Compos avec et sans ruche pour variété.
     boardId: 'board_10_v3',
     cellCount: 10,
     compositions: [
-      { bucheron: 2, ours: 2, mouton: 1, chien: 2, renard: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
-      { bucheron: 2, ours: 1, mouton: 2, chien: 2, renard: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
-      { bucheron: 3, ours: 1, mouton: 1, chien: 2, renard: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
-      { bucheron: 3, ours: 2, mouton: 2, renard: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓ (sans chien)
-      { bucheron: 2, ours: 3, mouton: 2, renard: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓
-      { bucheron: 3, ours: 2, mouton: 1, renard: 3, ruche: 1 },            // 10 I1✓ I2✓ I3✓ renard dominant
-      { bucheron: 2, ours: 2, mouton: 2, renard: 3, ruche: 1 },            // 10 I1✓ I2✓ I3✓
-      { bucheron: 3, ours: 3, mouton: 1, renard: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓ ours=3
+      { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
+      { bucheron: 3, ours: 1, mouton: 1, chien: 2, loup: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓ (sans chien)
+      { bucheron: 2, ours: 3, mouton: 2, loup: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 3, ruche: 1 },            // 10 I1✓ I2✓ I3✓ Loup dominant
+      { bucheron: 2, ours: 2, mouton: 2, loup: 3, ruche: 1 },            // 10 I1✓ I2✓ I3✓
+      { bucheron: 3, ours: 3, mouton: 1, loup: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓ ours=3
       // Sans ruche — variété
-      { bucheron: 3, ours: 2, mouton: 2, chien: 2, renard: 1 },            // 10 I1✓ I4✓
-      { bucheron: 2, ours: 2, mouton: 2, chien: 2, renard: 2 },            // 10 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 2, chien: 2, loup: 1 },            // 10 I1✓ I4✓
+      { bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 2 },            // 10 I1✓ I4✓
     ],
     emptyCellsRange: [6, 6],
     bonusDisabled: false,
@@ -261,17 +261,17 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
     boardId: 'board_10_v3',
     cellCount: 10,
     compositions: [
-      { bucheron: 2, ours: 2, mouton: 1, chien: 2, renard: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
-      { bucheron: 3, ours: 1, mouton: 1, chien: 2, renard: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
-      { bucheron: 2, ours: 1, mouton: 2, chien: 2, renard: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
-      { bucheron: 3, ours: 2, mouton: 2, renard: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓
-      { bucheron: 2, ours: 3, mouton: 2, renard: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓
-      { bucheron: 3, ours: 2, mouton: 1, renard: 3, ruche: 1 },            // 10 I1✓ I2✓ I3✓
-      { bucheron: 2, ours: 2, mouton: 2, renard: 3, ruche: 1 },            // 10 I1✓ I2✓ I3✓
-      { bucheron: 3, ours: 3, mouton: 1, renard: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓
+      { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
+      { bucheron: 3, ours: 1, mouton: 1, chien: 2, loup: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 2, ruche: 1 },  // 10 I1✓ I2✓ I3✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓
+      { bucheron: 2, ours: 3, mouton: 2, loup: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 3, ruche: 1 },            // 10 I1✓ I2✓ I3✓
+      { bucheron: 2, ours: 2, mouton: 2, loup: 3, ruche: 1 },            // 10 I1✓ I2✓ I3✓
+      { bucheron: 3, ours: 3, mouton: 1, loup: 2, ruche: 1 },            // 10 I1✓ I2✓ I3✓
       // Sans ruche
-      { bucheron: 3, ours: 2, mouton: 2, chien: 2, renard: 1 },            // 10 I1✓ I4✓
-      { bucheron: 2, ours: 3, mouton: 2, chien: 2, renard: 1 },            // 10 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 2, chien: 2, loup: 1 },            // 10 I1✓ I4✓
+      { bucheron: 2, ours: 3, mouton: 2, chien: 2, loup: 1 },            // 10 I1✓ I4✓
     ],
     emptyCellsRange: [7, 7],
     bonusDisabled: false,
@@ -290,20 +290,20 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
     cellCount: 11,
     compositions: [
       // 1 couple — ruche=1, chien=2
-      { bucheron: 2, ours: 2, mouton: 1, chien: 2, renard: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
-      { bucheron: 2, ours: 1, mouton: 2, chien: 2, renard: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
-      { bucheron: 3, ours: 1, mouton: 1, chien: 2, renard: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
+      { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
+      { bucheron: 3, ours: 1, mouton: 1, chien: 2, loup: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
       // 1 couple — ruche=1, sans chien
-      { bucheron: 3, ours: 2, mouton: 2, renard: 1, cerf: 1, biche: 1, ruche: 1 },            // 11 I1✓ I2✓ I3✓ I5✓
-      { bucheron: 2, ours: 3, mouton: 2, renard: 1, cerf: 1, biche: 1, ruche: 1 },            // 11 I1✓ I2✓ I3✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 1, cerf: 1, biche: 1, ruche: 1 },            // 11 I1✓ I2✓ I3✓ I5✓
+      { bucheron: 2, ours: 3, mouton: 2, loup: 1, cerf: 1, biche: 1, ruche: 1 },            // 11 I1✓ I2✓ I3✓ I5✓
       // 1 couple — chien=2, sans ruche
-      { bucheron: 2, ours: 2, mouton: 2, chien: 2, renard: 1, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
-      { bucheron: 3, ours: 2, mouton: 1, chien: 2, renard: 1, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
+      { bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
       // 2 couples — sans chien, sans ruche
-      { bucheron: 2, ours: 2, mouton: 1, renard: 2, cerf: 2, biche: 2 },                      // 11 I1✓ I5✓
-      { bucheron: 3, ours: 1, mouton: 1, renard: 2, cerf: 2, biche: 2 },                      // 11 I1✓ I5✓
+      { bucheron: 2, ours: 2, mouton: 1, loup: 2, cerf: 2, biche: 2 },                      // 11 I1✓ I5✓
+      { bucheron: 3, ours: 1, mouton: 1, loup: 2, cerf: 2, biche: 2 },                      // 11 I1✓ I5✓
       // 2 couples — chien=2, sans ruche
-      { bucheron: 1, ours: 2, mouton: 0, chien: 2, renard: 2, cerf: 2, biche: 2 },            // 11 I1✓ I4✓ I5✓
+      { bucheron: 1, ours: 2, mouton: 0, chien: 2, loup: 2, cerf: 2, biche: 2 },            // 11 I1✓ I4✓ I5✓
     ],
     emptyCellsRange: [7, 7],
     bonusDisabled: false,
@@ -318,23 +318,23 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
     cellCount: 11,
     compositions: [
       // 1 couple — ruche=1, chien=2
-      { bucheron: 2, ours: 1, mouton: 1, chien: 2, renard: 2, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
-      { bucheron: 2, ours: 2, mouton: 1, chien: 2, renard: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
-      { bucheron: 3, ours: 1, mouton: 1, chien: 2, renard: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
+      { bucheron: 2, ours: 1, mouton: 1, chien: 2, loup: 2, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
+      { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
+      { bucheron: 3, ours: 1, mouton: 1, chien: 2, loup: 1, cerf: 1, biche: 1, ruche: 1 },  // 11 I1✓ I2✓ I3✓ I4✓ I5✓
       // 1 couple — chien=2, sans ruche
-      { bucheron: 2, ours: 2, mouton: 1, chien: 2, renard: 2, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
-      { bucheron: 3, ours: 2, mouton: 1, chien: 2, renard: 1, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
-      { bucheron: 2, ours: 2, mouton: 2, chien: 2, renard: 1, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
+      { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 2, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
+      { bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1 },            // 11 I1✓ I4✓ I5✓
       // 1 couple — ruche=1, sans chien
-      { bucheron: 3, ours: 2, mouton: 2, renard: 1, cerf: 1, biche: 1, ruche: 1 },            // 11 I1✓ I2✓ I3✓ I5✓
-      { bucheron: 2, ours: 2, mouton: 2, renard: 2, cerf: 1, biche: 1, ruche: 1 },            // 11 I1✓ I2✓ I3✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 1, cerf: 1, biche: 1, ruche: 1 },            // 11 I1✓ I2✓ I3✓ I5✓
+      { bucheron: 2, ours: 2, mouton: 2, loup: 2, cerf: 1, biche: 1, ruche: 1 },            // 11 I1✓ I2✓ I3✓ I5✓
       // 2 couples — sans chien, sans ruche
-      { bucheron: 2, ours: 2, mouton: 1, renard: 2, cerf: 2, biche: 2 },                      // 11 I1✓ I5✓
-      { bucheron: 3, ours: 1, mouton: 1, renard: 2, cerf: 2, biche: 2 },                      // 11 I1✓ I5✓
+      { bucheron: 2, ours: 2, mouton: 1, loup: 2, cerf: 2, biche: 2 },                      // 11 I1✓ I5✓
+      { bucheron: 3, ours: 1, mouton: 1, loup: 2, cerf: 2, biche: 2 },                      // 11 I1✓ I5✓
       // 2 couples — chien=2, sans ruche
-      { bucheron: 1, ours: 2, mouton: 0, chien: 2, renard: 2, cerf: 2, biche: 2 },            // 11 I1✓ I4✓ I5✓
-      // renard=2, chien=2, ruche=1 (sans couple — 6 types)
-      { bucheron: 2, ours: 2, mouton: 2, chien: 2, renard: 2, ruche: 1 },                     // 11 I1✓ I2✓ I3✓ I4✓
+      { bucheron: 1, ours: 2, mouton: 0, chien: 2, loup: 2, cerf: 2, biche: 2 },            // 11 I1✓ I4✓ I5✓
+      // Loup=2, chien=2, ruche=1 (sans couple — 6 types)
+      { bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 2, ruche: 1 },                     // 11 I1✓ I2✓ I3✓ I4✓
     ],
     emptyCellsRange: [7, 7],
     bonusDisabled: false,
@@ -348,21 +348,21 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
     boardId: 'board_11_v2',
     cellCount: 11,
     compositions: [
-      // tas=1, renard=2, chien=2, ruche=1
-      { bucheron: 2, ours: 2, mouton: 1, chien: 2, renard: 2, tas_buches: 1, ruche: 1 },       // 11 I1✓ I2✓ I3✓ I4✓ I7✓
-      { bucheron: 3, ours: 1, mouton: 1, chien: 2, renard: 2, tas_buches: 1, ruche: 1 },       // 11 I1✓ I2✓ I3✓ I4✓ I7✓
-      { bucheron: 2, ours: 1, mouton: 2, chien: 2, renard: 2, tas_buches: 1, ruche: 1 },       // 11 I1✓ I2✓ I3✓ I4✓ I7✓
-      // tas=1, renard=2, chien=2, sans ruche
-      { bucheron: 2, ours: 2, mouton: 2, chien: 2, renard: 2, tas_buches: 1 },                 // 11 I1✓ I4✓ I7✓
-      { bucheron: 3, ours: 2, mouton: 1, chien: 2, renard: 2, tas_buches: 1 },                 // 11 I1✓ I4✓ I7✓
-      { bucheron: 2, ours: 3, mouton: 1, chien: 2, renard: 2, tas_buches: 1 },                 // 11 I1✓ I4✓ I7✓
-      // tas=1, renard=2, sans chien, ruche=1
-      { bucheron: 3, ours: 2, mouton: 2, renard: 2, tas_buches: 1, ruche: 1 },                 // 11 I1✓ I2✓ I3✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 1, renard: 2, tas_buches: 1, ruche: 1 },                 // 11 I1✓ I2✓ I3✓ I7✓
-      // tas=1, renard=3, sans chien, ruche=1
-      { bucheron: 3, ours: 2, mouton: 1, renard: 3, tas_buches: 1, ruche: 1 },                 // 11 I1✓ I2✓ I3✓ I7✓
+      // tas=1, Loup=2, chien=2, ruche=1
+      { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 2, tas_buches: 1, ruche: 1 },       // 11 I1✓ I2✓ I3✓ I4✓ I7✓
+      { bucheron: 3, ours: 1, mouton: 1, chien: 2, loup: 2, tas_buches: 1, ruche: 1 },       // 11 I1✓ I2✓ I3✓ I4✓ I7✓
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 2, tas_buches: 1, ruche: 1 },       // 11 I1✓ I2✓ I3✓ I4✓ I7✓
+      // tas=1, Loup=2, chien=2, sans ruche
+      { bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 2, tas_buches: 1 },                 // 11 I1✓ I4✓ I7✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, tas_buches: 1 },                 // 11 I1✓ I4✓ I7✓
+      { bucheron: 2, ours: 3, mouton: 1, chien: 2, loup: 2, tas_buches: 1 },                 // 11 I1✓ I4✓ I7✓
+      // tas=1, Loup=2, sans chien, ruche=1
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, tas_buches: 1, ruche: 1 },                 // 11 I1✓ I2✓ I3✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 1, loup: 2, tas_buches: 1, ruche: 1 },                 // 11 I1✓ I2✓ I3✓ I7✓
+      // tas=1, Loup=3, sans chien, ruche=1
+      { bucheron: 3, ours: 2, mouton: 1, loup: 3, tas_buches: 1, ruche: 1 },                 // 11 I1✓ I2✓ I3✓ I7✓
       // 1 couple — tas=1, cerf=1, biche=1, chien=2
-      { bucheron: 2, ours: 1, mouton: 1, chien: 2, renard: 2, cerf: 1, biche: 1, tas_buches: 1 },  // 11 I1✓ I4✓ I5✓ I7✓
+      { bucheron: 2, ours: 1, mouton: 1, chien: 2, loup: 2, cerf: 1, biche: 1, tas_buches: 1 },  // 11 I1✓ I4✓ I5✓ I7✓
     ],
     emptyCellsRange: [7, 7],
     bonusDisabled: false,
@@ -381,22 +381,22 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
     boardId: 'board_12',
     cellCount: 12,
     compositions: [
-      // chalet=2, renard=2, ruche=1, sans chien — bucheron=3
-      { bucheron: 3, ours: 2, mouton: 2, renard: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(3≥2)
-      { bucheron: 3, ours: 3, mouton: 1, renard: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(3≥2)
-      // chalet=2, renard=2, chien=2, sans ruche — bucheron=3
-      { bucheron: 3, ours: 2, mouton: 1, chien: 2, renard: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
-      { bucheron: 3, ours: 3, mouton: 0, chien: 2, renard: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
-      // chalet=2, tas_buches=1, renard=2, ruche=1, sans chien — bucheron=3
-      { bucheron: 3, ours: 2, mouton: 1, renard: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 0, renard: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
+      // chalet=2, Loup=2, ruche=1, sans chien — bucheron=3
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(3≥2)
+      { bucheron: 3, ours: 3, mouton: 1, loup: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(3≥2)
+      // chalet=2, Loup=2, chien=2, sans ruche — bucheron=3
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
+      { bucheron: 3, ours: 3, mouton: 0, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
+      // chalet=2, tas_buches=1, Loup=2, ruche=1, sans chien — bucheron=3
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 0, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
       // chalet=2, tas_buches=1, chien=2, sans ruche — bucheron=3
       { bucheron: 3, ours: 3, mouton: 1, chien: 2, chalet: 2, tas_buches: 1 },                 // 12 I1✓ I4✓ I6✓ I7✓
-      { bucheron: 3, ours: 2, mouton: 0, chien: 2, renard: 2, chalet: 2, tas_buches: 1 },      // 12 I1✓ I4✓ I6✓ I7✓
-      // chalet=1, renard=2, chien=2 — bucheron=3
-      { bucheron: 3, ours: 2, mouton: 2, chien: 2, renard: 2, chalet: 1 },                     // 12 I1✓ I4✓ I6✓(3≥1)
-      // chalet=3, renard=2, ruche=1, sans chien — bucheron=4
-      { bucheron: 4, ours: 2, mouton: 0, renard: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
+      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, tas_buches: 1 },      // 12 I1✓ I4✓ I6✓ I7✓
+      // chalet=1, Loup=2, chien=2 — bucheron=3
+      { bucheron: 3, ours: 2, mouton: 2, chien: 2, loup: 2, chalet: 1 },                     // 12 I1✓ I4✓ I6✓(3≥1)
+      // chalet=3, Loup=2, ruche=1, sans chien — bucheron=4
+      { bucheron: 4, ours: 2, mouton: 0, loup: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
     ],
     emptyCellsRange: [7, 7],
     bonusDisabled: false,
@@ -409,16 +409,16 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
     boardId: 'board_12',
     cellCount: 12,
     compositions: [
-      { bucheron: 3, ours: 2, mouton: 2, renard: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
-      { bucheron: 3, ours: 3, mouton: 1, renard: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
-      { bucheron: 3, ours: 2, mouton: 1, chien: 2, renard: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓
-      { bucheron: 3, ours: 2, mouton: 1, renard: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 0, renard: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
+      { bucheron: 3, ours: 3, mouton: 1, loup: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 0, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
       { bucheron: 3, ours: 3, mouton: 1, chien: 2, chalet: 2, tas_buches: 1 },                 // 12 I1✓ I4✓ I6✓ I7✓
-      { bucheron: 4, ours: 1, mouton: 1, renard: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
+      { bucheron: 4, ours: 1, mouton: 1, loup: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
       { bucheron: 3, ours: 2, mouton: 0, cerf: 2, biche: 2, chalet: 2, ruche: 1 },             // 12 I1✓ I2✓ I3✓ I5✓ I6✓
       { bucheron: 4, ours: 1, mouton: 0, cerf: 2, biche: 2, chalet: 2, ruche: 1 },             // 12 I1✓ I2✓ I3✓ I5✓ I6✓
-      { bucheron: 3, ours: 2, mouton: 0, renard: 2, chalet: 2, tas_buches: 2, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 2, mouton: 0, loup: 2, chalet: 2, tas_buches: 2, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
     ],
     emptyCellsRange: [7, 7],
     bonusDisabled: false,
@@ -431,20 +431,20 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
     boardId: 'board_12',
     cellCount: 12,
     compositions: [
-      // chalet=2, renard=2, chien=2, ruche=1
-      { bucheron: 3, ours: 2, mouton: 0, chien: 2, renard: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
-      { bucheron: 2, ours: 3, mouton: 0, chien: 2, renard: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
-      // chalet=2, renard=2, chien=2, sans ruche
-      { bucheron: 3, ours: 2, mouton: 1, chien: 2, renard: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
-      { bucheron: 2, ours: 3, mouton: 1, chien: 2, renard: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(2≥2)
-      // chalet=2, tas_buches=1, renard=2, ruche=1, sans chien
-      { bucheron: 3, ours: 2, mouton: 1, renard: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 0, renard: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 1, renard: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
-      // chalet=2, chien=2, renard=2, tas_buches=1, sans ruche
-      { bucheron: 3, ours: 2, mouton: 0, chien: 2, renard: 2, chalet: 2, tas_buches: 1 },      // 12 I1✓ I4✓ I6✓ I7✓
-      // chalet=3, renard=2, ruche=1, sans chien — bucheron=4
-      { bucheron: 4, ours: 2, mouton: 0, renard: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
+      // chalet=2, Loup=2, chien=2, ruche=1
+      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
+      { bucheron: 2, ours: 3, mouton: 0, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
+      // chalet=2, Loup=2, chien=2, sans ruche
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
+      { bucheron: 2, ours: 3, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(2≥2)
+      // chalet=2, tas_buches=1, Loup=2, ruche=1, sans chien
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 0, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 1, loup: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
+      // chalet=2, chien=2, Loup=2, tas_buches=1, sans ruche
+      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, tas_buches: 1 },      // 12 I1✓ I4✓ I6✓ I7✓
+      // chalet=3, Loup=2, ruche=1, sans chien — bucheron=4
+      { bucheron: 4, ours: 2, mouton: 0, loup: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
       // chalet=2, chien=2, ruche=1
       { bucheron: 3, ours: 3, mouton: 1, chien: 2, chalet: 2, ruche: 1 },                      // 12 I1✓ I2✓ I3✓ I4✓ I6✓
     ],
@@ -460,18 +460,18 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
     cellCount: 12,
     compositions: [
       // Reprend les compositions du niv 14
-      { bucheron: 3, ours: 2, mouton: 0, chien: 2, renard: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
-      { bucheron: 2, ours: 3, mouton: 0, chien: 2, renard: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
-      { bucheron: 3, ours: 2, mouton: 1, chien: 2, renard: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
-      { bucheron: 2, ours: 3, mouton: 1, chien: 2, renard: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(2≥2)
-      // chalet=2, renard=2, tas_buches=1, ruche=1, sans chien
-      { bucheron: 3, ours: 2, mouton: 1, renard: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 0, renard: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 1, renard: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
-      // chalet=2, chien=2, renard=2, tas_buches=1, sans ruche
-      { bucheron: 3, ours: 2, mouton: 0, chien: 2, renard: 2, chalet: 2, tas_buches: 1 },      // 12 I1✓ I4✓ I6✓ I7✓
-      // chalet=3, renard=2, ruche=1 — bucheron=4
-      { bucheron: 4, ours: 2, mouton: 0, renard: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
+      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
+      { bucheron: 2, ours: 3, mouton: 0, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
+      { bucheron: 2, ours: 3, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(2≥2)
+      // chalet=2, Loup=2, tas_buches=1, ruche=1, sans chien
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 0, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 1, loup: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
+      // chalet=2, chien=2, Loup=2, tas_buches=1, sans ruche
+      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, tas_buches: 1 },      // 12 I1✓ I4✓ I6✓ I7✓
+      // chalet=3, Loup=2, ruche=1 — bucheron=4
+      { bucheron: 4, ours: 2, mouton: 0, loup: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
       // 1 couple — chalet=2, cerf=1, biche=1, ruche=1
       { bucheron: 3, ours: 3, mouton: 1, cerf: 1, biche: 1, chalet: 2, ruche: 1 },             // 12 I1✓ I2✓ I3✓ I5✓ I6✓
       // 2 couples — chalet=2, cerf=2, biche=2, ruche=1

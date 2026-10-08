@@ -1,4 +1,4 @@
-import { BoardDefinition } from '../core/models/Board';
+﻿import { BoardDefinition } from '../core/models/Board';
 
 // Connexions vérifiées sur l'image fond_variante3.jpg
 // Disposition :
@@ -49,7 +49,7 @@ export const board10cellsV3: BoardDefinition = {
     { x: 88, y: 91 }, // case 9 — coin bas droite
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
-  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'renard', 'ruche'],
+  availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'loup', 'ruche'],
   specialCells: {
     corners: [0, 2, 7, 9],
     center: [3, 6],

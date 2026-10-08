@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // SingletonAnim — deuxième ruche apparaît → flash rouge → disparaît, badge "×1"
 // API Animated (legacy) — compatible web + native
 // Cycle : 1800ms
@@ -7,6 +7,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Text, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
+import { getSpriteOrIcon } from './sprites';
 import { RuleCard } from '../../../data/levelMeta';
 
 interface Props {
@@ -66,7 +67,7 @@ export const SingletonAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => 
       {/* Ruche 1 (stable) + badge ×1 */}
       <View style={styles.tokenWrapper}>
         <View style={[styles.token, { backgroundColor: def.color + '20', borderColor: def.color + '60' }]}>
-          <Image source={def.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(elementId, def.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.badge, { opacity: badgeOp, transform: [{ scale: badgeScale }] }]}>
           <Text style={styles.badgeText}>×1</Text>
@@ -79,7 +80,7 @@ export const SingletonAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => 
       {/* Ruche 2 (flash rouge, apparaît puis disparaît) */}
       <Animated.View style={{ opacity: op2, transform: [{ scale: scale2 }] }}>
         <View style={[styles.token, { backgroundColor: '#F4433620', borderColor: '#F44336' }]}>
-          <Image source={def.icon} style={styles.image} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(elementId, def.icon)} style={styles.image} resizeMode="contain" />
         </View>
       </Animated.View>
     </View>

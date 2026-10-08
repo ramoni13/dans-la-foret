@@ -17,20 +17,22 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Colors } from '../../constants/colors';
-import { LeaderboardEntry, subscribeLeaderboard } from '../../services/leaderboardService';
+import { LeaderboardEntry, DailyWinsEntry, subscribeLeaderboard, subscribeDailyWinsLeaderboard } from '../../services/leaderboardService';
 import { RecordHolderEntry, subscribeRecordHolders } from '../../services/worldRecordService';
+import { DailyResult, subscribeDailyLeaderboard, getDailyDateString } from '../../services/dailyChallengeService';
 import { computePlayerLevel } from '../../services/playerService';
+import { formatTime } from '../../utils/boardUtils';
 import { auth } from '../../services/firebase';
 
 // ── Onglets ──────────────────────────────────────────────────────────────────
 
-type Tab = 'global' | 'badges' | 'seeds' | 'records';
+type Tab = 'daily' | 'badges' | 'seeds' | 'records';
 
 const TABS: { key: Tab; label: string; emoji: string }[] = [
-  { key: 'global',  label: 'Niveau',   emoji: '🌲' },
-  { key: 'badges',  label: 'Badges',   emoji: '🏅' },
-  { key: 'seeds',   label: 'Graines',  emoji: '🌱' },
-  { key: 'records', label: 'Records',  emoji: '🏆' },
+  { key: 'daily',   label: 'Défis du Jour', emoji: '🌅' },
+  { key: 'badges',  label: 'Badges',        emoji: '🏅' },
+  { key: 'seeds',   label: 'Graines',       emoji: '🌱' },
+  { key: 'records', label: 'Records',       emoji: '🏆' },
 ];
 
 // ── Médailles podium ─────────────────────────────────────────────────────────
@@ -68,15 +70,17 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
         <Text style={styles.subinfo}>
           {tab === 'records'
             ? `🏆 ${(entry as any).recordCount ?? 0} records mondiaux`
+            : tab === 'daily'
+            ? `🌅 ${(entry as any).dailyWins ?? 0} victoire${((entry as any).dailyWins ?? 0) > 1 ? 's' : ''} du jour`
             : `Niv. ${entry.level} · ${entry.completedCount} défis`}
         </Text>
       </View>
 
       {/* Valeur mise en avant selon l'onglet */}
       <View style={styles.valueCol}>
-        {tab === 'global' && (
+        {tab === 'daily' && (
           <View style={styles.globalBadge}>
-            <Text style={styles.levelValue}>Niv. {entry.level}</Text>
+            <Text style={styles.levelValue}>🌅 {(entry as any).dailyWins ?? 0}</Text>
           </View>
         )}
         {tab === 'badges' && (
@@ -96,23 +100,22 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
 // ── Composant principal ──────────────────────────────────────────────────────
 
 export const LeaderboardScreen: React.FC = () => {
-  const [tab, setTab]             = useState<Tab>('global');
-  const [entries, setEntries]     = useState<LeaderboardEntry[]>([]);
-  const [recordHolders, setRecordHolders] = useState<RecordHolderEntry[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [tab, setTab]               = useState<Tab>('daily');
+  const [entries, setEntries]       = useState<LeaderboardEntry[]>([]);
+  const [recordHolders, setRecordHolders]   = useState<RecordHolderEntry[]>([]);
+  const [dailyWinners, setDailyWinners]     = useState<DailyWinsEntry[]>([]);
+  const [todayLeader, setTodayLeader]       = useState<DailyResult | null>(null);
+  const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const myUid = auth.currentUser?.uid ?? null;
+  const myUid    = auth.currentUser?.uid ?? null;
+  const todayStr = getDailyDateString(new Date());
 
   // Tri selon l'onglet actif
-  // Le niveau est recalculé côté client → on retrie systématiquement
   const sorted = useMemo((): LeaderboardEntry[] => {
-    if (tab === 'records') return []; // géré séparément via recordHolders
+    if (tab === 'records' || tab === 'daily') return [];
     const copy = [...entries];
-    if (tab === 'global') {
-      // Retrier par niveau (recalculé) > badges > graines
-      copy.sort((a, b) => b.level - a.level || b.badgeCount - a.badgeCount || b.seeds - a.seeds);
-    } else if (tab === 'badges') {
+    if (tab === 'badges') {
       copy.sort((a, b) => b.badgeCount - a.badgeCount || b.seeds - a.seeds || b.level - a.level);
     } else if (tab === 'seeds') {
       copy.sort((a, b) => b.seeds - a.seeds || b.badgeCount - a.badgeCount || b.level - a.level);
@@ -127,15 +130,18 @@ export const LeaderboardScreen: React.FC = () => {
       const idx = recordHolders.findIndex(e => e.userId === myUid);
       return idx === -1 ? null : idx + 1;
     }
+    if (tab === 'daily') {
+      const idx = dailyWinners.findIndex(e => e.userId === myUid);
+      return idx === -1 ? null : idx + 1;
+    }
     const idx = sorted.findIndex(e => e.userId === myUid);
     return idx === -1 ? null : idx + 1;
-  }, [sorted, recordHolders, tab, myUid]);
+  }, [sorted, recordHolders, dailyWinners, tab, myUid]);
 
-  // Abonnement Firestore temps-réel (leaderboard + records)
+  // Abonnement Firestore temps-réel
   useEffect(() => {
     setLoading(true);
     const unsubLeaderboard = subscribeLeaderboard(100, data => {
-      // Recalculer le niveau côté client pour corriger les entrées Firestore obsolètes
       const normalized = data.map(e => ({
         ...e,
         level: computePlayerLevel(e.completedCount),
@@ -147,34 +153,46 @@ export const LeaderboardScreen: React.FC = () => {
     const unsubRecords = subscribeRecordHolders(data => {
       setRecordHolders(data);
     });
-    return () => { unsubLeaderboard(); unsubRecords(); };
+    // Classement cumulatif des victoires daily (jamais décrémenté)
+    const unsubDailyWins = subscribeDailyWinsLeaderboard(100, data => {
+      setDailyWinners(data);
+    });
+    // Record du jour courant (top 1, pour le bandeau)
+    const unsubTodayLeader = subscribeDailyLeaderboard(todayStr, 1, data => {
+      setTodayLeader(data.length > 0 ? data[0] : null);
+    });
+    return () => { unsubLeaderboard(); unsubRecords(); unsubDailyWins(); unsubTodayLeader(); };
   }, []);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    // L'abonnement onSnapshot se met à jour automatiquement ; on reset juste l'UX
     setTimeout(() => setRefreshing(false), 1500);
   };
 
-  // Données affichées dans la FlatList (leaderboard ou records convertis)
+  // Données affichées dans la FlatList
   const displayData = useMemo((): LeaderboardEntry[] => {
-    if (tab !== 'records') return sorted;
-    // Convertir RecordHolderEntry → LeaderboardEntry pour réutiliser LeaderboardRow
-    return recordHolders.map(rh => ({
-      userId: rh.userId,
-      username: rh.username,
-      level: 0,
-      badgeCount: 0,
-      seeds: 0,
-      completedCount: 0,
-      score: 0,
-      recordCount: rh.recordCount,
-    } as LeaderboardEntry & { recordCount: number }));
-  }, [tab, sorted, recordHolders]);
+    if (tab === 'records') {
+      return recordHolders.map(rh => ({
+        userId: rh.userId, username: rh.username,
+        level: 0, badgeCount: 0, seeds: 0, completedCount: 0, score: 0,
+        recordCount: rh.recordCount,
+      } as LeaderboardEntry & { recordCount: number }));
+    }
+    if (tab === 'daily') {
+      // dailyWinners est déjà trié par dailyWins desc (Firestore orderBy)
+      return dailyWinners.map(dw => ({
+        userId: dw.userId, username: dw.username,
+        level: 0, badgeCount: 0, seeds: 0, completedCount: 0, score: 0,
+        dailyWins: dw.dailyWins,
+      } as LeaderboardEntry & { dailyWins: number }));
+    }
+    return sorted;
+  }, [tab, sorted, recordHolders, dailyWinners]);
 
   // ── Rendu header fixe (ma position) ──────────────────────────────────────
-  const myEntry = myUid ? entries.find(e => e.userId === myUid) : null;
-  const myRecordEntry = myUid ? recordHolders.find(e => e.userId === myUid) : null;
+  const myEntry        = myUid ? entries.find(e => e.userId === myUid) : null;
+  const myRecordEntry  = myUid ? recordHolders.find(e => e.userId === myUid) : null;
+  const myDailyWins    = myUid ? dailyWinners.find(e => e.userId === myUid) : null;
 
   return (
     <View style={styles.container}>
@@ -194,16 +212,39 @@ export const LeaderboardScreen: React.FC = () => {
         ))}
       </View>
 
+      {/* Bandeau record du jour courant — visible uniquement sur l'onglet daily */}
+      {tab === 'daily' && (
+        <View style={styles.todayBanner}>
+          <Text style={styles.todayBannerLabel}>Record du jour en cours</Text>
+          {todayLeader ? (
+            <Text style={styles.todayBannerValue}>
+              {'\uD83C\uDFC6'} {todayLeader.username}
+              {'  ·  '}
+              {formatTime(todayLeader.timeMs)}
+              {todayLeader.userId === myUid ? '  (toi !)' : ''}
+            </Text>
+          ) : (
+            <Text style={styles.todayBannerEmpty}>Aucun résultat pour l'instant — sois le premier !</Text>
+          )}
+        </View>
+      )}
+
       {/* Ma position */}
-      {myRank != null && (tab === 'records' ? myRecordEntry : myEntry) && (
+      {myRank != null && (
+        tab === 'records' ? myRecordEntry :
+        tab === 'daily'   ? myDailyWins   :
+        myEntry
+      ) && (
         <View style={styles.myRankBar}>
           <Text style={styles.myRankText}>
             Ta position : <Text style={styles.myRankValue}>#{myRank}</Text>
             {'  '}·{'  '}
             {tab === 'records' ? (
-              `🏆 ${myRecordEntry?.recordCount ?? 0} records`
+              `🏆 ${myRecordEntry?.recordCount ?? 0} records mondiaux`
+            ) : tab === 'daily' ? (
+              `🌅 ${myDailyWins?.dailyWins ?? 0} victoire${(myDailyWins?.dailyWins ?? 0) > 1 ? 's' : ''} du jour`
             ) : (
-              `Niv. ${myEntry!.level}  🏅 ${myEntry!.badgeCount}  🌱 ${myEntry!.seeds}`
+              `🏅 ${myEntry!.badgeCount}  🌱 ${myEntry!.seeds}`
             )}
           </Text>
         </View>
@@ -217,9 +258,13 @@ export const LeaderboardScreen: React.FC = () => {
         </View>
       ) : displayData.length === 0 ? (
         <View style={styles.center}>
-          <Text style={styles.emptyEmoji}>🌲</Text>
+          <Text style={styles.emptyEmoji}>{tab === 'daily' ? '🌅' : '🌲'}</Text>
           <Text style={styles.emptyText}>Aucun joueur pour l'instant.</Text>
-          <Text style={styles.emptySubtext}>Complète un défi pour apparaître ici !</Text>
+          <Text style={styles.emptySubtext}>
+            {tab === 'daily'
+              ? "Sois le premier à compléter le défi du jour !"
+              : "Complète un défi pour apparaître ici !"}
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -290,6 +335,32 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: Colors.forest.dark,
     fontWeight: '700',
+  },
+  todayBanner: {
+    backgroundColor: '#2C1A00',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#8B6914',
+    alignItems: 'center',
+    gap: 2,
+  },
+  todayBannerLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D4A017',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  todayBannerValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFD54F',
+  },
+  todayBannerEmpty: {
+    fontSize: 12,
+    color: '#A07830',
+    fontStyle: 'italic',
   },
   myRankBar: {
     backgroundColor: Colors.forest.dark + '12',

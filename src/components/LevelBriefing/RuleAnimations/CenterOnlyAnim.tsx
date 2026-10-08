@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // CenterOnlyAnim — grille 4×4 schématique
 //   12 cases de bord = rouge + croix (interdit)
 //    4 cases centrales = dorées, champignon pulse (autorisé)
@@ -13,6 +13,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Text, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
+import { getSpriteOrIcon } from './sprites';
 import { RuleCard } from '../../../data/levelMeta';
 
 interface Props {
@@ -64,7 +65,7 @@ export const CenterOnlyAnim: React.FC<Props> = ({ rule, accessibilityLabel }) =>
             >
               {isCenter ? (
                 <Animated.View style={{ transform: [{ scale: tokenScale }], opacity: tokenOp }}>
-                  <Image source={def.icon as any} style={styles.tokenImg} resizeMode="contain" />
+                  <Image source={getSpriteOrIcon(elementId, def.icon as any)} style={styles.tokenImg} resizeMode="contain" />
                 </Animated.View>
               ) : (
                 <Text style={styles.cross}>{'\u2715'}</Text>

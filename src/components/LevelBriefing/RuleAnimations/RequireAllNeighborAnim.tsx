@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // RequireAllNeighborAnim — Montre que TOUS les exemplaires d'un
 // élément (ex: ours) doivent être voisins d'un autre (ex: ruche).
 // Layout : 3 tokens à gauche avec flèches → 1 token central à droite.
@@ -10,6 +10,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Image, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { ElementRegistry } from '../../../elements/ElementRegistry';
+import { getSpriteOrIcon } from './sprites';
 import { RuleCard } from '../../../data/levelMeta';
 
 interface Props {
@@ -72,7 +73,7 @@ export const RequireAllNeighborAnim: React.FC<Props> = ({ rule, accessibilityLab
   const renderSourceRow = (arrowOp: Animated.Value, key: string) => (
     <View key={key} style={styles.sourceRow}>
       <View style={[styles.sourceToken, { backgroundColor: sourceDef.color + '20', borderColor: sourceDef.color + '60' }]}>
-        <Image source={sourceDef.icon} style={styles.sourceImage} resizeMode="contain" />
+        <Image source={getSpriteOrIcon(sourceId, sourceDef.icon)} style={styles.sourceImage} resizeMode="contain" />
       </View>
       <Animated.View style={[styles.arrow, { opacity: arrowOp }]}>
         <Text style={styles.arrowText}>{'\u2192'}</Text>
@@ -92,7 +93,7 @@ export const RequireAllNeighborAnim: React.FC<Props> = ({ rule, accessibilityLab
       {/* Cible centrale (ruche) */}
       <Animated.View style={{ transform: [{ scale: glowScale }] }}>
         <View style={[styles.targetToken, { backgroundColor: targetDef.color + '20', borderColor: targetDef.color + '60' }]}>
-          <Image source={targetDef.icon} style={styles.targetImage} resizeMode="contain" />
+          <Image source={getSpriteOrIcon(targetId, targetDef.icon)} style={styles.targetImage} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.glowRing, { opacity: glowOp }]} />
       </Animated.View>
