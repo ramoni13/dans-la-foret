@@ -13,8 +13,11 @@
   "a11y_paired": "Autant de {{e1}} que de {{e2}}",
   "a11y_chain": "{{e1}} doit être voisin de {{e2}}",
   "a11y_singleton": "Un seul {{element}} par défi",
-  "briefing_rules_title": "Règles du niveau",
-  "briefing_recap_title": "Ce défi",
+  "briefing_intro_title": "Remets la for\u00eat en ordre !",
+  "briefing_intro_body": "Place chaque animal sur une case de la grille en respectant les r\u00e8gles de la for\u00eat.",
+  "briefing_intro_legend": "Une case = un emplacement",
+  "briefing_rules_title": "R\u00e8gles du niveau",
+  "briefing_recap_title": "Ce d\u00e9fi",
   "label_expert": "Mode expert - sans bonus",
 
   "badge_unlocked": "✨ Badge débloqué !",
