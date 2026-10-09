@@ -4,9 +4,16 @@
 // Le PNG cadre_vide.png fait 1536×2752 (ratio ≈ 1.792).
 // Les boutons nav sont à 93.5% de la hauteur du cadre.
 // La bordure bois haute du cadre occupe ≈ 5% de la hauteur du cadre.
+//
+// Stratégie "cover" :
+//   Le cadre est scalé pour couvrir toujours toute la hauteur visible
+//   (screenH - insets.bottom) sans jamais laisser de zone vide en haut.
+//   Si le cadre dépasse en largeur, les bords bois sortent hors écran
+//   (invisibles de toute façon). cadreTop est toujours ≤ 0.
 // ============================================================
 
 import { useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const CADRE_NATIVE_W = 1536;
 export const CADRE_NATIVE_H = 2752;
@@ -33,30 +40,65 @@ export const FRAME_BOTTOM_FRACTION = 1 - BTN_Y_CENTER; // 0.065
 export const CADRE_SIDE_FRACTION = 0.07; // ≈ 7% de la largeur du cadre
 
 /**
- * Hook — renvoie toutes les dimensions utiles du cadre calculées pour l'écran courant.
- *
- * cadreTop  : position Y du haut du PNG cadre sur l'écran (positive = cadre ne touche pas le haut de l'écran)
- * cadreH    : hauteur rendue du cadre (= screenW * CADRE_RATIO)
- * btnY      : position Y des centres des boutons nav sur l'écran
- * innerTop  : position Y du haut de la zone interne (après la bordure bois haute)
- * innerBottom: position Y du bas de la zone interne (avant la bordure bois basse)
+ * Calcule les dimensions "cover" du cadre pour une hauteur visible donnée.
+ * Le cadre couvre toujours toute la zone visible (cadreTop ≤ 0).
  */
-export function useFrameLayout() {
-  const { width: screenW, height: screenH } = useWindowDimensions();
+export function computeFrameLayout(screenW: number, visibleH: number) {
+  // Scale par largeur
+  const cadreH_byW = screenW * CADRE_RATIO;
 
-  const cadreW  = screenW;
-  const cadreH  = screenW * CADRE_RATIO;
-  const cadreTop = screenH - cadreH; // peut être positif ou négatif
+  let cadreW: number;
+  let cadreH: number;
+
+  if (cadreH_byW >= visibleH) {
+    // Le cadre scalé par largeur est déjà assez grand verticalement → scale par largeur
+    cadreW = screenW;
+    cadreH = cadreH_byW;
+  } else {
+    // Le cadre scalé par largeur ne couvre pas toute la hauteur → scale par hauteur
+    cadreH = visibleH;
+    cadreW = visibleH / CADRE_RATIO;
+  }
+
+  // cadreTop ≤ 0 : le cadre déborde toujours en haut (jamais de zone vide)
+  const cadreTop  = visibleH - cadreH;
+  const cadreLeft = (screenW - cadreW) / 2; // centré horizontalement si cadreW > screenW
 
   const topBarH     = CADRE_TOP_BAR_FRACTION * cadreH;
   const btnY        = BTN_Y_CENTER * cadreH + cadreTop;
-  const innerTop    = topBarH + cadreTop; // Y du bas de la barre bois haute (début zone interne)
-  const innerBottom = btnY; // bas de la zone interne = hauteur des boutons
-  // Padding horizontal à appliquer au contenu pour rester dans la zone bois interne
+  const innerTop    = topBarH + cadreTop;
+  const innerBottom = btnY;
   const innerPadH   = cadreW * CADRE_SIDE_FRACTION;
-  // Centre vertical de la barre bois haute (où vivent graines + bouton retour)
-  // +14 = OVERLAY_NUDGE_Y pour coller avec le SeedsOverlay du ForestFrame
   const topBarCenterY = cadreTop + topBarH / 2 + 14;
 
-  return { screenW, screenH, cadreW, cadreH, cadreTop, topBarH, btnY, innerTop, innerBottom, innerPadH, topBarCenterY };
+  return { cadreW, cadreH, cadreTop, cadreLeft, topBarH, btnY, innerTop, innerBottom, innerPadH, topBarCenterY };
+}
+
+/**
+ * Hook — renvoie toutes les dimensions utiles du cadre calculées pour l'écran courant.
+ *
+ * Utilise insets.bottom pour exclure la barre de navigation Android de la hauteur visible.
+ * Le cadre est toujours en mode "cover" : aucune zone vide en haut, cadreTop ≤ 0.
+ *
+ * cadreTop    : position Y du haut du PNG cadre (≤ 0, le cadre déborde en haut)
+ * cadreH      : hauteur rendue du cadre
+ * btnY        : position Y des centres des boutons nav sur l'écran
+ * innerTop    : position Y du haut de la zone interne (après la bordure bois haute)
+ * innerBottom : position Y du bas de la zone interne (avant la bordure bois basse)
+ */
+export function useFrameLayout() {
+  const { width: screenW, height: screenH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  // Hauteur réellement visible (exclut la barre de navigation Android)
+  const visibleH = screenH - insets.bottom;
+
+  const layout = computeFrameLayout(screenW, visibleH);
+
+  // frameBottom : espace à réserver en bas du contenu scrollable pour ne pas
+  // être masqué par la bordure bois basse du cadre.
+  // = hauteur de la zone bois basse + barre nav système
+  const frameBottom = layout.cadreH * FRAME_BOTTOM_FRACTION + insets.bottom;
+
+  return { screenW, screenH, visibleH, frameBottom, ...layout };
 }

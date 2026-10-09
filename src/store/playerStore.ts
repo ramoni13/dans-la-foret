@@ -654,19 +654,26 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   markChallengeAbandoned: (challengeId) => {
-    set(state => ({
-      challengeAbandonedAt: {
-        ...state.challengeAbandonedAt,
-        [challengeId]: Date.now(),
-      },
-      stats: {
-        ...state.stats,
-        abandonCount: {
-          ...state.stats.abandonCount,
-          [challengeId]: (state.stats.abandonCount[challengeId] ?? 0) + 1,
+    set(state => {
+      // Effacer challengeStartedAt pour ce défi : le chrono repartira de 0
+      // lors de la prochaine tentative. challengeAbandonedAt est conservé
+      // pour le cooldown de 15 min (isChallengeOnCooldown).
+      const { [challengeId]: _s, ...restStarted } = state.challengeStartedAt;
+      return {
+        challengeStartedAt: restStarted,
+        challengeAbandonedAt: {
+          ...state.challengeAbandonedAt,
+          [challengeId]: Date.now(),
         },
-      },
-    }));
+        stats: {
+          ...state.stats,
+          abandonCount: {
+            ...state.stats.abandonCount,
+            [challengeId]: (state.stats.abandonCount[challengeId] ?? 0) + 1,
+          },
+        },
+      };
+    });
   },
 
   clearChallengeTimestamps: (challengeId) => {
