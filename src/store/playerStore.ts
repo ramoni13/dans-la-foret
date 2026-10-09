@@ -90,6 +90,7 @@ interface PlayerState {
   dailyChallengeStreak: number;                                      // Jours consécutifs réussis (indépendant du streak normal)
   lastDailyChallengeDate: string;                                    // "YYYY-MM-DD" — date UTC du dernier défi journalier réussi
   dailyChallengeStatus: 'pending' | 'in_progress' | 'success' | 'failed' | null; // Statut du jour en cours
+  dailyChallengeTimeMs: number | null;                               // Temps réalisé (ms) si success
 
   // ── Anti-triche : timestamps d'abandon ────────────────────────────────────
   challengeStartedAt: Record<string, number>;   // challengeId → Date.now() de première ouverture
@@ -140,7 +141,7 @@ interface PlayerState {
   checkDailyLogin: () => boolean; // Retourne true si c'est la première connexion du jour
 
   // ── Actions défi journalier ─────────────────────────────────────────────────
-  submitDailyResult: (date: string, success: boolean) => void;
+  submitDailyResult: (date: string, success: boolean, timeMs?: number) => void;
   resetDailyStatus: () => void;
 
   // ── Actions anti-triche ───────────────────────────────────────────────────
@@ -154,19 +155,21 @@ interface PlayerState {
 
 // ── Constante anti-triche ────────────────────────────────────────────────────
 
-/** Cooldown après abandon : 30 minutes */
-export const ABANDON_COOLDOWN_MS = 1_800_000;
+/** Cooldown après abandon : 15 minutes */
+export const ABANDON_COOLDOWN_MS = 900_000;
 
 // ── Fonctions utilitaires anti-triche (hors store pour éviter stale closures) ─
 
-/** Vérifie si un défi est en cooldown après abandon. Appeler avec getState(). */
+/** Vérifie si un défi est en cooldown après abandon. Appeler avec getState().
+ *  @param nowMs - timestamp courant (Date.now() par défaut). Passer le ticker pour réactivité. */
 export function isChallengeOnCooldown(
   challengeAbandonedAt: Record<string, number>,
   challengeId: string,
+  nowMs: number = Date.now(),
 ): { onCooldown: boolean; remainingMs: number } {
   const abandonedAt = challengeAbandonedAt[challengeId];
   if (abandonedAt == null) return { onCooldown: false, remainingMs: 0 };
-  const elapsed = Date.now() - abandonedAt;
+  const elapsed = nowMs - abandonedAt;
   if (elapsed >= ABANDON_COOLDOWN_MS) return { onCooldown: false, remainingMs: 0 };
   return { onCooldown: true, remainingMs: ABANDON_COOLDOWN_MS - elapsed };
 }
@@ -275,6 +278,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   dailyChallengeStreak: 0,
   lastDailyChallengeDate: '',
   dailyChallengeStatus: null,
+  dailyChallengeTimeMs: null,
 
   challengeStartedAt: {},
   challengeAbandonedAt: {},
@@ -514,6 +518,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     dailyChallengeStreak: 0,
     lastDailyChallengeDate: '',
     dailyChallengeStatus: null,
+    dailyChallengeTimeMs: null,
     challengeStartedAt: {},
     challengeAbandonedAt: {},
     friendNotifBadgeEnabled: true,
@@ -607,7 +612,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setVisualEffect: (effect) => set({ visualEffect: effect }),
 
   // ── Défi journalier ────────────────────────────────────────
-  submitDailyResult: (date, success) => {
+  submitDailyResult: (date, success, timeMs) => {
     set(state => {
       if (success) {
         // Succès : incrémenter le streak si c'est le jour suivant, sinon reset à 1
@@ -619,12 +624,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           dailyChallengeStatus: 'success' as const,
           lastDailyChallengeDate: date,
           dailyChallengeStreak: newStreak,
+          dailyChallengeTimeMs: timeMs ?? null,
         };
       } else {
         // Échec : reset le streak, marquer comme échoué
         return {
           dailyChallengeStatus: 'failed' as const,
           dailyChallengeStreak: 0,
+          dailyChallengeTimeMs: null,
         };
       }
     });

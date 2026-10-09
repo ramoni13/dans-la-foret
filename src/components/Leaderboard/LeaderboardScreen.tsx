@@ -15,8 +15,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { Colors } from '../../constants/colors';
+import { FRAME_BOTTOM_FRACTION, useFrameLayout } from '../../constants/frameLayout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LeaderboardEntry, DailyWinsEntry, subscribeLeaderboard, subscribeDailyWinsLeaderboard } from '../../services/leaderboardService';
 import { RecordHolderEntry, subscribeRecordHolders } from '../../services/worldRecordService';
 import { DailyResult, subscribeDailyLeaderboard, getDailyDateString } from '../../services/dailyChallengeService';
@@ -29,7 +32,7 @@ import { auth } from '../../services/firebase';
 type Tab = 'daily' | 'badges' | 'seeds' | 'records';
 
 const TABS: { key: Tab; label: string; emoji: string }[] = [
-  { key: 'daily',   label: 'Défis du Jour', emoji: '🌅' },
+  { key: 'daily',   label: 'Daily', emoji: '🌅' },
   { key: 'badges',  label: 'Badges',        emoji: '🏅' },
   { key: 'seeds',   label: 'Graines',       emoji: '🌱' },
   { key: 'records', label: 'Records',       emoji: '🏆' },
@@ -100,6 +103,10 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
 // ── Composant principal ──────────────────────────────────────────────────────
 
 export const LeaderboardScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const frameBottom = height * FRAME_BOTTOM_FRACTION;
+  const { innerPadH } = useFrameLayout();
   const [tab, setTab]               = useState<Tab>('daily');
   const [entries, setEntries]       = useState<LeaderboardEntry[]>([]);
   const [recordHolders, setRecordHolders]   = useState<RecordHolderEntry[]>([]);
@@ -197,7 +204,7 @@ export const LeaderboardScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Onglets */}
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, { paddingHorizontal: innerPadH }]}>
         {TABS.map(t => (
           <TouchableOpacity
             key={t.key}
@@ -279,7 +286,7 @@ export const LeaderboardScreen: React.FC = () => {
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -314,7 +321,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.ui.border,
     paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingTop: 16,
     gap: 4,
   },
   tab: {
