@@ -25,15 +25,14 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useSegments } from 'expo-router';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAudioStore } from '../../store/audioStore';
 import { useNavStore } from '../../store/navStore';
 import {
-  CADRE_RATIO,
-  BTN_Y_CENTER,
   BTN_X_CENTERS,
-  CADRE_TOP_BAR_FRACTION,
+  computeFrameLayout,
 } from '../../constants/frameLayout';
 
 // ── Assets ────────────────────────────────────────────────────────────────────
@@ -186,25 +185,21 @@ function SoundButton({ cadreW, cadreTop, topBarH }: {
 // ── Composant principal ───────────────────────────────────────────────────────
 export default function ForestFrame() {
   const { width: screenW, height: screenH } = useWindowDimensions();
+  const insets    = useSafeAreaInsets();
   const router    = useRouter();
   const segments  = useSegments() as string[];
   const activeTab = getActiveTab(segments);
   const seeds     = usePlayerStore(s => s.seeds);
   const { backLabel, onBack } = useNavStore();
 
-  // ── Calcul des dimensions du cadre — aligné par le bas ───────────────────
-  // On scale toujours sur la largeur de l'écran.
-  // cadreTop peut être positif (cadre ne couvre pas toute la hauteur écran)
-  // ou négatif (cadre plus grand que l'écran, la partie haute sort en haut).
-  const cadreW    = screenW;
-  const cadreH    = screenW * CADRE_RATIO;
-  const cadreLeft = 0;
-  const cadreTop  = screenH - cadreH; // positif ou négatif
+  // ── Calcul des dimensions du cadre — mode "cover" ────────────────────────
+  // Le cadre couvre toujours toute la hauteur visible (exclut la barre nav Android).
+  // cadreTop est toujours ≤ 0 : le cadre déborde en haut, jamais de zone vide.
+  const visibleH = screenH - insets.bottom;
+  const { cadreW, cadreH, cadreTop, cadreLeft, topBarH, btnY } = computeFrameLayout(screenW, visibleH);
 
   // ── Dimensions des zones de tap en pixels ─────────────────────────────────
   const tapHalf  = BTN_TAP_HALF * cadreW;
-  const btnY     = BTN_Y_CENTER * cadreH + cadreTop;
-  const topBarH  = CADRE_TOP_BAR_FRACTION * cadreH;
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.root]} pointerEvents="box-none">
@@ -214,8 +209,8 @@ export default function ForestFrame() {
         pointerEvents="none"
         style={{
           position: 'absolute',
-          left:     cadreLeft,
-          top:      cadreTop,
+          left:     cadreLeft,  // centré si cadreW > screenW (mode cover height)
+          top:      cadreTop,   // ≤ 0, le cadre déborde en haut
           width:    cadreW,
           height:   cadreH,
         }}
@@ -318,7 +313,8 @@ export default function ForestFrame() {
 
 const styles = StyleSheet.create({
   root: {
-    overflow: 'hidden',
+    // Pas d'overflow:hidden — le cadre PNG peut légèrement déborder en haut
+    // sur les écrans dont le ratio est plus allongé que le PNG (mode cover).
   },
   soundBtn: {
     position:        'absolute',

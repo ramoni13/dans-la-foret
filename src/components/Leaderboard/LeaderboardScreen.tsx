@@ -15,11 +15,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  useWindowDimensions,
 } from 'react-native';
 import { Colors } from '../../constants/colors';
-import { FRAME_BOTTOM_FRACTION, useFrameLayout } from '../../constants/frameLayout';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFrameLayout } from '../../constants/frameLayout';
+
 import { LeaderboardEntry, DailyWinsEntry, subscribeLeaderboard, subscribeDailyWinsLeaderboard } from '../../services/leaderboardService';
 import { RecordHolderEntry, subscribeRecordHolders } from '../../services/worldRecordService';
 import { DailyResult, subscribeDailyLeaderboard, getDailyDateString } from '../../services/dailyChallengeService';
@@ -103,10 +102,7 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
 // ── Composant principal ──────────────────────────────────────────────────────
 
 export const LeaderboardScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  const frameBottom = height * FRAME_BOTTOM_FRACTION;
-  const { innerPadH } = useFrameLayout();
+  const { frameBottom, innerPadH } = useFrameLayout();
   const [tab, setTab]               = useState<Tab>('daily');
   const [entries, setEntries]       = useState<LeaderboardEntry[]>([]);
   const [recordHolders, setRecordHolders]   = useState<RecordHolderEntry[]>([]);
@@ -286,7 +282,7 @@ export const LeaderboardScreen: React.FC = () => {
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
-          contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}
+          contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
