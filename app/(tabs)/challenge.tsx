@@ -16,8 +16,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -27,11 +27,14 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 
 import { Colors } from '../../src/constants/colors';
+import { FRAME_BOTTOM_FRACTION, useFrameLayout } from '../../src/constants/frameLayout';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { auth } from '../../src/services/firebase';
 import {
@@ -49,9 +52,27 @@ import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { ElementRegistry } from '../../src/elements/ElementRegistry';
 import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { formatTime } from '../../src/utils/boardUtils';
+import { ConfirmModal } from '../../src/components/Game/ConfirmModal';
 
 // ── Constantes ──────────────────────────────────────────────
 const TOKEN_SEED_COST = 15;
+
+const BG_IMAGE  = require('../../assets/elements/sprites/fond-ecran.jpg');
+const IMG_HACHES = require('../../assets/elements/design_app/Haches.png');
+
+function BgImage() {
+  const { width, height } = useWindowDimensions();
+  return (
+    <>
+      <Image
+        source={BG_IMAGE}
+        style={{ position: 'absolute', top: 0, left: 0, width, height }}
+        resizeMode="cover"
+      />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.52)' }]} pointerEvents="none" />
+    </>
+  );
+}
 
 // ── Correspondance niveau → difficulty + boardId ──────────
 // On mappe directement le numéro de niveau sur les LEVEL_PARAMS existants.
@@ -330,6 +351,10 @@ function CompletedCard({ item, myUid }: { item: FriendChallengeDoc; myUid: strin
 export default function ChallengeScreen() {
   const router  = useRouter();
   const player  = usePlayerStore();
+  const insets  = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const frameBottom = height * FRAME_BOTTOM_FRACTION;
+  const { innerTop, innerPadH, topBarCenterY, cadreW } = useFrameLayout();
   const uid     = auth.currentUser?.uid ?? null;
   const isAnon  = auth.currentUser?.isAnonymous ?? true;
 
@@ -341,6 +366,7 @@ export default function ChallengeScreen() {
   const [refreshing, setRefreshing]       = useState(false);
   const [generating, setGenerating]       = useState(false);
   const [showSearch, setShowSearch]       = useState(false);
+  const [showBuyTokenModal, setShowBuyTokenModal] = useState(false);
 
   // ── Chargement des défis ──────────────────────────────────
   const loadChallenges = useCallback(async (silent = false) => {
@@ -371,7 +397,7 @@ export default function ChallengeScreen() {
   };
 
   // ── Vérifier jetons (avant d'ouvrir la recherche) ─────────
-  const handleOpenSearch = async () => {
+  const handleOpenSearch = () => {
     if (!uid || isAnon) {
       showAlert('Connexion requise', 'Connecte-toi pour défier un ami.');
       return;
@@ -389,21 +415,20 @@ export default function ChallengeScreen() {
     }
 
     if (!hasToken && hasSeeds) {
-      const msg = `Tu n'as plus de jeton défi ami.\nDépenser ${TOKEN_SEED_COST} graines pour en obtenir un ?`;
-      const confirmed = Platform.OS === 'web'
-        ? window.confirm(msg)
-        : await new Promise<boolean>(resolve =>
-            Alert.alert('Acheter un jeton', msg, [
-              { text: 'Annuler', onPress: () => resolve(false), style: 'cancel' },
-              { text: 'Dépenser', onPress: () => resolve(true) },
-            ])
-          );
-      if (!confirmed) return;
-      player.spendSeeds(TOKEN_SEED_COST);
-    } else {
-      player.spendFriendChallengeToken();
+      // Ouvre la popup de confirmation d'achat
+      setShowBuyTokenModal(true);
+      return;
     }
 
+    // Jeton disponible → on le dépense directement
+    player.spendFriendChallengeToken();
+    setShowSearch(true);
+  };
+
+  // ── Confirmation achat jeton via graines ──────────────────
+  const handleConfirmBuyToken = () => {
+    setShowBuyTokenModal(false);
+    player.spendSeeds(TOKEN_SEED_COST);
     setShowSearch(true);
   };
 
@@ -552,11 +577,12 @@ export default function ChallengeScreen() {
   // ── Rendu : non connecté ──────────────────────────────────
   if (!uid || isAnon) {
     return (
-      <SafeAreaView style={styles.root}>
-        <View style={styles.centered}>
+      <View style={StyleSheet.absoluteFill}>
+        <BgImage />
+        <View style={[styles.centered, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
           <Text style={styles.emptyEmoji}>🔒</Text>
-          <Text style={styles.emptyTitle}>Connexion requise</Text>
-          <Text style={styles.emptyDesc}>
+          <Text style={[styles.emptyTitle, { color: '#fff' }]}>Connexion requise</Text>
+          <Text style={[styles.emptyDesc, { color: 'rgba(255,255,255,0.75)' }]}>
             Connecte-toi pour défier tes amis et comparer vos temps.
           </Text>
           <TouchableOpacity
@@ -567,7 +593,7 @@ export default function ChallengeScreen() {
             <Text style={styles.btnPrimaryText}>Se connecter</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -579,20 +605,35 @@ export default function ChallengeScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={StyleSheet.absoluteFill}>
+      <BgImage />
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>⚔️ Défis entre amis</Text>
-          <Text style={styles.headerLevel}>Ton niveau : {player.currentLevel}</Text>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 20), paddingLeft: innerPadH + 4, paddingRight: Math.max(72, innerPadH + 4) }]}>
+        <View style={styles.headerLeft}>
+          <Image source={IMG_HACHES} style={styles.headerIcon} resizeMode="contain" />
+          <View>
+            <Text style={styles.headerTitle}>Défis entre amis</Text>
+            <Text style={styles.headerLevel}>Ton niveau : {player.currentLevel}</Text>
+          </View>
         </View>
+      </View>
+
+      {/* ── Badge jetons — positionné en absolu dans la barre bois haute ── */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top:      Math.max(insets.top + 8, innerTop + 20),
+          right:    cadreW * 0.12,
+        }}
+      >
         <View style={styles.tokenBadge}>
           <Text style={styles.tokenText}>🎟️ {player.friendChallengeTokens}</Text>
         </View>
       </View>
 
       {/* ── Bouton Défier un ami ── */}
-      <View style={styles.launchSection}>
+      <View style={[styles.launchSection, { paddingHorizontal: innerPadH + 4 }]}>
         <TouchableOpacity
           style={[styles.btnLaunch, generating && styles.btnDisabled]}
           onPress={handleOpenSearch}
@@ -635,7 +676,8 @@ export default function ChallengeScreen() {
             <ActivityIndicator size="large" color={Colors.forest.medium} />
           </View>
         : <ScrollView
-            contentContainerStyle={styles.list}
+            style={styles.scrollArea}
+            contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
@@ -703,7 +745,22 @@ export default function ChallengeScreen() {
           player.addFriendChallengeToken();
         }}
       />
-    </SafeAreaView>
+
+      {/* ── Popup achat jeton via graines ── */}
+      <ConfirmModal
+        visible={showBuyTokenModal}
+        icon={'\uD83C\uDF31'}
+        iconBg={'#E8F5E9'}
+        iconBorder={'#A5D6A7'}
+        borderColor={Colors.forest.medium}
+        title={'Utiliser des graines ?'}
+        message={`Tu n'as plus de jeton d\u00e9fi ami.\nD\u00e9penser ${TOKEN_SEED_COST}\u00a0\uD83C\uDF31 pour en obtenir un ?`}
+        confirmLabel={`D\u00e9penser ${TOKEN_SEED_COST}\u00a0\uD83C\uDF31`}
+        cancelLabel={'Annuler'}
+        onConfirm={handleConfirmBuyToken}
+        onCancel={() => setShowBuyTokenModal(false)}
+      />
+    </View>
   );
 }
 
@@ -921,47 +978,59 @@ const cardStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.ui.background,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingLeft: 20,
-    paddingRight: 72, // réserve la place du bouton son flottant (40px + 16px marge + 16px espace)
-    paddingVertical: 14,
-    backgroundColor: Colors.ui.card,
+    paddingRight: 72,
+    paddingBottom: 14,
+    backgroundColor: 'rgba(10,30,10,0.75)',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  headerIcon: {
+    width: 28,
+    height: 28,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: Colors.forest.dark,
+    color: '#fff',
   },
   headerLevel: {
     fontSize: 12,
-    color: Colors.ui.textLight,
+    color: 'rgba(255,255,255,0.65)',
     marginTop: 2,
   },
   tokenBadge: {
-    backgroundColor: Colors.ui.seed + '25',
+    backgroundColor: '#5C3010',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: Colors.ui.seed + '80',
+    borderWidth: 1.5,
+    borderColor: '#3B1E08',
+    marginLeft: 12,
   },
   tokenText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.forest.dark,
+    color: '#FFF8E7',
   },
   launchSection: {
     padding: 16,
     gap: 8,
+    backgroundColor: 'rgba(10,30,10,0.82)',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
   },
   btnLaunch: {
     backgroundColor: Colors.forest.dark,
@@ -979,12 +1048,12 @@ const styles = StyleSheet.create({
   },
   launchHint: {
     fontSize: 12,
-    color: Colors.ui.textLight,
+    color: 'rgba(255,255,255,0.75)',
     textAlign: 'center',
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.ui.card,
+    backgroundColor: 'rgba(255,255,255,0.92)',
     borderBottomWidth: 1,
     borderBottomColor: Colors.ui.border,
   },
@@ -1006,10 +1075,13 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: Colors.forest.medium,
   },
+  scrollArea: {
+    flex: 1,
+    backgroundColor: 'rgba(240,245,240,0.92)',
+  },
   list: {
     padding: 16,
     gap: 12,
-    paddingBottom: 40,
   },
   centered: {
     flex: 1,
@@ -1022,6 +1094,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 48,
     gap: 10,
+    backgroundColor: 'rgba(10,30,10,0.72)',
+    borderRadius: 18,
+    paddingHorizontal: 24,
   },
   emptyEmoji: {
     fontSize: 48,
@@ -1029,11 +1104,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: Colors.forest.dark,
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   emptyDesc: {
     fontSize: 13,
-    color: Colors.ui.textLight,
+    color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
     lineHeight: 18,
   },

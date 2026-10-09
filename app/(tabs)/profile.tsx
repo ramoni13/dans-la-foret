@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -16,12 +17,15 @@ import {
   ActivityIndicator,
   Platform,
   Switch,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from 'firebase/auth';
 
 import { Colors } from '../../src/constants/colors';
+import { FRAME_BOTTOM_FRACTION, useFrameLayout } from '../../src/constants/frameLayout';
+import { useNavStore } from '../../src/store/navStore';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { formatTime } from '../../src/utils/boardUtils';
 import { Lang } from '../../src/i18n';
@@ -41,9 +45,29 @@ import { MusicPanel } from '../../src/components/Audio/MusicPanel';
 // ── Types ───────────────────────────────────────────────────────────────────────
 type ActiveSection = 'hub' | 'stats' | 'badges' | 'classement' | 'reglages';
 
+const BG_IMAGE = require('../../assets/elements/sprites/fond-ecran.jpg');
+
+function BgImage() {
+  const { width, height } = useWindowDimensions();
+  return (
+    <>
+      <Image
+        source={BG_IMAGE}
+        style={{ position: 'absolute', top: 0, left: 0, width, height }}
+        resizeMode="cover"
+      />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.52)' }]} pointerEvents="none" />
+    </>
+  );
+}
+
 export default function ProfileScreen() {
   const player = usePlayerStore();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const frameBottom = height * FRAME_BOTTOM_FRACTION;
+  const { innerTop, innerPadH } = useFrameLayout();
+  const { showBack, hideBack } = useNavStore();
 
   // ── État Firebase Auth ────────────────────────────────────────────────────────
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
@@ -56,6 +80,17 @@ export default function ProfileScreen() {
 
   // ── Hub navigation ──────────────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<ActiveSection>('hub');
+
+  // ── Bouton Retour dans la barre bois haute (via ForestFrame) ────────────────
+  const goHub = React.useCallback(() => setActiveSection('hub'), []);
+  React.useEffect(() => {
+    if (activeSection !== 'hub') {
+      showBack(goHub);
+    } else {
+      hideBack();
+    }
+    return () => { hideBack(); };
+  }, [activeSection]);
 
   // ── Mot de passe oublié ──────────────────────────────────────────────────────
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -150,10 +185,11 @@ export default function ProfileScreen() {
   // ── Chargement ───────────────────────────────────────────────────────────────
   if (authLoading) {
     return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.forest.medium} />
-          <Text style={styles.loadingText}>Connexion en cours…</Text>
+      <View style={StyleSheet.absoluteFill}>
+        <BgImage />
+        <View style={[styles.centered, { paddingTop: Math.max(insets.top, innerTop) }]}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={[styles.loadingText, { color: 'rgba(255,255,255,0.75)' }]}>Connexion en cours…</Text>
         </View>
       </View>
     );
@@ -164,8 +200,9 @@ export default function ProfileScreen() {
   // ──────────────────────────────────────────────────────────────────────────────
   if (!firebaseUser) {
     return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <ScrollView contentContainerStyle={styles.container}>
+      <View style={StyleSheet.absoluteFill}>
+        <BgImage />
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
           <View style={styles.avatarSection}>
             <View style={styles.avatar}>
               <Text style={styles.avatarEmoji}>🌲</Text>
@@ -302,19 +339,12 @@ export default function ProfileScreen() {
   // ──────────────────────────────────────────────────────────────────────────────
   const displayName = firebaseUser.displayName ?? firebaseUser.email ?? 'Joueur';
 
-  // ── Bouton retour vers le hub ─────────────────────────────────────────────────
-  const BackBtn = () => (
-    <TouchableOpacity style={styles.backBtn} onPress={() => setActiveSection('hub')} activeOpacity={0.7}>
-      <Text style={styles.backBtnText}>← Retour</Text>
-    </TouchableOpacity>
-  );
-
   // ── Section STATS ─────────────────────────────────────────────────────────────
   if (activeSection === 'stats') {
     return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <BackBtn />
-        <ScrollView contentContainerStyle={styles.container}>
+      <View style={StyleSheet.absoluteFill}>
+        <BgImage />
+        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>📊 Statistiques</Text>
           <View style={styles.statsGrid}>
             <StatCard label="Graines disponibles"  value={String(player.seeds)}                emoji="🌱" />
@@ -335,9 +365,9 @@ export default function ProfileScreen() {
   // ── Section BADGES ────────────────────────────────────────────────────────────
   if (activeSection === 'badges') {
     return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <BackBtn />
-        <ScrollView contentContainerStyle={styles.container}>
+      <View style={StyleSheet.absoluteFill}>
+        <BgImage />
+        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>🏅 Badges</Text>
           <BadgeCollection
             earnedBadges={player.earnedBadges}
@@ -358,9 +388,11 @@ export default function ProfileScreen() {
   // ── Section CLASSEMENT ────────────────────────────────────────────────────────
   if (activeSection === 'classement') {
     return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <BackBtn />
-        <LeaderboardScreen />
+      <View style={StyleSheet.absoluteFill}>
+        <BgImage />
+        <View style={[styles.subSection, { top: innerTop }]}>
+          <LeaderboardScreen />
+        </View>
       </View>
     );
   }
@@ -368,10 +400,10 @@ export default function ProfileScreen() {
   // ── Section RÉGLAGES ─────────────────────────────────────────────────────────
   if (activeSection === 'reglages') {
     return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <BackBtn />
-        <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.sectionHeading}>⚙️ Réglages</Text>
+      <View style={StyleSheet.absoluteFill}>
+        <BgImage />
+        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
+            <Text style={styles.sectionHeading}>⚙️ Réglages</Text>
 
           {/* Langue */}
           <View style={styles.section}>
@@ -427,8 +459,9 @@ export default function ProfileScreen() {
 
   // ── HUB (état initial) ────────────────────────────────────────────────────────
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.container}>
+    <View style={StyleSheet.absoluteFill}>
+      <BgImage />
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
 
         {/* Avatar + nom */}
         <View style={styles.avatarSection}>
@@ -528,8 +561,16 @@ const statStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.ui.background },
-  container: { padding: 20, gap: 20, paddingBottom: 40 },
+  root: { flex: 1, backgroundColor: 'transparent' },
+  // Zone de contenu des sous-sections, positionnée sous la barre bois haute
+  subSection: {
+    position: 'absolute',
+    // top est injecté dynamiquement (= innerTop) via style inline
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  container: { paddingVertical: 20, gap: 20 },
 
   // Chargement
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
@@ -548,20 +589,27 @@ const styles = StyleSheet.create({
     borderColor: Colors.forest.light,
   },
   avatarEmoji: { fontSize: 44 },
-  usernameText: { fontSize: 22, fontWeight: '700', color: Colors.forest.dark },
+  usernameText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
 
   seedsBadge: {
-    backgroundColor: Colors.ui.seed + '22',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.ui.seed + '55',
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   seedsBadgeText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.forest.dark,
+    color: '#fff',
   },
 
   // Grille de tuiles 2×2
@@ -602,22 +650,13 @@ const styles = StyleSheet.create({
   sectionHeading: {
     fontSize: 22,
     fontWeight: '800',
-    color: Colors.forest.dark,
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 
-  // Bouton retour
-  backBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
-    backgroundColor: Colors.ui.card,
-  },
-  backBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.forest.medium,
-  },
+  // (backBtn supprimé — le bouton Retour vit dans ForestFrame via navStore)
 
   // Stats
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -666,7 +705,7 @@ const styles = StyleSheet.create({
   resetBtnText: { fontSize: 14, color: Colors.ui.textLight },
 
   // Auth form
-  authSubtitle: { fontSize: 13, color: Colors.ui.textLight, textAlign: 'center', paddingHorizontal: 24 },
+  authSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.75)', textAlign: 'center', paddingHorizontal: 24 },
   toggleRow: { flexDirection: 'row', backgroundColor: Colors.ui.border + '40', borderRadius: 12, padding: 4 },
   toggleBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   toggleBtnActive: { backgroundColor: Colors.ui.card, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
@@ -707,7 +746,7 @@ const styles = StyleSheet.create({
 
   // Langue
   section: { gap: 12 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.forest.dark },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#fff' },
   langRow: { flexDirection: 'row', gap: 10 },
   langBtn: {
     flex: 1,

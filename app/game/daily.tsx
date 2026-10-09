@@ -223,8 +223,12 @@ export default function DailyGameScreen() {
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
   const [seedsEarned, setSeedsEarned] = useState(0);
   const [briefingDone, setBriefingDone] = useState(false);
+  const [isNewDailyRecord, setIsNewDailyRecord] = useState(false);
+  const [prevDailyRecordHolder, setPrevDailyRecordHolder] = useState<string | null>(null);
 
   const badgesEvaluatedRef = useRef(false);
+  // uid capturé à la victoire pour la détection record
+  const victoryUidRef = useRef<string | null>(null);
   const confettiPieces = useConfetti(game.isVictory);
 
   // -- Generation du defi journalier --
@@ -370,12 +374,19 @@ export default function DailyGameScreen() {
     badgesEvaluatedRef.current = true;
 
     // 1. Mettre a jour le store local
-    player.submitDailyResult(dailyDate, true);
+    player.submitDailyResult(dailyDate, true, game.elapsedTime);
     player.clearChallengeTimestamps(`daily_${dailyDate}`);
 
     // 2. Calculer les recompenses
     const uid = auth.currentUser?.uid;
     const username = auth.currentUser?.displayName ?? 'Joueur';
+
+    // Capturer l'uid pour la detection record post-soumission
+    victoryUidRef.current = uid ?? null;
+    // Sauvegarder l'ancien leader avant soumission
+    if (leaderboard.length > 0) {
+      setPrevDailyRecordHolder(leaderboard[0].username);
+    }
     const isAnonymous = auth.currentUser?.isAnonymous ?? true;
 
     // Trouver le rang du joueur dans le leaderboard
@@ -419,6 +430,19 @@ export default function DailyGameScreen() {
       }
     }
   }, [game.isVictory]);
+
+  // -- Détection record journalier après soumission Firestore --
+  // Le leaderboard onSnapshot se met à jour quelques secondes après la soumission.
+  // Quand leaderboard[0].userId === victoryUidRef.current, le joueur est #1.
+  useEffect(() => {
+    if (!game.isVictory) return;
+    const uid = victoryUidRef.current;
+    if (!uid) return;
+    if (leaderboard.length === 0) return;
+    if (leaderboard[0].userId === uid) {
+      setIsNewDailyRecord(true);
+    }
+  }, [leaderboard, game.isVictory]);
 
   // -- Toutes les cases remplies ? --
   const allFilled = challenge
@@ -558,6 +582,8 @@ export default function DailyGameScreen() {
           confettiPieces={confettiPieces}
           badgeQueue={badgeQueue}
           onBadgeQueueEmpty={() => setBadgeQueue([])}
+          isNewWorldRecord={isNewDailyRecord}
+          previousRecordHolder={isNewDailyRecord ? prevDailyRecordHolder : null}
           onNextChallenge={() => {
             game.resetGame();
             router.replace('/(tabs)');

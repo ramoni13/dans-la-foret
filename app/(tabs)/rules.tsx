@@ -11,12 +11,13 @@ import {
   Text,
   Image,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '../../src/constants/colors';
+import { FRAME_BOTTOM_FRACTION, useFrameLayout } from '../../src/constants/frameLayout';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { ElementRegistry } from '../../src/elements/ElementRegistry';
 import { useT } from '../../src/i18n';
@@ -24,8 +25,23 @@ import { LEVEL_META, RuleCard as RuleCardData } from '../../src/data/levelMeta';
 import { RuleCard as RuleCardComponent } from '../../src/components/LevelBriefing/RuleCard';
 import { IntroSlide } from '../../src/components/LevelBriefing/IntroSlide';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const RULE_CARD_WIDTH = SCREEN_WIDTH - 32 - 32; // padding list + padding card
+// RULE_CARD_WIDTH est calculé dynamiquement dans le composant (voir useFrameLayout)
+
+const BG_IMAGE = require('../../assets/elements/sprites/fond-ecran.jpg');
+
+function BgImage() {
+  const { width, height } = useWindowDimensions();
+  return (
+    <>
+      <Image
+        source={BG_IMAGE}
+        style={{ position: 'absolute', top: 0, left: 0, width, height }}
+        resizeMode="cover"
+      />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.52)' }]} pointerEvents="none" />
+    </>
+  );
+}
 
 // ── Ordre d'apparition + mapping explicite des regles ───────────────────────
 interface ElementEntry {
@@ -63,16 +79,24 @@ export default function RulesScreen() {
   const t = useT();
   const player = usePlayerStore();
   const currentLevel = player.currentLevel;
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
+  const frameBottom = height * FRAME_BOTTOM_FRACTION;
+  const { innerTop, innerPadH } = useFrameLayout();
+  // Largeur disponible = écran - 2×innerPadH (scroll) - 2×padding carte (16)
+  const ruleCardWidth = width - innerPadH * 2 - 32;
 
   return (
-    <SafeAreaView style={styles.root}>
-      <View style={styles.header}>
+    <View style={styles.root}>
+      <BgImage />
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH + 4 }]}>
         <Text style={styles.title}>{t('rules_tab_title')}</Text>
         <Text style={styles.subtitle}>{t('rules_subtitle')}</Text>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Slide intro : concept du jeu ── */}
@@ -149,7 +173,8 @@ export default function RulesScreen() {
                       <RuleCardComponent
                         rule={rule}
                         isNew={false}
-                        width={RULE_CARD_WIDTH}
+                        width={ruleCardWidth}
+                        animHeight={80}
                       />
                     </View>
                   ))}
@@ -166,36 +191,37 @@ export default function RulesScreen() {
           );
         })}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.ui.background,
+    backgroundColor: 'transparent',
   },
 
   // ── Header ──
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
     paddingBottom: 12,
     gap: 2,
   },
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: Colors.forest.dark,
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.ui.textLight,
+    color: 'rgba(255,255,255,0.75)',
   },
 
   // ── Liste ──
   list: {
-    padding: 16,
+    paddingVertical: 16,
     gap: 12,
     paddingBottom: 32,
   },

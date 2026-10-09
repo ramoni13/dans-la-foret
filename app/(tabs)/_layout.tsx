@@ -4,10 +4,9 @@
 // ============================================================
 
 import { Tabs, useRouter, useSegments } from 'expo-router';
-import { Colors } from '../../src/constants/colors';
-import { View, Image, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 import React, { useEffect, useRef, useState } from 'react';
+import ForestFrame from '../../src/components/Navigation/ForestFrame';
 import { User } from 'firebase/auth';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { onAuthChange } from '../../src/services/authService';
@@ -23,53 +22,8 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 
-// ── Icônes de navigation (images illustrées) ───────────────────────────────
-const TAB_ICONS = {
-  index:     require('../../assets/elements/boutons/Accueil.png'),
-  rules:     require('../../assets/elements/boutons/Règles.png'),
-  challenge: require('../../assets/elements/boutons/Défis.png'),
-  profile:   require('../../assets/elements/boutons/Parametres.png'),
-} as const;
-
-function TabIcon({ name, focused }: { name: keyof typeof TAB_ICONS; focused: boolean }) {
-  return (
-    <View style={[tabIconStyles.container, focused && tabIconStyles.focused]}>
-      <Image
-        source={TAB_ICONS[name]}
-        style={tabIconStyles.image}
-        resizeMode="contain"
-      />
-    </View>
-  );
-}
-
-const tabIconStyles = StyleSheet.create({
-  container: {
-    width: 70,
-    height: 64,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 2,
-  },
-  focused: {
-    // halo vert forêt derrière l'icône active
-    backgroundColor: 'rgba(76,175,80,0.28)',
-    borderRadius: 16,
-    shadowColor: '#4CAF50',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  image: {
-    width: 66,
-    height: 60,
-  },
-});
-
 export default function TabsLayout() {
   const player   = usePlayerStore();
-  const insets   = useSafeAreaInsets();
   const router   = useRouter();
   const segments = useSegments();
 
@@ -180,58 +134,32 @@ export default function TabsLayout() {
     return () => unsub();
   }, [user, player.friendNotifBadgeEnabled]);
 
-  const tabBarHeight = insets.bottom + 68;
-
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: 'transparent',
-        tabBarInactiveTintColor: 'transparent',
-        tabBarShowLabel: false,
-        tabBarStyle: {
-          position: 'absolute',
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          elevation: 0,
-          shadowOpacity: 0,
-          height: tabBarHeight,
-          paddingBottom: insets.bottom,
-          paddingTop: 0,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Jouer',
-          tabBarIcon: ({ focused }) => <TabIcon name="index" focused={focused} />,
+    <View style={{ flex: 1 }}>
+      {/* ── Tabs Expo Router — tab bar native masquée ─────────────────── */}
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          // Tab bar native masquée — ForestFrame gère la navigation
+          tabBarStyle: { display: 'none' },
         }}
-      />
-      <Tabs.Screen
-        name="rules"
-        options={{
-          title: 'R\u00e8gles',
-          tabBarIcon: ({ focused }) => <TabIcon name="rules" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="challenge"
-        options={{
-          title: 'D\u00e9fis amis',
-          tabBarIcon: ({ focused }) => <TabIcon name="challenge" focused={focused} />,
-          tabBarBadge: player.friendNotifBadgeEnabled && pendingChallengesCount > 0
-            ? pendingChallengesCount
-            : undefined,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profil',
-          tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} />,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen name="index"     options={{ title: 'Accueil' }} />
+        <Tabs.Screen name="rules"     options={{ title: 'R\u00e8gles' }} />
+        <Tabs.Screen
+          name="challenge"
+          options={{
+            title: 'D\u00e9fis',
+            tabBarBadge: player.friendNotifBadgeEnabled && pendingChallengesCount > 0
+              ? pendingChallengesCount
+              : undefined,
+          }}
+        />
+        <Tabs.Screen name="profile"   options={{ title: 'Profil' }} />
+      </Tabs>
+
+      {/* ── Cadre bois + boutons navigation (superposé en absolu) ─────── */}
+      <ForestFrame />
+    </View>
   );
 }
