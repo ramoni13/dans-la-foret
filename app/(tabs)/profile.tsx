@@ -8,7 +8,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -17,14 +16,14 @@ import {
   ActivityIndicator,
   Platform,
   Switch,
-  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from 'firebase/auth';
 
 import { Colors } from '../../src/constants/colors';
-import { FRAME_BOTTOM_FRACTION, useFrameLayout } from '../../src/constants/frameLayout';
+import { useFrameLayout } from '../../src/constants/frameLayout';
+import { BgImage } from '../../src/components/UI/BgImage';
 import { useNavStore } from '../../src/store/navStore';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { formatTime } from '../../src/utils/boardUtils';
@@ -45,28 +44,12 @@ import { MusicPanel } from '../../src/components/Audio/MusicPanel';
 // ── Types ───────────────────────────────────────────────────────────────────────
 type ActiveSection = 'hub' | 'stats' | 'badges' | 'classement' | 'reglages';
 
-const BG_IMAGE = require('../../assets/elements/sprites/fond-ecran.jpg');
 
-function BgImage() {
-  const { width, height } = useWindowDimensions();
-  return (
-    <>
-      <Image
-        source={BG_IMAGE}
-        style={{ position: 'absolute', top: 0, left: 0, width, height }}
-        resizeMode="cover"
-      />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.52)' }]} pointerEvents="none" />
-    </>
-  );
-}
 
 export default function ProfileScreen() {
   const player = usePlayerStore();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  const frameBottom = height * FRAME_BOTTOM_FRACTION;
-  const { innerTop, innerPadH } = useFrameLayout();
+  const { frameBottom, innerTop, innerPadH } = useFrameLayout();
   const { showBack, hideBack } = useNavStore();
 
   // ── État Firebase Auth ────────────────────────────────────────────────────────
@@ -186,7 +169,7 @@ export default function ProfileScreen() {
   if (authLoading) {
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BgImage />
+        <BgImage overlay={0.52} />
         <View style={[styles.centered, { paddingTop: Math.max(insets.top, innerTop) }]}>
           <ActivityIndicator size="large" color="#fff" />
           <Text style={[styles.loadingText, { color: 'rgba(255,255,255,0.75)' }]}>Connexion en cours…</Text>
@@ -201,8 +184,8 @@ export default function ProfileScreen() {
   if (!firebaseUser) {
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BgImage />
-      <ScrollView contentContainerStyle={[styles.container, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
+        <BgImage overlay={0.52} />
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <View style={styles.avatarSection}>
             <View style={styles.avatar}>
               <Text style={styles.avatarEmoji}>🌲</Text>
@@ -343,8 +326,8 @@ export default function ProfileScreen() {
   if (activeSection === 'stats') {
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BgImage />
-        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
+        <BgImage overlay={0.52} />
+        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>📊 Statistiques</Text>
           <View style={styles.statsGrid}>
             <StatCard label="Graines disponibles"  value={String(player.seeds)}                emoji="🌱" />
@@ -366,8 +349,8 @@ export default function ProfileScreen() {
   if (activeSection === 'badges') {
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BgImage />
-        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
+        <BgImage overlay={0.52} />
+        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>🏅 Badges</Text>
           <BadgeCollection
             earnedBadges={player.earnedBadges}
@@ -389,7 +372,7 @@ export default function ProfileScreen() {
   if (activeSection === 'classement') {
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BgImage />
+        <BgImage overlay={0.52} />
         <View style={[styles.subSection, { top: innerTop }]}>
           <LeaderboardScreen />
         </View>
@@ -401,8 +384,8 @@ export default function ProfileScreen() {
   if (activeSection === 'reglages') {
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BgImage />
-        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
+        <BgImage overlay={0.52} />
+        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
             <Text style={styles.sectionHeading}>⚙️ Réglages</Text>
 
           {/* Langue */}
@@ -460,8 +443,8 @@ export default function ProfileScreen() {
   // ── HUB (état initial) ────────────────────────────────────────────────────────
   return (
     <View style={StyleSheet.absoluteFill}>
-      <BgImage />
-      <ScrollView contentContainerStyle={[styles.container, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}>
+      <BgImage overlay={0.52} />
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
 
         {/* Avatar + nom */}
         <View style={styles.avatarSection}>

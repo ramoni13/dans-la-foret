@@ -27,14 +27,14 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
-  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 
 import { Colors } from '../../src/constants/colors';
-import { FRAME_BOTTOM_FRACTION, useFrameLayout } from '../../src/constants/frameLayout';
+import { useFrameLayout } from '../../src/constants/frameLayout';
+import { BgImage } from '../../src/components/UI/BgImage';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { auth } from '../../src/services/firebase';
 import {
@@ -57,22 +57,7 @@ import { ConfirmModal } from '../../src/components/Game/ConfirmModal';
 // ── Constantes ──────────────────────────────────────────────
 const TOKEN_SEED_COST = 15;
 
-const BG_IMAGE  = require('../../assets/elements/sprites/fond-ecran.jpg');
 const IMG_HACHES = require('../../assets/elements/design_app/Haches.png');
-
-function BgImage() {
-  const { width, height } = useWindowDimensions();
-  return (
-    <>
-      <Image
-        source={BG_IMAGE}
-        style={{ position: 'absolute', top: 0, left: 0, width, height }}
-        resizeMode="cover"
-      />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.52)' }]} pointerEvents="none" />
-    </>
-  );
-}
 
 // ── Correspondance niveau → difficulty + boardId ──────────
 // On mappe directement le numéro de niveau sur les LEVEL_PARAMS existants.
@@ -352,9 +337,7 @@ export default function ChallengeScreen() {
   const router  = useRouter();
   const player  = usePlayerStore();
   const insets  = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  const frameBottom = height * FRAME_BOTTOM_FRACTION;
-  const { innerTop, innerPadH, topBarCenterY, cadreW } = useFrameLayout();
+  const { frameBottom, innerTop, innerPadH, topBarCenterY, cadreW } = useFrameLayout();
   const uid     = auth.currentUser?.uid ?? null;
   const isAnon  = auth.currentUser?.isAnonymous ?? true;
 
@@ -578,7 +561,7 @@ export default function ChallengeScreen() {
   if (!uid || isAnon) {
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BgImage />
+        <BgImage overlay={0.52} />
         <View style={[styles.centered, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
           <Text style={styles.emptyEmoji}>🔒</Text>
           <Text style={[styles.emptyTitle, { color: '#fff' }]}>Connexion requise</Text>
@@ -606,7 +589,7 @@ export default function ChallengeScreen() {
 
   return (
     <View style={StyleSheet.absoluteFill}>
-      <BgImage />
+      <BgImage overlay={0.52} />
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 20), paddingLeft: innerPadH + 4, paddingRight: Math.max(72, innerPadH + 4) }]}>
         <View style={styles.headerLeft}>
@@ -677,7 +660,7 @@ export default function ChallengeScreen() {
           </View>
         : <ScrollView
             style={styles.scrollArea}
-            contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}
+            contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl

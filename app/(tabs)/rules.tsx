@@ -17,7 +17,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '../../src/constants/colors';
-import { FRAME_BOTTOM_FRACTION, useFrameLayout } from '../../src/constants/frameLayout';
+import { useFrameLayout } from '../../src/constants/frameLayout';
+import { BgImage } from '../../src/components/UI/BgImage';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { ElementRegistry } from '../../src/elements/ElementRegistry';
 import { useT } from '../../src/i18n';
@@ -27,21 +28,7 @@ import { IntroSlide } from '../../src/components/LevelBriefing/IntroSlide';
 
 // RULE_CARD_WIDTH est calculé dynamiquement dans le composant (voir useFrameLayout)
 
-const BG_IMAGE = require('../../assets/elements/sprites/fond-ecran.jpg');
 
-function BgImage() {
-  const { width, height } = useWindowDimensions();
-  return (
-    <>
-      <Image
-        source={BG_IMAGE}
-        style={{ position: 'absolute', top: 0, left: 0, width, height }}
-        resizeMode="cover"
-      />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.52)' }]} pointerEvents="none" />
-    </>
-  );
-}
 
 // ── Ordre d'apparition + mapping explicite des regles ───────────────────────
 interface ElementEntry {
@@ -80,23 +67,21 @@ export default function RulesScreen() {
   const player = usePlayerStore();
   const currentLevel = player.currentLevel;
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
   const { width } = useWindowDimensions();
-  const frameBottom = height * FRAME_BOTTOM_FRACTION;
-  const { innerTop, innerPadH } = useFrameLayout();
+  const { frameBottom, innerTop, innerPadH } = useFrameLayout();
   // Largeur disponible = écran - 2×innerPadH (scroll) - 2×padding carte (16)
   const ruleCardWidth = width - innerPadH * 2 - 32;
 
   return (
     <View style={styles.root}>
-      <BgImage />
+      <BgImage overlay={0.52} />
       <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH + 4 }]}>
         <Text style={styles.title}>{t('rules_tab_title')}</Text>
         <Text style={styles.subtitle}>{t('rules_subtitle')}</Text>
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: insets.bottom + frameBottom + 16 }]}
+        contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Slide intro : concept du jeu ── */}

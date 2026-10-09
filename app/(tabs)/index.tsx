@@ -13,13 +13,11 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
-  Image,
-  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { FRAME_BOTTOM_FRACTION, useFrameLayout } from '../../src/constants/frameLayout';
+import { useFrameLayout } from '../../src/constants/frameLayout';
 import { usePlayerStore, isChallengeOnCooldown } from '../../src/store/playerStore';
 import { auth } from '../../src/services/firebase';
 import { getDailyDateString, subscribeDailyLeaderboard, DailyResult } from '../../src/services/dailyChallengeService';
@@ -28,6 +26,7 @@ import { DifficultyLevel } from '../../src/core/models/Challenge';
 import { WorldRecord, subscribeAllWorldRecords } from '../../src/services/worldRecordService';
 import { WoodSign } from '../../src/components/UI/WoodSign';
 import { WoodButton } from '../../src/components/UI/WoodButton';
+import { BgImage } from '../../src/components/UI/BgImage';
 
 
 // ── Tous les défis (15 niveaux) ────────────────────────────────────────────────
@@ -93,21 +92,7 @@ const ALL_CHALLENGES_BY_LEVEL: Record<string, any[]> = {
 const ALL_CHALLENGES_FLAT = LEVELS.flatMap(l => ALL_CHALLENGES_BY_LEVEL[l.id] ?? []);
 
 // ── Assets ─────────────────────────────────────────────────────────────────────
-const BG_IMAGE     = require('../../assets/elements/sprites/fond-ecran.jpg');
-// ── Fond plein écran (dimensions dynamiques obligatoires pour Image RN) ────────
-function BgImage() {
-  const { width, height } = useWindowDimensions();
-  return (
-    <>
-      <Image
-        source={BG_IMAGE}
-        style={{ position: 'absolute', top: 0, left: 0, width, height }}
-        resizeMode="cover"
-      />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.20)' }]} pointerEvents="none" />
-    </>
-  );
-}
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Sous-écran : navigateur de niveaux (carrousel + liste de défis)
@@ -124,9 +109,7 @@ function LevelsScreen({
   initialLevelIndex: number;
 }) {
   const insets  = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
-  const frameBottom = height * FRAME_BOTTOM_FRACTION;
-  const { innerTop } = useFrameLayout();
+  const { frameBottom, innerTop } = useFrameLayout();
   const player  = usePlayerStore();
   const [levelIndex, setLevelIndex] = useState(initialLevelIndex);
 
@@ -171,7 +154,7 @@ function LevelsScreen({
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.levelsContainer, { paddingBottom: insets.bottom + frameBottom + 16 }]}
+        contentContainerStyle={[styles.levelsContainer, { paddingBottom: frameBottom + 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Navigateur de niveau ‹/› */}
@@ -318,9 +301,7 @@ function LevelsScreen({
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width: screenWidth, height } = useWindowDimensions();
-  const frameBottom = height * FRAME_BOTTOM_FRACTION;
-  const { innerTop } = useFrameLayout();
+  const { frameBottom, innerTop } = useFrameLayout();
   const player = usePlayerStore();
   const { authReady, isAuthenticated } = player;
 
@@ -440,7 +421,7 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
         contentContainerStyle={[
           styles.container,
-          { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingBottom: insets.bottom + frameBottom + 16 },
+          { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingBottom: frameBottom + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
