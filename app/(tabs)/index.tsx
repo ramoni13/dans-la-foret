@@ -13,17 +13,20 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
-  Image,
-  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { usePlayerStore } from '../../src/store/playerStore';
+import { useFrameLayout } from '../../src/constants/frameLayout';
+import { usePlayerStore, isChallengeOnCooldown } from '../../src/store/playerStore';
+import { auth } from '../../src/services/firebase';
 import { getDailyDateString, subscribeDailyLeaderboard, DailyResult } from '../../src/services/dailyChallengeService';
 import { formatTime } from '../../src/utils/boardUtils';
 import { DifficultyLevel } from '../../src/core/models/Challenge';
 import { WorldRecord, subscribeAllWorldRecords } from '../../src/services/worldRecordService';
+import { WoodSign } from '../../src/components/UI/WoodSign';
+import { WoodButton } from '../../src/components/UI/WoodButton';
+import { BgImage } from '../../src/components/UI/BgImage';
 
 
 // ── Tous les défis (15 niveaux) ────────────────────────────────────────────────
@@ -89,22 +92,7 @@ const ALL_CHALLENGES_BY_LEVEL: Record<string, any[]> = {
 const ALL_CHALLENGES_FLAT = LEVELS.flatMap(l => ALL_CHALLENGES_BY_LEVEL[l.id] ?? []);
 
 // ── Assets ─────────────────────────────────────────────────────────────────────
-const BG_IMAGE = require('../../assets/elements/sprites/fond-ecran.jpg');
 
-// ── Fond plein écran (dimensions dynamiques obligatoires pour Image RN) ────────
-function BgImage() {
-  const { width, height } = useWindowDimensions();
-  return (
-    <>
-      <Image
-        source={BG_IMAGE}
-        style={{ position: 'absolute', top: 0, left: 0, width, height }}
-        resizeMode="cover"
-      />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.48)' }]} pointerEvents="none" />
-    </>
-  );
-}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Sous-écran : navigateur de niveaux (carrousel + liste de défis)
@@ -121,6 +109,7 @@ function LevelsScreen({
   initialLevelIndex: number;
 }) {
   const insets  = useSafeAreaInsets();
+  const { frameBottom, innerTop } = useFrameLayout();
   const player  = usePlayerStore();
   const [levelIndex, setLevelIndex] = useState(initialLevelIndex);
 
@@ -156,7 +145,7 @@ function LevelsScreen({
       <BgImage />
 
       {/* Header avec bouton retour */}
-      <View style={[styles.levelsHeader, { paddingTop: insets.top + 8 }]}>
+      <View style={[styles.levelsHeader, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
           <Text style={styles.backBtnText}>← Retour</Text>
         </TouchableOpacity>
@@ -165,7 +154,7 @@ function LevelsScreen({
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.levelsContainer, { paddingBottom: insets.bottom + 90 }]}
+        contentContainerStyle={[styles.levelsContainer, { paddingBottom: frameBottom + 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Navigateur de niveau ‹/› */}
@@ -312,6 +301,7 @@ function LevelsScreen({
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { frameBottom, innerTop } = useFrameLayout();
   const player = usePlayerStore();
   const { authReady, isAuthenticated } = player;
 
@@ -358,6 +348,13 @@ export default function HomeScreen() {
     return () => unsub();
   }, [todayStr]);
 
+  // ── Ticker cooldown (mis à jour chaque seconde si un défi est en pause) ──────
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (isDailyToday && dailyStatus) return;
@@ -374,7 +371,7 @@ export default function HomeScreen() {
   // ── Gardes ────────────────────────────────────────────────────────────────
   if (!authReady) {
     return (
-      <View style={[styles.guardRoot, { paddingTop: insets.top }]}>
+      <View style={[styles.guardRoot, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.forest.medium} />
         </View>
@@ -384,7 +381,7 @@ export default function HomeScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.guardRoot, { paddingTop: insets.top }]}>
+      <View style={[styles.guardRoot, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
         <View style={styles.centered}>
           <Text style={styles.lockEmoji}>🔒</Text>
           <Text style={styles.lockTitle}>Connexion requise</Text>
@@ -424,116 +421,118 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
         contentContainerStyle={[
           styles.container,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 90 },
+          { paddingTop: innerTop, paddingBottom: frameBottom + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Hero ── */}
-        <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Dans la Forêt</Text>
-          <View style={styles.seedsHeroBadge}>
-            <Text style={styles.seedsHeroText}>🌱 {player.seeds} graines</Text>
-          </View>
+        {/* ── Hero : panneau bois "Tous les défis" ── */}
+        <View style={styles.heroGroup}>
+          <WoodSign
+            label="Tous les défis"
+            sublabel={`${totalCompleted}/${totalChallenges} complétés`}
+            onPress={() => setShowLevels(true)}
+          />
         </View>
 
         {/* ── Défi du Jour ── */}
         {(() => {
           const DAILY_UNLOCK_LEVEL = 12;
-          const dailyUnlocked = player.currentLevel >= DAILY_UNLOCK_LEVEL;
-
-          // Bandeau record du jour — visible dans TOUS les états
-          const dailyRecordBadge = dailyLeader ? (
-            <View style={styles.dailyRecordBadge}>
-              <Text style={styles.dailyRecordText}>
-                {'\uD83C\uDFC6'} {dailyLeader.username} · {formatTime(dailyLeader.timeMs)}
-              </Text>
-            </View>
-          ) : null;
+          const DEV_USERS = ['Ramoni', 'Cedric'];
+          const dailyUnlocked = player.currentLevel >= DAILY_UNLOCK_LEVEL || DEV_USERS.includes(player.username ?? '');
 
           if (!dailyUnlocked) {
             return (
-              <View style={styles.dailyCardLocked}>
-                <View style={styles.dailyLeft}>
-                  <Text style={[styles.dailyIcon, { opacity: 0.4 }]}>🔒</Text>
-                </View>
-                <View style={styles.dailyCenter}>
-                  <Text style={styles.dailyTitleLocked}>Défi du Jour</Text>
-                  <Text style={styles.dailySubLocked}>Disponible au niveau {DAILY_UNLOCK_LEVEL}</Text>
-                  {dailyRecordBadge}
-                </View>
-              </View>
+              <WoodButton
+                variant="locked"
+                label="Défi du Jour"
+                sublabel={`Disponible au niveau ${DAILY_UNLOCK_LEVEL}`}
+                height={76}
+                onPress={() => {}}
+                disabled
+              />
             );
           }
 
           if (!isDailyToday || !dailyStatus) {
+            const dailySublabel = dailyLeader
+              ? '🏆 ' + formatTime(dailyLeader.timeMs) + ' · ' + dailyLeader.username
+              : 'Soyez le 1er à le découvrir !';
             return (
               <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-                <TouchableOpacity
-                  style={styles.dailyCard}
+                <WoodButton
+                  variant="yellow"
+                  label="Défi du Jour"
+                  sublabel={dailySublabel}
+                  height={76}
                   onPress={() => router.push('/game/daily')}
-                  activeOpacity={0.85}
-                >
-                  <View style={styles.dailyLeft}>
-                    <Text style={styles.dailyIcon}>{'\uD83C\uDF05'}</Text>
-                  </View>
-                  <View style={styles.dailyCenter}>
-                    <Text style={styles.dailyAction}>NOUVEAU</Text>
-                    <Text style={styles.dailyTitle}>Défi du Jour</Text>
-                    <Text style={styles.dailySub}>Clairière Secrète · 15 cases</Text>
-                    {dailyRecordBadge}
-                  </View>
-                  <Text style={styles.dailyArrow}>→</Text>
-                </TouchableOpacity>
+                />
               </Animated.View>
             );
           }
 
           if (dailyStatus === 'success') {
+            const myTime = player.dailyChallengeTimeMs;
+            const myTimeStr = myTime != null ? formatTime(myTime) : null;
+            const wrHolder = dailyLeader;
+            // Fallback sur auth.currentUser si player.userId pas encore hydraté
+            const myUid = player.userId ?? auth.currentUser?.uid ?? null;
+            const isMyRecord = wrHolder != null && myUid != null && wrHolder.userId === myUid;
+            // Sublabel court : "Réussi · 2:34 · 🏆 1:58" ou si même joueur "Réussi · 🏆 2:34"
+            let sublabelSuccess: string;
+            if (isMyRecord && myTimeStr) {
+              sublabelSuccess = 'Réussi · 🏆 ' + myTimeStr;
+            } else if (myTimeStr && wrHolder) {
+              sublabelSuccess = 'Réussi · ' + myTimeStr + ' · 🏆 ' + formatTime(wrHolder.timeMs);
+            } else if (myTimeStr) {
+              sublabelSuccess = 'Réussi · ' + myTimeStr;
+            } else {
+              sublabelSuccess = 'Réussi aujourd\'hui';
+            }
             return (
               <View style={styles.dailyDoneRow}>
-                <View style={[styles.dailyCardSuccess, { flex: 1 }]}>
-                  <View style={styles.dailyLeft}>
-                    <Text style={styles.dailyIcon}>{'\u2705'}</Text>
-                  </View>
-                  <View style={styles.dailyCenter}>
-                    <Text style={styles.dailyActionDone}>RÉUSSI</Text>
-                    <Text style={styles.dailyTitleDone}>Défi du Jour</Text>
-                    {dailyStreak > 1 && <Text style={styles.dailySub}>Série : {dailyStreak} jours</Text>}
-                    {dailyRecordBadge}
-                  </View>
-                </View>
+                <WoodButton
+                  variant="locked"
+                  lockIcon="✅"
+                  label="Défi du Jour"
+                  sublabel={sublabelSuccess}
+                  showArrow={false}
+                  height={76}
+                  onPress={() => {}}
+                  disabled
+                />
                 {player.username === 'Ramoni' && (
                   <TouchableOpacity
                     style={styles.dailyReplayBtn}
                     onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.dailyReplayText}>Rejouer</Text>
+                    <Text style={styles.dailyReplayText}>↺</Text>
                   </TouchableOpacity>
                 )}
               </View>
             );
           }
 
+          // failed ou abandonné
           return (
             <View style={styles.dailyDoneRow}>
-              <View style={[styles.dailyCardFailed, { flex: 1 }]}>
-                <View style={styles.dailyLeft}>
-                  <Text style={styles.dailyIcon}>{'\uD83D\uDCA4'}</Text>
-                </View>
-                <View style={styles.dailyCenter}>
-                  <Text style={styles.dailyActionFailed}>ÉCHOUÉ</Text>
-                  <Text style={styles.dailyTitleFailed}>Rendez-vous demain</Text>
-                  {dailyRecordBadge}
-                </View>
-              </View>
+              <WoodButton
+                variant="locked"
+                lockIcon="❌"
+                label="Défi du Jour"
+                sublabel="Défi raté · Rendez-vous demain"
+                showArrow={false}
+                height={76}
+                onPress={() => {}}
+                disabled
+              />
               {player.username === 'Ramoni' && (
                 <TouchableOpacity
                   style={styles.dailyReplayBtn}
                   onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.dailyReplayText}>Rejouer</Text>
+                  <Text style={styles.dailyReplayText}>↺</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -541,47 +540,26 @@ export default function HomeScreen() {
         })()}
 
         {/* ── Continuer ── */}
-        {nextChallenge && (
-          <TouchableOpacity
-            style={styles.resumeCard}
-            onPress={() => router.push(`/game/${nextChallenge.challenge.id}`)}
-            activeOpacity={0.85}
-          >
-            <View style={styles.resumeLeft}>
-              <Text style={styles.resumeIcon}>
-                {allCompleted ? '🏆' : totalCompleted === 0 ? '🌱' : '▶️'}
-              </Text>
-            </View>
-            <View style={styles.resumeCenter}>
-              <Text style={styles.resumeAction}>
-                {allCompleted ? 'Tout terminé ! Recommencer' : totalCompleted === 0 ? 'Commencer' : 'Continuer'}
-              </Text>
-              <Text style={styles.resumeLevel}>
-                {nextChallenge.level.emoji} {nextChallenge.level.label}
-              </Text>
-              <Text style={styles.resumeChallenge}>
-                Défi n°{nextChallenge.challenge.challengeNumber}
-              </Text>
-            </View>
-            <Text style={styles.resumeArrow}>→</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* ── Bouton Tous les défis ── */}
-        <TouchableOpacity
-          style={styles.allChallengesBtn}
-          onPress={() => setShowLevels(true)}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.allChallengesBtnEmoji}>🗺️</Text>
-          <View style={styles.allChallengesBtnCenter}>
-            <Text style={styles.allChallengesBtnTitle}>Tous les défis</Text>
-            <Text style={styles.allChallengesBtnSub}>
-              {totalCompleted}/{totalChallenges} complétés
-            </Text>
-          </View>
-          <Text style={styles.allChallengesBtnArrow}>→</Text>
-        </TouchableOpacity>
+        {nextChallenge && (() => {
+          const challengeId = nextChallenge.challenge.id;
+          // `now` est le ticker 1s — le passer garantit que onCooldown bascule dès expiration
+          const { onCooldown, remainingMs } = isChallengeOnCooldown(player.challengeAbandonedAt, challengeId, now);
+          const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+          const remMin = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+          const remSec = String(remainingSec % 60).padStart(2, '0');
+          const levelSublabel = `${nextChallenge.level.emoji} ${nextChallenge.level.label} · Défi n°${nextChallenge.challenge.challengeNumber}`;
+          return (
+            <WoodButton
+              variant={onCooldown ? 'locked' : 'green'}
+              lockIcon="⏸"
+              label={onCooldown ? `${nextChallenge.level.label} · Défi n°${nextChallenge.challenge.challengeNumber}` : allCompleted ? 'Tout terminé !' : totalCompleted === 0 ? 'Commencer' : 'Continuer'}
+              sublabel={onCooldown ? `Reprise dans ${remMin}:${remSec}` : levelSublabel}
+              height={76}
+              onPress={() => router.push(`/game/${challengeId}`)}
+              disabled={onCooldown}
+            />
+          );
+        })()}
 
       </ScrollView>
     </View>
@@ -616,83 +594,17 @@ const styles = StyleSheet.create({
   // ── Écran principal ─────────────────────────────────────────────────────────
   container: {
     paddingHorizontal: 16,
-    gap: 14,
+    gap: 24,
   },
 
-  // Hero
-  hero: { alignItems: 'center', gap: 8, paddingVertical: 4 },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: -0.5,
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-  seedsHeroBadge: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  seedsHeroText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  // Hero group
+  heroGroup: { alignItems: 'center', gap: 0 },
 
-  // Continuer
-  resumeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(20,55,20,0.88)',
-    borderRadius: 18,
-    padding: 18,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  resumeLeft:    { width: 44, alignItems: 'center' },
-  resumeIcon:    { fontSize: 30 },
-  resumeCenter:  { flex: 1, gap: 2 },
-  resumeAction:  { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: 0.8 },
-  resumeLevel:   { fontSize: 15, fontWeight: '700', color: '#fff' },
-  resumeChallenge: { fontSize: 12, color: 'rgba(255,255,255,0.55)' },
-  resumeArrow:   { fontSize: 20, color: 'rgba(255,255,255,0.85)' },
 
-  // Défi du Jour
-  dailyCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#C8950F', borderRadius: 18, padding: 18, gap: 12,
-    borderWidth: 2, borderColor: '#E8B830',
-  },
-  dailyCardLocked: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(60,60,60,0.75)', borderRadius: 18, padding: 18, gap: 12,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', opacity: 0.7,
-  },
-  dailyCardSuccess: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(46,125,50,0.9)', borderRadius: 18, padding: 18, gap: 12,
-    borderWidth: 1, borderColor: '#43A047',
-  },
-  dailyCardFailed: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(100,100,100,0.85)', borderRadius: 18, padding: 18, gap: 12,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
-  },
-  dailyLeft:   { width: 44, alignItems: 'center' },
-  dailyIcon:   { fontSize: 30 },
-  dailyCenter: { flex: 1, gap: 3 },
-  dailyAction:       { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase', letterSpacing: 0.8 },
-  dailyActionDone:   { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)',  textTransform: 'uppercase', letterSpacing: 0.8 },
-  dailyActionFailed: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.6)',  textTransform: 'uppercase', letterSpacing: 0.8 },
-  dailyTitle:       { fontSize: 17, fontWeight: '800', color: '#fff' },
-  dailyTitleDone:   { fontSize: 15, fontWeight: '700', color: '#fff' },
-  dailyTitleLocked: { fontSize: 15, fontWeight: '700', color: 'rgba(255,255,255,0.5)' },
-  dailyTitleFailed: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  dailySub:       { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
-  dailySubLocked: { fontSize: 12, color: 'rgba(255,255,255,0.35)' },
-  dailyArrow:     { fontSize: 22, color: 'rgba(255,255,255,0.9)' },
+  // Défi du Jour — états non interactifs
+
+  dailyDoneRow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center' },
+
   dailyRecordBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -701,33 +613,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    marginTop: 2,
+    marginTop: 4,
   },
   dailyRecordText: { fontSize: 11, fontWeight: '700', color: '#FFD54F' },
-  dailyDoneRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dailyReplayBtn: {
-    backgroundColor: '#C8950F', borderRadius: 14,
-    paddingVertical: 16, paddingHorizontal: 14,
-    borderWidth: 2, borderColor: '#E8B830',
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  dailyReplayText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-
-  // Bouton Tous les défis
-  allChallengesBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 18,
-    padding: 18,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  allChallengesBtnEmoji:  { fontSize: 28 },
-  allChallengesBtnCenter: { flex: 1, gap: 2 },
-  allChallengesBtnTitle:  { fontSize: 16, fontWeight: '700', color: '#fff' },
-  allChallengesBtnSub:    { fontSize: 12, color: 'rgba(255,255,255,0.6)' },
-  allChallengesBtnArrow:  { fontSize: 20, color: 'rgba(255,255,255,0.7)' },
+  dailyReplayText: { fontSize: 18, color: '#fff' },
 
   // ── Sous-écran niveaux ──────────────────────────────────────────────────────
   levelsHeader: {

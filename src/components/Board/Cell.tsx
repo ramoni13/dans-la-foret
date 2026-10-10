@@ -47,6 +47,8 @@ interface CellProps {
   hasSelection: boolean;    // un jeton est sélectionné dans la palette
   positionStyle: ViewStyle;
   onPress: (cellIndex: number) => void;
+  /** Taille effective de la case (px). Par défaut CELL_SIZE = 64. */
+  cellSize?: number;
 }
 
 const native = Platform.OS !== 'web';
@@ -59,7 +61,9 @@ const CellComponent: React.FC<CellProps> = ({
   hasSelection,
   positionStyle,
   onPress,
+  cellSize: cellSizeProp,
 }) => {
+  const cs = cellSizeProp ?? CELL_SIZE;
   const elementDef = elementId ? ElementRegistry[elementId] : null;
 
   // ── Détection des états bonus ────────────────────────────
@@ -253,6 +257,7 @@ const CellComponent: React.FC<CellProps> = ({
           style={[
             StyleSheet.absoluteFill,
             styles.pulseOverlay,
+            cs !== CELL_SIZE && { borderRadius: cs / 2 },
             {
               opacity: pulseAnim,
               backgroundColor: pulseOverlayColor + '40',
@@ -264,7 +269,7 @@ const CellComponent: React.FC<CellProps> = ({
 
       {/* Overlay fond assombri pour les cases fixes */}
       {isFixed && (
-        <View style={styles.fixedOverlay} pointerEvents="none" />
+        <View style={[styles.fixedOverlay, cs !== CELL_SIZE && { borderRadius: cs / 2 }]} pointerEvents="none" />
       )}
 
       {/* Icône de l'élément */}
@@ -275,7 +280,7 @@ const CellComponent: React.FC<CellProps> = ({
         }}>
           <Image
             source={typeof elementDef.icon === 'string' ? { uri: elementDef.icon } : elementDef.icon}
-            style={styles.icon}
+            style={[styles.icon, cs !== CELL_SIZE && { width: cs * 0.72, height: cs * 0.72 }]}
             resizeMode="contain"
           />
         </Animated.View>
@@ -304,11 +309,23 @@ const CellComponent: React.FC<CellProps> = ({
     </>
   );
 
+  // ── Styles dynamiques selon cs (taille effective) ─────────
+  const dynamicCellStyle = cs !== CELL_SIZE ? {
+    width: cs,
+    height: cs,
+    borderRadius: cs / 2,
+  } : undefined;
+
+  const dynamicInnerStyle = cs !== CELL_SIZE ? {
+    borderRadius: cs / 2,
+  } : undefined;
+
   // ── Rendu WEB ─────────────────────────────────────────────
   if (Platform.OS === 'web') {
     return (
       <Animated.View style={[
         styles.cell,
+        dynamicCellStyle,
         positionStyle,
         cellStyle,
         { transform: [{ scale: emptyPulseAnim }] },
@@ -316,7 +333,7 @@ const CellComponent: React.FC<CellProps> = ({
         <TouchableOpacity
           activeOpacity={isFixed ? 1 : 0.7}
           onPress={() => !isFixed && onPress(cellIndex)}
-          style={styles.innerTouchable}
+          style={[styles.innerTouchable, dynamicInnerStyle]}
         >
           {cellContent}
         </TouchableOpacity>
@@ -329,6 +346,7 @@ const CellComponent: React.FC<CellProps> = ({
     <GestureDetector gesture={tapGesture}>
       <Animated.View style={[
         styles.cell,
+        dynamicCellStyle,
         positionStyle,
         cellStyle,
         {
@@ -426,11 +444,11 @@ const styles = StyleSheet.create({
   // ── Badge cadenas (coin bas-droit) ────────────────────────
   lockBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -441,8 +459,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   lockIcon: {
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 8,
+    lineHeight: 12,
   },
 });
 
@@ -453,5 +471,6 @@ export const Cell = React.memo(CellComponent, (prev, next) =>
   prev.isFixed         === next.isFixed         &&
   prev.backgroundColor === next.backgroundColor &&
   prev.hasSelection    === next.hasSelection    &&
-  prev.positionStyle   === next.positionStyle
+  prev.positionStyle   === next.positionStyle   &&
+  prev.cellSize        === next.cellSize
 );

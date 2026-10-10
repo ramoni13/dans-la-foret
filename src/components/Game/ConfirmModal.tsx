@@ -1,6 +1,6 @@
 // ============================================================
-// ABANDON CONFIRM MODAL — Confirmation d'abandon (mode Normal)
-// Affiché quand le joueur veut quitter un défi en cours
+// CONFIRM MODAL — Popup de confirmation générique
+// Même style qu'AbandonConfirmModal, props configurables
 // ============================================================
 
 import React, { useEffect, useRef } from 'react';
@@ -12,20 +12,38 @@ import {
   Animated,
   Platform,
 } from 'react-native';
-
-const native = Platform.OS !== 'web';
 import { Colors } from '../../constants/colors';
 
-interface AbandonConfirmModalProps {
+const native = Platform.OS !== 'web';
+
+interface ConfirmModalProps {
   visible: boolean;
-  onContinue: () => void;   // Ferme le modal, le joueur reprend
-  onAbandon: () => void;    // Confirme l'abandon
+  icon?: string;                // emoji Unicode, ex: '\uD83C\uDF31'
+  iconBg?: string;              // couleur fond cercle icône
+  iconBorder?: string;          // couleur bordure cercle icône
+  borderColor?: string;         // couleur bordure card
+  title: string;
+  message: string;
+  confirmLabel: string;         // bouton principal (action)
+  confirmDestructive?: boolean; // rouge si vrai
+  cancelLabel?: string;         // bouton annuler (optionnel)
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
-export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
+export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   visible,
-  onContinue,
-  onAbandon,
+  icon = '\u26A0\uFE0F',
+  iconBg = '#FFF3E0',
+  iconBorder = '#FFE0B2',
+  borderColor = '#FF9800',
+  title,
+  message,
+  confirmLabel,
+  confirmDestructive = false,
+  cancelLabel = 'Annuler',
+  onConfirm,
+  onCancel,
 }) => {
   const scaleAnim   = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -34,7 +52,6 @@ export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
     if (visible) {
       scaleAnim.setValue(0);
       opacityAnim.setValue(0);
-
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
@@ -63,33 +80,37 @@ export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
     >
       <Animated.View style={[styles.backdrop, { opacity: opacityAnim }]}>
         <Animated.View
-          style={[styles.card, { transform: [{ scale: scaleAnim }] }]}
+          style={[styles.card, { borderColor, transform: [{ scale: scaleAnim }] }]}
         >
-          {/* Icône warning ambre */}
-          <Animated.View style={styles.iconContainer}>
-            <Text style={styles.iconText}>{'\u26A0\uFE0F'}</Text>
+          {/* Icône */}
+          <Animated.View style={[styles.iconContainer, { backgroundColor: iconBg, borderColor: iconBorder }]}>
+            <Text style={styles.iconText}>{icon}</Text>
           </Animated.View>
 
-          <Text style={styles.title}>Abandonner ce defi ?</Text>
-          <Text style={styles.message}>
-            Le chrono ne s'arretera pas. Tu pourras retenter ce defi dans 15 minutes.
+          <Text style={[styles.title, { color: borderColor === '#FF9800' ? '#E65100' : borderColor }]}>
+            {title}
           </Text>
+          <Text style={styles.message}>{message}</Text>
 
-          {/* Actions */}
+          {/* Bouton principal */}
           <TouchableOpacity
-            style={styles.btnContinue}
-            onPress={onContinue}
+            style={[
+              styles.btnConfirm,
+              confirmDestructive ? styles.btnDestructive : styles.btnPrimary,
+            ]}
+            onPress={onConfirm}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnContinueText}>Continuer a jouer</Text>
+            <Text style={styles.btnConfirmText}>{confirmLabel}</Text>
           </TouchableOpacity>
 
+          {/* Bouton annuler */}
           <TouchableOpacity
-            style={styles.btnAbandon}
-            onPress={onAbandon}
+            style={styles.btnCancel}
+            onPress={onCancel}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnAbandonText}>Abandonner</Text>
+            <Text style={styles.btnCancelText}>{cancelLabel}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
@@ -113,19 +134,16 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     borderWidth: 3,
-    borderColor: '#FF9800',
     elevation: 16,
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FFF3E0',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#FFE0B2',
   },
   iconText: {
     fontSize: 40,
@@ -133,7 +151,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#E65100',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -144,8 +161,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 22,
   },
-  btnContinue: {
-    backgroundColor: Colors.forest.medium,
+  btnConfirm: {
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 32,
@@ -153,16 +169,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  btnContinueText: {
+  btnPrimary: {
+    backgroundColor: Colors.forest.medium,
+  },
+  btnDestructive: {
+    backgroundColor: '#C62828',
+  },
+  btnConfirmText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
   },
-  btnAbandon: {
+  btnCancel: {
     paddingVertical: 10,
   },
-  btnAbandonText: {
-    color: '#F44336',
+  btnCancelText: {
+    color: Colors.ui.textLight,
     fontSize: 14,
     fontWeight: '500',
   },

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Platform,
   BackHandler,
+  useWindowDimensions,
 } from 'react-native';
 import { useAudioStore } from '../../src/store/audioStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,6 +94,7 @@ export default function GameScreen() {
   const { challengeId } = useLocalSearchParams<{ challengeId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const game = useGame();
   const player = usePlayerStore();
@@ -446,7 +448,7 @@ export default function GameScreen() {
           </View>
         </View>
 
-        {/* ── Barre de bonus ── */}
+        {/* ── Barre de bonus + bouton Valider (bandeau unique) ── */}
         <HintOverlay
           seeds={player.seeds}
           bonusUsed={game.bonusUsed}
@@ -459,26 +461,24 @@ export default function GameScreen() {
           instinctDeadline={game.instinctDeadline}
           highlightActive={game.highlightActive}
           hasPlacedElements={hasPlacedElements}
+          rightSlot={
+            <TouchableOpacity
+              style={[
+                styles.validateBtn,
+                !allFilled && styles.validateBtnDisabled,
+              ]}
+              onPress={handleValidate}
+              activeOpacity={0.8}
+              disabled={!allFilled}
+            >
+              <Text style={styles.validateBtnText}>Valider ✓</Text>
+            </TouchableOpacity>
+          }
         />
-
-        {/* ── Bouton Valider ── */}
-        <View style={styles.validateRow}>
-          <TouchableOpacity
-            style={[
-              styles.validateBtn,
-              !allFilled && styles.validateBtnDisabled,
-            ]}
-            onPress={handleValidate}
-            activeOpacity={0.8}
-            disabled={!allFilled}
-          >
-            <Text style={styles.validateBtnText}>Valider ✓</Text>
-          </TouchableOpacity>
-        </View>
 
         {/* ── Plateau ── */}
         <View style={styles.boardArea}>
-          <View style={styles.boardContainer}>
+          <View style={[styles.boardContainer, { maxHeight: Math.min(screenWidth, screenHeight * 0.52) }]}>
             <BoardRenderer
               boardDef={boardDef}
               playerBoard={game.playerBoard}
@@ -664,14 +664,6 @@ const styles = StyleSheet.create({
   speakerIcon: {
     fontSize: 18,
   },
-  validateRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
-    alignItems: 'flex-end',
-  },
   validateBtn: {
     backgroundColor: Colors.forest.medium,
     paddingHorizontal: 20,
@@ -695,10 +687,10 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   boardContainer: {
-    flex: 1,
     width: '100%',
     maxWidth: 500,
     aspectRatio: 1,
     borderRadius: 16,
+    overflow: 'hidden',
   },
 });

@@ -11,7 +11,7 @@ export const ELEMENT_SPRITES: Record<string, any> = {
   cerf:       require('../../../../assets/elements/sprites/cerf3D.png'),
   biche:      require('../../../../assets/elements/sprites/biche3D.png'),
   loup:       require('../../../../assets/elements/sprites/loup3D.png'),
-  tas_buches: require('../../../../assets/elements/sprites/tas_buches.png'),
+  tas_buches: require('../../../../assets/elements/sprites/buches.png'),
   chalet:     require('../../../../assets/elements/sprites/chalet3D.png'),
 };
 

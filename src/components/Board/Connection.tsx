@@ -23,11 +23,11 @@ interface ConnectionProps {
   to: CellPosition;
   containerWidth: number;
   containerHeight: number;
+  /** Taille effective des cases — pour calculer l'offset correct des lignes */
+  cellSize?: number;
 }
 
-const CELL_RADIUS = CELL_SIZE / 2;
 const LINE_GAP = 5;
-const OFFSET = CELL_RADIUS + LINE_GAP;
 
 // 4 couleurs foncées, lisibles sur fond vert vif
 const PALETTE = [
@@ -52,7 +52,9 @@ export const Connection: React.FC<ConnectionProps> = ({
   to,
   containerWidth,
   containerHeight,
+  cellSize,
 }) => {
+  const OFFSET = (cellSize ?? CELL_SIZE) / 2 + LINE_GAP;
   const cx1 = (from.x / 100) * containerWidth;
   const cy1 = (from.y / 100) * containerHeight;
   const cx2 = (to.x / 100) * containerWidth;

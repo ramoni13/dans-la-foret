@@ -4,12 +4,14 @@
 // Animations : spring scale-up + halo pulsant sur le jeton sélectionné
 // ============================================================
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  TouchableOpacity,
+  Image,
   useWindowDimensions,
   Animated,
   Platform,
@@ -20,6 +22,9 @@ import { ElementRegistry } from '../../elements/ElementRegistry';
 import { TokenCount } from '../../core/models/Challenge';
 import { Colors } from '../../constants/colors';
 import { impactLight } from '../../utils/haptics';
+
+const ARROW_RIGHT = require('../../../assets/elements/design_app/fleche.png');
+const ARROW_LEFT  = require('../../../assets/elements/design_app/fleche_gauche.png');
 
 // Taille minimale en dessous de laquelle le jeton devient illisible
 const TOKEN_MIN_SIZE = 44;
@@ -206,6 +211,11 @@ interface ElementPaletteProps {
   onSelectElement: (elementId: string | null) => void;
 }
 
+// Largeur du scroll à déplacer par tap de flèche
+const ARROW_SCROLL_STEP = 140;
+// Taille des flèches
+const ARROW_SIZE = 28;
+
 export const ElementPalette: React.FC<ElementPaletteProps> = ({
   availableTokens,
   playerBoard,
@@ -214,6 +224,17 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
   onSelectElement,
 }) => {
   const { width: screenWidth } = useWindowDimensions();
+  const scrollRef   = useRef<ScrollView>(null);
+  const scrollX     = useRef(0);
+  const [canScrollLeft,  setCanScrollLeft]  = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const contentWidth  = useRef(0);
+  const containerWidth = useRef(0);
+
+  const updateArrows = (x: number) => {
+    setCanScrollLeft(x > 4);
+    setCanScrollRight(x < contentWidth.current - containerWidth.current - 4);
+  };
 
   const tokenSize = React.useMemo(() => {
     const tokenCount = availableTokens.length;
@@ -235,13 +256,72 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
     return counts;
   }, [playerBoard, fixedCells]);
 
+  const scrollLeft = () => {
+    const next = Math.max(0, scrollX.current - ARROW_SCROLL_STEP);
+    scrollRef.current?.scrollTo({ x: next, animated: true });
+  };
+
+  const scrollRight = () => {
+    const next = scrollX.current + ARROW_SCROLL_STEP;
+    scrollRef.current?.scrollTo({ x: next, animated: true });
+  };
+
+  const showArrows = canScrollLeft || canScrollRight;
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Jetons disponibles</Text>
+      {/* Titre + flèches à droite (uniquement si le contenu déborde) */}
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>Jetons disponibles</Text>
+        {showArrows && (
+          <View style={styles.arrowsInline}>
+            <TouchableOpacity
+              onPress={scrollLeft}
+              activeOpacity={canScrollLeft ? 0.7 : 0.3}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              disabled={!canScrollLeft}
+            >
+              <Image
+                source={ARROW_LEFT}
+                style={[styles.arrowImg, !canScrollLeft && styles.arrowDisabled]}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={scrollRight}
+              activeOpacity={canScrollRight ? 0.7 : 0.3}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              disabled={!canScrollRight}
+            >
+              <Image
+                source={ARROW_RIGHT}
+                style={[styles.arrowImg, !canScrollRight && styles.arrowDisabled]}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* ScrollView sans flèches latérales — layout intact */}
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { gap: GAP }]}
+        onScroll={(e) => {
+          scrollX.current = e.nativeEvent.contentOffset.x;
+          updateArrows(scrollX.current);
+        }}
+        scrollEventThrottle={16}
+        onLayout={(e) => {
+          containerWidth.current = e.nativeEvent.layout.width;
+          updateArrows(scrollX.current);
+        }}
+        onContentSizeChange={(w) => {
+          contentWidth.current = w;
+          updateArrows(scrollX.current);
+        }}
       >
         {availableTokens.map(({ elementId, count }) => {
           const elementDef = ElementRegistry[elementId];
@@ -292,8 +372,25 @@ const styles = StyleSheet.create({
     color: Colors.ui.textLight,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 14,
     marginLeft: 4,
+  },
+  arrowsInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 8,
+  },
+  arrowImg: {
+    width: ARROW_SIZE,
+    height: ARROW_SIZE,
+  },
+  arrowDisabled: {
+    opacity: 0.3,
   },
   scroll: {
     flexDirection: 'row',

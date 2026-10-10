@@ -70,7 +70,8 @@ export const RequireAllNeighborAnim: React.FC<Props> = ({ rule, accessibilityLab
 
   if (!sourceDef || !targetDef) return null;
 
-  const renderSourceRow = (arrowOp: Animated.Value, key: string) => (
+  // Colonne gauche : 2 ours (flèche →), colonne droite : 1 ours (flèche ←), ruche au centre
+  const renderLeftRow = (arrowOp: Animated.Value, key: string) => (
     <View key={key} style={styles.sourceRow}>
       <View style={[styles.sourceToken, { backgroundColor: sourceDef.color + '20', borderColor: sourceDef.color + '60' }]}>
         <Image source={getSpriteOrIcon(sourceId, sourceDef.icon)} style={styles.sourceImage} resizeMode="contain" />
@@ -81,22 +82,37 @@ export const RequireAllNeighborAnim: React.FC<Props> = ({ rule, accessibilityLab
     </View>
   );
 
+  const renderRightRow = (arrowOp: Animated.Value) => (
+    <View style={styles.sourceRowRight}>
+      <Animated.View style={[styles.arrow, { opacity: arrowOp }]}>
+        <Text style={styles.arrowText}>{'\u2190'}</Text>
+      </Animated.View>
+      <View style={[styles.sourceToken, { backgroundColor: sourceDef.color + '20', borderColor: sourceDef.color + '60' }]}>
+        <Image source={getSpriteOrIcon(sourceId, sourceDef.icon)} style={styles.sourceImage} resizeMode="contain" />
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.container} accessibilityLabel={accessibilityLabel} accessible>
-      {/* 3 sources avec flèches */}
+      {/* Colonne gauche : 2 ours → */}
       <View style={styles.sourcesColumn}>
-        {renderSourceRow(arrow1Op, 'src1')}
-        {renderSourceRow(arrow2Op, 'src2')}
-        {renderSourceRow(arrow3Op, 'src3')}
+        {renderLeftRow(arrow1Op, 'src1')}
+        {renderLeftRow(arrow2Op, 'src2')}
       </View>
 
-      {/* Cible centrale (ruche) */}
+      {/* Ruche centrale */}
       <Animated.View style={{ transform: [{ scale: glowScale }] }}>
         <View style={[styles.targetToken, { backgroundColor: targetDef.color + '20', borderColor: targetDef.color + '60' }]}>
           <Image source={getSpriteOrIcon(targetId, targetDef.icon)} style={styles.targetImage} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.glowRing, { opacity: glowOp }]} />
       </Animated.View>
+
+      {/* Colonne droite : 1 ours ← */}
+      <View style={styles.sourcesColumn}>
+        {renderRightRow(arrow3Op)}
+      </View>
     </View>
   );
 };
@@ -106,7 +122,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 110,
+    height: 80,
     gap: 2,
   },
   sourcesColumn: {
@@ -115,6 +131,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sourceRowRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },

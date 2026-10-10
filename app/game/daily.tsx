@@ -20,6 +20,7 @@ import {
   Modal,
   Animated,
   BackHandler,
+  useWindowDimensions,
 } from 'react-native';
 import { useAudioStore } from '../../src/store/audioStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,6 +48,7 @@ import { awardBadgesFirestore } from '../../src/services/badgeService';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
+import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
 import { evaluateDailyBadges, DailyGameContext } from '../../src/core/engine/badgeEngine';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
@@ -206,11 +208,13 @@ const failStyles = StyleSheet.create({
 export default function DailyGameScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const game = useGame();
   const player = usePlayerStore();
   const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
+  const { borderW } = useFrameLayout();
 
   // -- Etat local --
   const [loading, setLoading] = useState(true);
@@ -221,8 +225,12 @@ export default function DailyGameScreen() {
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
   const [seedsEarned, setSeedsEarned] = useState(0);
   const [briefingDone, setBriefingDone] = useState(false);
+  const [isNewDailyRecord, setIsNewDailyRecord] = useState(false);
+  const [prevDailyRecordHolder, setPrevDailyRecordHolder] = useState<string | null>(null);
 
   const badgesEvaluatedRef = useRef(false);
+  // uid capturé à la victoire pour la détection record
+  const victoryUidRef = useRef<string | null>(null);
   const confettiPieces = useConfetti(game.isVictory);
 
   // -- Generation du defi journalier --
@@ -368,12 +376,19 @@ export default function DailyGameScreen() {
     badgesEvaluatedRef.current = true;
 
     // 1. Mettre a jour le store local
-    player.submitDailyResult(dailyDate, true);
+    player.submitDailyResult(dailyDate, true, game.elapsedTime);
     player.clearChallengeTimestamps(`daily_${dailyDate}`);
 
     // 2. Calculer les recompenses
     const uid = auth.currentUser?.uid;
     const username = auth.currentUser?.displayName ?? 'Joueur';
+
+    // Capturer l'uid pour la detection record post-soumission
+    victoryUidRef.current = uid ?? null;
+    // Sauvegarder l'ancien leader avant soumission
+    if (leaderboard.length > 0) {
+      setPrevDailyRecordHolder(leaderboard[0].username);
+    }
     const isAnonymous = auth.currentUser?.isAnonymous ?? true;
 
     // Trouver le rang du joueur dans le leaderboard
@@ -417,6 +432,19 @@ export default function DailyGameScreen() {
       }
     }
   }, [game.isVictory]);
+
+  // -- Détection record journalier après soumission Firestore --
+  // Le leaderboard onSnapshot se met à jour quelques secondes après la soumission.
+  // Quand leaderboard[0].userId === victoryUidRef.current, le joueur est #1.
+  useEffect(() => {
+    if (!game.isVictory) return;
+    const uid = victoryUidRef.current;
+    if (!uid) return;
+    if (leaderboard.length === 0) return;
+    if (leaderboard[0].userId === uid) {
+      setIsNewDailyRecord(true);
+    }
+  }, [leaderboard, game.isVictory]);
 
   // -- Toutes les cases remplies ? --
   const allFilled = challenge
@@ -462,7 +490,7 @@ export default function DailyGameScreen() {
       {/* Feuilles qui tombent */}
       <FallingLeaves />
 
-      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 8), paddingHorizontal: borderW }]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -497,18 +525,16 @@ export default function DailyGameScreen() {
           </View>
         </View>
 
-        {/* Banniere validation unique */}
+        {/* Banniere validation unique + bouton Valider (bandeau unique) */}
         <View style={styles.dailyBanner}>
-          <Text style={styles.dailyBannerText}>
-            {game.dailyValidationUsed
-              ? '\u26A0\uFE0F Validation utilisee'
-              : '\u26A1 Une seule validation !'}
-          </Text>
-          <Text style={styles.dailyBannerSub}>Aucun bonus disponible</Text>
-        </View>
-
-        {/* Bouton Valider */}
-        <View style={styles.validateRow}>
+          <View style={styles.dailyBannerInfo}>
+            <Text style={styles.dailyBannerText}>
+              {game.dailyValidationUsed
+                ? '\u26A0\uFE0F Validation utilisee'
+                : '\u26A1 Une seule validation !'}
+            </Text>
+            <Text style={styles.dailyBannerSub}>Aucun bonus disponible</Text>
+          </View>
           <TouchableOpacity
             style={[
               styles.validateBtn,
@@ -519,24 +545,22 @@ export default function DailyGameScreen() {
             disabled={!allFilled || game.dailyValidationUsed}
           >
             <Text style={styles.validateBtnText}>
-              {game.dailyValidationUsed ? 'Validation utilisee' : 'Valider \u2713'}
+              {game.dailyValidationUsed ? 'Utilis\u00e9e' : 'Valider \u2713'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Plateau */}
+        {/* Plateau — occupe tout l'espace flex restant */}
         <View style={styles.boardArea}>
-          <View style={styles.boardContainer}>
-            <BoardRenderer
-              boardDef={boardDef}
-              playerBoard={game.playerBoard}
-              fixedCells={fixedCells}
-              selectedElement={game.selectedElement}
-              highlightActive={false}
-              getCellColor={(idx) => game.getCellColor(idx)}
-              onCellPress={handleCellPress}
-            />
-          </View>
+          <BoardRenderer
+            boardDef={boardDef}
+            playerBoard={game.playerBoard}
+            fixedCells={fixedCells}
+            selectedElement={game.selectedElement}
+            highlightActive={false}
+            getCellColor={(idx) => game.getCellColor(idx)}
+            onCellPress={handleCellPress}
+          />
         </View>
 
         {/* Palette */}
@@ -558,6 +582,8 @@ export default function DailyGameScreen() {
           confettiPieces={confettiPieces}
           badgeQueue={badgeQueue}
           onBadgeQueueEmpty={() => setBadgeQueue([])}
+          isNewWorldRecord={isNewDailyRecord}
+          previousRecordHolder={isNewDailyRecord ? prevDailyRecordHolder : null}
           onNextChallenge={() => {
             game.resetGame();
             router.replace('/(tabs)');
@@ -695,12 +721,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   dailyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#FFF3E0',
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#FFE0B2',
-    alignItems: 'center',
+  },
+  dailyBannerInfo: {
+    flex: 1,
+    marginRight: 12,
   },
   dailyBannerText: {
     fontSize: 13,
@@ -710,15 +742,7 @@ const styles = StyleSheet.create({
   dailyBannerSub: {
     fontSize: 11,
     color: '#BF360C',
-    marginTop: 2,
-  },
-  validateRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
-    alignItems: 'flex-end',
+    marginTop: 1,
   },
   validateBtn: {
     backgroundColor: '#D4A017',
@@ -737,16 +761,10 @@ const styles = StyleSheet.create({
   },
   boardArea: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     backgroundColor: Colors.ui.background,
-    padding: 4,
-  },
-  boardContainer: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 500,
-    aspectRatio: 1,
-    borderRadius: 16,
+    paddingHorizontal: 0,
+    paddingVertical: 4,
   },
 });

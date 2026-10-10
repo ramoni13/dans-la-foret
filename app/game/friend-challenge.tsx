@@ -37,6 +37,7 @@ import { usePlayerStore } from '../../src/store/playerStore';
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
 import { Colors } from '../../src/constants/colors';
+import { ConfirmModal } from '../../src/components/Game/ConfirmModal';
 import { Challenge } from '../../src/core/models/Challenge';
 import {
   FriendChallengeData,
@@ -286,10 +287,11 @@ export default function FriendChallengeScreen() {
     : false;
 
   // ── État modal résultat ─────────────────────────────────────────────────────
-  const [showResult, setShowResult] = useState(false);
-  const [sending, setSending]       = useState(false);
-  const [sent, setSent]             = useState(false);
+  const [showResult, setShowResult]   = useState(false);
+  const [sending, setSending]         = useState(false);
+  const [sent, setSent]               = useState(false);
   const [opponentWon, setOpponentWon] = useState<boolean | null>(null);
+  const [showAbandonModal, setShowAbandonModal] = useState(false);
   const confettiPieces = useConfetti(showResult);
 
   useEffect(() => {
@@ -353,6 +355,17 @@ export default function FriendChallengeScreen() {
   };
 
   const handleClose = () => {
+    // Si le joueur A quitte avant d'avoir résolu → popup perte de jeton
+    if (isChallenger && !game.isVictory) {
+      setShowAbandonModal(true);
+      return;
+    }
+    game.resetGame();
+    router.replace('/(tabs)/challenge');
+  };
+
+  const handleConfirmAbandon = () => {
+    setShowAbandonModal(false);
     game.resetGame();
     router.replace('/(tabs)/challenge');
   };
@@ -480,6 +493,21 @@ export default function FriendChallengeScreen() {
           visible={game.validationResult.status === 'failure'}
           onRetry={game.dismissValidation}
           onGiveUp={handleClose}
+        />
+
+        {/* Popup abandon (perte de jeton) */}
+        <ConfirmModal
+          visible={showAbandonModal}
+          icon={'\u26A0\uFE0F'}
+          iconBg={'#FFF3E0'}
+          iconBorder={'#FFE0B2'}
+          borderColor={'#FF9800'}
+          title={'Abandonner le d\u00e9fi ?'}
+          message={'Si tu quittes maintenant, ton jeton d\u00e9fi ami sera perdu d\u00e9finitivement.'}
+          confirmLabel={'Continuer \u00e0 jouer'}
+          cancelLabel={'Abandonner'}
+          onConfirm={() => setShowAbandonModal(false)}
+          onCancel={handleConfirmAbandon}
         />
 
       </View>
@@ -642,5 +670,6 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     aspectRatio: 1,
     borderRadius: 16,
+    overflow: 'hidden',
   },
 });

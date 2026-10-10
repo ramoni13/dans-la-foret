@@ -42,6 +42,8 @@ interface HintOverlayProps {
   highlightActive?: boolean;
   /** Au moins un élément posé par le joueur (non fixe) sur le plateau */
   hasPlacedElements?: boolean;
+  /** Slot optionnel affiché à droite de la barre (ex: bouton Valider) */
+  rightSlot?: React.ReactNode;
 }
 
 // ── Composant countdown pulsant pour un seul bouton ──────────
@@ -106,6 +108,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
   instinctDeadline = null,
   highlightActive = false,
   hasPlacedElements = false,
+  rightSlot,
 }) => {
   const t = useT();
   const dismissed = usePlayerStore(s => s.bonusTutorialDismissed);
@@ -197,7 +200,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
         <Text style={styles.seedsCount}>{seeds}</Text>
       </View>
 
-      {/* Boutons bonus */}
+      {/* Boutons bonus + slot droit */}
       <View style={styles.bonusRow}>
         {visibleBonusIds.map((bonusId) => {
           const def = BONUS_DEFINITIONS[bonusId];
@@ -235,6 +238,9 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
             </View>
           );
         })}
+        {rightSlot != null && (
+          <View style={styles.rightSlotWrapper}>{rightSlot}</View>
+        )}
       </View>
 
       {/* Modal tutoriel bonus */}
@@ -282,6 +288,10 @@ const styles = StyleSheet.create({
   bonusRow: {
     flexDirection: 'row',
     gap: 8,
+    alignItems: 'center',
+  },
+  rightSlotWrapper: {
+    marginLeft: 4,
   },
   bonusBtnWrapper: {
     position: 'relative',

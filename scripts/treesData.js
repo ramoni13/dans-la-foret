@@ -6,7 +6,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus robur",
     "region": "France métropolitaine",
     "anecdote": "Il peut vivre plus de 500 ans et abrite plus de 300 espèces d'insectes différentes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_robur_Mittelrheingau_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_robur_Mittelrheingau_01.jpg",
+    "geo_location": "Plaines et collines de toute la France métropolitaine, sauf haute montagne et zone méditerranéenne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_robur_acorn.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 2,
@@ -15,7 +19,11 @@ window.TREES_DATA = [
     "name_latin": "Fagus sylvatica",
     "region": "France métropolitaine",
     "anecdote": "Son écorce reste lisse toute sa vie. Ses fruits riches en huile s'appellent des faînes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fagus_sylvatica_J%C3%A4gerstein_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fagus_sylvatica_J%C3%A4gerstein_01.jpg",
+    "geo_location": "Massifs montagneux et collines : Vosges, Jura, Alpes, Massif central, Pyrénées et Normandie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fagus_sylvatica_fagus.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 3,
@@ -24,7 +32,11 @@ window.TREES_DATA = [
     "name_latin": "Larix decidua",
     "region": "France métropolitaine",
     "anecdote": "C'est l'un des rares résineux d'Europe à perdre ses aiguilles dorées en hiver.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Larix_decidua_Val_Roseg_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Larix_decidua_Val_Roseg_01.jpg",
+    "geo_location": "Alpes françaises de la Savoie à la Haute-Provence, entre 1 000 et 2 500 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Larix_decidua_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 4,
@@ -33,7 +45,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus sylvestris",
     "region": "France métropolitaine",
     "anecdote": "Reconnaissable à son écorce ocre et orange dans sa partie supérieure.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_sylvestris_Vosges_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_sylvestris_Vosges_01.jpg",
+    "geo_location": "Massif central, Vosges, Alpes, Jura et landes de l'Est de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_sylvestris_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 5,
@@ -42,7 +58,11 @@ window.TREES_DATA = [
     "name_latin": "Castanea sativa",
     "region": "France métropolitaine",
     "anecdote": "Surnommé 'l'arbre à pain' car ses châtaignes ont nourri des générations en montagne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Castanea_sativa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Castanea_sativa_01.jpg",
+    "geo_location": "Massif central, Cévennes, Corse, Pyrénées, Ardèche et Bretagne méridionale",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Castanea_sativa_nuts.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 6,
@@ -51,7 +71,11 @@ window.TREES_DATA = [
     "name_latin": "Sorbus aucuparia",
     "region": "France métropolitaine",
     "anecdote": "Ses baies rouges en grappes sont une réserve de nourriture essentielle pour les oiseaux en hiver.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aucuparia_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aucuparia_01.jpg",
+    "geo_location": "Montagnes et collines fraîches : Alpes, Vosges, Massif central et Pyrénées",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aucuparia_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 7,
@@ -60,7 +84,11 @@ window.TREES_DATA = [
     "name_latin": "Abies alba",
     "region": "France métropolitaine",
     "anecdote": "Ses cônes dressés vers le ciel se désagrègent directement sur l'arbre à maturité.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_alba_Vosges_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_alba_Vosges_01.jpg",
+    "geo_location": "Vosges, Jura, Alpes et Pyrénées entre 600 et 1 800 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_alba_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 8,
@@ -69,7 +97,11 @@ window.TREES_DATA = [
     "name_latin": "Picea abies",
     "region": "France métropolitaine",
     "anecdote": "Ses cônes pendent vers le bas contrairement au sapin, et son bois sert à fabriquer des violons.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Picea_abies_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Picea_abies_01.jpg",
+    "geo_location": "Vosges, Jura et Alpes du Nord entre 700 et 1 800 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Picea_abies_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 9,
@@ -78,7 +110,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus ilex",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles coriaces et piquantes gardent l'eau pendant les étés méditerranéens.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_ilex_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_ilex_01.jpg",
+    "geo_location": "Région méditerranéenne : Provence, Languedoc, Corse et vallées du Rhône",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_ilex_acorn.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 10,
@@ -87,7 +123,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus suber",
     "region": "France métropolitaine",
     "anecdote": "Son écorce est récoltée tous les 9 à 12 ans pour fabriquer des bouchons sans couper l'arbre.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_suber_Portugal_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_suber_Portugal_01.jpg",
+    "geo_location": "Maures, Estérel, Corse, Pyrénées-Orientales et littoral atlantique landais",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_suber_acorn.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 11,
@@ -96,7 +136,11 @@ window.TREES_DATA = [
     "name_latin": "Fraxinus excelsior",
     "region": "France métropolitaine",
     "anecdote": "Son bois souple et résistant est historiquement utilisé pour les manches d'outils et les rames.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fraxinus_excelsior_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fraxinus_excelsior_01.jpg",
+    "geo_location": "Vallées humides et forêts fraîches de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fraxinus_excelsior_samaras.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 12,
@@ -105,7 +149,11 @@ window.TREES_DATA = [
     "name_latin": "Betula pendula",
     "region": "France métropolitaine",
     "anecdote": "Arbre pionnier dont l'écorce blanche réfléchit la lumière pour se protéger du gel.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Betula_pendula_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Betula_pendula_01.jpg",
+    "geo_location": "Collines et landes acides de toute la France, espèce pionnière des sols pauvres",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Betula_pendula_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 13,
@@ -114,7 +162,11 @@ window.TREES_DATA = [
     "name_latin": "Carpinus betulus",
     "region": "France métropolitaine",
     "anecdote": "Son feuillage est marcescent : ses feuilles séchées restent accrochées aux branches tout l'hiver.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Carpinus_betulus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Carpinus_betulus_01.jpg",
+    "geo_location": "Plaines et collines de la moitié nord de la France et du Massif central",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Carpinus_betulus_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 14,
@@ -123,7 +175,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus pinaster",
     "region": "France métropolitaine",
     "anecdote": "Emblématique du massif des Landes de Gascogne, planté pour fixer les dunes au XIXe siècle.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinaster_Landes_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinaster_Landes_01.jpg",
+    "geo_location": "Landes de Gascogne, massif landais, côte atlantique et massif des Maures",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinaster_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 15,
@@ -132,7 +188,11 @@ window.TREES_DATA = [
     "name_latin": "Tilia platyphyllos",
     "region": "France métropolitaine",
     "anecdote": "Ses fleurs très parfumées et mellifères sont réputées en infusion apaisante.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_platyphyllos_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_platyphyllos_01.jpg",
+    "geo_location": "Forêts fraîches de montagne et de collines, surtout Centre et Est de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_platyphyllos_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 16,
@@ -141,7 +201,11 @@ window.TREES_DATA = [
     "name_latin": "Acer campestre",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits munis de deux ailes (disamares) tournoient comme des hélicoptères en tombant.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_campestre_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_campestre_01.jpg",
+    "geo_location": "Bocages, lisières et forêts de plaine de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_campestre_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 17,
@@ -150,7 +214,11 @@ window.TREES_DATA = [
     "name_latin": "Ulmus minor",
     "region": "France métropolitaine",
     "anecdote": "Autrefois très fréquent au bord des chemins, il a été fragilisé par la maladie de la graphiose.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ulmus_minor_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ulmus_minor_01.jpg",
+    "geo_location": "Vallées, haies et bords de chemins de la moitié nord de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ulmus_minor_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 18,
@@ -159,7 +227,11 @@ window.TREES_DATA = [
     "name_latin": "Alnus glutinosa",
     "region": "France métropolitaine",
     "anecdote": "Son bois immergé ne pourrit pas ; il a servi à fabriquer les pieux des fondations de Venise.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_01.jpg",
+    "geo_location": "Bords de cours d'eau et zones humides de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 19,
@@ -168,7 +240,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus halepensis",
     "region": "France métropolitaine",
     "anecdote": "Très fréquent en Provence, ses pommes de pin restent fermées jusqu'au passage d'un incendie.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_halepensis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_halepensis_01.jpg",
+    "geo_location": "Provence, Languedoc, Corse et garrigues méditerranéennes",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_halepensis_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 20,
@@ -177,7 +253,11 @@ window.TREES_DATA = [
     "name_latin": "Sorbus torminalis",
     "region": "France métropolitaine",
     "anecdote": "Son bois est l'un des plus précieux d'Europe, très prisé en ébénisterie et lutherie.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_torminalis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_torminalis_01.jpg",
+    "geo_location": "Plaines et collines calcaires du Centre et de l'Est de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_torminalis_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 21,
@@ -186,7 +266,11 @@ window.TREES_DATA = [
     "name_latin": "Juglans regia",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles sécrètent une substance qui empêche les autres plantes de pousser à son pied.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juglans_regia_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juglans_regia_01.jpg",
+    "geo_location": "Périgord, Dauphiné et vallées du Lot et de la Dordogne ; cultivé partout",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juglans_regia_nut.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 22,
@@ -195,7 +279,11 @@ window.TREES_DATA = [
     "name_latin": "Platanus orientalis",
     "region": "France métropolitaine",
     "anecdote": "Arbre majestueux d'alignement dont l'écorce se détache en plaques multicolores.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Platanus_orientalis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Platanus_orientalis_01.jpg",
+    "geo_location": "Zone méditerranéenne et bords de rivières du sud de la France ; planté en avenues",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Platanus_orientalis_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 23,
@@ -204,7 +292,11 @@ window.TREES_DATA = [
     "name_latin": "Sorbus domestica",
     "region": "France métropolitaine",
     "anecdote": "Produit des cormes, de petits fruits anciens ressemblant à de petites poires.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_domestica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_domestica_01.jpg",
+    "geo_location": "Causse, Provence et Corse — rare, localisé dans les chênaies sèches calcaires",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_domestica_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 24,
@@ -213,7 +305,11 @@ window.TREES_DATA = [
     "name_latin": "Pyrus pyraster",
     "region": "France métropolitaine",
     "anecdote": "Ancêtre de nos poiriers cultivés, ses rameaux portent de petites épines.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pyrus_pyraster_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pyrus_pyraster_01.jpg",
+    "geo_location": "Lisières et haies du Centre, du Massif central et du Midi de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pyrus_pyraster_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 25,
@@ -222,7 +318,11 @@ window.TREES_DATA = [
     "name_latin": "Malus sylvestris",
     "region": "France métropolitaine",
     "anecdote": "Ses petites pommes acides sont une source de nourriture précieuse pour la faune forestière.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malus_sylvestris_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malus_sylvestris_01.jpg",
+    "geo_location": "Haies et lisières forestières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malus_sylvestris_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 26,
@@ -231,7 +331,11 @@ window.TREES_DATA = [
     "name_latin": "Prunus avium",
     "region": "France métropolitaine",
     "anecdote": "Ancêtre du cerisier, sa floraison printanière blanche illumine le bord des forêts.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_avium_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_avium_01.jpg",
+    "geo_location": "Forêts fraîches et lisières de toute la France, sauf haute montagne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_avium_cherries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 27,
@@ -240,7 +344,11 @@ window.TREES_DATA = [
     "name_latin": "Sorbus aria",
     "region": "France métropolitaine",
     "anecdote": "Le dessous de ses feuilles est recouvert d'un duvet blanc feutré qui capte la lumière.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aria_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aria_01.jpg",
+    "geo_location": "Coteaux calcaires, Jura, Alpes et Massif central",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aria_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 28,
@@ -249,7 +357,11 @@ window.TREES_DATA = [
     "name_latin": "Acer pseudoplatanus",
     "region": "France métropolitaine",
     "anecdote": "Apprécié en lutherie pour fabriquer le dos des violons et des violoncelles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_pseudoplatanus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_pseudoplatanus_01.jpg",
+    "geo_location": "Forêts fraîches et montagnes de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_pseudoplatanus_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 29,
@@ -258,7 +370,11 @@ window.TREES_DATA = [
     "name_latin": "Acer platanoides",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles prennent une couleur jaune d'or éclatante dès le début de l'automne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_platanoides_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_platanoides_01.jpg",
+    "geo_location": "Forêts mixtes de l'Est : Alsace, Lorraine, Franche-Comté et Burgundie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_platanoides_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 30,
@@ -267,7 +383,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus cembra",
     "region": "France métropolitaine",
     "anecdote": "Vit en haute montagne ; ses graines sont dispersées par un oiseau nommé le Cassenoix.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_cembra_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_cembra_01.jpg",
+    "geo_location": "Alpes françaises en zone subalpine entre 1 600 et 2 600 m : Savoie, Hautes-Alpes",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_cembra_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 31,
@@ -276,7 +396,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus uncinata",
     "region": "France métropolitaine",
     "anecdote": "Ses écailles d'écorce se terminent par un petit crochet dirigé vers la base du cône.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_uncinata_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_uncinata_01.jpg",
+    "geo_location": "Pyrénées et Alpes du Sud entre 1 500 et 2 700 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_uncinata_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 32,
@@ -285,7 +409,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus nigra",
     "region": "France métropolitaine",
     "anecdote": "Traces sombres sur son écorce et grande résistance aux sols calcaires difficiles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_01.jpg",
+    "geo_location": "Provence calcaire, Cévennes, Alpes du Sud et reboisements divers du Midi",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 33,
@@ -294,7 +422,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus pinea",
     "region": "France métropolitaine",
     "anecdote": "Emblématique des côtes méditerranéennes, il produit les pignons de pin comestibles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinea_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinea_01.jpg",
+    "geo_location": "Côte méditerranéenne, Corse, massif des Maures et zones sableuses du Midi",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinea_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 34,
@@ -303,7 +435,11 @@ window.TREES_DATA = [
     "name_latin": "Cupressus sempervirens",
     "region": "France métropolitaine",
     "anecdote": "Arbre élancé typique du paysage provençal, souvent planté comme brise-vent.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cupressus_sempervirens_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cupressus_sempervirens_01.jpg",
+    "geo_location": "Provence, Languedoc et Corse — cultivé et naturalisé en zone méditerranéenne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cupressus_sempervirens_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 35,
@@ -312,7 +448,11 @@ window.TREES_DATA = [
     "name_latin": "Juniperus oxycedrus",
     "region": "France métropolitaine",
     "anecdote": "Son bois odorant produit l'huile de cade utilisée autrefois en médecine populaire.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_oxycedrus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_oxycedrus_01.jpg",
+    "geo_location": "Garrigues et maquis méditerranéens : Provence, Languedoc et Corse",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_oxycedrus_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 36,
@@ -321,7 +461,11 @@ window.TREES_DATA = [
     "name_latin": "Juniperus communis",
     "region": "France métropolitaine",
     "anecdote": "Ses baies bleu-noir mettent deux ans à mûrir et parfument la choucroute.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_communis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_communis_01.jpg",
+    "geo_location": "Pelouses sèches, landes et clairières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_communis_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 37,
@@ -330,7 +474,11 @@ window.TREES_DATA = [
     "name_latin": "Taxus baccata",
     "region": "France métropolitaine",
     "anecdote": "Arbre très longévif pouvant dépasser 1000 ans ; toutes ses parties sont toxiques sauf la chair rouge du fruit.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Taxus_baccata_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Taxus_baccata_01.jpg",
+    "geo_location": "Forêts fraîches ombragées : Normandie, Jura, Alpes et Pyrénées",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Taxus_baccata_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 38,
@@ -339,7 +487,11 @@ window.TREES_DATA = [
     "name_latin": "Ilex aquifolium",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles du bas sont piquantes contre les herbivores, mais deviennent lisses en hauteur.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ilex_aquifolium_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ilex_aquifolium_01.jpg",
+    "geo_location": "Sous-bois humides atlantiques : Bretagne, Normandie, Pyrénées et Vosges",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ilex_aquifolium_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 39,
@@ -348,7 +500,11 @@ window.TREES_DATA = [
     "name_latin": "Buxus sempervirens",
     "region": "France métropolitaine",
     "anecdote": "Son bois est si dense et lourd qu'il coule dans l'eau.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Buxus_sempervirens_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Buxus_sempervirens_01.jpg",
+    "geo_location": "Causses, Languedoc, Provence et vallées calcaires de l'Ardèche et du Lot",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Buxus_sempervirens_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 40,
@@ -357,7 +513,11 @@ window.TREES_DATA = [
     "name_latin": "Aesculus hippocastanum",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits (marrons) ne sont pas comestibles, contrairement aux châtaignes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Aesculus_hippocastanum_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Aesculus_hippocastanum_01.jpg",
+    "geo_location": "Parcs et avenues de toute la France — introduit des Balkans au XVIe siècle",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Aesculus_hippocastanum_nut.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 41,
@@ -366,7 +526,11 @@ window.TREES_DATA = [
     "name_latin": "Tilia cordata",
     "region": "France métropolitaine",
     "anecdote": "Reconnaissable à ses petites feuilles en forme de cœur avec des touffes de poils roux au verso.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_cordata_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_cordata_01.jpg",
+    "geo_location": "Forêts et bocages de la moitié nord et du Centre de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_cordata_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 42,
@@ -375,7 +539,11 @@ window.TREES_DATA = [
     "name_latin": "Alnus incana",
     "region": "France métropolitaine",
     "anecdote": "Colonise les bords de torrents en montagne et aide à stabiliser les berges.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_incana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_incana_01.jpg",
+    "geo_location": "Bords de torrents alpins et pyrénéens entre 400 et 1 800 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_incana_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 43,
@@ -384,7 +552,11 @@ window.TREES_DATA = [
     "name_latin": "Salix alba",
     "region": "France métropolitaine",
     "anecdote": "Son écorce contient de la salicine, molécule à l'origine de l'aspirine.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_alba_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_alba_01.jpg",
+    "geo_location": "Ripisylves et bords de rivières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_alba_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 44,
@@ -393,7 +565,11 @@ window.TREES_DATA = [
     "name_latin": "Salix caprea",
     "region": "France métropolitaine",
     "anecdote": "Ses chatons du printemps apportent l'un des premiers pollens aux abeilles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_caprea_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_caprea_01.jpg",
+    "geo_location": "Coupes forestières, landes et lisières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_caprea_catkins.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 45,
@@ -402,7 +578,11 @@ window.TREES_DATA = [
     "name_latin": "Populus nigra",
     "region": "France métropolitaine",
     "anecdote": "Grand arbre des zones humides au tronc souvent recouvert de grosses loupes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_nigra_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_nigra_01.jpg",
+    "geo_location": "Ripisylves et plaines alluviales des grands fleuves : Rhône, Loire, Garonne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_nigra_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 46,
@@ -411,7 +591,11 @@ window.TREES_DATA = [
     "name_latin": "Populus tremula",
     "region": "France métropolitaine",
     "anecdote": "Le pétiole aplati de ses feuilles fait qu'elles 'remblent' à la moindre brise.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_tremula_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_tremula_01.jpg",
+    "geo_location": "Forêts claires et landes de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_tremula_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 47,
@@ -420,7 +604,11 @@ window.TREES_DATA = [
     "name_latin": "Populus alba",
     "region": "France métropolitaine",
     "anecdote": "Le dessous de ses feuilles est d'un blanc cotonneux très lumineux.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_alba_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_alba_01.jpg",
+    "geo_location": "Bords de rivières méditerranéens et grandes vallées alluviales",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_alba_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 48,
@@ -429,7 +617,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus pubescens",
     "region": "France métropolitaine",
     "anecdote": "Le dessous de ses feuilles est couvert de petits poils doux pour limiter la transpiration.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pubescens_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pubescens_01.jpg",
+    "geo_location": "Causse, Provence, Languedoc et coteaux calcaires chauds du Centre",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pubescens_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 49,
@@ -438,7 +630,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus pyrenaica",
     "region": "France métropolitaine",
     "anecdote": "Très présent dans le Sud-Ouest, adapté aux sols sableux et pauvres.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pyrenaica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pyrenaica_01.jpg",
+    "geo_location": "Sud-Ouest : Pyrénées, Landes, Périgord et Massif central atlantique",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pyrenaica_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 50,
@@ -447,7 +643,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus cerris",
     "region": "France métropolitaine",
     "anecdote": "La cupule de son gland est recouverte d'écailles allongées comme des cheveux.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_cerris_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_cerris_01.jpg",
+    "geo_location": "Est et Centre de la France : Alsace, Bourgogne — introduit, naturalisé",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_cerris_acorn.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 51,
@@ -456,7 +656,11 @@ window.TREES_DATA = [
     "name_latin": "Liquidambar styraciflua",
     "region": "France métropolitaine",
     "anecdote": "Célèbre pour le spectacle de ses feuilles qui deviennent rouge écarlate à l'automne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_styraciflua_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_styraciflua_01.jpg",
+    "geo_location": "Parcs et jardins de toute la France — originaire d'Amérique du Nord",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_styraciflua_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 52,
@@ -465,7 +669,11 @@ window.TREES_DATA = [
     "name_latin": "Robinia pseudoacacia",
     "region": "France métropolitaine",
     "anecdote": "Importé d'Amérique en 1601, ses fleurs blanches en grappes donnent un miel délicieux.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Robinia_pseudoacacia_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Robinia_pseudoacacia_01.jpg",
+    "geo_location": "Toute la France — naturalisé et souvent invasif en lisières et forêts",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Robinia_pseudoacacia_pod.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 53,
@@ -474,7 +682,11 @@ window.TREES_DATA = [
     "name_latin": "Styphnolobium japonicum",
     "region": "France métropolitaine",
     "anecdote": "Souvent planté dans les parcs pour son ombre et sa floraison estivale tardive.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Styphnolobium_japonicum_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Styphnolobium_japonicum_01.jpg",
+    "geo_location": "Parcs urbains de toute la France — originaire du nord de la Chine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Styphnolobium_japonicum_pod.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 54,
@@ -483,7 +695,11 @@ window.TREES_DATA = [
     "name_latin": "Gleditsia triacanthos",
     "region": "France métropolitaine",
     "anecdote": "Son tronc porte de redoutables épines ramifiées à trois pointes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Gleditsia_triacanthos_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Gleditsia_triacanthos_01.jpg",
+    "geo_location": "Parcs, haies et jardins de toute la France — introduit d'Amérique du Nord",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Gleditsia_triacanthos_pod.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 55,
@@ -492,7 +708,11 @@ window.TREES_DATA = [
     "name_latin": "Sambucus nigra",
     "region": "France métropolitaine",
     "anecdote": "Ses ombrelles de fleurs blanches donnent des baies utilisées en sirop et gelée.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_nigra_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_nigra_01.jpg",
+    "geo_location": "Lisières, haies et zones rudérales de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_nigra_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 56,
@@ -501,7 +721,11 @@ window.TREES_DATA = [
     "name_latin": "Sambucus racemosa",
     "region": "France métropolitaine",
     "anecdote": "Aruste de montagne dont les baies rouge vif mûrissent en été.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_racemosa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_racemosa_01.jpg",
+    "geo_location": "Clairières et coupes forestières en montagne : Vosges, Jura, Alpes, Pyrénées",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_racemosa_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 57,
@@ -510,7 +734,11 @@ window.TREES_DATA = [
     "name_latin": "Viburnum opulus",
     "region": "France métropolitaine",
     "anecdote": "Surnommée 'boule de neige' en raison de ses grosses inflorescences blanches.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_opulus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_opulus_01.jpg",
+    "geo_location": "Haies humides et lisières fraîches de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_opulus_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 58,
@@ -519,7 +747,11 @@ window.TREES_DATA = [
     "name_latin": "Viburnum lantana",
     "region": "France métropolitaine",
     "anecdote": "Ses jeunes rameaux très souples servaient autrefois de liens pour les fagos.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_lantana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_lantana_01.jpg",
+    "geo_location": "Coteaux calcaires et lisières sèches : Centre, Est et Midi de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_lantana_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 59,
@@ -528,7 +760,11 @@ window.TREES_DATA = [
     "name_latin": "Cornus sanguinea",
     "region": "France métropolitaine",
     "anecdote": "Ses jeunes branches deviennent rouge sang en automne et en hiver.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_sanguinea_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_sanguinea_01.jpg",
+    "geo_location": "Haies, lisières et bords de chemins de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_sanguinea_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 60,
@@ -537,7 +773,11 @@ window.TREES_DATA = [
     "name_latin": "Cornus mas",
     "region": "France métropolitaine",
     "anecdote": "Fleurit en jaune dès le mois de février avant l'apparition de ses feuilles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_mas_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_mas_01.jpg",
+    "geo_location": "Coteaux calcaires chauds : Bourgogne, Centre, Provence et Languedoc",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_mas_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 61,
@@ -546,7 +786,11 @@ window.TREES_DATA = [
     "name_latin": "Euonymus europaeus",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits roses et oranges appelés 'bonnets d'évêque' sont très decoratifs.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Euonymus_europaeus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Euonymus_europaeus_01.jpg",
+    "geo_location": "Haies et lisières forestières calcaires de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Euonymus_europaeus_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 62,
@@ -555,7 +799,11 @@ window.TREES_DATA = [
     "name_latin": "Corylus avellana",
     "region": "France métropolitaine",
     "anecdote": "Arbrisseau buissonnant dont le bois souple servait à fabriquer les baguettes de sourcier.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Corylus_avellana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Corylus_avellana_01.jpg",
+    "geo_location": "Sous-bois et haies de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Corylus_avellana_nuts.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 63,
@@ -564,7 +812,11 @@ window.TREES_DATA = [
     "name_latin": "Prunus spinosa",
     "region": "France métropolitaine",
     "anecdote": "Ses baies bleues très astringentes servent à fabriquer la liqueur de prunelle.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_spinosa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_spinosa_01.jpg",
+    "geo_location": "Haies bocagères de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_spinosa_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 64,
@@ -573,7 +825,11 @@ window.TREES_DATA = [
     "name_latin": "Crataegus monogyna",
     "region": "France métropolitaine",
     "anecdote": "Arbre d'aménageant des haies bocagères, ses fleurs blanches soutiennent la biodiversité.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Crataegus_monogyna_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Crataegus_monogyna_01.jpg",
+    "geo_location": "Haies bocagères et lisières forestières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Crataegus_monogyna_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 65,
@@ -582,7 +838,11 @@ window.TREES_DATA = [
     "name_latin": "Ligustrum vulgare",
     "region": "France métropolitaine",
     "anecdote": "Arbusculte des lisières aux fleurs très odorantes et baies noires toxiques.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ligustrum_vulgare_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ligustrum_vulgare_01.jpg",
+    "geo_location": "Lisières calcaires, garrigues et haies du Centre et du Midi de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ligustrum_vulgare_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 66,
@@ -591,7 +851,11 @@ window.TREES_DATA = [
     "name_latin": "Hippophae rhamnoides",
     "region": "France métropolitaine",
     "anecdote": "Ses petites baies oranges sont extrêmement riches en vitamine C.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Hippophae_rhamnoides_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Hippophae_rhamnoides_01.jpg",
+    "geo_location": "Dunes côtières atlantiques et bords de torrents alpins et pyrénéens",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Hippophae_rhamnoides_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 67,
@@ -600,7 +864,11 @@ window.TREES_DATA = [
     "name_latin": "Arbutus unedo",
     "region": "France métropolitaine",
     "anecdote": "Surnommé 'arbre à fraises', il porte fleurs et fruits mûrs en même temps à l'automne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Arbutus_unedo_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Arbutus_unedo_01.jpg",
+    "geo_location": "Maquis et forêts de Corse, Provence littorale et côte du Languedoc",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Arbutus_unedo_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 68,
@@ -609,7 +877,11 @@ window.TREES_DATA = [
     "name_latin": "Olea europaea var. sylvestris",
     "region": "France métropolitaine",
     "anecdote": "Ancêtre rustique de l'olivier cultivé, très résistant à la sécheresse.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Olea_europaea_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Olea_europaea_01.jpg",
+    "geo_location": "Corse, Provence littorale et Languedoc — sous-bois et maquis méditerranéens",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Olea_europaea_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 69,
@@ -618,7 +890,11 @@ window.TREES_DATA = [
     "name_latin": "Pistacia terebinthus",
     "region": "France métropolitaine",
     "anecdote": "Arbrisseau méditerranéen dont la résine dégage une odeur de térébenthine.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_terebinthus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_terebinthus_01.jpg",
+    "geo_location": "Garrigues et maquis du Languedoc, de la Provence et de la Corse",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_terebinthus_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 70,
@@ -627,7 +903,11 @@ window.TREES_DATA = [
     "name_latin": "Pistacia lentiscus",
     "region": "France métropolitaine",
     "anecdote": "Feuillage persistant de la garrigue, il produit le mastic de Chios.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_lentiscus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_lentiscus_01.jpg",
+    "geo_location": "Maquis littoraux méditerranéens : Corse, Provence et côte languedocienne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_lentiscus_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 71,
@@ -636,7 +916,11 @@ window.TREES_DATA = [
     "name_latin": "Phillyrea latifolia",
     "region": "France métropolitaine",
     "anecdote": "Aruste méditerranéen coriace poussant dans le maquis et la garrigue.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phillyrea_latifolia_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phillyrea_latifolia_01.jpg",
+    "geo_location": "Maquis et garrigues du Languedoc, de la Provence et de la Corse",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phillyrea_latifolia_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 72,
@@ -645,7 +929,11 @@ window.TREES_DATA = [
     "name_latin": "Rhamnus alaternus",
     "region": "France métropolitaine",
     "anecdote": "Feuillage vert brillant persistant, très apprécié des chenilles de papillons.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Rhamnus_alaternus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Rhamnus_alaternus_01.jpg",
+    "geo_location": "Garrigues et maquis méditerranéens : Languedoc, Provence et Corse",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Rhamnus_alaternus_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 73,
@@ -654,7 +942,11 @@ window.TREES_DATA = [
     "name_latin": "Frangula alnus",
     "region": "France métropolitaine",
     "anecdote": "Son charbon de bois de grande qualité servait autrefois à la fabrication de la poudre à canon.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Frangula_alnus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Frangula_alnus_01.jpg",
+    "geo_location": "Landes, tourbières et sous-bois humides acides de toute la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Frangula_alnus_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 74,
@@ -663,7 +955,11 @@ window.TREES_DATA = [
     "name_latin": "Acer negundo",
     "region": "France métropolitaine",
     "anecdote": "Originaire d'Amérique du Nord, ses feuilles ressemblent à celles du frêne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_negundo_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_negundo_01.jpg",
+    "geo_location": "Bords de rivières et zones urbaines de toute la France — introduit d'Amérique",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_negundo_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 75,
@@ -672,7 +968,11 @@ window.TREES_DATA = [
     "name_latin": "Acer monspessulanum",
     "region": "France métropolitaine",
     "anecdote": "Ses petites feuilles à trois lobes sont typiques des zones chaudes du Sud.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_monspessulanum_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_monspessulanum_01.jpg",
+    "geo_location": "Coteaux secs du Midi méditerranéen et Massif central méridional",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_monspessulanum_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 76,
@@ -681,7 +981,11 @@ window.TREES_DATA = [
     "name_latin": "Acer opalus",
     "region": "France métropolitaine",
     "anecdote": "Espèce des montagnes méditerranéennes et du sud de la France.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_opalus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_opalus_01.jpg",
+    "geo_location": "Alpes du Sud, Provence calcaire et Pyrénées méditerranéennes",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_opalus_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 77,
@@ -690,7 +994,11 @@ window.TREES_DATA = [
     "name_latin": "Ailanthus altissima",
     "region": "France métropolitaine",
     "anecdote": "Arbre à croissance très rapide, originaire d'Asie et très résistant à la pollution.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ailanthus_altissima_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ailanthus_altissima_01.jpg",
+    "geo_location": "Milieux urbains et bords de voies de toute la France — invasif d'Asie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ailanthus_altissima_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 78,
@@ -699,7 +1007,11 @@ window.TREES_DATA = [
     "name_latin": "Phellodendron amurense",
     "region": "France métropolitaine",
     "anecdote": "Son écorce spongieuse rappelle celle du chêne liège.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phellodendron_amurense_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phellodendron_amurense_01.jpg",
+    "geo_location": "Parcs et arboretums de France — originaire de Mandchourie (Chine du Nord)",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phellodendron_amurense_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 79,
@@ -708,7 +1020,11 @@ window.TREES_DATA = [
     "name_latin": "Paulownia tomentosa",
     "region": "France métropolitaine",
     "anecdote": "Grandes feuilles douces et magnifiques grappes de fleurs violettes au printemps.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Paulownia_tomentosa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Paulownia_tomentosa_01.jpg",
+    "geo_location": "Parcs et jardins de toute la France — originaire de Chine centrale",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Paulownia_tomentosa_capsule.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 80,
@@ -717,7 +1033,11 @@ window.TREES_DATA = [
     "name_latin": "Catalpa bignonioides",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits longs et pendants ressemblent à de grands haricots.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Catalpa_bignonioides_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Catalpa_bignonioides_01.jpg",
+    "geo_location": "Parcs et jardins de toute la France — originaire du sud-est des États-Unis",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Catalpa_bignonioides_pods.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 81,
@@ -726,7 +1046,11 @@ window.TREES_DATA = [
     "name_latin": "Ginkgo biloba",
     "region": "France métropolitaine",
     "anecdote": "Considéré comme 'l'arbre aux quarante écus', c'est la plus ancienne espèce d'arbre vivante.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ginkgo_biloba_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ginkgo_biloba_01.jpg",
+    "geo_location": "Parcs et avenues de toute la France — relique tertiaire vivante d'Asie orientale",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ginkgo_biloba_fruit.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 82,
@@ -735,7 +1059,11 @@ window.TREES_DATA = [
     "name_latin": "Cedrus atlantica",
     "region": "France métropolitaine",
     "anecdote": "Introduit au XIXe siècle dans le Luberon et le Ventoux pour reboiser les montagnes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_atlantica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_atlantica_01.jpg",
+    "geo_location": "Reboisements du Mont Ventoux, Luberon et Alpes du Sud provençales",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_atlantica_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 83,
@@ -744,7 +1072,11 @@ window.TREES_DATA = [
     "name_latin": "Cedrus libani",
     "region": "France métropolitaine",
     "anecdote": "Arbre majestueux à port étalé et bois très odorant.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_libani_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_libani_01.jpg",
+    "geo_location": "Parcs et arboretums de toute la France — originaire du Proche-Orient",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_libani_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 84,
@@ -753,7 +1085,11 @@ window.TREES_DATA = [
     "name_latin": "Cedrus deodara",
     "region": "France métropolitaine",
     "anecdote": "Ses branches retombantes lui donnent une silhouette très élégante.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_deodara_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_deodara_01.jpg",
+    "geo_location": "Parcs et jardins du Midi et de la façade atlantique — originaire de l'Himalaya",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_deodara_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 85,
@@ -762,7 +1098,11 @@ window.TREES_DATA = [
     "name_latin": "Pseudotsuga menziesii",
     "region": "France métropolitaine",
     "anecdote": "Grand résineux originaire d'Amérique, très utilisé pour le bois de charpente en France.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pseudotsuga_menziesii_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pseudotsuga_menziesii_01.jpg",
+    "geo_location": "Reboisements des Vosges, Massif central, Jura, Alpes et Pyrénées",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pseudotsuga_menziesii_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 86,
@@ -771,7 +1111,11 @@ window.TREES_DATA = [
     "name_latin": "Abies nordmanniana",
     "region": "France métropolitaine",
     "anecdote": "Arbre de Noël star car ses aiguilles douces ne tombent pas facilement.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_nordmanniana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_nordmanniana_01.jpg",
+    "geo_location": "Sapins de Noël cultivés en Bretagne, Normandie et Massif central — originaire du Caucase",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_nordmanniana_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 87,
@@ -780,7 +1124,11 @@ window.TREES_DATA = [
     "name_latin": "Abies grandis",
     "region": "France métropolitaine",
     "anecdote": "Ses aiguilles écrasées dégagent une agréable odeur de citron.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_grandis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_grandis_01.jpg",
+    "geo_location": "Reboisements atlantiques : Bretagne, Pays de la Loire et Landes — originaire du Pacifique",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_grandis_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 88,
@@ -789,7 +1137,11 @@ window.TREES_DATA = [
     "name_latin": "Abies numidica",
     "region": "France métropolitaine",
     "anecdote": "Résineux rustique bien adapté aux sols calcaires et secs.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_numidica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_numidica_01.jpg",
+    "geo_location": "Reboisements calcaires secs du Midi de la France — originaire d'Algérie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_numidica_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 89,
@@ -798,7 +1150,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus strobus",
     "region": "France métropolitaine",
     "anecdote": "Ses aiguilles fines et douces sont regroupées par paquets de cinq.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_strobus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_strobus_01.jpg",
+    "geo_location": "Reboisements et arboretums de France — originaire d'Amérique du Nord",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_strobus_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 90,
@@ -807,7 +1163,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus taeda",
     "region": "France métropolitaine",
     "anecdote": "Utilisé dans certaines plantations du Sud-Ouest pour sa croissance rapide.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_taeda_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_taeda_01.jpg",
+    "geo_location": "Essais de reboisement en Gironde et Landes — originaire du Sud-Est américain",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_taeda_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 91,
@@ -816,7 +1176,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus nigra ssp. laricio",
     "region": "France métropolitaine",
     "anecdote": "Arbre élancé des montagnes corses, son bois servait autrefois pour les mâts de bateaux.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_laricio_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_laricio_01.jpg",
+    "geo_location": "Forêts corses des massifs d'Aïtone et de Vizzavona ; reboisements du Midi",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 92,
@@ -825,7 +1189,11 @@ window.TREES_DATA = [
     "name_latin": "Sequoiadendron giganteum",
     "region": "France métropolitaine",
     "anecdote": "Peut atteindre des dimensions colossales et vivre plus de 3000 ans.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoiadendron_giganteum_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoiadendron_giganteum_01.jpg",
+    "geo_location": "Parcs de montagne : Alpes, Vosges et Pyrénées — introduit de Sierra Nevada (Californie)",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoiadendron_giganteum_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 93,
@@ -834,7 +1202,11 @@ window.TREES_DATA = [
     "name_latin": "Sequoia sempervirens",
     "region": "France métropolitaine",
     "anecdote": "Comprend les arbres les plus hauts de la planète, dépassant 110 mètres.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoia_sempervirens_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoia_sempervirens_01.jpg",
+    "geo_location": "Parcs côtiers de Bretagne, Normandie et façade atlantique — originaire de Californie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoia_sempervirens_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 94,
@@ -843,7 +1215,11 @@ window.TREES_DATA = [
     "name_latin": "Chamaecyparis lawsoniana",
     "region": "France métropolitaine",
     "anecdote": "Trés fréquemment utilisé en horticulture et pour former des haies brise-vent.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Chamaecyparis_lawsoniana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Chamaecyparis_lawsoniana_01.jpg",
+    "geo_location": "Haies, jardins et parcs de toute la France — originaire du sud de l'Oregon",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Chamaecyparis_lawsoniana_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 95,
@@ -852,7 +1228,11 @@ window.TREES_DATA = [
     "name_latin": "Thuja plicata",
     "region": "France métropolitaine",
     "anecdote": "Son bois de cèdre rouge est naturellement imputrescible.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Thuja_plicata_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Thuja_plicata_01.jpg",
+    "geo_location": "Reboisements atlantiques humides et haies ornementales — originaire du Pacifique",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Thuja_plicata_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 96,
@@ -861,7 +1241,11 @@ window.TREES_DATA = [
     "name_latin": "Cryptomeria japonica",
     "region": "France métropolitaine",
     "anecdote": "Arbre sacré au Japon, souvent planté autour des temples.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cryptomeria_japonica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cryptomeria_japonica_01.jpg",
+    "geo_location": "Parcs et jardins de toute la France — arbre sacré national du Japon",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cryptomeria_japonica_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 97,
@@ -870,7 +1254,11 @@ window.TREES_DATA = [
     "name_latin": "Magnolia grandiflora",
     "region": "France métropolitaine",
     "anecdote": "Ses fleurs blanches de la taille d'une assiette exhalent un parfum suave.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Magnolia_grandiflora_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Magnolia_grandiflora_01.jpg",
+    "geo_location": "Façades et jardins du Midi et du Centre de la France — originaire du Sud-Est américain",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Magnolia_grandiflora_fruit.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 98,
@@ -879,7 +1267,11 @@ window.TREES_DATA = [
     "name_latin": "Liriodendron tulipifera",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles ont une forme originale de silhouette de tulipe.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liriodendron_tulipifera_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liriodendron_tulipifera_01.jpg",
+    "geo_location": "Parcs et grandes allées de toute la France — originaire d'Amérique du Nord",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liriodendron_tulipifera_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 99,
@@ -888,7 +1280,11 @@ window.TREES_DATA = [
     "name_latin": "Liquidambar orientalis",
     "region": "France métropolitaine",
     "anecdote": "Produit un baume odorant utilisé en parfumerie.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_orientalis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_orientalis_01.jpg",
+    "geo_location": "Jardins des régions méditerranéennes de France — originaire de Turquie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_orientalis_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 100,
@@ -897,7 +1293,11 @@ window.TREES_DATA = [
     "name_latin": "Diospyros kaki",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits (kakis) restent accrochés aux branches découvertes à la fin de l'automne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Diospyros_kaki_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Diospyros_kaki_01.jpg",
+    "geo_location": "Jardins et vergers du Midi méditerranéen — originaire d'Extrême-Orient",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Diospyros_kaki_fruit.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 101,
@@ -906,7 +1306,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus robur",
     "region": "France métropolitaine",
     "anecdote": "Il peut vivre plus de 500 ans et abrite plus de 300 espèces d'insectes différentes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_robur_Mittelrheingau_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_robur_Mittelrheingau_01.jpg",
+    "geo_location": "Plaines et collines de toute la France métropolitaine, sauf haute montagne et zone méditerranéenne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_robur_acorn.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 102,
@@ -915,7 +1319,11 @@ window.TREES_DATA = [
     "name_latin": "Fagus sylvatica",
     "region": "France métropolitaine",
     "anecdote": "Son écorce reste lisse toute sa vie. Ses fruits riches en huile s'appellent des faînes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fagus_sylvatica_J%C3%A4gerstein_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fagus_sylvatica_J%C3%A4gerstein_01.jpg",
+    "geo_location": "Massifs montagneux et collines : Vosges, Jura, Alpes, Massif central, Pyrénées et Normandie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fagus_sylvatica_fagus.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 103,
@@ -924,7 +1332,11 @@ window.TREES_DATA = [
     "name_latin": "Larix decidua",
     "region": "France métropolitaine",
     "anecdote": "C'est l'un des rares résineux d'Europe à perdre ses aiguilles dorées en hiver.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Larix_decidua_Val_Roseg_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Larix_decidua_Val_Roseg_01.jpg",
+    "geo_location": "Alpes françaises de la Savoie à la Haute-Provence, entre 1 000 et 2 500 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Larix_decidua_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 104,
@@ -933,7 +1345,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus sylvestris",
     "region": "France métropolitaine",
     "anecdote": "Reconnaissable à son écorce ocre et orange dans sa partie supérieure.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_sylvestris_Vosges_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_sylvestris_Vosges_01.jpg",
+    "geo_location": "Massif central, Vosges, Alpes, Jura et landes de l'Est de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_sylvestris_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 105,
@@ -942,7 +1358,11 @@ window.TREES_DATA = [
     "name_latin": "Castanea sativa",
     "region": "France métropolitaine",
     "anecdote": "Surnommé 'l'arbre à pain' car ses châtaignes ont nourri des générations en montagne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Castanea_sativa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Castanea_sativa_01.jpg",
+    "geo_location": "Massif central, Cévennes, Corse, Pyrénées, Ardèche et Bretagne méridionale",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Castanea_sativa_nuts.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 106,
@@ -951,7 +1371,11 @@ window.TREES_DATA = [
     "name_latin": "Sorbus aucuparia",
     "region": "France métropolitaine",
     "anecdote": "Ses baies rouges en grappes sont une réserve de nourriture essentielle pour les oiseaux en hiver.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aucuparia_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aucuparia_01.jpg",
+    "geo_location": "Montagnes et collines fraîches : Alpes, Vosges, Massif central et Pyrénées",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aucuparia_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 107,
@@ -960,7 +1384,11 @@ window.TREES_DATA = [
     "name_latin": "Abies alba",
     "region": "France métropolitaine",
     "anecdote": "Ses cônes dressés vers le ciel se désagrègent directement sur l'arbre à maturité.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_alba_Vosges_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_alba_Vosges_01.jpg",
+    "geo_location": "Vosges, Jura, Alpes et Pyrénées entre 600 et 1 800 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_alba_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 108,
@@ -969,7 +1397,11 @@ window.TREES_DATA = [
     "name_latin": "Picea abies",
     "region": "France métropolitaine",
     "anecdote": "Ses cônes pendent vers le bas contrairement au sapin, et son bois sert à fabriquer des violons.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Picea_abies_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Picea_abies_01.jpg",
+    "geo_location": "Vosges, Jura et Alpes du Nord entre 700 et 1 800 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Picea_abies_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 109,
@@ -978,7 +1410,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus ilex",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles coriaces et piquantes gardent l'eau pendant les étés méditerranéens.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_ilex_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_ilex_01.jpg",
+    "geo_location": "Région méditerranéenne : Provence, Languedoc, Corse et vallées du Rhône",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_ilex_acorn.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 110,
@@ -987,7 +1423,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus suber",
     "region": "France métropolitaine",
     "anecdote": "Son écorce est récoltée tous les 9 à 12 ans pour fabriquer des bouchons sans couper l'arbre.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_suber_Portugal_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_suber_Portugal_01.jpg",
+    "geo_location": "Maures, Estérel, Corse, Pyrénées-Orientales et littoral atlantique landais",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_suber_acorn.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 111,
@@ -996,7 +1436,11 @@ window.TREES_DATA = [
     "name_latin": "Fraxinus excelsior",
     "region": "France métropolitaine",
     "anecdote": "Son bois souple et résistant est historiquement utilisé pour les manches d'outils et les rames.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fraxinus_excelsior_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fraxinus_excelsior_01.jpg",
+    "geo_location": "Vallées humides et forêts fraîches de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Fraxinus_excelsior_samaras.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 112,
@@ -1005,7 +1449,11 @@ window.TREES_DATA = [
     "name_latin": "Betula pendula",
     "region": "France métropolitaine",
     "anecdote": "Arbre pionnier dont l'écorce blanche réfléchit la lumière pour se protéger du gel.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Betula_pendula_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Betula_pendula_01.jpg",
+    "geo_location": "Collines et landes acides de toute la France, espèce pionnière des sols pauvres",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Betula_pendula_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 113,
@@ -1014,7 +1462,11 @@ window.TREES_DATA = [
     "name_latin": "Carpinus betulus",
     "region": "France métropolitaine",
     "anecdote": "Son feuillage est marcescent : ses feuilles séchées restent accrochées aux branches tout l'hiver.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Carpinus_betulus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Carpinus_betulus_01.jpg",
+    "geo_location": "Plaines et collines de la moitié nord de la France et du Massif central",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Carpinus_betulus_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 114,
@@ -1023,7 +1475,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus pinaster",
     "region": "France métropolitaine",
     "anecdote": "Emblématique du massif des Landes de Gascogne, planté pour fixer les dunes au XIXe siècle.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinaster_Landes_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinaster_Landes_01.jpg",
+    "geo_location": "Landes de Gascogne, massif landais, côte atlantique et massif des Maures",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinaster_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 115,
@@ -1032,7 +1488,11 @@ window.TREES_DATA = [
     "name_latin": "Tilia platyphyllos",
     "region": "France métropolitaine",
     "anecdote": "Ses fleurs très parfumées et mellifères sont réputées en infusion apaisante.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_platyphyllos_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_platyphyllos_01.jpg",
+    "geo_location": "Forêts fraîches de montagne et de collines, surtout Centre et Est de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_platyphyllos_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 116,
@@ -1041,7 +1501,11 @@ window.TREES_DATA = [
     "name_latin": "Acer campestre",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits munis de deux ailes (disamares) tournoient comme des hélicoptères en tombant.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_campestre_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_campestre_01.jpg",
+    "geo_location": "Bocages, lisières et forêts de plaine de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_campestre_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 117,
@@ -1050,7 +1514,11 @@ window.TREES_DATA = [
     "name_latin": "Ulmus minor",
     "region": "France métropolitaine",
     "anecdote": "Autrefois très fréquent au bord des chemins, il a été fragilisé par la maladie de la graphiose.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ulmus_minor_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ulmus_minor_01.jpg",
+    "geo_location": "Vallées, haies et bords de chemins de la moitié nord de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ulmus_minor_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 118,
@@ -1059,7 +1527,11 @@ window.TREES_DATA = [
     "name_latin": "Alnus glutinosa",
     "region": "France métropolitaine",
     "anecdote": "Son bois immergé ne pourrit pas ; il a servi à fabriquer les pieux des fondations de Venise.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_01.jpg",
+    "geo_location": "Bords de cours d'eau et zones humides de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 119,
@@ -1068,7 +1540,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus halepensis",
     "region": "France métropolitaine",
     "anecdote": "Très fréquent en Provence, ses pommes de pin restent fermées jusqu'au passage d'un incendie.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_halepensis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_halepensis_01.jpg",
+    "geo_location": "Provence, Languedoc, Corse et garrigues méditerranéennes",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_halepensis_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 120,
@@ -1077,7 +1553,11 @@ window.TREES_DATA = [
     "name_latin": "Sorbus torminalis",
     "region": "France métropolitaine",
     "anecdote": "Son bois est l'un des plus précieux d'Europe, très prisé en ébénisterie et lutherie.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_torminalis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_torminalis_01.jpg",
+    "geo_location": "Plaines et collines calcaires du Centre et de l'Est de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_torminalis_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 121,
@@ -1086,7 +1566,11 @@ window.TREES_DATA = [
     "name_latin": "Juglans regia",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles sécrètent une substance qui empêche les autres plantes de pousser à son pied.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juglans_regia_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juglans_regia_01.jpg",
+    "geo_location": "Périgord, Dauphiné et vallées du Lot et de la Dordogne ; cultivé partout",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juglans_regia_nut.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 122,
@@ -1095,7 +1579,11 @@ window.TREES_DATA = [
     "name_latin": "Platanus orientalis",
     "region": "France métropolitaine",
     "anecdote": "Arbre majestueux d'alignement dont l'écorce se détache en plaques multicolores.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Platanus_orientalis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Platanus_orientalis_01.jpg",
+    "geo_location": "Zone méditerranéenne et bords de rivières du sud de la France ; planté en avenues",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Platanus_orientalis_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 123,
@@ -1104,7 +1592,11 @@ window.TREES_DATA = [
     "name_latin": "Sorbus domestica",
     "region": "France métropolitaine",
     "anecdote": "Produit des cormes, de petits fruits anciens ressemblant à de petites poires.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_domestica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_domestica_01.jpg",
+    "geo_location": "Causse, Provence et Corse — rare, localisé dans les chênaies sèches calcaires",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_domestica_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 124,
@@ -1113,7 +1605,11 @@ window.TREES_DATA = [
     "name_latin": "Pyrus pyraster",
     "region": "France métropolitaine",
     "anecdote": "Ancêtre de nos poiriers cultivés, ses rameaux portent de petites épines.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pyrus_pyraster_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pyrus_pyraster_01.jpg",
+    "geo_location": "Lisières et haies du Centre, du Massif central et du Midi de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pyrus_pyraster_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 125,
@@ -1122,7 +1618,11 @@ window.TREES_DATA = [
     "name_latin": "Malus sylvestris",
     "region": "France métropolitaine",
     "anecdote": "Ses petites pommes acides sont une source de nourriture précieuse pour la faune forestière.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malus_sylvestris_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malus_sylvestris_01.jpg",
+    "geo_location": "Haies et lisières forestières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Malus_sylvestris_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 126,
@@ -1131,7 +1631,11 @@ window.TREES_DATA = [
     "name_latin": "Prunus avium",
     "region": "France métropolitaine",
     "anecdote": "Ancêtre du cerisier, sa floraison printanière blanche illumine le bord des forêts.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_avium_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_avium_01.jpg",
+    "geo_location": "Forêts fraîches et lisières de toute la France, sauf haute montagne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_avium_cherries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 127,
@@ -1140,7 +1644,11 @@ window.TREES_DATA = [
     "name_latin": "Sorbus aria",
     "region": "France métropolitaine",
     "anecdote": "Le dessous de ses feuilles est recouvert d'un duvet blanc feutré qui capte la lumière.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aria_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aria_01.jpg",
+    "geo_location": "Coteaux calcaires, Jura, Alpes et Massif central",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sorbus_aria_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 128,
@@ -1149,7 +1657,11 @@ window.TREES_DATA = [
     "name_latin": "Acer pseudoplatanus",
     "region": "France métropolitaine",
     "anecdote": "Apprécié en lutherie pour fabriquer le dos des violons et des violoncelles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_pseudoplatanus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_pseudoplatanus_01.jpg",
+    "geo_location": "Forêts fraîches et montagnes de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_pseudoplatanus_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 129,
@@ -1158,7 +1670,11 @@ window.TREES_DATA = [
     "name_latin": "Acer platanoides",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles prennent une couleur jaune d'or éclatante dès le début de l'automne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_platanoides_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_platanoides_01.jpg",
+    "geo_location": "Forêts mixtes de l'Est : Alsace, Lorraine, Franche-Comté et Burgundie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_platanoides_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 130,
@@ -1167,7 +1683,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus cembra",
     "region": "France métropolitaine",
     "anecdote": "Vit en haute montagne ; ses graines sont dispersées par un oiseau nommé le Cassenoix.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_cembra_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_cembra_01.jpg",
+    "geo_location": "Alpes françaises en zone subalpine entre 1 600 et 2 600 m : Savoie, Hautes-Alpes",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_cembra_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 131,
@@ -1176,7 +1696,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus uncinata",
     "region": "France métropolitaine",
     "anecdote": "Ses écailles d'écorce se terminent par un petit crochet dirigé vers la base du cône.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_uncinata_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_uncinata_01.jpg",
+    "geo_location": "Pyrénées et Alpes du Sud entre 1 500 et 2 700 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_uncinata_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 132,
@@ -1185,7 +1709,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus nigra",
     "region": "France métropolitaine",
     "anecdote": "Traces sombres sur son écorce et grande résistance aux sols calcaires difficiles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_01.jpg",
+    "geo_location": "Provence calcaire, Cévennes, Alpes du Sud et reboisements divers du Midi",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 133,
@@ -1194,7 +1722,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus pinea",
     "region": "France métropolitaine",
     "anecdote": "Emblématique des côtes méditerranéennes, il produit les pignons de pin comestibles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinea_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinea_01.jpg",
+    "geo_location": "Côte méditerranéenne, Corse, massif des Maures et zones sableuses du Midi",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_pinea_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 134,
@@ -1203,7 +1735,11 @@ window.TREES_DATA = [
     "name_latin": "Cupressus sempervirens",
     "region": "France métropolitaine",
     "anecdote": "Arbre élancé typique du paysage provençal, souvent planté comme brise-vent.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cupressus_sempervirens_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cupressus_sempervirens_01.jpg",
+    "geo_location": "Provence, Languedoc et Corse — cultivé et naturalisé en zone méditerranéenne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cupressus_sempervirens_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 135,
@@ -1212,7 +1748,11 @@ window.TREES_DATA = [
     "name_latin": "Juniperus oxycedrus",
     "region": "France métropolitaine",
     "anecdote": "Son bois odorant produit l'huile de cade utilisée autrefois en médecine populaire.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_oxycedrus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_oxycedrus_01.jpg",
+    "geo_location": "Garrigues et maquis méditerranéens : Provence, Languedoc et Corse",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_oxycedrus_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 136,
@@ -1221,7 +1761,11 @@ window.TREES_DATA = [
     "name_latin": "Juniperus communis",
     "region": "France métropolitaine",
     "anecdote": "Ses baies bleu-noir mettent deux ans à mûrir et parfument la choucroute.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_communis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_communis_01.jpg",
+    "geo_location": "Pelouses sèches, landes et clairières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Juniperus_communis_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 137,
@@ -1230,7 +1774,11 @@ window.TREES_DATA = [
     "name_latin": "Taxus baccata",
     "region": "France métropolitaine",
     "anecdote": "Arbre très longévif pouvant dépasser 1000 ans ; toutes ses parties sont toxiques sauf la chair rouge du fruit.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Taxus_baccata_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Taxus_baccata_01.jpg",
+    "geo_location": "Forêts fraîches ombragées : Normandie, Jura, Alpes et Pyrénées",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Taxus_baccata_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 138,
@@ -1239,7 +1787,11 @@ window.TREES_DATA = [
     "name_latin": "Ilex aquifolium",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles du bas sont piquantes contre les herbivores, mais deviennent lisses en hauteur.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ilex_aquifolium_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ilex_aquifolium_01.jpg",
+    "geo_location": "Sous-bois humides atlantiques : Bretagne, Normandie, Pyrénées et Vosges",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ilex_aquifolium_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 139,
@@ -1248,7 +1800,11 @@ window.TREES_DATA = [
     "name_latin": "Buxus sempervirens",
     "region": "France métropolitaine",
     "anecdote": "Son bois est si dense et lourd qu'il coule dans l'eau.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Buxus_sempervirens_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Buxus_sempervirens_01.jpg",
+    "geo_location": "Causses, Languedoc, Provence et vallées calcaires de l'Ardèche et du Lot",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Buxus_sempervirens_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 140,
@@ -1257,7 +1813,11 @@ window.TREES_DATA = [
     "name_latin": "Aesculus hippocastanum",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits (marrons) ne sont pas comestibles, contrairement aux châtaignes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Aesculus_hippocastanum_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Aesculus_hippocastanum_01.jpg",
+    "geo_location": "Parcs et avenues de toute la France — introduit des Balkans au XVIe siècle",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Aesculus_hippocastanum_nut.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 141,
@@ -1266,7 +1826,11 @@ window.TREES_DATA = [
     "name_latin": "Tilia cordata",
     "region": "France métropolitaine",
     "anecdote": "Reconnaissable à ses petites feuilles en forme de cœur avec des touffes de poils roux au verso.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_cordata_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_cordata_01.jpg",
+    "geo_location": "Forêts et bocages de la moitié nord et du Centre de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Tilia_cordata_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 142,
@@ -1275,7 +1839,11 @@ window.TREES_DATA = [
     "name_latin": "Alnus incana",
     "region": "France métropolitaine",
     "anecdote": "Colonise les bords de torrents en montagne et aide à stabiliser les berges.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_incana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_incana_01.jpg",
+    "geo_location": "Bords de torrents alpins et pyrénéens entre 400 et 1 800 m d'altitude",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_incana_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 143,
@@ -1284,7 +1852,11 @@ window.TREES_DATA = [
     "name_latin": "Salix alba",
     "region": "France métropolitaine",
     "anecdote": "Son écorce contient de la salicine, molécule à l'origine de l'aspirine.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_alba_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_alba_01.jpg",
+    "geo_location": "Ripisylves et bords de rivières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_alba_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 144,
@@ -1293,7 +1865,11 @@ window.TREES_DATA = [
     "name_latin": "Salix caprea",
     "region": "France métropolitaine",
     "anecdote": "Ses chatons du printemps apportent l'un des premiers pollens aux abeilles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_caprea_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_caprea_01.jpg",
+    "geo_location": "Coupes forestières, landes et lisières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Salix_caprea_catkins.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 145,
@@ -1302,7 +1878,11 @@ window.TREES_DATA = [
     "name_latin": "Populus nigra",
     "region": "France métropolitaine",
     "anecdote": "Grand arbre des zones humides au tronc souvent recouvert de grosses loupes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_nigra_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_nigra_01.jpg",
+    "geo_location": "Ripisylves et plaines alluviales des grands fleuves : Rhône, Loire, Garonne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_nigra_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 146,
@@ -1311,7 +1891,11 @@ window.TREES_DATA = [
     "name_latin": "Populus tremula",
     "region": "France métropolitaine",
     "anecdote": "Le pétiole aplati de ses feuilles fait qu'elles 'remblent' à la moindre brise.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_tremula_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_tremula_01.jpg",
+    "geo_location": "Forêts claires et landes de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_tremula_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 147,
@@ -1320,7 +1904,11 @@ window.TREES_DATA = [
     "name_latin": "Populus alba",
     "region": "France métropolitaine",
     "anecdote": "Le dessous de ses feuilles est d'un blanc cotonneux très lumineux.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_alba_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_alba_01.jpg",
+    "geo_location": "Bords de rivières méditerranéens et grandes vallées alluviales",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Populus_alba_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 148,
@@ -1329,7 +1917,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus pubescens",
     "region": "France métropolitaine",
     "anecdote": "Le dessous de ses feuilles est couvert de petits poils doux pour limiter la transpiration.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pubescens_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pubescens_01.jpg",
+    "geo_location": "Causse, Provence, Languedoc et coteaux calcaires chauds du Centre",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pubescens_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 149,
@@ -1338,7 +1930,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus pyrenaica",
     "region": "France métropolitaine",
     "anecdote": "Très présent dans le Sud-Ouest, adapté aux sols sableux et pauvres.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pyrenaica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pyrenaica_01.jpg",
+    "geo_location": "Sud-Ouest : Pyrénées, Landes, Périgord et Massif central atlantique",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_pyrenaica_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 150,
@@ -1347,7 +1943,11 @@ window.TREES_DATA = [
     "name_latin": "Quercus cerris",
     "region": "France métropolitaine",
     "anecdote": "La cupule de son gland est recouverte d'écailles allongées comme des cheveux.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_cerris_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_cerris_01.jpg",
+    "geo_location": "Est et Centre de la France : Alsace, Bourgogne — introduit, naturalisé",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Quercus_cerris_acorn.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 151,
@@ -1356,7 +1956,11 @@ window.TREES_DATA = [
     "name_latin": "Liquidambar styraciflua",
     "region": "France métropolitaine",
     "anecdote": "Célèbre pour le spectacle de ses feuilles qui deviennent rouge écarlate à l'automne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_styraciflua_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_styraciflua_01.jpg",
+    "geo_location": "Parcs et jardins de toute la France — originaire d'Amérique du Nord",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_styraciflua_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 152,
@@ -1365,7 +1969,11 @@ window.TREES_DATA = [
     "name_latin": "Robinia pseudoacacia",
     "region": "France métropolitaine",
     "anecdote": "Importé d'Amérique en 1601, ses fleurs blanches en grappes donnent un miel délicieux.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Robinia_pseudoacacia_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Robinia_pseudoacacia_01.jpg",
+    "geo_location": "Toute la France — naturalisé et souvent invasif en lisières et forêts",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Robinia_pseudoacacia_pod.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 153,
@@ -1374,7 +1982,11 @@ window.TREES_DATA = [
     "name_latin": "Styphnolobium japonicum",
     "region": "France métropolitaine",
     "anecdote": "Souvent planté dans les parcs pour son ombre et sa floraison estivale tardive.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Styphnolobium_japonicum_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Styphnolobium_japonicum_01.jpg",
+    "geo_location": "Parcs urbains de toute la France — originaire du nord de la Chine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Styphnolobium_japonicum_pod.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 154,
@@ -1383,7 +1995,11 @@ window.TREES_DATA = [
     "name_latin": "Gleditsia triacanthos",
     "region": "France métropolitaine",
     "anecdote": "Son tronc porte de redoutables épines ramifiées à trois pointes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Gleditsia_triacanthos_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Gleditsia_triacanthos_01.jpg",
+    "geo_location": "Parcs, haies et jardins de toute la France — introduit d'Amérique du Nord",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Gleditsia_triacanthos_pod.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 155,
@@ -1392,7 +2008,11 @@ window.TREES_DATA = [
     "name_latin": "Sambucus nigra",
     "region": "France métropolitaine",
     "anecdote": "Ses ombrelles de fleurs blanches donnent des baies utilisées en sirop et gelée.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_nigra_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_nigra_01.jpg",
+    "geo_location": "Lisières, haies et zones rudérales de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_nigra_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 156,
@@ -1401,7 +2021,11 @@ window.TREES_DATA = [
     "name_latin": "Sambucus racemosa",
     "region": "France métropolitaine",
     "anecdote": "Aruste de montagne dont les baies rouge vif mûrissent en été.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_racemosa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_racemosa_01.jpg",
+    "geo_location": "Clairières et coupes forestières en montagne : Vosges, Jura, Alpes, Pyrénées",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sambucus_racemosa_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 157,
@@ -1410,7 +2034,11 @@ window.TREES_DATA = [
     "name_latin": "Viburnum opulus",
     "region": "France métropolitaine",
     "anecdote": "Surnommée 'boule de neige' en raison de ses grosses inflorescences blanches.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_opulus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_opulus_01.jpg",
+    "geo_location": "Haies humides et lisières fraîches de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_opulus_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 158,
@@ -1419,7 +2047,11 @@ window.TREES_DATA = [
     "name_latin": "Viburnum lantana",
     "region": "France métropolitaine",
     "anecdote": "Ses jeunes rameaux très souples servaient autrefois de liens pour les fagos.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_lantana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_lantana_01.jpg",
+    "geo_location": "Coteaux calcaires et lisières sèches : Centre, Est et Midi de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Viburnum_lantana_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 159,
@@ -1428,7 +2060,11 @@ window.TREES_DATA = [
     "name_latin": "Cornus sanguinea",
     "region": "France métropolitaine",
     "anecdote": "Ses jeunes branches deviennent rouge sang en automne et en hiver.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_sanguinea_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_sanguinea_01.jpg",
+    "geo_location": "Haies, lisières et bords de chemins de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_sanguinea_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 160,
@@ -1437,7 +2073,11 @@ window.TREES_DATA = [
     "name_latin": "Cornus mas",
     "region": "France métropolitaine",
     "anecdote": "Fleurit en jaune dès le mois de février avant l'apparition de ses feuilles.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_mas_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_mas_01.jpg",
+    "geo_location": "Coteaux calcaires chauds : Bourgogne, Centre, Provence et Languedoc",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cornus_mas_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 161,
@@ -1446,7 +2086,11 @@ window.TREES_DATA = [
     "name_latin": "Euonymus europaeus",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits roses et oranges appelés 'bonnets d'évêque' sont très decoratifs.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Euonymus_europaeus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Euonymus_europaeus_01.jpg",
+    "geo_location": "Haies et lisières forestières calcaires de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Euonymus_europaeus_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 162,
@@ -1455,7 +2099,11 @@ window.TREES_DATA = [
     "name_latin": "Corylus avellana",
     "region": "France métropolitaine",
     "anecdote": "Arbrisseau buissonnant dont le bois souple servait à fabriquer les baguettes de sourcier.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Corylus_avellana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Corylus_avellana_01.jpg",
+    "geo_location": "Sous-bois et haies de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Corylus_avellana_nuts.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 163,
@@ -1464,7 +2112,11 @@ window.TREES_DATA = [
     "name_latin": "Prunus spinosa",
     "region": "France métropolitaine",
     "anecdote": "Ses baies bleues très astringentes servent à fabriquer la liqueur de prunelle.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_spinosa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_spinosa_01.jpg",
+    "geo_location": "Haies bocagères de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Prunus_spinosa_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 164,
@@ -1473,7 +2125,11 @@ window.TREES_DATA = [
     "name_latin": "Crataegus monogyna",
     "region": "France métropolitaine",
     "anecdote": "Arbre d'aménageant des haies bocagères, ses fleurs blanches soutiennent la biodiversité.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Crataegus_monogyna_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Crataegus_monogyna_01.jpg",
+    "geo_location": "Haies bocagères et lisières forestières de toute la France métropolitaine",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Crataegus_monogyna_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 165,
@@ -1482,7 +2138,11 @@ window.TREES_DATA = [
     "name_latin": "Ligustrum vulgare",
     "region": "France métropolitaine",
     "anecdote": "Arbusculte des lisières aux fleurs très odorantes et baies noires toxiques.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ligustrum_vulgare_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ligustrum_vulgare_01.jpg",
+    "geo_location": "Lisières calcaires, garrigues et haies du Centre et du Midi de la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ligustrum_vulgare_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 166,
@@ -1491,7 +2151,11 @@ window.TREES_DATA = [
     "name_latin": "Hippophae rhamnoides",
     "region": "France métropolitaine",
     "anecdote": "Ses petites baies oranges sont extrêmement riches en vitamine C.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Hippophae_rhamnoides_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Hippophae_rhamnoides_01.jpg",
+    "geo_location": "Dunes côtières atlantiques et bords de torrents alpins et pyrénéens",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Hippophae_rhamnoides_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 167,
@@ -1500,7 +2164,11 @@ window.TREES_DATA = [
     "name_latin": "Arbutus unedo",
     "region": "France métropolitaine",
     "anecdote": "Surnommé 'arbre à fraises', il porte fleurs et fruits mûrs en même temps à l'automne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Arbutus_unedo_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Arbutus_unedo_01.jpg",
+    "geo_location": "Maquis et forêts de Corse, Provence littorale et côte du Languedoc",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Arbutus_unedo_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 168,
@@ -1509,7 +2177,11 @@ window.TREES_DATA = [
     "name_latin": "Olea europaea var. sylvestris",
     "region": "France métropolitaine",
     "anecdote": "Ancêtre rustique de l'olivier cultivé, très résistant à la sécheresse.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Olea_europaea_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Olea_europaea_01.jpg",
+    "geo_location": "Corse, Provence littorale et Languedoc — sous-bois et maquis méditerranéens",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Olea_europaea_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 169,
@@ -1518,7 +2190,11 @@ window.TREES_DATA = [
     "name_latin": "Pistacia terebinthus",
     "region": "France métropolitaine",
     "anecdote": "Arbrisseau méditerranéen dont la résine dégage une odeur de térébenthine.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_terebinthus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_terebinthus_01.jpg",
+    "geo_location": "Garrigues et maquis du Languedoc, de la Provence et de la Corse",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_terebinthus_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 170,
@@ -1527,7 +2203,11 @@ window.TREES_DATA = [
     "name_latin": "Pistacia lentiscus",
     "region": "France métropolitaine",
     "anecdote": "Feuillage persistant de la garrigue, il produit le mastic de Chios.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_lentiscus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_lentiscus_01.jpg",
+    "geo_location": "Maquis littoraux méditerranéens : Corse, Provence et côte languedocienne",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pistacia_lentiscus_fruits.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 171,
@@ -1536,7 +2216,11 @@ window.TREES_DATA = [
     "name_latin": "Phillyrea latifolia",
     "region": "France métropolitaine",
     "anecdote": "Aruste méditerranéen coriace poussant dans le maquis et la garrigue.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phillyrea_latifolia_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phillyrea_latifolia_01.jpg",
+    "geo_location": "Maquis et garrigues du Languedoc, de la Provence et de la Corse",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phillyrea_latifolia_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 172,
@@ -1545,7 +2229,11 @@ window.TREES_DATA = [
     "name_latin": "Rhamnus alaternus",
     "region": "France métropolitaine",
     "anecdote": "Feuillage vert brillant persistant, très apprécié des chenilles de papillons.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Rhamnus_alaternus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Rhamnus_alaternus_01.jpg",
+    "geo_location": "Garrigues et maquis méditerranéens : Languedoc, Provence et Corse",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Rhamnus_alaternus_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 173,
@@ -1554,7 +2242,11 @@ window.TREES_DATA = [
     "name_latin": "Frangula alnus",
     "region": "France métropolitaine",
     "anecdote": "Son charbon de bois de grande qualité servait autrefois à la fabrication de la poudre à canon.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Frangula_alnus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Frangula_alnus_01.jpg",
+    "geo_location": "Landes, tourbières et sous-bois humides acides de toute la France",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Frangula_alnus_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 174,
@@ -1563,7 +2255,11 @@ window.TREES_DATA = [
     "name_latin": "Acer negundo",
     "region": "France métropolitaine",
     "anecdote": "Originaire d'Amérique du Nord, ses feuilles ressemblent à celles du frêne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_negundo_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_negundo_01.jpg",
+    "geo_location": "Bords de rivières et zones urbaines de toute la France — introduit d'Amérique",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_negundo_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 175,
@@ -1572,7 +2268,11 @@ window.TREES_DATA = [
     "name_latin": "Acer monspessulanum",
     "region": "France métropolitaine",
     "anecdote": "Ses petites feuilles à trois lobes sont typiques des zones chaudes du Sud.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_monspessulanum_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_monspessulanum_01.jpg",
+    "geo_location": "Coteaux secs du Midi méditerranéen et Massif central méridional",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_monspessulanum_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 176,
@@ -1581,7 +2281,11 @@ window.TREES_DATA = [
     "name_latin": "Acer opalus",
     "region": "France métropolitaine",
     "anecdote": "Espèce des montagnes méditerranéennes et du sud de la France.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_opalus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_opalus_01.jpg",
+    "geo_location": "Alpes du Sud, Provence calcaire et Pyrénées méditerranéennes",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Acer_opalus_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 177,
@@ -1590,7 +2294,11 @@ window.TREES_DATA = [
     "name_latin": "Ailanthus altissima",
     "region": "France métropolitaine",
     "anecdote": "Arbre à croissance très rapide, originaire d'Asie et très résistant à la pollution.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ailanthus_altissima_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ailanthus_altissima_01.jpg",
+    "geo_location": "Milieux urbains et bords de voies de toute la France — invasif d'Asie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ailanthus_altissima_samara.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 178,
@@ -1599,7 +2307,11 @@ window.TREES_DATA = [
     "name_latin": "Phellodendron amurense",
     "region": "France métropolitaine",
     "anecdote": "Son écorce spongieuse rappelle celle du chêne liège.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phellodendron_amurense_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phellodendron_amurense_01.jpg",
+    "geo_location": "Parcs et arboretums de France — originaire de Mandchourie (Chine du Nord)",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Phellodendron_amurense_berries.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 179,
@@ -1608,7 +2320,11 @@ window.TREES_DATA = [
     "name_latin": "Paulownia tomentosa",
     "region": "France métropolitaine",
     "anecdote": "Grandes feuilles douces et magnifiques grappes de fleurs violettes au printemps.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Paulownia_tomentosa_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Paulownia_tomentosa_01.jpg",
+    "geo_location": "Parcs et jardins de toute la France — originaire de Chine centrale",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Paulownia_tomentosa_capsule.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 180,
@@ -1617,7 +2333,11 @@ window.TREES_DATA = [
     "name_latin": "Catalpa bignonioides",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits longs et pendants ressemblent à de grands haricots.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Catalpa_bignonioides_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Catalpa_bignonioides_01.jpg",
+    "geo_location": "Parcs et jardins de toute la France — originaire du sud-est des États-Unis",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Catalpa_bignonioides_pods.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 181,
@@ -1626,7 +2346,11 @@ window.TREES_DATA = [
     "name_latin": "Ginkgo biloba",
     "region": "France métropolitaine",
     "anecdote": "Considéré comme 'l'arbre aux quarante écus', c'est la plus ancienne espèce d'arbre vivante.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ginkgo_biloba_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ginkgo_biloba_01.jpg",
+    "geo_location": "Parcs et avenues de toute la France — relique tertiaire vivante d'Asie orientale",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Ginkgo_biloba_fruit.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 182,
@@ -1635,7 +2359,11 @@ window.TREES_DATA = [
     "name_latin": "Cedrus atlantica",
     "region": "France métropolitaine",
     "anecdote": "Introduit au XIXe siècle dans le Luberon et le Ventoux pour reboiser les montagnes.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_atlantica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_atlantica_01.jpg",
+    "geo_location": "Reboisements du Mont Ventoux, Luberon et Alpes du Sud provençales",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_atlantica_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 183,
@@ -1644,7 +2372,11 @@ window.TREES_DATA = [
     "name_latin": "Cedrus libani",
     "region": "France métropolitaine",
     "anecdote": "Arbre majestueux à port étalé et bois très odorant.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_libani_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_libani_01.jpg",
+    "geo_location": "Parcs et arboretums de toute la France — originaire du Proche-Orient",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_libani_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 184,
@@ -1653,7 +2385,11 @@ window.TREES_DATA = [
     "name_latin": "Cedrus deodara",
     "region": "France métropolitaine",
     "anecdote": "Ses branches retombantes lui donnent une silhouette très élégante.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_deodara_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_deodara_01.jpg",
+    "geo_location": "Parcs et jardins du Midi et de la façade atlantique — originaire de l'Himalaya",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cedrus_deodara_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 185,
@@ -1662,7 +2398,11 @@ window.TREES_DATA = [
     "name_latin": "Pseudotsuga menziesii",
     "region": "France métropolitaine",
     "anecdote": "Grand résineux originaire d'Amérique, très utilisé pour le bois de charpente en France.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pseudotsuga_menziesii_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pseudotsuga_menziesii_01.jpg",
+    "geo_location": "Reboisements des Vosges, Massif central, Jura, Alpes et Pyrénées",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pseudotsuga_menziesii_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 186,
@@ -1671,7 +2411,11 @@ window.TREES_DATA = [
     "name_latin": "Abies nordmanniana",
     "region": "France métropolitaine",
     "anecdote": "Arbre de Noël star car ses aiguilles douces ne tombent pas facilement.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_nordmanniana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_nordmanniana_01.jpg",
+    "geo_location": "Sapins de Noël cultivés en Bretagne, Normandie et Massif central — originaire du Caucase",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_nordmanniana_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 187,
@@ -1680,7 +2424,11 @@ window.TREES_DATA = [
     "name_latin": "Abies grandis",
     "region": "France métropolitaine",
     "anecdote": "Ses aiguilles écrasées dégagent une agréable odeur de citron.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_grandis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_grandis_01.jpg",
+    "geo_location": "Reboisements atlantiques : Bretagne, Pays de la Loire et Landes — originaire du Pacifique",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_grandis_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 188,
@@ -1689,7 +2437,11 @@ window.TREES_DATA = [
     "name_latin": "Abies numidica",
     "region": "France métropolitaine",
     "anecdote": "Résineux rustique bien adapté aux sols calcaires et secs.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_numidica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_numidica_01.jpg",
+    "geo_location": "Reboisements calcaires secs du Midi de la France — originaire d'Algérie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Abies_numidica_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 189,
@@ -1698,7 +2450,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus strobus",
     "region": "France métropolitaine",
     "anecdote": "Ses aiguilles fines et douces sont regroupées par paquets de cinq.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_strobus_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_strobus_01.jpg",
+    "geo_location": "Reboisements et arboretums de France — originaire d'Amérique du Nord",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_strobus_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 190,
@@ -1707,7 +2463,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus taeda",
     "region": "France métropolitaine",
     "anecdote": "Utilisé dans certaines plantations du Sud-Ouest pour sa croissance rapide.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_taeda_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_taeda_01.jpg",
+    "geo_location": "Essais de reboisement en Gironde et Landes — originaire du Sud-Est américain",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_taeda_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 191,
@@ -1716,7 +2476,11 @@ window.TREES_DATA = [
     "name_latin": "Pinus nigra ssp. laricio",
     "region": "France métropolitaine",
     "anecdote": "Arbre élancé des montagnes corses, son bois servait autrefois pour les mâts de bateaux.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_laricio_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_laricio_01.jpg",
+    "geo_location": "Forêts corses des massifs d'Aïtone et de Vizzavona ; reboisements du Midi",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Pinus_nigra_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 192,
@@ -1725,7 +2489,11 @@ window.TREES_DATA = [
     "name_latin": "Sequoiadendron giganteum",
     "region": "France métropolitaine",
     "anecdote": "Peut atteindre des dimensions colossales et vivre plus de 3000 ans.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoiadendron_giganteum_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoiadendron_giganteum_01.jpg",
+    "geo_location": "Parcs de montagne : Alpes, Vosges et Pyrénées — introduit de Sierra Nevada (Californie)",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoiadendron_giganteum_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 193,
@@ -1734,7 +2502,11 @@ window.TREES_DATA = [
     "name_latin": "Sequoia sempervirens",
     "region": "France métropolitaine",
     "anecdote": "Comprend les arbres les plus hauts de la planète, dépassant 110 mètres.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoia_sempervirens_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoia_sempervirens_01.jpg",
+    "geo_location": "Parcs côtiers de Bretagne, Normandie et façade atlantique — originaire de Californie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sequoia_sempervirens_cone.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 194,
@@ -1743,7 +2515,11 @@ window.TREES_DATA = [
     "name_latin": "Chamaecyparis lawsoniana",
     "region": "France métropolitaine",
     "anecdote": "Trés fréquemment utilisé en horticulture et pour former des haies brise-vent.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Chamaecyparis_lawsoniana_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Chamaecyparis_lawsoniana_01.jpg",
+    "geo_location": "Haies, jardins et parcs de toute la France — originaire du sud de l'Oregon",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Chamaecyparis_lawsoniana_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 195,
@@ -1752,7 +2528,11 @@ window.TREES_DATA = [
     "name_latin": "Thuja plicata",
     "region": "France métropolitaine",
     "anecdote": "Son bois de cèdre rouge est naturellement imputrescible.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Thuja_plicata_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Thuja_plicata_01.jpg",
+    "geo_location": "Reboisements atlantiques humides et haies ornementales — originaire du Pacifique",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Thuja_plicata_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 196,
@@ -1761,7 +2541,11 @@ window.TREES_DATA = [
     "name_latin": "Cryptomeria japonica",
     "region": "France métropolitaine",
     "anecdote": "Arbre sacré au Japon, souvent planté autour des temples.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cryptomeria_japonica_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cryptomeria_japonica_01.jpg",
+    "geo_location": "Parcs et jardins de toute la France — arbre sacré national du Japon",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Cryptomeria_japonica_cones.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 197,
@@ -1770,7 +2554,11 @@ window.TREES_DATA = [
     "name_latin": "Magnolia grandiflora",
     "region": "France métropolitaine",
     "anecdote": "Ses fleurs blanches de la taille d'une assiette exhalent un parfum suave.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Magnolia_grandiflora_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Magnolia_grandiflora_01.jpg",
+    "geo_location": "Façades et jardins du Midi et du Centre de la France — originaire du Sud-Est américain",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Magnolia_grandiflora_fruit.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   },
   {
     "id": 198,
@@ -1779,7 +2567,11 @@ window.TREES_DATA = [
     "name_latin": "Liriodendron tulipifera",
     "region": "France métropolitaine",
     "anecdote": "Ses feuilles ont une forme originale de silhouette de tulipe.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liriodendron_tulipifera_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liriodendron_tulipifera_01.jpg",
+    "geo_location": "Parcs et grandes allées de toute la France — originaire d'Amérique du Nord",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liriodendron_tulipifera_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 199,
@@ -1788,7 +2580,11 @@ window.TREES_DATA = [
     "name_latin": "Liquidambar orientalis",
     "region": "France métropolitaine",
     "anecdote": "Produit un baume odorant utilisé en parfumerie.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_orientalis_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_orientalis_01.jpg",
+    "geo_location": "Jardins des régions méditerranéennes de France — originaire de Turquie",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Liquidambar_orientalis_leaf.jpg",
+    "image_type": "feuille",
+    "image_source": "local"
   },
   {
     "id": 200,
@@ -1797,6 +2593,10 @@ window.TREES_DATA = [
     "name_latin": "Diospyros kaki",
     "region": "France métropolitaine",
     "anecdote": "Ses fruits (kakis) restent accrochés aux branches découvertes à la fin de l'automne.",
-    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Diospyros_kaki_01.jpg"
+    "wikimedia_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Diospyros_kaki_01.jpg",
+    "geo_location": "Jardins et vergers du Midi méditerranéen — originaire d'Extrême-Orient",
+    "onf_image_url": "https://commons.wikimedia.org/wiki/Special:FilePath/Diospyros_kaki_fruit.jpg",
+    "image_type": "fruit",
+    "image_source": "local"
   }
 ];
