@@ -12,6 +12,7 @@
     "expo-constants": "~57.0.17",
     "expo-haptics": "~57.0.2",
     "expo-linking": "~57.0.9",
+    "expo-navigation-bar": "~57.0.2",
     "expo-router": "~57.0.20",
     "expo-status-bar": "~57.0.1",
     "firebase": "12.19.0",
