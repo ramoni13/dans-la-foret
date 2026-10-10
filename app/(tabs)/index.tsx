@@ -421,7 +421,7 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
         contentContainerStyle={[
           styles.container,
-          { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingBottom: frameBottom + 16 },
+          { paddingTop: innerTop, paddingBottom: frameBottom + 16 },
         ]}
         showsVerticalScrollIndicator={false}
       >
