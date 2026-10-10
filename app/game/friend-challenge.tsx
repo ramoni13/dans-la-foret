@@ -20,6 +20,7 @@ import {
   Platform,
   Modal,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -246,6 +247,7 @@ export default function FriendChallengeScreen() {
   }, [challengeData]);
 
   const insets   = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const game     = useGame();
   const boardDef = challenge ? BoardRegistry[challenge.boardId] : null;
 
@@ -424,7 +426,7 @@ export default function FriendChallengeScreen() {
 
         {/* Plateau */}
         <View style={styles.boardArea}>
-          <View style={styles.boardContainer}>
+          <View style={[styles.boardContainer, { maxHeight: Math.min(screenWidth, screenHeight * 0.45) }]}>
             <BoardRenderer
               boardDef={boardDef}
               playerBoard={game.playerBoard}
@@ -665,7 +667,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   boardContainer: {
-    flex: 1,
     width: '100%',
     maxWidth: 500,
     aspectRatio: 1,
