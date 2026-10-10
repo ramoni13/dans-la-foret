@@ -48,6 +48,7 @@ import { awardBadgesFirestore } from '../../src/services/badgeService';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
+import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
 import { evaluateDailyBadges, DailyGameContext } from '../../src/core/engine/badgeEngine';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
@@ -213,6 +214,7 @@ export default function DailyGameScreen() {
   const player = usePlayerStore();
   const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
+  const { borderW } = useFrameLayout();
 
   // -- Etat local --
   const [loading, setLoading] = useState(true);
@@ -488,7 +490,7 @@ export default function DailyGameScreen() {
       {/* Feuilles qui tombent */}
       <FallingLeaves />
 
-      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 8), paddingHorizontal: borderW }]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -548,19 +550,17 @@ export default function DailyGameScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Plateau */}
+        {/* Plateau — occupe tout l'espace flex restant */}
         <View style={styles.boardArea}>
-          <View style={[styles.boardContainer, { maxHeight: Math.min(screenWidth, screenHeight * 0.48) }]}>
-            <BoardRenderer
-              boardDef={boardDef}
-              playerBoard={game.playerBoard}
-              fixedCells={fixedCells}
-              selectedElement={game.selectedElement}
-              highlightActive={false}
-              getCellColor={(idx) => game.getCellColor(idx)}
-              onCellPress={handleCellPress}
-            />
-          </View>
+          <BoardRenderer
+            boardDef={boardDef}
+            playerBoard={game.playerBoard}
+            fixedCells={fixedCells}
+            selectedElement={game.selectedElement}
+            highlightActive={false}
+            getCellColor={(idx) => game.getCellColor(idx)}
+            onCellPress={handleCellPress}
+          />
         </View>
 
         {/* Palette */}
@@ -761,15 +761,10 @@ const styles = StyleSheet.create({
   },
   boardArea: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     backgroundColor: Colors.ui.background,
-    padding: 4,
-  },
-  boardContainer: {
-    width: '100%',
-    maxWidth: 500,
-    aspectRatio: 1,
-    borderRadius: 16,
+    paddingHorizontal: 0,
+    paddingVertical: 4,
   },
 });

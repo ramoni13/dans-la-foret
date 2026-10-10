@@ -12,6 +12,7 @@ import React, { useEffect } from 'react';
 import { useStorage } from '../src/hooks/useStorage';
 import { AudioController } from '../src/components/Audio/AudioController';
 import { useAudioStore } from '../src/store/audioStore';
+import { NavigationBar } from 'expo-navigation-bar';
 
 
 // ── Error Boundary audio ──────────────────────────────────────────────────────
@@ -86,6 +87,14 @@ function AudioBridge() {
 }
 
 export default function RootLayout() {
+  // Masque la barre de navigation Android dès le démarrage.
+  // Mode immersif : la barre réapparaît temporairement au swipe depuis le bas.
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setHidden(true);
+    }
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <StorageBridge />

@@ -337,7 +337,7 @@ export default function ChallengeScreen() {
   const router  = useRouter();
   const player  = usePlayerStore();
   const insets  = useSafeAreaInsets();
-  const { frameBottom, innerTop, innerPadH, topBarCenterY, cadreW } = useFrameLayout();
+  const { frameBottom, innerTop, innerPadH, topBarCenterY, screenW } = useFrameLayout();
   const uid     = auth.currentUser?.uid ?? null;
   const isAnon  = auth.currentUser?.isAnonymous ?? true;
 
@@ -607,7 +607,7 @@ export default function ChallengeScreen() {
         style={{
           position: 'absolute',
           top:      Math.max(insets.top + 8, innerTop + 20),
-          right:    cadreW * 0.12,
+          right:    screenW * 0.12,
         }}
       >
         <View style={styles.tokenBadge}>

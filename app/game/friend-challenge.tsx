@@ -670,5 +670,6 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     aspectRatio: 1,
     borderRadius: 16,
+    overflow: 'hidden',
   },
 });
