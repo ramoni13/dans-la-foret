@@ -20,9 +20,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Dimensions,
   Platform,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Challenge } from '../../core/models/Challenge';
@@ -39,8 +39,6 @@ interface LevelBriefingModalProps {
   onClose: () => void;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 export const LevelBriefingModal: React.FC<LevelBriefingModalProps> = ({
   challenge,
   levelMeta,
@@ -48,6 +46,7 @@ export const LevelBriefingModal: React.FC<LevelBriefingModalProps> = ({
 }) => {
   const t = useT();
   const insets = useSafeAreaInsets();
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const flatListRef = useRef<FlatList>(null);
 
   const hasNewRules = levelMeta.newRules.length > 0;
