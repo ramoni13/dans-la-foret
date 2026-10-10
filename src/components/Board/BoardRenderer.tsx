@@ -38,6 +38,31 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
     setContainerSize({ width, height });
   }, []);
 
+  /**
+   * Taille effective d'une case : garantit que même les cases aux positions
+   * extrêmes (ex : x=7% ou x=93% dans board_12cells) restent dans les limites
+   * du container.
+   * minMargin = min(pos.x, 100-pos.x, pos.y, 100-pos.y) sur toutes les cases
+   * → cellSize ≤ 2 * minMargin% * containerSize
+   *
+   * Plancher à 52 px : les plateaux 12 cases et daily (15 cases) ont des cases
+   * aux positions très extrêmes (5–7% de marge), ce qui les ramènerait à ~38 px.
+   * On les remonte à la taille des niveaux 6–11 (~53–60 px) pour que les
+   * personnages et le cadenas restent lisibles.
+   */
+  const effectiveCellSize = React.useMemo(() => {
+    if (containerSize.width === 0 || containerSize.height === 0) return CELL_SIZE;
+    let minMarginPct = 50; // commence au centre, réduit selon positions extrêmes
+    for (const pos of boardDef.cellPositions) {
+      minMarginPct = Math.min(minMarginPct, pos.x, 100 - pos.x, pos.y, 100 - pos.y);
+    }
+    // La case doit tenir dans la marge disponible de chaque côté
+    const maxCellSize = Math.floor(2 * (minMarginPct / 100) * Math.min(containerSize.width, containerSize.height));
+    // Plancher : jamais en dessous de 52 px (taille des niveaux 6–11)
+    const CELL_SIZE_MIN = 52;
+    return Math.min(CELL_SIZE, Math.max(CELL_SIZE_MIN, maxCellSize));
+  }, [containerSize, boardDef]);
+
   // Quand le bonus highlight est actif, les cases valides ont leur propre
   // indicateur (bordure + badge ✓ + pulsation verte) — les cases vides
   // non valides ne doivent PAS pulser pour éviter le bruit visuel.
@@ -65,7 +90,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
       pos,
       containerSize.width,
       containerSize.height,
-      CELL_SIZE
+      effectiveCellSize
     );
     return (
       <Cell
@@ -76,6 +101,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
         backgroundColor={getCellColor(idx)}
         hasSelection={hasSelection}
         onPress={onCellPress}
+        cellSize={effectiveCellSize}
         positionStyle={{ left: x, top: y }}
       />
     );
@@ -103,6 +129,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
               to={boardDef.cellPositions[toIdx]}
               containerWidth={containerSize.width}
               containerHeight={containerSize.height}
+              cellSize={effectiveCellSize}
             />
           ))}
         </Svg>
