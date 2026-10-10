@@ -253,58 +253,69 @@ export default function DailyGameScreen() {
     const dailyKey = `daily_${dateStr}`;
     const isResuming = status === 'in_progress';
 
-    // Generer le defi journalier
-    const dailyChallenge = generateDailyChallenge(now);
-    if (!dailyChallenge) {
-      setGenerationError(true);
+    // Generer le defi journalier de facon asynchrone pour ne pas bloquer le thread JS
+    // (le solveur backtracking est synchrone et peut durer ~500ms-2s sur mobile)
+    let leaderboardUnsub: (() => void) | null = null;
+
+    const runGeneration = () => {
+      const dailyChallenge = generateDailyChallenge(now);
+      if (!dailyChallenge) {
+        setGenerationError(true);
+        setLoading(false);
+        return;
+      }
+
+      // Adapter les cases fixes au niveau du joueur
+      const playerLevel = player.currentLevel;
+      const { fixedPlacements, availableTokens } = getDailyFixedPlacements(
+        playerLevel,
+        dailyChallenge,
+        now
+      );
+
+      // Construire le challenge adapte
+      const adaptedChallenge: Challenge = {
+        ...dailyChallenge,
+        fixedPlacements,
+        availableTokens,
+      };
+
+      // Calculer l'offset de temps accumule (reprise apres quit app)
+      const pState = usePlayerStore.getState();
+      const priorElapsed = isResuming
+        ? (Date.now() - (pState.challengeStartedAt[dailyKey] ?? Date.now()))
+        : 0;
+
+      game.loadDailyChallenge(adaptedChallenge);
+      badgesEvaluatedRef.current = false;
+
+      // Marquer le daily comme en cours + enregistrer le timestamp de debut
+      if (!isResuming) {
+        usePlayerStore.setState({ dailyChallengeStatus: 'in_progress' });
+        player.markChallengeStarted(dailyKey);
+      }
+
       setLoading(false);
-      return;
-    }
-
-    // Adapter les cases fixes au niveau du joueur
-    const playerLevel = player.currentLevel;
-    const { fixedPlacements, availableTokens } = getDailyFixedPlacements(
-      playerLevel,
-      dailyChallenge,
-      now
-    );
-
-    // Construire le challenge adapte
-    const adaptedChallenge: Challenge = {
-      ...dailyChallenge,
-      fixedPlacements,
-      availableTokens,
+      // Le timer demarrera apres la fermeture du briefing (handleBriefingClose)
+      // sauf si on reprend (briefing deja vu)
+      if (isResuming) {
+        setBriefingDone(true);
+        setTimeout(() => game.startTimer(priorElapsed), 50);
+      }
     };
 
-    // Calculer l'offset de temps accumule (reprise apres quit app)
-    const pState = usePlayerStore.getState();
-    const priorElapsed = isResuming
-      ? (Date.now() - (pState.challengeStartedAt[dailyKey] ?? Date.now()))
-      : 0;
-
-    game.loadDailyChallenge(adaptedChallenge);
-    badgesEvaluatedRef.current = false;
-
-    // Marquer le daily comme en cours + enregistrer le timestamp de debut
-    if (!isResuming) {
-      usePlayerStore.setState({ dailyChallengeStatus: 'in_progress' });
-      player.markChallengeStarted(dailyKey);
-    }
-
-    setLoading(false);
-    // Le timer demarrera apres la fermeture du briefing (handleBriefingClose)
-    // sauf si on reprend (briefing deja vu)
-    if (isResuming) {
-      setBriefingDone(true);
-      setTimeout(() => game.startTimer(priorElapsed), 50);
-    }
+    // Laisser React Native rendre l'ecran de chargement avant de lancer le solveur
+    const genTimeout = setTimeout(runGeneration, 16);
 
     // Ecouter le leaderboard
-    const unsub = subscribeDailyLeaderboard(dateStr, 50, (results) => {
+    leaderboardUnsub = subscribeDailyLeaderboard(dateStr, 50, (results) => {
       setLeaderboard(results);
     });
 
-    return () => unsub();
+    return () => {
+      clearTimeout(genTimeout);
+      leaderboardUnsub?.();
+    };
   }, []);
 
   const challenge = game.challenge;
@@ -761,7 +772,7 @@ const styles = StyleSheet.create({
   },
   boardArea: {
     flex: 1,
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     justifyContent: 'flex-start',
     backgroundColor: Colors.ui.background,
     paddingHorizontal: 0,
