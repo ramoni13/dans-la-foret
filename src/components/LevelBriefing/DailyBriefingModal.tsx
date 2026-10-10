@@ -18,9 +18,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Dimensions,
   ScrollView,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
@@ -35,7 +35,7 @@ interface DailyBriefingModalProps {
   onClose: () => void;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 
 // ── Regles champignon statiques (comme les RuleCard de levelMeta) ─────────────
 
@@ -61,6 +61,7 @@ export const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
 }) => {
   const t = useT();
   const insets = useSafeAreaInsets();
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const flatListRef = useRef<FlatList>(null);
 
   const TOTAL_PAGES = 3;
