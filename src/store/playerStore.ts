@@ -116,8 +116,9 @@ interface PlayerState {
   friendNotifBadgeEnabled: boolean;
 
   // ── Mode ONF — Grille Forestière 4×4 ────────────────────────────────────────
-  onfSolvedCount: number;        // nb de grilles 4×4 résolues
-  lastOnfCompoKey: string | null; // clé de la dernière composition jouée (anti-répétition)
+  onfSolvedCount: number;              // nb de grilles 4×4 résolues
+  lastOnfCompoKey: string | null;      // clé de la dernière composition jouée (anti-répétition)
+  completedOnfChallengeIds: string[]; // IDs des défis ONF terminés (pour ne pas reproposer)
 
   // ── Badges : objectifs actifs (chantier 3) ───────────────────────────────────
   activeBadgeGoals: string[];  // max 3 badgeIds choisis par le joueur
@@ -190,6 +191,8 @@ interface PlayerState {
   // ── Actions mode ONF ─────────────────────────────────────────────────────
   incrementOnfSolved: () => void;
   setLastOnfCompoKey: (key: string) => void;
+  /** Marque un défi ONF comme terminé (ajoute son ID, incrémente le compteur). */
+  markOnfChallengeCompleted: (challengeId: string) => void;
 
   // ── Actions statistiques génériques (chantier 5) ──────────────────────────
   incrementStat: (key: keyof PlayerStats, amount?: number) => void;
@@ -329,6 +332,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   onfSolvedCount: 0,
   lastOnfCompoKey: null,
+  completedOnfChallengeIds: [],
 
   activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
 
@@ -444,6 +448,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         (profile as any).longestDailyChallengeStreak ?? 0,
       ),
       onfSolvedCount: (profile as any).onfSolvedCount ?? (profile as any).onf4x4SolvedCount ?? 0,
+      completedOnfChallengeIds: (profile as any).completedOnfChallengeIds ?? [],
       // Objectifs actifs : restaurer depuis le cloud ; si vide (ancien profil), appliquer les défauts
       activeBadgeGoals: (() => {
         const cloudGoals: string[] = (profile as any).activeBadgeGoals ?? [];
@@ -636,6 +641,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     friendNotifBadgeEnabled: true,
     onfSolvedCount: 0,
     lastOnfCompoKey: null,
+    completedOnfChallengeIds: [],
     activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
     dailyBonusUses: { highlight_valid_cells: 5, instinct: 5 },
     lastBonusResetDate: null,
@@ -826,6 +832,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   })),
 
   setLastOnfCompoKey: (key) => set({ lastOnfCompoKey: key }),
+
+  markOnfChallengeCompleted: (challengeId) => set(state => {
+    if (state.completedOnfChallengeIds.includes(challengeId)) return state;
+    return {
+      completedOnfChallengeIds: [...state.completedOnfChallengeIds, challengeId],
+      onfSolvedCount: state.onfSolvedCount + 1,
+    };
+  }),
 
   // ── Objectifs de badges actifs (chantier 3) ───────────────
   setActiveBadgeGoals: (ids) => set({
