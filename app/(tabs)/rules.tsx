@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // ECRAN REGLES
 // Affiche tous les elements dans l'ordre d'apparition.
 // Elements debloques : icone + nom + animations des regles (memes que le briefing).

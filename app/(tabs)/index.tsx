@@ -556,7 +556,8 @@ export default function HomeScreen() {
         {(() => {
           // Débloqué par niveau OU par palier badge bois×9 (chantier 3)
           const isOnfUnlocked = player.currentLevel >= ONF_4X4_LEVEL_UNLOCK || player.unlockedOnf;
-          const solved = player.onfSolvedCount;
+          const solved = player.completedOnfChallengeIds.length;
+          const total = 100;
 
           if (!isOnfUnlocked) {
             return (
@@ -571,11 +572,23 @@ export default function HomeScreen() {
             );
           }
 
+          if (solved >= total) {
+            return (
+              <WoodButton
+                variant="green"
+                label="Défi ONF"
+                sublabel={`Tous les défis réussis (${total}/${total}) 🏆`}
+                height={76}
+                onPress={() => router.push('/game/onf')}
+              />
+            );
+          }
+
           return (
             <WoodButton
               variant="green"
               label="Défi ONF"
-              sublabel={`${solved} grille${solved !== 1 ? 's' : ''} résolue${solved !== 1 ? 's' : ''} `}
+              sublabel={`${solved} / ${total} défis résolus`}
               height={76}
               onPress={() => router.push('/game/onf')}
             />

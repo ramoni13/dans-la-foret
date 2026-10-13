@@ -1,16 +1,16 @@
 // ============================================================
 // ÉCRAN DE JEU ONF — Mode Grille Forestière (Sudoku Forestier)
 //
-// Route : /game/onf?size=3  ou  /game/onf?size=4
+// Route : /game/onf
 //
 // Différences avec le mode normal :
+// - Défis pré-générés (src/data/onf_challenges.json)
+// - Sélection aléatoire d'un défi non encore complété
 // - Contrainte supplémentaire : max 1 élément par ligne ET par colonne
 // - Validation combinée : validateBoard() + validateRowColUnique()
-// - Victoire via checkVictory() seul (solution pré-calculée par solveOnf)
-// - Pas de markChallengeCompleted (ONF ne fait pas progresser le niveau)
-// - incrementOnf3x3Solved() ou incrementOnf4x4Solved() après victoire
+// - Victoire → défi marqué complété en local + Firestore
+// - Message "Vous avez réussi tous les défis" si tous terminés
 // - Bouton "Nouveau défi" pour rejouer sans quitter l'écran
-// - Surlignage ligne/colonne de la case sélectionnée (Option A)
 // ============================================================
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -21,7 +21,6 @@ import {
   TouchableOpacity,
   Platform,
   BackHandler,
-  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,9 +40,9 @@ import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 
 import {
-  generateOnfChallenge,
+  pickOnfChallenge,
   calculateOnfReward,
-  compositionKey,
+  getTotalOnfChallenges,
 } from '../../src/services/onfChallengeService';
 import {
   validateBoard,
@@ -51,7 +50,11 @@ import {
   checkVictory,
 } from '../../src/core/engine/validator';
 import { ElementRegistry } from '../../src/elements/ElementRegistry';
-import { updateSeeds, upsertPlayer } from '../../src/services/playerService';
+import {
+  updateSeeds,
+  upsertPlayer,
+  markOnfChallengeCompleted,
+} from '../../src/services/playerService';
 
 const native = Platform.OS !== 'web';
 
@@ -74,7 +77,7 @@ export default function ONFGameScreen() {
 
   // ── État local ────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
-  const [generationError, setGenerationError] = useState(false);
+  const [allCompleted, setAllCompleted] = useState(false);
   const [seedsEarned, setSeedsEarned] = useState(0);
   const seedsBeforeGainRef = useRef(0);
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
@@ -84,34 +87,34 @@ export default function ONFGameScreen() {
   const badgesEvaluatedRef = useRef(false);
   const confettiPieces = useConfetti(game.isVictory);
 
-  // ── Génération du défi ────────────────────────────────────
-  const generateAndLoad = useCallback(() => {
+  // ── Sélection et chargement d'un défi ────────────────────
+  const pickAndLoad = useCallback(() => {
     setLoading(true);
-    setGenerationError(false);
+    setAllCompleted(false);
     setRowColViolationCells([]);
     badgesEvaluatedRef.current = false;
 
     // setTimeout de 16ms pour laisser React rendre l'écran de chargement
-    // avant que le solveur backtracking (synchrone) ne s'exécute.
+    // avant que le chargement du défi (synchrone) ne s'exécute.
     const timeout = setTimeout(() => {
-      const state       = usePlayerStore.getState();
-      const solvedCount = state.onfSolvedCount;
-      const lastKey     = state.lastOnfCompoKey;
+      const state = usePlayerStore.getState();
+      const completedIds = state.completedOnfChallengeIds;
 
-      const challenge = generateOnfChallenge(solvedCount, lastKey);
-      if (!challenge) {
-        setGenerationError(true);
+      const result = pickOnfChallenge(completedIds);
+
+      if (result.allCompleted) {
+        setAllCompleted(true);
         setLoading(false);
         return;
       }
 
-      // Mémoriser la composition jouée pour l'anti-répétition
-      const onfChallenge = challenge as typeof challenge & { _onfCompoKey?: string };
-      if (onfChallenge._onfCompoKey) {
-        state.setLastOnfCompoKey(onfChallenge._onfCompoKey);
+      if (!result.challenge) {
+        setAllCompleted(true);
+        setLoading(false);
+        return;
       }
 
-      game.loadChallenge(challenge);
+      game.loadChallenge(result.challenge);
       // Mode ONF : aucun bonus disponible
       game.setBonusDisabled(true);
       game.startTimer(0);
@@ -122,7 +125,7 @@ export default function ONFGameScreen() {
   }, []);
 
   useEffect(() => {
-    generateAndLoad();
+    pickAndLoad();
   }, []);
 
   // ── Données dérivées ──────────────────────────────────────
@@ -142,7 +145,6 @@ export default function ONFGameScreen() {
     : false;
 
   // ── Couleur des cases ─────────────────────────────────────
-  // Pas de surlignage aide en mode ONF — le joueur doit déduire seul.
   const getCellColorOnf = useCallback((cellIndex: number): string => {
     // 1. Violations après validation (rouge) — priorité maximale
     if (rowColViolationCells.includes(cellIndex)) {
@@ -210,16 +212,19 @@ export default function ONFGameScreen() {
     seedsBeforeGainRef.current = usePlayerStore.getState().seeds;
     setSeedsEarned(earned);
     player.addSeeds(earned);
-    player.incrementOnfSolved();
 
-    // Sync Firestore en arrière-plan — lecture du store après les mises à jour
-    // pour avoir les valeurs incrémentées correctes.
+    // Marquer le défi comme complété (local store — incrémente aussi onfSolvedCount)
+    player.markOnfChallengeCompleted(challenge.id);
+
+    // Sync Firestore en arrière-plan
     const uid = player.userId;
     if (uid) {
       const updatedState = usePlayerStore.getState();
       // 1. Sync des graines
       updateSeeds(uid, updatedState.seeds).catch(() => {});
-      // 2. Sync du compteur ONF et du profil complet
+      // 2. Marquer le défi complété + compteur ONF dans Firestore
+      markOnfChallengeCompleted(uid, challenge.id, updatedState.onfSolvedCount).catch(() => {});
+      // 3. Sync profil complet (seeds, earnedBadges, etc.)
       upsertPlayer({
         userId: uid,
         username: updatedState.username,
@@ -234,6 +239,7 @@ export default function ONFGameScreen() {
         dailyStreak: updatedState.dailyStreak,
         lastPlayedDate: updatedState.lastPlayedDate,
         onfSolvedCount: updatedState.onfSolvedCount,
+        completedOnfChallengeIds: updatedState.completedOnfChallengeIds,
       }).catch(() => {});
     }
   }, [game.isVictory]);
@@ -260,22 +266,30 @@ export default function ONFGameScreen() {
     return (
       <View style={[styles.loading, { paddingTop: insets.top }]}>
         <Text style={styles.loadingText}>
-          Génération de la grille en cours...
+          Chargement du défi...
         </Text>
       </View>
     );
   }
 
-  if (generationError) {
+  // ── Tous les défis terminés ───────────────────────────────
+  if (allCompleted) {
+    const total = getTotalOnfChallenges();
     return (
       <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Impossible de générer la grille</Text>
+        <Text style={styles.allCompletedEmoji}>🏆</Text>
+        <Text style={styles.allCompletedTitle}>
+          Félicitations !
+        </Text>
+        <Text style={styles.allCompletedText}>
+          Vous avez réussi tous les défis ONF ({total}/{total}).
+        </Text>
         <TouchableOpacity
           style={styles.errorBtn}
           onPress={() => router.replace('/(tabs)')}
           activeOpacity={0.8}
         >
-          <Text style={styles.errorBtnText}>Retour</Text>
+          <Text style={styles.errorBtnText}>Retour à l'accueil</Text>
         </TouchableOpacity>
       </View>
     );
@@ -289,7 +303,10 @@ export default function ONFGameScreen() {
     );
   }
 
-  const gridLabel = 'Grille 4x4';
+  // Progression : combien de défis restants
+  const completedCount = player.completedOnfChallengeIds.length;
+  const totalCount = getTotalOnfChallenges();
+  const gridLabel = `Défi ${completedCount + 1} / ${totalCount}`;
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -391,7 +408,7 @@ export default function ONFGameScreen() {
           previousRecordHolder={null}
           onNextChallenge={() => {
             game.resetGame();
-            generateAndLoad();
+            pickAndLoad();
           }}
           onBackToMenu={() => {
             game.resetGame();
@@ -423,11 +440,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 32,
   },
+
+  // Écran "tous complétés"
+  allCompletedEmoji: {
+    fontSize: 64,
+    marginBottom: 8,
+  },
+  allCompletedTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+    textAlign: 'center',
+  },
+  allCompletedText: {
+    fontSize: 16,
+    color: Colors.ui.textLight,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+    lineHeight: 22,
+  },
+
   errorBtn: {
     backgroundColor: Colors.forest.medium,
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 24,
+    marginTop: 8,
   },
   errorBtnText: {
     color: '#fff',
