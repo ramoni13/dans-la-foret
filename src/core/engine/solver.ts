@@ -478,18 +478,24 @@ function isCompleteSolutionValid(
 export interface SolverONFInput extends SolverInput {
   /** gridMeta doit être présent sur le boardDef — fourni explicitement pour sécurité */
   gridMeta: { rows: number[][]; cols: number[][] };
+  /**
+   * Nombre maximum de solutions à collecter avant de s'arrêter.
+   * Par défaut : 2 (pour détecter l'unicité).
+   * Mettre à 1 pour trouver une solution unique rapidement (premier appel en génération).
+   */
+  maxSolutions?: number;
 }
 
 /**
  * Résout le puzzle ONF en ajoutant l'élagage row_col_unique au backtracking standard.
  * Utilise isPlacementValidOnf() à la place de isPlacementValid() pour chaque tentative.
- * S'arrête dès que 2 solutions sont trouvées (détection d'unicité).
+ * S'arrête dès que maxSolutions solutions sont trouvées (défaut : 2, pour détection d'unicité).
  *
  * Identique à solve() sauf que le prédicat de placement intègre la contrainte
  * ligne/colonne du mode ONF (sudoku assoupli : max 1 élément identique par ligne ET colonne).
  */
 export function solveOnf(input: SolverONFInput): SolverResult {
-  const { boardDef, fixedPlacements, availableTokens, elementDefs, rng, gridMeta } = input;
+  const { boardDef, fixedPlacements, availableTokens, elementDefs, rng, gridMeta, maxSolutions = 2 } = input;
   const rngFn = rng ?? Math.random;
 
   // Injecter gridMeta dans boardDef si absent (garantit la cohérence)
@@ -507,9 +513,21 @@ export function solveOnf(input: SolverONFInput): SolverResult {
     tokenInventory[tc.elementId] = tc.count;
   }
 
+  // Précalculer : pour chaque case, quelles lignes/colonnes elle appartient
+  const cellGroups: number[][] = Array(boardDef.cellCount).fill(null).map(() => []);
+  const allGroups = [...gridMeta.rows, ...gridMeta.cols];
+  for (let g = 0; g < allGroups.length; g++) {
+    for (const idx of allGroups[g]) {
+      cellGroups[idx].push(g);
+    }
+  }
+
   const rawSolutions: string[][] = [];
 
-  backtrackOnf(initialBoard, tokenInventory, boardDefWithGrid, elementDefs, rawSolutions, rngFn, gridMeta);
+  backtrackOnf(
+    initialBoard, tokenInventory, boardDefWithGrid, elementDefs,
+    rawSolutions, rngFn, gridMeta, allGroups, cellGroups, maxSolutions,
+  );
 
   // Dédupliquer canoniquement (même logique que solve())
   const seen = new Set<string>();
@@ -530,8 +548,50 @@ export function solveOnf(input: SolverONFInput): SolverResult {
 }
 
 /**
+ * Élagage row_col_unique précoce pour le mode ONF.
+ * Pour chaque groupe (ligne ou colonne), vérifie que le nombre de cases restantes
+ * peut encore accueillir les éléments dont le count restant dépasse les places libres.
+ * Si un élément a déjà saturé une ligne ou colonne (présent 1 fois sur 4), on l'élimine
+ * des tentatives via isPlacementValidOnf. Ici on élimine les branches où il serait
+ * impossible de placer les tokens restants dans les lignes/colonnes non encore saturées.
+ */
+function canStillSatisfyRowColUnique(
+  board: (string | null)[],
+  inventory: Record<string, number>,
+  allGroups: number[][],
+): boolean {
+  const gridSize = allGroups[0]?.length ?? 4;
+
+  for (const elementId of Object.keys(inventory)) {
+    const remaining = inventory[elementId];
+    if (remaining <= 0) continue;
+
+    // Compter combien de groupes peuvent encore accueillir cet élément
+    // (groupe = ligne ou colonne où l'élément n'est pas encore présent)
+    let availableGroups = 0;
+    for (const group of allGroups) {
+      const alreadyInGroup = group.some(idx => board[idx] === elementId);
+      if (!alreadyInGroup) availableGroups++;
+    }
+
+    // Chaque placement utilise 1 place dans 1 ligne ET 1 colonne.
+    // Sur une grille N×N, il y a N lignes + N colonnes = 2N groupes.
+    // Chaque élément peut être placé au plus N fois (1 par ligne, 1 par colonne).
+    // Si remaining > availableGroups / 2, impossible de placer tous les tokens restants.
+    if (remaining > Math.floor(availableGroups / 2)) return false;
+
+    // Vérification stricte : si remaining > gridSize, impossible (I9 devrait l'avoir bloqué)
+    if (remaining > gridSize) return false;
+  }
+
+  return true;
+}
+
+/**
  * Backtracking ONF : identique à backtrack() mais utilise isPlacementValidOnf()
  * pour intégrer la contrainte ligne/colonne lors de chaque tentative de placement.
+ * Intègre également un élagage précoce de la contrainte row_col_unique via
+ * canStillSatisfyRowColUnique().
  */
 function backtrackOnf(
   board: (string | null)[],
@@ -540,9 +600,12 @@ function backtrackOnf(
   elementDefs: Record<string, ElementDefinition>,
   solutions: string[][],
   rng: RngFunction,
-  gridMeta: { rows: number[][]; cols: number[][] }
+  gridMeta: { rows: number[][]; cols: number[][] },
+  allGroups: number[][],
+  cellGroups: number[][],
+  maxSolutions: number,
 ): void {
-  if (solutions.length >= 2) return;
+  if (solutions.length >= maxSolutions) return;
 
   const emptyCellIndex = board.findIndex(cell => cell === null);
 
@@ -565,8 +628,11 @@ function backtrackOnf(
     board[emptyCellIndex] = elementId;
     inventory[elementId]--;
 
-    if (canStillSatisfyRequireConstraints(board, inventory, boardDef, elementDefs)) {
-      backtrackOnf(board, inventory, boardDef, elementDefs, solutions, rng, gridMeta);
+    if (
+      canStillSatisfyRequireConstraints(board, inventory, boardDef, elementDefs) &&
+      canStillSatisfyRowColUnique(board, inventory, allGroups)
+    ) {
+      backtrackOnf(board, inventory, boardDef, elementDefs, solutions, rng, gridMeta, allGroups, cellGroups, maxSolutions);
     }
 
     board[emptyCellIndex] = null;
