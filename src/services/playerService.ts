@@ -55,7 +55,8 @@ export interface PlayerProfile {
   dailyStreak: number;
   lastPlayedDate: string;    // "YYYY-MM-DD"
   // ── Mode ONF — Grille Forestière 4×4 ────────────────
-  onfSolvedCount: number; // nb de grilles 4×4 résolues
+  onfSolvedCount: number;              // nb de grilles 4×4 résolues
+  completedOnfChallengeIds: string[]; // IDs des défis ONF terminés (pour ne pas reproposer)
   // ── Badges : objectifs actifs (chantier 3) ───────────
   activeBadgeGoals?: string[];
 }
@@ -115,6 +116,7 @@ function migrateProfile(raw: any): PlayerProfile {
     dailyStreak:       raw.dailyStreak ?? 0,
     lastPlayedDate:    raw.lastPlayedDate ?? '',
     onfSolvedCount: raw.onfSolvedCount ?? raw.onf4x4SolvedCount ?? 0,
+    completedOnfChallengeIds: raw.completedOnfChallengeIds ?? [],
     activeBadgeGoals: raw.activeBadgeGoals ?? [],
   };
 }
@@ -187,6 +189,7 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
     dailyStreak: 0,
     lastPlayedDate: '',
     onfSolvedCount: 0,
+    completedOnfChallengeIds: [],
   };
   // usernameLower permet la recherche d'unicité insensible à la casse
   await setDoc(doc(db, 'players', userId), {
@@ -194,6 +197,21 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
     usernameLower: username.trim().toLowerCase(),
   });
   return profile;
+}
+
+// ── Marquer un défi ONF comme complété ────────────────────────────────────────
+// Ajoute l'ID du défi dans completedOnfChallengeIds (tableUnion via arrayUnion).
+export async function markOnfChallengeCompleted(
+  userId: string,
+  challengeId: string,
+  onfSolvedCount: number,
+): Promise<void> {
+  const { arrayUnion } = await import('firebase/firestore');
+  await updateDoc(doc(db, 'players', userId), {
+    completedOnfChallengeIds: arrayUnion(challengeId),
+    onfSolvedCount,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 // ── Mettre à jour les graines ─────────────────────────────────────────────────
