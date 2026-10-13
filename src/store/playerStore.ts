@@ -15,6 +15,7 @@ import {
   BADGE_SEED_REWARDS,
   RARITY_UNLOCKS,
 } from '../constants/badges';
+import { DEFAULT_BADGE_GOALS } from '../core/engine/badgeEngine';
 
 // ── Helpers de date ────────────────────────────────────────────────────────────
 
@@ -47,6 +48,19 @@ interface PlayerStats {
   improvedChallengesCount: number;   // nb de défis différents dont le temps a été amélioré
   seasonalChallengesPlayed: number;  // défis joués pendant la saison en cours
   abandonCount: Record<string, number>; // challengeId → nb d'abandons cumulés
+  // ── Nouveaux champs statistiques (chantier 5) ──────────────────────────────
+  dailyPlayed: number;          // nb de défis du jour tentés (tous temps)
+  dailyWon: number;             // nb de défis du jour réussis (tous temps)
+  friendPlayed: number;         // nb de défis amis joués en tant que participant
+  avgResolutionMs: number;      // moyenne glissante du temps de résolution solo
+  totalResolutionCount: number; // nb de parties solo comptées dans la moyenne
+  /**
+   * Nb de victoires sous le seuil vitesse par badge.
+   * Clés : 'vitesse_tortue' | 'vitesse_Loup' | 'vitesse_oiseau' | 'vitesse_eclair' | 'vitesse_tornade'
+   * Le seuil est celui du niveau courant au moment de la partie.
+   * Un badge est décerné quand le compteur atteint SPEED_BADGE_TARGET (5).
+   */
+  speedBadgeHits: Record<string, number>;
 }
 
 interface PlayerState {
@@ -73,6 +87,7 @@ interface PlayerState {
   earnedBadges: string[];                   // IDs des badges obtenus
   unlockedBonuses: BonusId[];               // bonus débloqués via badges (instinct)
   unlockedThemes: string[];                 // thèmes débloqués via badges
+  unlockedOnf: boolean;                     // mode ONF débloqué via badge bois×9 (chantier 3)
   badgeShowcase: [string?, string?, string?]; // 3 badges choisis pour la vitrine
 
   // ── Streak quotidien ────────────────────────────────────────────────────────
@@ -88,17 +103,32 @@ interface PlayerState {
 
   // ── Défi journalier ────────────────────────────────────────────────────────
   dailyChallengeStreak: number;                                      // Jours consécutifs réussis (indépendant du streak normal)
+  longestDailyChallengeStreak: number;                               // Meilleure série journalière (record historique)
   lastDailyChallengeDate: string;                                    // "YYYY-MM-DD" — date UTC du dernier défi journalier réussi
   dailyChallengeStatus: 'pending' | 'in_progress' | 'success' | 'failed' | null; // Statut du jour en cours
   dailyChallengeTimeMs: number | null;                               // Temps réalisé (ms) si success
 
-  // ── Anti-triche : timestamps d'abandon ────────────────────────────────────
+  // ── Anti-triche : timestamps de début ────────────────────────────────────
   challengeStartedAt: Record<string, number>;   // challengeId → Date.now() de première ouverture
-  challengeAbandonedAt: Record<string, number>; // challengeId → Date.now() du dernier abandon
 
   // ── Notifications amis ─────────────────────────────────────────────────────
   /** Afficher le badge rouge sur l'onglet Amis quand un défi est en attente */
   friendNotifBadgeEnabled: boolean;
+
+  // ── Mode ONF — Grille Forestière 4×4 ────────────────────────────────────────
+  onfSolvedCount: number;        // nb de grilles 4×4 résolues
+  lastOnfCompoKey: string | null; // clé de la dernière composition jouée (anti-répétition)
+
+  // ── Badges : objectifs actifs (chantier 3) ───────────────────────────────────
+  activeBadgeGoals: string[];  // max 3 badgeIds choisis par le joueur
+
+  // ── Défis amis : amis uniques défiés (pour badge social_poignee / social_cirque) ──
+  /** UIDs des amis à qui le joueur a envoyé au moins un défi. Jamais de doublons. */
+  challengedFriendIds: string[];
+
+  // ── Bonus journaliers (chantier 4) ───────────────────────────────────────────
+  dailyBonusUses: Record<BonusId, number>; // utilisations restantes aujourd'hui
+  lastBonusResetDate: string | null;        // "YYYY-MM-DD" du dernier reset
 
   // ── Actions de base ─────────────────────────────────────────────────────────
   setAuthState: (ready: boolean, authenticated: boolean) => void;
@@ -124,10 +154,16 @@ interface PlayerState {
   /** Attribue plusieurs badges en UN SEUL set() — évite la cascade de re-renders */
   awardBadges: (badgeIds: string[]) => void;
   setBadgeShowcase: (badges: [string?, string?, string?]) => void;
+  setActiveBadgeGoals: (ids: string[]) => void;
+
+  // ── Actions bonus journaliers (chantier 4) ───────────────────────────────────
+  spendBonus: (bonusId: BonusId) => boolean;
 
   // ── Actions social ───────────────────────────────────────────────────────────
   recordFriendWin: () => void;
-  recordFriendInvited: () => void;
+  /** Enregistre un défi envoyé à un ami (uniquement si c'est un nouvel ami).
+   *  Met à jour challengedFriendIds et totalFriendsInvited. */
+  recordFriendChallenged: (friendUid: string) => void;
   recordTopDEJ: () => void;
 
   // ── Actions tutoriels bonus ──────────────────────────────────────────────────
@@ -147,43 +183,28 @@ interface PlayerState {
   // ── Actions anti-triche ───────────────────────────────────────────────────
   markChallengeStarted: (challengeId: string) => void;
   markChallengeAbandoned: (challengeId: string) => void;
-  clearChallengeTimestamps: (challengeId: string) => void;
 
   // ── Actions notifications amis ───────────────────────────────────────────
   setFriendNotifBadgeEnabled: (enabled: boolean) => void;
+
+  // ── Actions mode ONF ─────────────────────────────────────────────────────
+  incrementOnfSolved: () => void;
+  setLastOnfCompoKey: (key: string) => void;
+
+  // ── Actions statistiques génériques (chantier 5) ──────────────────────────
+  incrementStat: (key: keyof PlayerStats, amount?: number) => void;
 }
-
-// ── Constante anti-triche ────────────────────────────────────────────────────
-
-/** Cooldown après abandon : 15 minutes */
-export const ABANDON_COOLDOWN_MS = 900_000;
 
 // ── Fonctions utilitaires anti-triche (hors store pour éviter stale closures) ─
-
-/** Vérifie si un défi est en cooldown après abandon. Appeler avec getState().
- *  @param nowMs - timestamp courant (Date.now() par défaut). Passer le ticker pour réactivité. */
-export function isChallengeOnCooldown(
-  challengeAbandonedAt: Record<string, number>,
-  challengeId: string,
-  nowMs: number = Date.now(),
-): { onCooldown: boolean; remainingMs: number } {
-  const abandonedAt = challengeAbandonedAt[challengeId];
-  if (abandonedAt == null) return { onCooldown: false, remainingMs: 0 };
-  const elapsed = nowMs - abandonedAt;
-  if (elapsed >= ABANDON_COOLDOWN_MS) return { onCooldown: false, remainingMs: 0 };
-  return { onCooldown: true, remainingMs: ABANDON_COOLDOWN_MS - elapsed };
-}
 
 /** Retourne le temps écoulé cumulé pour un défi (en ms). Appeler avec getState(). */
 export function getChallengeElapsed(
   challengeStartedAt: Record<string, number>,
-  challengeAbandonedAt: Record<string, number>,
   challengeId: string,
 ): number {
   const startedAt = challengeStartedAt[challengeId];
   if (startedAt == null) return 0;
-  const endedAt = challengeAbandonedAt[challengeId] ?? Date.now();
-  return endedAt - startedAt;
+  return Date.now() - startedAt;
 }
 
 // ── Calcul des bonus/thèmes débloqués depuis les badges ──────────────────────
@@ -224,10 +245,24 @@ function computeUnlockedThemes(earnedBadges: string[]): string[] {
       if (unlock.unlock === 'theme_automne')        themes.push('automne');
       if (unlock.unlock === 'theme_hiver')          themes.push('hiver');
       if (unlock.unlock === 'theme_foret_mystique') themes.push('foret_mystique');
+      if (unlock.unlock === 'music_unlock')         themes.push('music'); // chantier 3
     }
   }
 
   return themes;
+}
+
+/** Retourne true si le joueur a débloqué le mode ONF via le palier badge bois×9. */
+function computeUnlockedONF(earnedBadges: string[]): boolean {
+  const rarityCount: Record<string, number> = {};
+  for (const id of earnedBadges) {
+    const def = BADGE_MAP[id];
+    if (!def) continue;
+    rarityCount[def.rarity] = (rarityCount[def.rarity] ?? 0) + 1;
+  }
+  return RARITY_UNLOCKS.some(
+    u => u.unlock === 'mode_onf' && (rarityCount[u.rarity] ?? 0) >= u.count
+  );
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -262,11 +297,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     improvedChallengesCount: 0,
     seasonalChallengesPlayed: 0,
     abandonCount: {},
+    dailyPlayed: 0,
+    dailyWon: 0,
+    friendPlayed: 0,
+    avgResolutionMs: 0,
+    totalResolutionCount: 0,
+    speedBadgeHits: {},
   },
 
   earnedBadges: [],
   unlockedBonuses: [],
   unlockedThemes: [],
+  unlockedOnf: false,
   badgeShowcase: [undefined, undefined, undefined],
 
   dailyStreak: 0,
@@ -276,14 +318,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   visualEffect: 'leaves' as VisualEffect,
 
   dailyChallengeStreak: 0,
+  longestDailyChallengeStreak: 0,
   lastDailyChallengeDate: '',
   dailyChallengeStatus: null,
   dailyChallengeTimeMs: null,
 
   challengeStartedAt: {},
-  challengeAbandonedAt: {},
 
   friendNotifBadgeEnabled: true,
+
+  onfSolvedCount: 0,
+  lastOnfCompoKey: null,
+
+  activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+
+  challengedFriendIds: [],
+
+  dailyBonusUses: { highlight_valid_cells: 5, instinct: 5 },
+  lastBonusResetDate: null,
 
   // ── setAuthState ──────────────────────────────────────────
   setAuthState: (ready, authenticated) => set({ authReady: ready, isAuthenticated: authenticated }),
@@ -369,13 +421,34 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         improvedChallengesCount:  profile.stats.improvedChallengesCount ?? 0,
         seasonalChallengesPlayed: profile.stats.seasonalChallengesPlayed ?? 0,
         abandonCount:             (profile.stats as any).abandonCount ?? {},
+        dailyPlayed:              (profile.stats as any).dailyPlayed ?? 0,
+        dailyWon:                 (profile.stats as any).dailyWon ?? 0,
+        friendPlayed:             (profile.stats as any).friendPlayed ?? 0,
+        avgResolutionMs:          (profile.stats as any).avgResolutionMs ?? 0,
+        totalResolutionCount:     (profile.stats as any).totalResolutionCount ?? 0,
+        speedBadgeHits:           (profile.stats as any).speedBadgeHits ?? {},
       },
       earnedBadges:    mergedEarned,
       unlockedBonuses: computeUnlockedBonuses(mergedEarned),
       unlockedThemes:  computeUnlockedThemes(mergedEarned),
+      unlockedOnf:     computeUnlockedONF(mergedEarned),
       badgeShowcase:   (profile.badgeShowcase as [string?, string?, string?]) ?? [undefined, undefined, undefined],
-      dailyStreak:     mergedDailyStreak,
-      lastPlayedDate:  mergedLastPlayed,
+      dailyStreak:       mergedDailyStreak,
+      lastPlayedDate:    mergedLastPlayed,
+      dailyChallengeStreak: Math.max(
+        get().dailyChallengeStreak,
+        (profile as any).dailyChallengeStreak ?? 0,
+      ),
+      longestDailyChallengeStreak: Math.max(
+        get().longestDailyChallengeStreak,
+        (profile as any).longestDailyChallengeStreak ?? 0,
+      ),
+      onfSolvedCount: (profile as any).onfSolvedCount ?? (profile as any).onf4x4SolvedCount ?? 0,
+      // Objectifs actifs : restaurer depuis le cloud ; si vide (ancien profil), appliquer les défauts
+      activeBadgeGoals: (() => {
+        const cloudGoals: string[] = (profile as any).activeBadgeGoals ?? [];
+        return cloudGoals.length > 0 ? cloudGoals : [...DEFAULT_BADGE_GOALS];
+      })(),
     });
   },
 
@@ -394,6 +467,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   // pendant CETTE partie (avant la victoire finale).
   // noErrorStreak s'incrémente seulement si failCountForThisGame === 0.
   markChallengeCompleted: (challengeId, timeMs, errorCount) => {
+    // Nombre de victoires sous seuil requis pour obtenir un badge vitesse
+    const SPEED_BADGE_TARGET = 5;
     set(state => {
       const alreadyCompleted = state.completedChallenges.includes(challengeId);
       const prevBest = state.stats.bestTimes[challengeId];
@@ -434,9 +509,37 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       // seasonalChallengesPlayed : incrémente toujours (une partie = une saison)
       const newSeasonalCount = state.stats.seasonalChallengesPlayed + 1;
 
-      // Anti-triche : nettoyer les timestamps d'abandon à la victoire
+      // Anti-triche : nettoyer le timestamp de début à la victoire
       const { [challengeId]: _s, ...restStarted } = state.challengeStartedAt;
-      const { [challengeId]: _a, ...restAbandoned } = state.challengeAbandonedAt;
+
+      // Moyenne glissante du temps de résolution (chantier 5)
+      const prevResCount = state.stats.totalResolutionCount;
+      const newResolutionCount = prevResCount + 1;
+      const newAvgResolutionMs = prevResCount === 0
+        ? timeMs
+        : Math.round((state.stats.avgResolutionMs * prevResCount + timeMs) / newResolutionCount);
+
+      // speedBadgeHits : incrémenter le compteur de chaque badge vitesse si le seuil est battu
+      const lvl = Math.max(1, state.currentLevel);
+      const elapsedSec = timeMs / 1000;
+      const speedThresholds: Array<[string, number]> = [
+        ['vitesse_tortue',  30 + (lvl - 1) * 5],
+        ['vitesse_Loup',    20 + (lvl - 1) * 3],
+        ['vitesse_oiseau',  12 + (lvl - 1) * 2],
+        ['vitesse_eclair',   7 + (lvl - 1) * 1],
+        ['vitesse_tornade',  4 + (lvl - 1) * 0.5],
+      ];
+      const prevHits = state.stats.speedBadgeHits ?? {};
+      const newSpeedHits = { ...prevHits };
+      for (const [badgeId, threshold] of speedThresholds) {
+        // N'incrémenter que si pas encore obtenu ET sous le seuil
+        if (!state.earnedBadges.includes(badgeId) && elapsedSec < threshold) {
+          const prev = prevHits[badgeId] ?? 0;
+          if (prev < SPEED_BADGE_TARGET) {
+            newSpeedHits[badgeId] = prev + 1;
+          }
+        }
+      }
 
       return {
         completedChallenges: newCompleted,
@@ -445,7 +548,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           ? state.friendChallengeTokens + 1
           : state.friendChallengeTokens,
         challengeStartedAt: restStarted,
-        challengeAbandonedAt: restAbandoned,
         stats: {
           ...state.stats,
           totalSolved: alreadyCompleted ? state.stats.totalSolved : state.stats.totalSolved + 1,
@@ -457,6 +559,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           improvedChallengesCount: newImproved,
           failCount: newFailCount,
           seasonalChallengesPlayed: newSeasonalCount,
+          avgResolutionMs: newAvgResolutionMs,
+          totalResolutionCount: newResolutionCount,
+          speedBadgeHits: newSpeedHits,
         },
       };
     });
@@ -508,20 +613,32 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       improvedChallengesCount: 0,
       seasonalChallengesPlayed: 0,
       abandonCount: {},
+      dailyPlayed: 0,
+      dailyWon: 0,
+      friendPlayed: 0,
+      avgResolutionMs: 0,
+      totalResolutionCount: 0,
+      speedBadgeHits: {},
     },
     earnedBadges: [],
     unlockedBonuses: [],
     unlockedThemes: [],
+    unlockedOnf: false,
     badgeShowcase: [undefined, undefined, undefined],
     dailyStreak: 0,
     lastPlayedDate: '',
     dailyChallengeStreak: 0,
+    longestDailyChallengeStreak: 0,
     lastDailyChallengeDate: '',
     dailyChallengeStatus: null,
     dailyChallengeTimeMs: null,
     challengeStartedAt: {},
-    challengeAbandonedAt: {},
     friendNotifBadgeEnabled: true,
+    onfSolvedCount: 0,
+    lastOnfCompoKey: null,
+    activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+    dailyBonusUses: { highlight_valid_cells: 5, instinct: 5 },
+    lastBonusResetDate: null,
   }),
 
   // ── awardBadge ────────────────────────────────────────────
@@ -552,11 +669,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       const newUnlockedBonuses = computeUnlockedBonuses(newEarned);
       const newUnlockedThemes  = computeUnlockedThemes(newEarned);
 
+      // Retirer des objectifs actifs les badges nouvellement obtenus (chantier 3)
+      const newActiveBadgeGoals = state.activeBadgeGoals.filter(
+        id => !toAdd.includes(id)
+      );
+
       return {
         earnedBadges:    newEarned,
         seeds:           state.seeds + totalSeeds,
         unlockedBonuses: newUnlockedBonuses,
         unlockedThemes:  newUnlockedThemes,
+        unlockedOnf:     computeUnlockedONF(newEarned),
+        activeBadgeGoals: newActiveBadgeGoals,
       };
     });
   },
@@ -569,9 +693,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     stats: { ...state.stats, friendWins: state.stats.friendWins + 1 },
   })),
 
-  recordFriendInvited: () => set(state => ({
-    stats: { ...state.stats, totalFriendsInvited: state.stats.totalFriendsInvited + 1 },
-  })),
+  recordFriendChallenged: (friendUid) => set(state => {
+    // Ignorer si cet ami a déjà été défié (on ne compte que les nouveaux)
+    if (state.challengedFriendIds.includes(friendUid)) return state;
+    const newList = [...state.challengedFriendIds, friendUid];
+    return {
+      challengedFriendIds: newList,
+      stats: { ...state.stats, totalFriendsInvited: newList.length },
+    };
+  }),
 
   recordTopDEJ: () => set(state => ({
     stats: { ...state.stats, topDEJCount: state.stats.topDEJCount + 1 },
@@ -580,9 +710,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   // ── checkDailyLogin ───────────────────────────────────────
   // Appelé au montage de l'app. Retourne true si c'est une nouvelle journée.
   checkDailyLogin: () => {
-    const { lastPlayedDate, dailyStreak } = get();
+    const { lastPlayedDate, dailyStreak, lastBonusResetDate } = get();
     const today     = todayISO();
     const yesterday = yesterdayISO();
+
+    // Reset des bonus journaliers si nouvelle journée (chantier 4)
+    if (lastBonusResetDate !== today) {
+      set({
+        dailyBonusUses: { highlight_valid_cells: 5, instinct: 5 },
+        lastBonusResetDate: today,
+      });
+    }
 
     if (lastPlayedDate === today) return false; // Déjà compté aujourd'hui
 
@@ -614,24 +752,32 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   // ── Défi journalier ────────────────────────────────────────
   submitDailyResult: (date, success, timeMs) => {
     set(state => {
+      // Incrémenter les compteurs cumulatifs (chantier 5)
+      const newDailyPlayed = state.stats.dailyPlayed + 1;
+      const newDailyWon    = success ? state.stats.dailyWon + 1 : state.stats.dailyWon;
+
       if (success) {
         // Succès : incrémenter le streak si c'est le jour suivant, sinon reset à 1
         const isConsecutive = isNextDay(state.lastDailyChallengeDate, date);
         const newStreak = isConsecutive
           ? state.dailyChallengeStreak + 1
           : 1;
+        const newLongest = Math.max(state.longestDailyChallengeStreak, newStreak);
         return {
           dailyChallengeStatus: 'success' as const,
           lastDailyChallengeDate: date,
           dailyChallengeStreak: newStreak,
+          longestDailyChallengeStreak: newLongest,
           dailyChallengeTimeMs: timeMs ?? null,
+          stats: { ...state.stats, dailyPlayed: newDailyPlayed, dailyWon: newDailyWon },
         };
       } else {
-        // Échec : reset le streak, marquer comme échoué
+        // Échec : reset le streak mais on conserve le record
         return {
           dailyChallengeStatus: 'failed' as const,
           dailyChallengeStreak: 0,
           dailyChallengeTimeMs: null,
+          stats: { ...state.stats, dailyPlayed: newDailyPlayed, dailyWon: newDailyWon },
         };
       }
     });
@@ -656,15 +802,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   markChallengeAbandoned: (challengeId) => {
     set(state => {
       // Effacer challengeStartedAt pour ce défi : le chrono repartira de 0
-      // lors de la prochaine tentative. challengeAbandonedAt est conservé
-      // pour le cooldown de 15 min (isChallengeOnCooldown).
+      // lors de la prochaine tentative.
       const { [challengeId]: _s, ...restStarted } = state.challengeStartedAt;
       return {
         challengeStartedAt: restStarted,
-        challengeAbandonedAt: {
-          ...state.challengeAbandonedAt,
-          [challengeId]: Date.now(),
-        },
         stats: {
           ...state.stats,
           abandonCount: {
@@ -676,19 +817,47 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     });
   },
 
-  clearChallengeTimestamps: (challengeId) => {
-    set(state => {
-      const { [challengeId]: _s, ...restStarted } = state.challengeStartedAt;
-      const { [challengeId]: _a, ...restAbandoned } = state.challengeAbandonedAt;
-      return {
-        challengeStartedAt: restStarted,
-        challengeAbandonedAt: restAbandoned,
-      };
-    });
-  },
-
   // ── Notifications amis ────────────────────────────────────
   setFriendNotifBadgeEnabled: (enabled) => set({ friendNotifBadgeEnabled: enabled }),
+
+  // ── Mode ONF ──────────────────────────────────────────────
+  incrementOnfSolved: () => set(state => ({
+    onfSolvedCount: state.onfSolvedCount + 1,
+  })),
+
+  setLastOnfCompoKey: (key) => set({ lastOnfCompoKey: key }),
+
+  // ── Objectifs de badges actifs (chantier 3) ───────────────
+  setActiveBadgeGoals: (ids) => set({
+    activeBadgeGoals: ids.slice(0, 3).filter((id, i, arr) => arr.indexOf(id) === i),
+  }),
+
+  // ── Dépense de bonus journalier (chantier 4) ──────────────
+  spendBonus: (bonusId) => {
+    const { isPremium, dailyBonusUses } = get();
+    if (isPremium) return true; // Illimité en premium
+    const remaining = dailyBonusUses[bonusId] ?? 0;
+    if (remaining <= 0) return false;
+    set(state => ({
+      dailyBonusUses: {
+        ...state.dailyBonusUses,
+        [bonusId]: (state.dailyBonusUses[bonusId] ?? 0) - 1,
+      },
+    }));
+    return true;
+  },
+
+  // ── Incrément générique de stat (chantier 5) ─────────────
+  incrementStat: (key, amount = 1) => {
+    set(state => ({
+      stats: {
+        ...state.stats,
+        [key]: typeof state.stats[key] === 'number'
+          ? (state.stats[key] as number) + amount
+          : state.stats[key],
+      },
+    }));
+  },
 }));
 
 // ── Helpers privés ────────────────────────────────────────────────────────────

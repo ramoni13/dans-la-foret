@@ -1,0 +1,784 @@
+{
+  "challenges": [
+    {
+      "id": "niveau_20_001",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 1,
+      "challengeNumber": 1,
+      "fixedPlacements": [
+        {
+          "cellIndex": 7,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "chalet"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 13,
+          "elementId": "loup"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 12,
+          "elementId": "ours"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 3
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        },
+        {
+          "elementId": "loup",
+          "count": 1
+        },
+        {
+          "elementId": "tas_buches",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "loup",
+        "bucheron",
+        "chalet",
+        "bucheron",
+        "chien",
+        "chien",
+        "tas_buches",
+        "mouton",
+        "arbre",
+        "arbre",
+        "ours",
+        "arbre",
+        "ours",
+        "loup"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:17.159Z"
+    },
+    {
+      "id": "niveau_20_002",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 2,
+      "challengeNumber": 2,
+      "fixedPlacements": [
+        {
+          "cellIndex": 2,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "tas_buches"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 0,
+          "elementId": "arbre"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "loup"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        },
+        {
+          "elementId": "loup",
+          "count": 1
+        },
+        {
+          "elementId": "chalet",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "arbre",
+        "bucheron",
+        "ours",
+        "bucheron",
+        "arbre",
+        "tas_buches",
+        "chalet",
+        "arbre",
+        "loup",
+        "chien",
+        "mouton",
+        "ours",
+        "chien",
+        "loup"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:17.695Z"
+    },
+    {
+      "id": "niveau_20_003",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 3,
+      "challengeNumber": 3,
+      "fixedPlacements": [
+        {
+          "cellIndex": 8,
+          "elementId": "ruche"
+        },
+        {
+          "cellIndex": 0,
+          "elementId": "chalet"
+        },
+        {
+          "cellIndex": 13,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "chien"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "cerf"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "chien",
+          "count": 1
+        },
+        {
+          "elementId": "loup",
+          "count": 2
+        },
+        {
+          "elementId": "biche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "chalet",
+        "mouton",
+        "arbre",
+        "loup",
+        "bucheron",
+        "ours",
+        "arbre",
+        "chien",
+        "ruche",
+        "loup",
+        "chien",
+        "cerf",
+        "biche",
+        "bucheron"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:18.250Z"
+    },
+    {
+      "id": "niveau_20_004",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 4,
+      "challengeNumber": 4,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "biche"
+        },
+        {
+          "cellIndex": 0,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 5,
+          "elementId": "loup"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "arbre"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 6,
+          "elementId": "arbre"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "loup",
+          "count": 1
+        },
+        {
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "ours",
+        "biche",
+        "arbre",
+        "cerf",
+        "cerf",
+        "loup",
+        "arbre",
+        "bucheron",
+        "arbre",
+        "arbre",
+        "ruche",
+        "loup",
+        "bucheron",
+        "biche"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:18.576Z"
+    },
+    {
+      "id": "niveau_20_005",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 5,
+      "challengeNumber": 5,
+      "fixedPlacements": [
+        {
+          "cellIndex": 7,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "loup"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "biche"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "arbre"
+        },
+        {
+          "cellIndex": 13,
+          "elementId": "ours"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 3
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "loup",
+          "count": 1
+        },
+        {
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "biche",
+        "ours",
+        "loup",
+        "bucheron",
+        "loup",
+        "cerf",
+        "arbre",
+        "bucheron",
+        "biche",
+        "arbre",
+        "cerf",
+        "arbre",
+        "arbre",
+        "ours"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:20.164Z"
+    },
+    {
+      "id": "niveau_20_006",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 6,
+      "challengeNumber": 6,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "biche"
+        },
+        {
+          "cellIndex": 7,
+          "elementId": "chalet"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 12,
+          "elementId": "loup"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "arbre"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "mouton"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "loup",
+          "count": 1
+        },
+        {
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "cerf",
+        "biche",
+        "ours",
+        "mouton",
+        "arbre",
+        "arbre",
+        "ruche",
+        "chalet",
+        "arbre",
+        "ours",
+        "loup",
+        "bucheron",
+        "loup",
+        "bucheron"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:21.323Z"
+    },
+    {
+      "id": "niveau_20_007",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 7,
+      "challengeNumber": 7,
+      "fixedPlacements": [
+        {
+          "cellIndex": 7,
+          "elementId": "arbre"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "loup"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "chalet"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "cerf"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 2
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "loup",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
+          "count": 1
+        },
+        {
+          "elementId": "ruche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "ruche",
+        "cerf",
+        "chalet",
+        "loup",
+        "ours",
+        "biche",
+        "bucheron",
+        "arbre",
+        "arbre",
+        "loup",
+        "ours",
+        "mouton",
+        "arbre",
+        "bucheron"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:21.599Z"
+    },
+    {
+      "id": "niveau_20_008",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 8,
+      "challengeNumber": 8,
+      "fixedPlacements": [
+        {
+          "cellIndex": 5,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "arbre"
+        },
+        {
+          "cellIndex": 13,
+          "elementId": "ruche"
+        },
+        {
+          "cellIndex": 1,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 8,
+          "elementId": "loup"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "biche"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 3
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "loup",
+          "count": 1
+        },
+        {
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "bucheron",
+        "cerf",
+        "biche",
+        "ours",
+        "loup",
+        "bucheron",
+        "arbre",
+        "cerf",
+        "loup",
+        "arbre",
+        "biche",
+        "arbre",
+        "arbre",
+        "ruche"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:22.378Z"
+    },
+    {
+      "id": "niveau_20_009",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 9,
+      "challengeNumber": 9,
+      "fixedPlacements": [
+        {
+          "cellIndex": 1,
+          "elementId": "chalet"
+        },
+        {
+          "cellIndex": 10,
+          "elementId": "arbre"
+        },
+        {
+          "cellIndex": 0,
+          "elementId": "biche"
+        },
+        {
+          "cellIndex": 13,
+          "elementId": "mouton"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "bucheron"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 2
+        },
+        {
+          "elementId": "loup",
+          "count": 1
+        },
+        {
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "biche",
+        "chalet",
+        "cerf",
+        "bucheron",
+        "cerf",
+        "bucheron",
+        "biche",
+        "ours",
+        "loup",
+        "ours",
+        "arbre",
+        "arbre",
+        "arbre",
+        "mouton"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:22.677Z"
+    },
+    {
+      "id": "niveau_20_010",
+      "boardId": "board_14_v1",
+      "level": "niveau_20",
+      "levelNumber": 10,
+      "challengeNumber": 10,
+      "fixedPlacements": [
+        {
+          "cellIndex": 10,
+          "elementId": "bucheron"
+        },
+        {
+          "cellIndex": 4,
+          "elementId": "ours"
+        },
+        {
+          "cellIndex": 3,
+          "elementId": "arbre"
+        },
+        {
+          "cellIndex": 2,
+          "elementId": "cerf"
+        },
+        {
+          "cellIndex": 9,
+          "elementId": "biche"
+        },
+        {
+          "cellIndex": 11,
+          "elementId": "arbre"
+        }
+      ],
+      "availableTokens": [
+        {
+          "elementId": "arbre",
+          "count": 2
+        },
+        {
+          "elementId": "bucheron",
+          "count": 1
+        },
+        {
+          "elementId": "ours",
+          "count": 1
+        },
+        {
+          "elementId": "loup",
+          "count": 2
+        },
+        {
+          "elementId": "cerf",
+          "count": 1
+        },
+        {
+          "elementId": "biche",
+          "count": 1
+        }
+      ],
+      "solution": [
+        "loup",
+        "biche",
+        "cerf",
+        "arbre",
+        "ours",
+        "bucheron",
+        "ours",
+        "loup",
+        "cerf",
+        "biche",
+        "bucheron",
+        "arbre",
+        "arbre",
+        "arbre"
+      ],
+      "solutionCount": 1,
+      "estimatedDuration": 600,
+      "createdAt": "2026-10-12T22:27:26.819Z"
+    }
+  ]
+}

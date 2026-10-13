@@ -41,6 +41,33 @@ export function getConnectedGroup(
   return visited;
 }
 
+/**
+ * BFS multi-éléments : retourne le groupe connexe contenant `startIndex`,
+ * en traversant les cases occupées par l'un quelconque des elementIds donnés.
+ * Utilisé pour connected_group_with (arbre + tas_buches).
+ */
+export function getConnectedGroupMulti(
+  startIndex: number,
+  elementIds: Set<string>,
+  board: (string | null)[],
+  boardDef: BoardDefinition
+): Set<number> {
+  const visited = new Set<number>();
+  const queue = [startIndex];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    for (const neighbor of boardDef.connections[current]) {
+      const el = board[neighbor];
+      if (!visited.has(neighbor) && el !== null && elementIds.has(el)) {
+        queue.push(neighbor);
+      }
+    }
+  }
+  return visited;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   violations: Violation[];
@@ -243,6 +270,48 @@ export function validateBoard(
         checkedGlobalTypes.add(elementId);
       }
 
+      // ── connected_group_with ───────────────────────────────────────────
+      // Cet élément + groupElementId (si présent sur le plateau) forment
+      // ENSEMBLE un seul groupe connexe mixte.
+      // Ex : arbre + tas_buches → une seule forêt connexe.
+      // Si groupElementId est absent du plateau, seuls les arbres doivent
+      // être connexes entre eux (repli sur connected_group standard).
+      if (constraint.type === 'connected_group_with' && !checkedGlobalTypes.has(elementId)) {
+        const groupId = constraint.groupElementId;
+        const groupOnBoard = groupId ? board.some(el => el === groupId) : false;
+
+        // Rassembler toutes les positions : cet élément + l'élément associé (si présent)
+        const elementIds = new Set<string>([elementId]);
+        if (groupId && groupOnBoard) elementIds.add(groupId);
+
+        const allPositions = board.reduce<number[]>((acc, el, idx) => {
+          if (el !== null && elementIds.has(el)) acc.push(idx);
+          return acc;
+        }, []);
+
+        if (allPositions.length > 1) {
+          const group = getConnectedGroupMulti(allPositions[0], elementIds, board, boardDef);
+          if (group.size !== allPositions.length) {
+            for (const pos of allPositions) {
+              if (!group.has(pos)) {
+                const posEl = board[pos]!;
+                const posLabel = elementDefs[posEl]?.label ?? posEl;
+                violations.push({
+                  cellIndex: pos,
+                  elementId: posEl,
+                  constraintType: 'connected_group_with',
+                  message: groupId && groupOnBoard
+                    ? `Tous les ${elementDef.label}s et ${elementDefs[groupId]?.label ?? groupId}s doivent former un seul groupe connexe`
+                    : `Tous les ${posLabel}s doivent former un seul groupe connexe`,
+                });
+              }
+            }
+          }
+        }
+        checkedGlobalTypes.add(elementId);
+        if (groupId) checkedGlobalTypes.add(groupId); // ne pas revérifier tas_buches seul
+      }
+
       // ── paired_specific ────────────────────────────────────────────────
       // Couplage 1-pour-1 entre cet élément et targetElementId.
       // Règles :
@@ -294,6 +363,105 @@ export function validateBoard(
   }
 
   return { isValid: violations.length === 0, violations };
+}
+
+// ── Fonctions ONF — Mode Grille Forestière ──────────────────────────────────
+
+/**
+ * Vérifie la contrainte row_col_unique sur le plateau ONF.
+ * Pour chaque ligne et chaque colonne définie dans gridMeta, s'assure
+ * qu'aucun elementId n'apparaît plus d'une fois.
+ *
+ * Retourne les violations trouvées. Appelé en PLUS de validateBoard()
+ * depuis l'écran de jeu ONF lors de la validation (bouton Valider).
+ * La solution pré-calculée par solveOnf respecte déjà cette contrainte,
+ * donc checkVictory() seul suffit pour la détection de victoire.
+ */
+export function validateRowColUnique(
+  board: (string | null)[],
+  gridMeta: { rows: number[][]; cols: number[][] }
+): Violation[] {
+  const violations: Violation[] = [];
+
+  const checkGroup = (group: number[], groupLabel: string) => {
+    const seen = new Map<string, number>(); // elementId → premier cellIndex vu
+    for (const cellIdx of group) {
+      const el = board[cellIdx];
+      if (!el) continue;
+      if (seen.has(el)) {
+        // Doublon détecté dans ce groupe
+        violations.push({
+          cellIndex: cellIdx,
+          elementId: el,
+          constraintType: 'row_col_unique',
+          message: `${el} apparaît plusieurs fois dans la même ${groupLabel}`,
+        });
+        // Marquer aussi la première occurrence si pas encore marquée
+        const firstIdx = seen.get(el)!;
+        if (!violations.some(v => v.cellIndex === firstIdx && v.elementId === el && v.constraintType === 'row_col_unique')) {
+          violations.push({
+            cellIndex: firstIdx,
+            elementId: el,
+            constraintType: 'row_col_unique',
+            message: `${el} apparaît plusieurs fois dans la même ${groupLabel}`,
+          });
+        }
+      } else {
+        seen.set(el, cellIdx);
+      }
+    }
+  };
+
+  for (const row of gridMeta.rows) {
+    checkGroup(row, 'ligne');
+  }
+  for (const col of gridMeta.cols) {
+    checkGroup(col, 'colonne');
+  }
+
+  return violations;
+}
+
+/**
+ * Vérifie si un placement individuel respecte la contrainte row_col_unique
+ * dans le contexte ONF (utilisé pendant le drag pour le retour visuel).
+ *
+ * Retourne false si la ligne ou la colonne de cellIndex contient déjà elementId.
+ * S'appelle après isPlacementValid() — les deux filtres s'additionnent.
+ */
+export function isPlacementValidOnf(
+  cellIndex: number,
+  elementId: string,
+  currentBoard: (string | null)[],
+  boardDef: BoardDefinition,
+  elementDefs: Record<string, ElementDefinition>
+): boolean {
+  // Appliquer d'abord la validation standard (règles de voisinage)
+  if (!isPlacementValid(cellIndex, elementId, currentBoard, boardDef, elementDefs)) {
+    return false;
+  }
+
+  // Vérifier la contrainte ligne/colonne si le plateau a des métadonnées de grille
+  const gridMeta = boardDef.gridMeta;
+  if (!gridMeta) return true;
+
+  // Chercher dans quelle ligne et quelle colonne se trouve cellIndex
+  for (const row of gridMeta.rows) {
+    if (row.includes(cellIndex)) {
+      // Vérifier qu'aucune autre case de cette ligne n'a déjà elementId
+      const hasConflict = row.some(idx => idx !== cellIndex && currentBoard[idx] === elementId);
+      if (hasConflict) return false;
+    }
+  }
+
+  for (const col of gridMeta.cols) {
+    if (col.includes(cellIndex)) {
+      const hasConflict = col.some(idx => idx !== cellIndex && currentBoard[idx] === elementId);
+      if (hasConflict) return false;
+    }
+  }
+
+  return true;
 }
 
 /**

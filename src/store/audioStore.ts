@@ -1,15 +1,22 @@
 // ============================================================
 // STORE AUDIO — Zustand
 // Gestion des préférences musicales du joueur
+//
 // - 2 types : "Ambiance Défi" (ingame) et "Ambiance Forêt" (menu)
-// - Morceaux possédés (free + achetés)
-// - Morceau sélectionné par type
+// - Morceaux débloqués via paliers de badges (RARITY_UNLOCKS dans playerStore)
+// - Morceau sélectionné par type (persisté dans AsyncStorage via useStorage)
 // - Toggles on/off par type
 // - Volume global
+//
+// Source de vérité des musiques débloquées :
+//   playerStore.unlockedThemes contient 'music' si 6 badges Bois sont obtenus.
+//   audioStore.ownedTrackIds est calculé depuis FREE_TRACK_IDS + les pistes dont
+//   le unlockTheme figure dans playerStore.unlockedThemes.
+//   → Appeler syncOwnedFromThemes(unlockedThemes) à chaque changement de badges.
 // ============================================================
 
 import { create } from 'zustand';
-import { FREE_TRACK_IDS, MusicType, MUSIC_CATALOG, MUSIC_UNLOCK_COST } from '../constants/music';
+import { FREE_TRACK_IDS, MusicType, MUSIC_CATALOG } from '../constants/music';
 
 interface AudioState {
   // Préférences
@@ -21,12 +28,8 @@ interface AudioState {
   selectedIngameTrackId: string;  // ID du morceau choisi pour ingame
   selectedMenuTrackId: string;    // ID du morceau choisi pour menu
 
-  // Catalogue possédé
-  ownedTrackIds: string[];        // IDs des titres débloqués/possédés
-
-  // Compteur de graines accumulées vers l'achat du prochain titre
-  // Clé = track ID en attente, valeur = graines accumulées (0..100)
-  seedsTowardUnlock: Record<string, number>;
+  // Catalogue possédé (calculé depuis FREE_TRACK_IDS + paliers badges)
+  ownedTrackIds: string[];
 
   // Morceau en cours de preview (lecture dans le profil)
   previewTrackId: string | null;
@@ -43,18 +46,39 @@ interface AudioState {
   setPreviewTrack: (trackId: string | null) => void;
   signalUserInteraction: () => void;
 
-  // Ajoute des graines vers un déblocage (retourne true si le titre est maintenant débloqué)
-  addSeedsTowardTrack: (trackId: string, amount: number) => boolean;
-  unlockTrack: (trackId: string) => void;
   isTrackOwned: (trackId: string) => boolean;
 
-  // Charge l'état depuis AsyncStorage (appelé au démarrage)
-  hydrate: (data: Partial<AudioState>) => void;
+  /**
+   * Met à jour ownedTrackIds depuis les badges obtenus du joueur.
+   * À appeler dès que playerStore.earnedBadges change (subscribe dans useStorage).
+   * Logique : FREE_TRACK_IDS + pistes dont unlockBadgeId est dans earnedBadges.
+   */
+  syncOwnedFromBadges: (earnedBadges: string[]) => void;
+
+  /**
+   * Charge l'état audio persisté depuis AsyncStorage.
+   * N'écrase PAS userHasInteracted ni previewTrackId.
+   */
+  hydrate: (data: Partial<Pick<AudioState,
+    'ingameEnabled' | 'menuEnabled' | 'volume' |
+    'selectedIngameTrackId' | 'selectedMenuTrackId'
+  >>) => void;
 }
 
 // Morceau menu et ingame par défaut (les gratuits)
 const DEFAULT_INGAME_TRACK = 'foret_mystique';
 const DEFAULT_MENU_TRACK = 'manor_cocktail';
+
+/** Calcule les IDs possédés depuis les badges obtenus du joueur */
+function computeOwnedFromBadges(earnedBadges: string[]): string[] {
+  const owned = new Set(FREE_TRACK_IDS);
+  for (const track of MUSIC_CATALOG) {
+    if (track.unlockBadgeId && earnedBadges.includes(track.unlockBadgeId)) {
+      owned.add(track.id);
+    }
+  }
+  return Array.from(owned);
+}
 
 export const useAudioStore = create<AudioState>((set, get) => ({
   ingameEnabled: true,
@@ -63,7 +87,6 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   selectedIngameTrackId: DEFAULT_INGAME_TRACK,
   selectedMenuTrackId: DEFAULT_MENU_TRACK,
   ownedTrackIds: [...FREE_TRACK_IDS],
-  seedsTowardUnlock: {},
   previewTrackId: null,
   userHasInteracted: false,
 
@@ -87,55 +110,40 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     set({ userHasInteracted: true });
   },
 
-  addSeedsTowardTrack: (trackId, amount) => {
-    const state = get();
-    if (state.ownedTrackIds.includes(trackId)) return false;
-
-    const current = state.seedsTowardUnlock[trackId] ?? 0;
-    const next = current + amount;
-
-    if (next >= MUSIC_UNLOCK_COST) {
-      // Déblocage !
-      set(s => ({
-        ownedTrackIds: [...s.ownedTrackIds, trackId],
-        seedsTowardUnlock: {
-          ...s.seedsTowardUnlock,
-          [trackId]: MUSIC_UNLOCK_COST,
-        },
-      }));
-      return true;
-    } else {
-      set(s => ({
-        seedsTowardUnlock: {
-          ...s.seedsTowardUnlock,
-          [trackId]: next,
-        },
-      }));
-      return false;
-    }
-  },
-
-  unlockTrack: (trackId) => {
-    set(s => ({
-      ownedTrackIds: s.ownedTrackIds.includes(trackId)
-        ? s.ownedTrackIds
-        : [...s.ownedTrackIds, trackId],
-    }));
-  },
-
   isTrackOwned: (trackId) => {
     return get().ownedTrackIds.includes(trackId);
   },
 
+  syncOwnedFromBadges: (earnedBadges) => {
+    const newOwned = computeOwnedFromBadges(earnedBadges);
+    const current = get().ownedTrackIds;
+    // Éviter un set() inutile si le contenu est identique
+    if (
+      newOwned.length === current.length &&
+      newOwned.every(id => current.includes(id))
+    ) return;
+    set({ ownedTrackIds: newOwned });
+  },
+
   hydrate: (data) => {
-    set(s => ({
-      ...s,
-      ...data,
-      // Toujours s'assurer que les morceaux gratuits sont dans ownedTrackIds
-      ownedTrackIds: Array.from(new Set([
-        ...FREE_TRACK_IDS,
-        ...(data.ownedTrackIds ?? s.ownedTrackIds),
-      ])),
-    }));
+    set(s => {
+      // Recalculer les possédés depuis les thèmes si ownedTrackIds est fourni,
+      // sinon garder les gratuits. Les thèmes seront resynchronisés via
+      // syncOwnedFromThemes() juste après le chargement du playerStore.
+      // ownedTrackIds n'est plus persisté directement : il est recalculé depuis
+      // earnedBadges via syncOwnedFromBadges() appelé juste après le chargement.
+      // On garde uniquement les gratuits comme base sûre.
+      const ownedFromStorage = [...FREE_TRACK_IDS];
+
+      return {
+        ...s,
+        ingameEnabled:         data.ingameEnabled          ?? s.ingameEnabled,
+        menuEnabled:           data.menuEnabled             ?? s.menuEnabled,
+        volume:                data.volume                  ?? s.volume,
+        selectedIngameTrackId: data.selectedIngameTrackId  ?? s.selectedIngameTrackId,
+        selectedMenuTrackId:   data.selectedMenuTrackId    ?? s.selectedMenuTrackId,
+        ownedTrackIds: ownedFromStorage,
+      };
+    });
   },
 }));

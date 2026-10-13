@@ -15,9 +15,20 @@
 import { useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePlayerStore } from '../store/playerStore';
+import { useAudioStore } from '../store/audioStore';
 import { Lang, getSystemLocale } from '../i18n/locale';
 
 const STORAGE_KEY = 'dlf_player_v1';
+const AUDIO_STORAGE_KEY = 'dlf_audio_v1';
+
+// Sous-ensemble de l'audioStore à persister
+interface PersistedAudioState {
+  ingameEnabled: boolean;
+  menuEnabled: boolean;
+  volume: number;
+  selectedIngameTrackId: string;
+  selectedMenuTrackId: string;
+}
 
 // Sous-ensemble du store à persister (on exclut les fonctions)
 interface PersistedPlayerState {
@@ -39,6 +50,7 @@ interface PersistedPlayerState {
     failCount: Record<string, number>;
     improvedChallengesCount: number;
     seasonalChallengesPlayed: number;
+    speedBadgeHits: Record<string, number>;
   };
   // Badges
   earnedBadges: string[];
@@ -54,13 +66,17 @@ interface PersistedPlayerState {
   visualEffect: string;
   // Défi journalier
   dailyChallengeStreak: number;
+  longestDailyChallengeStreak: number;
   lastDailyChallengeDate: string;
   dailyChallengeStatus: string | null;
   // Anti-triche
   challengeStartedAt: Record<string, number>;
-  challengeAbandonedAt: Record<string, number>;
   // Notifications amis
   friendNotifBadgeEnabled: boolean;
+  // Mode ONF
+  onfSolvedCount: number;
+  // Amis défiés (pour badge social_poignee / social_cirque)
+  challengedFriendIds: string[];
 }
 
 /** Extrait le sous-ensemble persistable depuis l'état Zustand courant */
@@ -80,18 +96,21 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     lastPlayedDate:      state.lastPlayedDate,
     bonusTutorialDismissed: state.bonusTutorialDismissed as string[],
     visualEffect:          state.visualEffect,
-    dailyChallengeStreak:      state.dailyChallengeStreak,
-    lastDailyChallengeDate:    state.lastDailyChallengeDate,
+    dailyChallengeStreak:           state.dailyChallengeStreak,
+    longestDailyChallengeStreak:    state.longestDailyChallengeStreak,
+    lastDailyChallengeDate:         state.lastDailyChallengeDate,
     dailyChallengeStatus:      state.dailyChallengeStatus,
     challengeStartedAt:        state.challengeStartedAt,
-    challengeAbandonedAt:      state.challengeAbandonedAt,
     friendNotifBadgeEnabled:   state.friendNotifBadgeEnabled,
+    onfSolvedCount:            state.onfSolvedCount,
+    challengedFriendIds:       state.challengedFriendIds,
   };
 }
 
 export function useStorage() {
-  // saveTimeout est partagé entre le subscriber et le cleanup
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // saveTimeout est partagé entre les subscribers et le cleanup
+  const saveTimeoutRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Chargement au démarrage ──────────────────────────────────────────────────
   // S'exécute UNE SEULE FOIS au montage — pas de dépendances variables.
@@ -120,7 +139,14 @@ export function useStorage() {
               failCount:                saved.stats?.failCount                ?? {},
               improvedChallengesCount:  saved.stats?.improvedChallengesCount  ?? 0,
               seasonalChallengesPlayed: saved.stats?.seasonalChallengesPlayed ?? 0,
+              speedBadgeHits:           (saved.stats as any)?.speedBadgeHits  ?? {},
               abandonCount:             (saved.stats as any)?.abandonCount    ?? {},
+              // Nouveaux champs (chantier 5)
+              dailyPlayed:              (saved.stats as any)?.dailyPlayed              ?? 0,
+              dailyWon:                 (saved.stats as any)?.dailyWon                 ?? 0,
+              friendPlayed:             (saved.stats as any)?.friendPlayed             ?? 0,
+              avgResolutionMs:          (saved.stats as any)?.avgResolutionMs          ?? 0,
+              totalResolutionCount:     (saved.stats as any)?.totalResolutionCount     ?? 0,
             },
             earnedBadges:    saved.earnedBadges    ?? [],
             badgeShowcase:   (saved.badgeShowcase  ?? []) as [string?, string?, string?],
@@ -130,18 +156,67 @@ export function useStorage() {
             lastPlayedDate:  saved.lastPlayedDate  ?? '',
             bonusTutorialDismissed: (saved.bonusTutorialDismissed ?? []) as import('../constants/bonus').BonusId[],
             visualEffect: (saved.visualEffect ?? 'leaves') as import('../store/playerStore').VisualEffect,
-            dailyChallengeStreak:   saved.dailyChallengeStreak   ?? 0,
-            lastDailyChallengeDate: saved.lastDailyChallengeDate ?? '',
+            dailyChallengeStreak:        saved.dailyChallengeStreak        ?? 0,
+            longestDailyChallengeStreak: (saved as any).longestDailyChallengeStreak ?? 0,
+            lastDailyChallengeDate:      saved.lastDailyChallengeDate      ?? '',
             dailyChallengeStatus:   (saved.dailyChallengeStatus  ?? null) as 'pending' | 'in_progress' | 'success' | 'failed' | null,
             challengeStartedAt:     saved.challengeStartedAt     ?? {},
-            challengeAbandonedAt:   saved.challengeAbandonedAt   ?? {},
             friendNotifBadgeEnabled: saved.friendNotifBadgeEnabled ?? true,
+            onfSolvedCount:         (saved as any).onfSolvedCount ?? 0,
+            challengedFriendIds:    (saved as any).challengedFriendIds ?? [],
           });
+          // Synchroniser immédiatement les musiques débloquées depuis les badges chargés
+          useAudioStore.getState().syncOwnedFromBadges(saved.earnedBadges ?? []);
         } catch {
           console.warn('[useStorage] Données corrompues, réinitialisation.');
         }
       })
       .catch(err => console.warn('[useStorage] Erreur lecture:', err));
+
+    // ── Chargement état audio ────────────────────────────────────────────────
+    AsyncStorage.getItem(AUDIO_STORAGE_KEY)
+      .then(rawAudio => {
+        if (!rawAudio) return;
+        try {
+          const savedAudio: PersistedAudioState = JSON.parse(rawAudio);
+          useAudioStore.getState().hydrate({
+            ingameEnabled:         savedAudio.ingameEnabled,
+            menuEnabled:           savedAudio.menuEnabled,
+            volume:                savedAudio.volume,
+            selectedIngameTrackId: savedAudio.selectedIngameTrackId,
+            selectedMenuTrackId:   savedAudio.selectedMenuTrackId,
+          });
+        } catch {
+          console.warn('[useStorage] Données audio corrompues, réinitialisation.');
+        }
+      })
+      .catch(err => console.warn('[useStorage] Erreur lecture audio:', err));
+
+    // ── Sauvegarde audio via subscribe ──────────────────────────────────────
+    const unsubscribeAudio = useAudioStore.subscribe((newA, prevA) => {
+      const changed =
+        newA.ingameEnabled          !== prevA.ingameEnabled          ||
+        newA.menuEnabled            !== prevA.menuEnabled            ||
+        newA.volume                 !== prevA.volume                 ||
+        newA.selectedIngameTrackId  !== prevA.selectedIngameTrackId  ||
+        newA.selectedMenuTrackId    !== prevA.selectedMenuTrackId;
+
+      if (!changed) return;
+
+      if (audioSaveTimeoutRef.current) clearTimeout(audioSaveTimeoutRef.current);
+      audioSaveTimeoutRef.current = setTimeout(() => {
+        const a = useAudioStore.getState();
+        const toSave: PersistedAudioState = {
+          ingameEnabled:         a.ingameEnabled,
+          menuEnabled:           a.menuEnabled,
+          volume:                a.volume,
+          selectedIngameTrackId: a.selectedIngameTrackId,
+          selectedMenuTrackId:   a.selectedMenuTrackId,
+        };
+        AsyncStorage.setItem(AUDIO_STORAGE_KEY, JSON.stringify(toSave))
+          .catch(err => console.warn('[useStorage] Erreur sauvegarde audio:', err));
+      }, 500);
+    });
 
     // ── Sauvegarde via subscribe Zustand (hors cycle React) ─────────────────
     // subscribe() reçoit (newState, prevState). On compare les clés primitives
@@ -170,18 +245,27 @@ export function useStorage() {
         newState.stats.totalFriendsInvited      !== prevState.stats.totalFriendsInvited      ||
         newState.stats.topDEJCount              !== prevState.stats.topDEJCount              ||
         newState.stats.improvedChallengesCount  !== prevState.stats.improvedChallengesCount  ||
+        JSON.stringify(newState.stats.speedBadgeHits) !== JSON.stringify(prevState.stats.speedBadgeHits) ||
         newState.stats.seasonalChallengesPlayed !== prevState.stats.seasonalChallengesPlayed ||
         newState.bonusTutorialDismissed.length  !== prevState.bonusTutorialDismissed.length ||
         newState.visualEffect                   !== prevState.visualEffect ||
         newState.dailyChallengeStreak           !== prevState.dailyChallengeStreak ||
+        newState.longestDailyChallengeStreak    !== prevState.longestDailyChallengeStreak ||
         newState.lastDailyChallengeDate         !== prevState.lastDailyChallengeDate ||
         newState.dailyChallengeStatus           !== prevState.dailyChallengeStatus ||
-        // Anti-triche : détecter changements dans les Records via nombre de clés + référence
+        // Anti-triche : détecter changements dans le Record via référence
         newState.challengeStartedAt             !== prevState.challengeStartedAt ||
-        newState.challengeAbandonedAt           !== prevState.challengeAbandonedAt ||
-        newState.friendNotifBadgeEnabled        !== prevState.friendNotifBadgeEnabled;
+        newState.friendNotifBadgeEnabled        !== prevState.friendNotifBadgeEnabled ||
+        newState.onfSolvedCount                 !== prevState.onfSolvedCount ||
+        newState.challengedFriendIds.length     !== prevState.challengedFriendIds.length ||
+        newState.earnedBadges.length            !== prevState.earnedBadges.length;
 
       if (!changed) return;
+
+      // Synchroniser les musiques débloquées quand de nouveaux badges sont obtenus
+      if (newState.earnedBadges.length !== prevState.earnedBadges.length) {
+        useAudioStore.getState().syncOwnedFromBadges(newState.earnedBadges);
+      }
 
       // Debounce 500 ms pour regrouper les écritures rapprochées (ex: awardBadges + addSeeds)
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -192,10 +276,12 @@ export function useStorage() {
       }, 500);
     });
 
-    // Cleanup : annuler le subscriber et le timeout en suspens
+    // Cleanup : annuler les subscribers et les timeouts en suspens
     return () => {
       unsubscribe();
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      unsubscribeAudio();
+      if (saveTimeoutRef.current)      clearTimeout(saveTimeoutRef.current);
+      if (audioSaveTimeoutRef.current) clearTimeout(audioSaveTimeoutRef.current);
     };
   }, []); // [] = s'exécute une seule fois, jamais rebranché
 }

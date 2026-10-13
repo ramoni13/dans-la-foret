@@ -41,9 +41,13 @@ interface GameState {
   isDailyChallenge: boolean;        // true = mode défi journalier actif
   dailyValidationUsed: boolean;     // true = le joueur a déjà utilisé sa validation unique
 
+  // ── Mode sans bonus (ONF) ─────────────────────────────────────
+  bonusDisabled: boolean;           // true = aucun bonus activable (mode ONF)
+
   // Actions
   loadChallenge: (challenge: Challenge) => void;
   loadDailyChallenge: (challenge: Challenge) => void;
+  setBonusDisabled: (disabled: boolean) => void;
   placeElement: (cellIndex: number, elementId: string) => void;
   removeElement: (cellIndex: number) => void;
   moveElement: (fromCell: number, toCell: number) => void;
@@ -77,6 +81,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   highlightActive: false,
   isDailyChallenge: false,
   dailyValidationUsed: false,
+  bonusDisabled: false,
+
+  setBonusDisabled: (disabled) => set({ bonusDisabled: disabled }),
 
   loadChallenge: (challenge) => {
     const board: (string | null)[] = Array(challenge.solution.length).fill(null);
@@ -263,5 +270,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     highlightActive: false,
     isDailyChallenge: false,
     dailyValidationUsed: false,
+    bonusDisabled: false,
   }),
 }));

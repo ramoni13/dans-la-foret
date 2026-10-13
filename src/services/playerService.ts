@@ -27,7 +27,7 @@ export interface PlayerProfile {
     currentStreak: number;
     longestStreak: number;
     bestTimes: Record<string, number>;
-    // ── Nouveaux champs badges ──────────────────────────
+    // ── Champs badges ───────────────────────────────────
     noErrorStreak: number;
     friendWins: number;
     totalFriendsInvited: number;
@@ -36,6 +36,12 @@ export interface PlayerProfile {
     failCount: Record<string, number>;
     improvedChallengesCount: number;
     seasonalChallengesPlayed: number;
+    // ── Nouveaux champs statistiques (chantier 5) ──────
+    dailyPlayed: number;
+    dailyWon: number;
+    friendPlayed: number;
+    avgResolutionMs: number;
+    totalResolutionCount: number;
   };
   isPremium: boolean;
   createdAt?: any;
@@ -48,6 +54,10 @@ export interface PlayerProfile {
   // ── Streak quotidien ─────────────────────────────────
   dailyStreak: number;
   lastPlayedDate: string;    // "YYYY-MM-DD"
+  // ── Mode ONF — Grille Forestière 4×4 ────────────────
+  onfSolvedCount: number; // nb de grilles 4×4 résolues
+  // ── Badges : objectifs actifs (chantier 3) ───────────
+  activeBadgeGoals?: string[];
 }
 
 // ── Calcul du niveau courant d'un joueur ──────────────────────────────────────
@@ -92,13 +102,20 @@ function migrateProfile(raw: any): PlayerProfile {
       failCount:                raw.stats?.failCount ?? {},
       improvedChallengesCount:  raw.stats?.improvedChallengesCount ?? 0,
       seasonalChallengesPlayed: raw.stats?.seasonalChallengesPlayed ?? 0,
+      dailyPlayed:              raw.stats?.dailyPlayed ?? 0,
+      dailyWon:                 raw.stats?.dailyWon ?? 0,
+      friendPlayed:             raw.stats?.friendPlayed ?? 0,
+      avgResolutionMs:          raw.stats?.avgResolutionMs ?? 0,
+      totalResolutionCount:     raw.stats?.totalResolutionCount ?? 0,
     },
     earnedBadges:    raw.earnedBadges ?? [],
     badgeShowcase:   raw.badgeShowcase ?? [],
     unlockedBonuses: raw.unlockedBonuses ?? [],
     unlockedThemes:  raw.unlockedThemes ?? [],
-    dailyStreak:     raw.dailyStreak ?? 0,
-    lastPlayedDate:  raw.lastPlayedDate ?? '',
+    dailyStreak:       raw.dailyStreak ?? 0,
+    lastPlayedDate:    raw.lastPlayedDate ?? '',
+    onfSolvedCount: raw.onfSolvedCount ?? raw.onf4x4SolvedCount ?? 0,
+    activeBadgeGoals: raw.activeBadgeGoals ?? [],
   };
 }
 
@@ -153,6 +170,12 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
       failCount: {},
       improvedChallengesCount: 0,
       seasonalChallengesPlayed: 0,
+      // Nouveaux champs (chantier 5)
+      dailyPlayed: 0,
+      dailyWon: 0,
+      friendPlayed: 0,
+      avgResolutionMs: 0,
+      totalResolutionCount: 0,
     },
     isPremium: false,
     createdAt: serverTimestamp(),
@@ -163,6 +186,7 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
     unlockedThemes: [],
     dailyStreak: 0,
     lastPlayedDate: '',
+    onfSolvedCount: 0,
   };
   // usernameLower permet la recherche d'unicité insensible à la casse
   await setDoc(doc(db, 'players', userId), {

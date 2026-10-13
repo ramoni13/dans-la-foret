@@ -41,7 +41,9 @@ export interface TokenCount {
 
 export type DifficultyLevel =
   | 'niveau_1' | 'niveau_2' | 'niveau_3' | 'niveau_4' | 'niveau_5'
-  | 'niveau_6'   // 9 cases — Lisière Étendue (NOUVEAU)
-  | 'niveau_7' | 'niveau_8' | 'niveau_9'   // ex niv 6, 7, 8 (10 cases)
-  | 'niveau_10'  // 11 cases — Sous-bois Profond (NOUVEAU)
-  | 'niveau_11' | 'niveau_12' | 'niveau_13' | 'niveau_14' | 'niveau_15'; // ex niv 9–13 (12 cases)
+  | 'niveau_6'   // 9 cases — Lisière Étendue
+  | 'niveau_7' | 'niveau_8' | 'niveau_9'   // 10 cases
+  | 'niveau_10'  // 11 cases — Sous-bois Profond
+  | 'niveau_11' | 'niveau_12' | 'niveau_13' | 'niveau_14' | 'niveau_15' // 12 cases
+  | 'niveau_16' | 'niveau_17' | 'niveau_18' // 13 cases — Cœur de la Forêt
+  | 'niveau_19' | 'niveau_20' | 'niveau_21'; // 14 cases — Cœur Profond (+ Arbre)

@@ -150,11 +150,20 @@ export function useGame() {
   }, []);
 
   // ── Activation d'un bonus ─────────────────────────────────
+  // Les bonus ne coûtent plus de graines (chantier 4) :
+  // le joueur dispose de 5 utilisations par jour (∞ si premium).
   const activateBonus = (bonusId: BonusId): boolean => {
     if (!game.currentChallenge) return false;
+    // Mode sans bonus (ONF) — aucun bonus activable
+    if (game.bonusDisabled) return false;
 
+    // Vérifier si l'instinct est débloqué via badges (requiresUnlock)
     const bonusDef = BONUS_DEFINITIONS[bonusId];
-    const spent = player.spendSeeds(bonusDef.cost);
+    if (bonusDef.requiresUnlock && !player.unlockedBonuses.includes(bonusId)) {
+      return false; // pas encore débloqué
+    }
+
+    const spent = player.spendBonus(bonusId);
     if (!spent) return false;
 
     game.useBonus(bonusId);
@@ -205,6 +214,8 @@ export function useGame() {
     tryPlaceElement,
     getCellColor,
     activateBonus,
+    bonusDisabled: game.bonusDisabled,
+    setBonusDisabled: game.setBonusDisabled,
     selectElement: game.selectElement,
     removeElement: game.removeElement,
     moveElement: game.moveElement,

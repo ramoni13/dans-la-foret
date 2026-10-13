@@ -17,6 +17,16 @@ export interface BoardDefinition {
     edges?: number[];
     corners?: number[];
   };
+  /**
+   * Métadonnées de grille — présentes uniquement sur les plateaux ONF.
+   * Définit les groupes de cases formant chaque ligne et chaque colonne.
+   * Le validateur standard l'ignore ; le validateur ONF l'utilise pour
+   * vérifier la contrainte row_col_unique (max 1 élément identique par ligne/colonne).
+   */
+  gridMeta?: {
+    rows: number[][];  // gridMeta.rows[i] = indices des cases de la ligne i
+    cols: number[][];  // gridMeta.cols[j] = indices des cases de la colonne j
+  };
 }
 
 export interface CellPosition {

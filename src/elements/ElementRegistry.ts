@@ -9,12 +9,13 @@ import { oursDef } from './ours';
 import { moutonDef } from './mouton';
 import { chienDef } from './chien';
 import { chaletDef } from './chalet';
-import { renardDef as loupDef } from './renard';
+import { loupDef } from './loup';
 import { rucheDef } from './ruche';
 import { cerfDef } from './cerf';
 import { bicheDef } from './biche';
 import { tasBuchesDef } from './tas_buches';
 import { champignonDef } from './champignon';
+import { arbreDef } from './arbre';
 
 export const ElementRegistry: Record<string, ElementDefinition> = {
   // ── Éléments de base (jeu physique Djeco) ──────────────────────────────
@@ -31,4 +32,6 @@ export const ElementRegistry: Record<string, ElementDefinition> = {
   tas_buches: tasBuchesDef, // neighbor_specific_chain (bucheron + chalet conditionnel)
   // ── Défi journalier ──────────────────────────────────────────────────
   champignon: champignonDef, // center_only, ≠ voisin champignon
+  // ── Niveaux 19-21 ────────────────────────────────────────────────────
+  arbre: arbreDef,       // connected_group_with tas_buches (forêt connexe)
 };

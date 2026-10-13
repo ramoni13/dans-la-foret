@@ -16,6 +16,12 @@ interface NavState {
   showBack: (onBack: () => void, label?: string) => void;
   /** Masque le bouton retour */
   hideBack: () => void;
+  /** Nombre de défis amis en attente — alimente le badge rouge sur l'onglet Défis */
+  pendingFriendChallenges: number;
+  setPendingFriendChallenges: (count: number) => void;
+  /** Nombre de slots d'objectif badge libres (0–3) — alimente le badge rouge sur l'onglet Profil */
+  goalSlotsToFill: number;
+  setGoalSlotsToFill: (count: number) => void;
 }
 
 export const useNavStore = create<NavState>((set) => ({
@@ -23,4 +29,8 @@ export const useNavStore = create<NavState>((set) => ({
   onBack:    null,
   showBack: (onBack, label = '← Retour') => set({ onBack, backLabel: label }),
   hideBack: () => set({ onBack: null, backLabel: null }),
+  pendingFriendChallenges: 0,
+  setPendingFriendChallenges: (count) => set({ pendingFriendChallenges: count }),
+  goalSlotsToFill: 0,
+  setGoalSlotsToFill: (count) => set({ goalSlotsToFill: count }),
 }));

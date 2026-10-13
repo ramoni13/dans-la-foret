@@ -11,7 +11,7 @@
 import { BoardDefinition } from '../models/Board';
 import { ElementDefinition } from '../models/Element';
 import { FixedPlacement, TokenCount } from '../models/Challenge';
-import { isPlacementValid, getConnectedGroup } from './validator';
+import { isPlacementValid, isPlacementValidOnf, getConnectedGroup, getConnectedGroupMulti } from './validator';
 
 /** Fonction RNG : retourne un nombre dans [0, 1) */
 export type RngFunction = () => number;
@@ -185,6 +185,52 @@ function canStillSatisfyRequireConstraints(
       }
     }
   }
+
+  // ── Élagage connected_group_with ─────────────────────────────────────────
+  // Pour chaque élément soumis à connected_group_with (ex: arbre) :
+  // Si un exemplaire placé n'a aucun voisin du groupe (ni arbre ni buche)
+  // ET aucun token du groupe ne peut plus être placé dans ses voisins vides,
+  // la connexité est impossible → élaguer.
+  const cgwChecked = new Set<string>();
+  for (let i = 0; i < board.length; i++) {
+    const elementId = board[i];
+    if (!elementId || cgwChecked.has(elementId)) continue;
+    const elementDef = elementDefs[elementId];
+    if (!elementDef) continue;
+
+    for (const constraint of elementDef.constraints) {
+      if (constraint.type !== 'connected_group_with') continue;
+      const groupId = constraint.groupElementId;
+
+      // Construire l'ensemble des éléments du groupe
+      const groupElIds: string[] = [elementId];
+      if (groupId) groupElIds.push(groupId);
+
+      // Vérifier que chaque exemplaire du groupe peut encore être relié au groupe
+      for (let j = 0; j < board.length; j++) {
+        const el = board[j];
+        if (!el || !groupElIds.includes(el)) continue;
+
+        const nbrs = boardDef.connections[j];
+        const hasGroupNeighbor = nbrs.some(n => {
+          const nEl = board[n];
+          return nEl !== null && groupElIds.includes(nEl);
+        });
+        if (hasGroupNeighbor) continue; // déjà connecté → OK
+
+        // Peut-on encore placer un élément du groupe dans un voisin vide ?
+        const emptyNeighbors = nbrs.filter(n => board[n] === null);
+        const canConnect = emptyNeighbors.some(n =>
+          groupElIds.some(gId => (inventory[gId] ?? 0) > 0)
+        );
+        if (!canConnect) return false; // cet exemplaire sera toujours isolé
+      }
+
+      cgwChecked.add(elementId);
+      if (groupId) cgwChecked.add(groupId);
+    }
+  }
+
   return true;
 }
 
@@ -379,6 +425,25 @@ function isCompleteSolutionValid(
         checkedGlobalTypes.add(elementId);
       }
 
+      // connected_group_with : cet élément + groupElementId (si présent)
+      // forment ensemble un seul groupe connexe mixte.
+      if (constraint.type === 'connected_group_with' && !checkedGlobalTypes.has(elementId)) {
+        const groupId = constraint.groupElementId;
+        const groupOnBoard = groupId ? board.some(el => el === groupId) : false;
+        const elementIds = new Set<string>([elementId]);
+        if (groupId && groupOnBoard) elementIds.add(groupId);
+        const allPositions = board.reduce<number[]>((acc, el, idx) => {
+          if (elementIds.has(el)) acc.push(idx);
+          return acc;
+        }, []);
+        if (allPositions.length > 1) {
+          const group = getConnectedGroupMulti(allPositions[0], elementIds, board, boardDef);
+          if (group.size !== allPositions.length) return false;
+        }
+        checkedGlobalTypes.add(elementId);
+        if (groupId) checkedGlobalTypes.add(groupId);
+      }
+
       // paired_specific : couplage 1-pour-1 avec targetElementId
       if (constraint.type === 'paired_specific') {
         const partnerId = constraint.targetElementId;
@@ -402,6 +467,135 @@ function isCompleteSolutionValid(
         }
         checkedGlobalTypes.add(elementId);
       }
+    }
+  }
+
+  return true;
+}
+
+// ── Solveur ONF ─────────────────────────────────────────────────────────────
+
+export interface SolverONFInput extends SolverInput {
+  /** gridMeta doit être présent sur le boardDef — fourni explicitement pour sécurité */
+  gridMeta: { rows: number[][]; cols: number[][] };
+}
+
+/**
+ * Résout le puzzle ONF en ajoutant l'élagage row_col_unique au backtracking standard.
+ * Utilise isPlacementValidOnf() à la place de isPlacementValid() pour chaque tentative.
+ * S'arrête dès que 2 solutions sont trouvées (détection d'unicité).
+ *
+ * Identique à solve() sauf que le prédicat de placement intègre la contrainte
+ * ligne/colonne du mode ONF (sudoku assoupli : max 1 élément identique par ligne ET colonne).
+ */
+export function solveOnf(input: SolverONFInput): SolverResult {
+  const { boardDef, fixedPlacements, availableTokens, elementDefs, rng, gridMeta } = input;
+  const rngFn = rng ?? Math.random;
+
+  // Injecter gridMeta dans boardDef si absent (garantit la cohérence)
+  const boardDefWithGrid: BoardDefinition = gridMeta
+    ? { ...boardDef, gridMeta }
+    : boardDef;
+
+  const initialBoard: (string | null)[] = Array(boardDef.cellCount).fill(null);
+  for (const fp of fixedPlacements) {
+    initialBoard[fp.cellIndex] = fp.elementId;
+  }
+
+  const tokenInventory: Record<string, number> = {};
+  for (const tc of availableTokens) {
+    tokenInventory[tc.elementId] = tc.count;
+  }
+
+  const rawSolutions: string[][] = [];
+
+  backtrackOnf(initialBoard, tokenInventory, boardDefWithGrid, elementDefs, rawSolutions, rngFn, gridMeta);
+
+  // Dédupliquer canoniquement (même logique que solve())
+  const seen = new Set<string>();
+  const solutions: string[][] = [];
+  for (const sol of rawSolutions) {
+    const key = canonicalKey(sol);
+    if (!seen.has(key)) {
+      seen.add(key);
+      solutions.push(sol);
+    }
+  }
+
+  return {
+    solutions,
+    solutionCount: solutions.length,
+    isUnique: solutions.length === 1,
+  };
+}
+
+/**
+ * Backtracking ONF : identique à backtrack() mais utilise isPlacementValidOnf()
+ * pour intégrer la contrainte ligne/colonne lors de chaque tentative de placement.
+ */
+function backtrackOnf(
+  board: (string | null)[],
+  inventory: Record<string, number>,
+  boardDef: BoardDefinition,
+  elementDefs: Record<string, ElementDefinition>,
+  solutions: string[][],
+  rng: RngFunction,
+  gridMeta: { rows: number[][]; cols: number[][] }
+): void {
+  if (solutions.length >= 2) return;
+
+  const emptyCellIndex = board.findIndex(cell => cell === null);
+
+  if (emptyCellIndex === -1) {
+    // Solution complète : valider les contraintes globales + row_col_unique
+    if (isCompleteSolutionValidOnf(board as string[], boardDef, elementDefs, gridMeta)) {
+      solutions.push([...board] as string[]);
+    }
+    return;
+  }
+
+  for (const [elementId, count] of shuffleEntries(inventory, rng)) {
+    if (count <= 0) continue;
+
+    // Vérification combinée : règles de voisinage + contrainte ligne/colonne
+    if (!isPlacementValidOnf(emptyCellIndex, elementId, board, boardDef, elementDefs)) {
+      continue;
+    }
+
+    board[emptyCellIndex] = elementId;
+    inventory[elementId]--;
+
+    if (canStillSatisfyRequireConstraints(board, inventory, boardDef, elementDefs)) {
+      backtrackOnf(board, inventory, boardDef, elementDefs, solutions, rng, gridMeta);
+    }
+
+    board[emptyCellIndex] = null;
+    inventory[elementId]++;
+  }
+}
+
+/**
+ * Validation complète d'une solution ONF :
+ * - Toutes les contraintes standard (isCompleteSolutionValid)
+ * - Contrainte row_col_unique (chaque élément max 1 fois par ligne et par colonne)
+ */
+function isCompleteSolutionValidOnf(
+  board: string[],
+  boardDef: BoardDefinition,
+  elementDefs: Record<string, ElementDefinition>,
+  gridMeta: { rows: number[][]; cols: number[][] }
+): boolean {
+  // Contraintes standard
+  if (!isCompleteSolutionValid(board, boardDef, elementDefs)) return false;
+
+  // Contrainte row_col_unique
+  for (const group of [...gridMeta.rows, ...gridMeta.cols]) {
+    const seen = new Set<string>();
+    for (const idx of group) {
+      const el = board[idx];
+      if (!el) continue;
+      if (seen.has(el)) return false;
+      seen.add(el);
     }
   }
 

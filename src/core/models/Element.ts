@@ -30,6 +30,13 @@ export interface ConstraintDefinition {
   // doit aussi en être voisin (contrainte conditionnelle).
   // Ex : tas_buches doit être voisin de bucheron ET de chalet si chalet présent.
   chainTargetElementId?: string;
+  //
+  // Champ additionnel pour 'connected_group_with' :
+  // Les exemplaires de cet élément ET de groupElementId forment ensemble
+  // un seul groupe connexe. groupElementId est optionnel : si présent sur
+  // le plateau, ses exemplaires sont inclus dans la vérification de connexité.
+  // Ex : arbre + tas_buches (si présent) → un seul groupe connexe mixte.
+  groupElementId?: string;
 }
 
 export type ConstraintType =
@@ -39,12 +46,18 @@ export type ConstraintType =
   | 'count_on_board'           // Contrainte sur le nombre total sur le plateau
   | 'connected_group'          // Tous les exemplaires forment UN SEUL groupe connexe
   //   → chien : toute la meute reliée, pas de sous-groupes
+  | 'connected_group_with'     // Cet élément + groupElementId (si présent) forment UN SEUL groupe connexe
+  //   → arbre + tas_buches (si présent) : une seule forêt connexe mixte
   | 'paired_specific'          // Couplage 1-pour-1 avec targetElementId
   //   → cerf/biche : chaque cerf voisin d'exactement 1 biche
   //     et inversement ; counts égaux obligatoires
-  | 'neighbor_specific_chain'; // Voisinage requis + voisinage conditionnel
-//   → tas_buches : voisin bucheron TOUJOURS
-//     + voisin chalet SI chalet présent sur le plateau
+  | 'neighbor_specific_chain'  // Voisinage requis + voisinage conditionnel
+  //   → tas_buches : voisin bucheron TOUJOURS
+  //     + voisin chalet SI chalet présent sur le plateau
+  | 'row_col_unique';          // Mode ONF : un même élément ne peut apparaître qu'une
+//   fois par ligne ET qu'une fois par colonne (sudoku assoupli)
+//   Contrainte universelle du mode — pas déclarée dans ElementDefinition,
+//   vérifiée séparément via gridMeta dans le validateur ONF.
 
 export interface PlacementRule {
   type: 'center_only' | 'edge_only' | 'corner_only' | 'cell_whitelist';

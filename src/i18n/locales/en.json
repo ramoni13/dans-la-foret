@@ -160,6 +160,7 @@
   "rules_element_loup": "Wolf",
   "rules_element_tas_buches": "Logs",
   "rules_element_chalet": "Chalet",
+  "rules_element_champignon": "Mushroom",
   "rules_desc_bucheron": "Cannot be adjacent to another lumberjack.",
   "rules_desc_ours": "Cannot be adjacent to another bear. If a beehive is present, all bears must be adjacent to it.",
   "rules_desc_mouton": "Cannot be adjacent to another sheep or a wolf.",
@@ -170,5 +171,10 @@
   "rules_desc_loup": "Cannot be adjacent to another wolf or a sheep.",
   "rules_desc_tas_buches": "Must be adjacent to a lumberjack. If a chalet is present, must also be adjacent to the chalet.",
   "rules_desc_chalet": "Must be adjacent to a lumberjack. No adjacent chalet.",
-  "a11y_chain_chalet": "If a {{e1}} is present, {{e2}} must also be adjacent to {{e1}}"
+  "a11y_chain_chalet": "If a {{e1}} is present, {{e2}} must also be adjacent to {{e1}}",
+
+  "element_arbre": "Tree",
+  "a11y_connected_group_with": "All {{e1}} (and {{e2}} if present) form one connected forest",
+  "rules_element_arbre": "Tree",
+  "rules_desc_arbre": "Trees form a single connected forest. If logs are present, they are part of this forest."
 }
