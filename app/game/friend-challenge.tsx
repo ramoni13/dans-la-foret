@@ -21,6 +21,8 @@ import {
   Modal,
   ActivityIndicator,
   useWindowDimensions,
+  Animated,
+  LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -34,6 +36,7 @@ import { FailModal } from '../../src/components/Game/FailModal';
 
 import { useGame } from '../../src/hooks/useGame';
 import { usePlayerStore } from '../../src/store/playerStore';
+import { SeedFlyAnimation, useCounterPulse } from '../../src/components/Game/SeedFlyAnimation';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
@@ -150,15 +153,109 @@ function OpponentResultModal({
   confettiPieces: any[];
 }) {
   const diff = Math.abs(myTime - challengerTime);
+
+  // ── Compteur de graines animé ────────────────────────────────────────────
+  // totalSeeds = vrai total APRÈS gain (addSeeds déjà appelé quand la modal s'ouvre)
+  // displayedSeeds part de (totalSeeds - seedsEarned) et monte vers totalSeeds
+  // une unité à la fois, synchronisé avec chaque graine qui arrive
+  const totalSeeds = usePlayerStore(s => s.seeds);
+  const seedsEarned = iWon ? CHALLENGE_WINNER_SEEDS : 0;
+  const [displayedSeeds, setDisplayedSeeds] = useState(totalSeeds - seedsEarned);
+  const [displayedGain, setDisplayedGain]   = useState(seedsEarned);
+  const [animDone, setAnimDone]             = useState(false);
+  const arrivedCount = useRef(0);
+
+  useEffect(() => {
+    if (visible) {
+      setDisplayedSeeds(totalSeeds - seedsEarned);
+      setDisplayedGain(seedsEarned);
+      setAnimDone(false);
+      arrivedCount.current = 0;
+    }
+  }, [visible]);
+
+  // ── Positions mesurées (source → cible des graines) ──────────────────────
+  const [fromY, setFromY] = useState<number | null>(null);
+  const [fromX, setFromX] = useState<number>(200);
+  const [toY, setToY]     = useState<number | null>(null);
+  const [toX, setToX]     = useState<number>(150);
+
+  const onCounterLayout = useCallback((e: LayoutChangeEvent) => {
+    const { x, y, height, width } = e.nativeEvent.layout;
+    setToY(y + height / 2);
+    setToX(x + width / 2);
+  }, []);
+
+  const onRewardLayout = useCallback((e: LayoutChangeEvent) => {
+    const { x, y, height, width } = e.nativeEvent.layout;
+    setFromY(y + height / 2);
+    setFromX(x + width / 2);
+  }, []);
+
+  // ── Pulse et halo ─────────────────────────────────────────────────────────
+  const { scale: counterScale, haloOpacity, haloScale, pulse } = useCounterPulse();
+
+  // ── Callback : une graine arrive au compteur ──────────────────────────────
+  const onSeedArrived = useCallback(() => {
+    arrivedCount.current += 1;
+    setDisplayedSeeds(prev => prev + 1);
+    setDisplayedGain(prev => Math.max(0, prev - 1));
+    pulse();
+    if (arrivedCount.current >= Math.max(1, seedsEarned)) {
+      setAnimDone(true);
+    }
+  }, [seedsEarned, pulse]);
+
+  // ── Déclenchement : 600ms après l'ouverture ──────────────────────────────
+  const [flyKey, setFlyKey] = useState(0);
+  const [flyActive, setFlyActive] = useState(false);
+
+  useEffect(() => {
+    if (!visible) { setFlyActive(false); return; }
+    if (!iWon || seedsEarned <= 0) return;
+    const t = setTimeout(() => {
+      setFlyKey(k => k + 1);
+      setFlyActive(true);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [visible, iWon, seedsEarned]);
+
+  const particleCount = Math.max(1, seedsEarned);
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={rs.overlay}>
         <View style={rs.card}>
+
+          {/* ── Compteur de graines — CIBLE (affiché uniquement si victoire) ── */}
+          {iWon && (
+            <View style={rs.counterWrapper} onLayout={onCounterLayout}>
+              <Animated.View
+                style={[
+                  rs.halo,
+                  { opacity: haloOpacity, transform: [{ scale: haloScale }] },
+                ]}
+                pointerEvents="none"
+              />
+              <Animated.View
+                style={[rs.seedCounterBadge, { transform: [{ scale: counterScale }] }]}
+              >
+                <Text style={rs.seedCounterValue}>{displayedSeeds}</Text>
+                <Text style={rs.seedCounterEmoji}>🌱</Text>
+                {displayedGain > 0 && !animDone && (
+                  <View style={rs.seedGainBubble}>
+                    <Text style={rs.seedGainText}>+{displayedGain}</Text>
+                  </View>
+                )}
+              </Animated.View>
+            </View>
+          )}
+
           <Text style={rs.emoji}>{iWon ? '🏆' : '😤'}</Text>
           <Text style={rs.title}>{iWon ? 'Victoire !' : 'Défaite…'}</Text>
 
           {iWon && (
-            <View style={rs.rewardBox}>
+            <View style={rs.rewardBox} onLayout={onRewardLayout}>
               <Text style={rs.rewardText}>+{CHALLENGE_WINNER_SEEDS} 🌱 graines gagnées !</Text>
             </View>
           )}
@@ -187,6 +284,20 @@ function OpponentResultModal({
           <TouchableOpacity style={rs.btnClose} onPress={onClose} activeOpacity={0.8}>
             <Text style={rs.btnCloseText}>Retour aux défis</Text>
           </TouchableOpacity>
+
+          {/* Graines volantes — absoluteFill dans la carte */}
+          {flyActive && fromY !== null && toY !== null && (
+            <SeedFlyAnimation
+              key={flyKey}
+              count={particleCount}
+              fromX={fromX}
+              fromY={fromY}
+              targetX={toX}
+              targetY={toY}
+              onSeedArrived={onSeedArrived}
+            />
+          )}
+
         </View>
       </View>
     </Modal>
@@ -297,7 +408,11 @@ export default function FriendChallengeScreen() {
   const confettiPieces = useConfetti(showResult);
 
   useEffect(() => {
-    if (game.isVictory && challenge) setShowResult(true);
+    if (game.isVictory && challenge) {
+      setShowResult(true);
+      // Incrémenter friendPlayed pour tous les participants (chantier 5)
+      player.incrementStat('friendPlayed');
+    }
   }, [game.isVictory]);
 
   // ── Enregistrer le résultat (Joueur B) ─────────────────────────────────────
@@ -349,6 +464,18 @@ export default function FriendChallengeScreen() {
         friendData.level,
       );
       setSent(true);
+
+      // Enregistrer le défi envoyé (nouvel ami uniquement) + évaluer badge social_poignee
+      const playerState = usePlayerStore.getState();
+      const isNewFriend = !playerState.challengedFriendIds.includes(friendData.userId);
+      player.recordFriendChallenged(friendData.userId);
+
+      // Si c'est un nouvel ami ET que social_poignee est dans les objectifs actifs → décerner
+      if (isNewFriend && playerState.activeBadgeGoals.includes('social_poignee')) {
+        if (!playerState.earnedBadges.includes('social_poignee')) {
+          player.awardBadges(['social_poignee']);
+        }
+      }
     } catch {
       if (Platform.OS === 'web') window.alert("Erreur lors de l'envoi. Réessaie.");
     } finally {
@@ -357,8 +484,8 @@ export default function FriendChallengeScreen() {
   };
 
   const handleClose = () => {
-    // Si le joueur A quitte avant d'avoir résolu → popup perte de jeton
-    if (isChallenger && !game.isVictory) {
+    // Si le joueur (A ou B) quitte avant d'avoir résolu → popup d'avertissement
+    if (!game.isVictory) {
       setShowAbandonModal(true);
       return;
     }
@@ -497,7 +624,7 @@ export default function FriendChallengeScreen() {
           onGiveUp={handleClose}
         />
 
-        {/* Popup abandon (perte de jeton) */}
+        {/* Popup abandon */}
         <ConfirmModal
           visible={showAbandonModal}
           icon={'\u26A0\uFE0F'}
@@ -505,7 +632,11 @@ export default function FriendChallengeScreen() {
           iconBorder={'#FFE0B2'}
           borderColor={'#FF9800'}
           title={'Abandonner le d\u00e9fi ?'}
-          message={'Si tu quittes maintenant, ton jeton d\u00e9fi ami sera perdu d\u00e9finitivement.'}
+          message={
+            isChallenger
+              ? 'Si tu quittes maintenant, ton jeton d\u00e9fi ami sera perdu d\u00e9finitivement.'
+              : 'Si tu quittes maintenant, tu perds ce d\u00e9fi et ton ami sera d\u00e9clar\u00e9 vainqueur.'
+          }
           confirmLabel={'Continuer \u00e0 jouer'}
           cancelLabel={'Abandonner'}
           onConfirm={() => setShowAbandonModal(false)}
@@ -573,6 +704,55 @@ const rs = StyleSheet.create({
     color: Colors.forest.medium,
     textAlign: 'center',
   },
+  // ── Compteur de graines animé ─────────────────────────────────────────────
+  counterWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  halo: {
+    position: 'absolute',
+    width: 90,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#6FCF5A',
+  },
+  seedCounterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.forest.dark,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    gap: 6,
+    shadowColor: Colors.forest.medium,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  seedCounterValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFF8E7',
+    minWidth: 28,
+    textAlign: 'center',
+  },
+  seedCounterEmoji: { fontSize: 20 },
+  seedGainBubble: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: Colors.forest.accent,
+    borderRadius: 10,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  seedGainText: { fontSize: 10, fontWeight: '800', color: '#fff' },
+  // ── Fin compteur ──────────────────────────────────────────────────────────
+
   sentBox: {
     width: '100%',
     backgroundColor: Colors.forest.medium + '15',

@@ -9,6 +9,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import ForestFrame from '../../src/components/Navigation/ForestFrame';
 import { User } from 'firebase/auth';
 import { usePlayerStore } from '../../src/store/playerStore';
+import { useNavStore } from '../../src/store/navStore';
 import { onAuthChange } from '../../src/services/authService';
 import { getPlayer } from '../../src/services/playerService';
 import { updateDailyStreak } from '../../src/services/badgeService';
@@ -21,19 +22,18 @@ import {
   onSnapshot,
   Timestamp,
 } from 'firebase/firestore';
+import { ELIGIBLE_GOAL_BADGE_IDS } from '../../src/core/engine/badgeEngine';
 
 export default function TabsLayout() {
   const player   = usePlayerStore();
   const router   = useRouter();
   const segments = useSegments();
+  const { setPendingFriendChallenges, setGoalSlotsToFill } = useNavStore();
 
   // undefined = Firebase pas encore répondu, null = déconnecté, User = connecté
   const [user, setUser] = useState<User | null | undefined>(undefined);
   // Verrou anti-boucle : une seule redirection par changement d'état auth
   const redirectedRef = useRef(false);
-
-  // ── Compteur de défis amis en attente (badge onglet Amis) ──────────────────
-  const [pendingChallengesCount, setPendingChallengesCount] = useState(0);
 
   // ── Un seul abonnement Firebase Auth pour toute l'app ──────────────────────
   useEffect(() => {
@@ -103,17 +103,29 @@ export default function TabsLayout() {
     }
   }, []); // Une seule fois au montage
 
+  // ── Badge objectifs libres — badge rouge sur l'onglet Profil ─────────────
+  useEffect(() => {
+    const earnedSet = new Set(player.earnedBadges);
+    // Slots libres = objectifs non-obtenus actuellement actifs manquants
+    // = 3 - (actifs non-obtenus)
+    const activeNonEarned = player.activeBadgeGoals.filter(id => !earnedSet.has(id));
+    // + il doit rester des badges à choisir
+    const available = ELIGIBLE_GOAL_BADGE_IDS.filter(id => !earnedSet.has(id) && !activeNonEarned.includes(id)).length;
+    const slots = available > 0 ? 3 - activeNonEarned.length : 0;
+    setGoalSlotsToFill(Math.max(0, slots));
+  }, [player.activeBadgeGoals, player.earnedBadges]);
+
   // ── Badge défis amis en attente (Firestore onSnapshot) ────────────────────
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    const isAnon = auth.currentUser?.isAnonymous ?? true;
+    // Utiliser `user` (état React stable) plutôt que auth.currentUser (peut être null au montage)
+    const uid    = user?.uid;
+    const isAnon = user?.isAnonymous ?? true;
 
     if (!uid || isAnon || !player.friendNotifBadgeEnabled) {
-      setPendingChallengesCount(0);
+      setPendingFriendChallenges(0);
       return;
     }
 
-    const now = Date.now();
     const q = query(
       collection(db, 'friendChallenges'),
       where('opponentUid', '==', uid),
@@ -121,14 +133,15 @@ export default function TabsLayout() {
     );
 
     const unsub = onSnapshot(q, (snap) => {
+      const now = Date.now();
       const count = snap.docs.filter(d => {
         const exp = (d.data().expiresAt as Timestamp)?.toMillis() ?? Infinity;
         return exp > now;
       }).length;
-      setPendingChallengesCount(count);
+      setPendingFriendChallenges(count);
     }, () => {
       // Erreur (permissions) → pas de badge
-      setPendingChallengesCount(0);
+      setPendingFriendChallenges(0);
     });
 
     return () => unsub();
@@ -145,16 +158,8 @@ export default function TabsLayout() {
         }}
       >
         <Tabs.Screen name="index"     options={{ title: 'Accueil' }} />
-        <Tabs.Screen name="rules"     options={{ title: 'R\u00e8gles' }} />
-        <Tabs.Screen
-          name="challenge"
-          options={{
-            title: 'D\u00e9fis',
-            tabBarBadge: player.friendNotifBadgeEnabled && pendingChallengesCount > 0
-              ? pendingChallengesCount
-              : undefined,
-          }}
-        />
+        <Tabs.Screen name="rules"     options={{ title: 'Règles' }} />
+        <Tabs.Screen name="challenge" options={{ title: 'Défis' }} />
         <Tabs.Screen name="profile"   options={{ title: 'Profil' }} />
       </Tabs>
 

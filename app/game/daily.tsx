@@ -54,6 +54,7 @@ import { evaluateDailyBadges, DailyGameContext } from '../../src/core/engine/bad
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { DailyBriefingModal } from '../../src/components/LevelBriefing/DailyBriefingModal';
+import { DailyStreakRecordModal } from '../../src/components/Game/DailyStreakRecordModal';
 import { Challenge, FixedPlacement, TokenCount } from '../../src/core/models/Challenge';
 import { notificationError } from '../../src/utils/haptics';
 
@@ -224,9 +225,12 @@ export default function DailyGameScreen() {
   const [leaderboard, setLeaderboard] = useState<DailyResult[]>([]);
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
   const [seedsEarned, setSeedsEarned] = useState(0);
+  const seedsBeforeGainRef = useRef(0);
   const [briefingDone, setBriefingDone] = useState(false);
   const [isNewDailyRecord, setIsNewDailyRecord] = useState(false);
   const [prevDailyRecordHolder, setPrevDailyRecordHolder] = useState<string | null>(null);
+
+  const [streakRecordModal, setStreakRecordModal] = useState<{ newRecord: number; seeds: number } | null>(null);
 
   const badgesEvaluatedRef = useRef(false);
   // uid capturé à la victoire pour la détection record
@@ -343,7 +347,7 @@ export default function DailyGameScreen() {
   const handleDailyAbandonConfirm = useCallback(() => {
     const dailyKey = `daily_${dailyDate}`;
     player.submitDailyResult(dailyDate, false);
-    player.clearChallengeTimestamps(dailyKey);
+    player.markChallengeAbandoned(dailyKey);
     setShowDailyAbandonModal(false);
     game.resetGame();
     router.replace('/(tabs)');
@@ -386,9 +390,22 @@ export default function DailyGameScreen() {
     if (badgesEvaluatedRef.current) return;
     badgesEvaluatedRef.current = true;
 
-    // 1. Mettre a jour le store local
+    // 1. Détecter si le joueur bat son record de série AVANT la mise à jour du store
+    const stateBeforeSubmit = usePlayerStore.getState();
+    const prevRecord    = stateBeforeSubmit.longestDailyChallengeStreak;
+    const currentStreak = stateBeforeSubmit.dailyChallengeStreak;
+    const lastDate      = stateBeforeSubmit.lastDailyChallengeDate;
+    // Reproduire la logique isNextDay de playerStore : la date du dernier succès est-elle hier ?
+    const yesterday = new Date();
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const yesterdayStr  = yesterday.toISOString().split('T')[0];
+    const isConsecutive = lastDate === yesterdayStr;
+    const nextStreak    = isConsecutive ? currentStreak + 1 : 1;
+    const willBreakRecord = nextStreak > prevRecord;
+
+    // 1b. Mettre a jour le store local (calcule et enregistre le nouveau record en interne)
     player.submitDailyResult(dailyDate, true, game.elapsedTime);
-    player.clearChallengeTimestamps(`daily_${dailyDate}`);
+    player.markChallengeAbandoned(`daily_${dailyDate}`);
 
     // 2. Calculer les recompenses
     const uid = auth.currentUser?.uid;
@@ -413,8 +430,15 @@ export default function DailyGameScreen() {
 
     const storeState = usePlayerStore.getState();
     const reward = calculateDailyReward(rank, leaderboard.length + 1, storeState.dailyChallengeStreak);
+    seedsBeforeGainRef.current = usePlayerStore.getState().seeds;
     setSeedsEarned(reward.total);
     player.addSeeds(reward.total);
+
+    // Bonus record de série : Nb graines = nouveau record
+    if (willBreakRecord && nextStreak > 1) {
+      player.addSeeds(nextStreak);
+      setStreakRecordModal({ newRecord: nextStreak, seeds: nextStreak });
+    }
 
     // 3. Evaluer les badges journaliers
     const dailyCtx: DailyGameContext = {
@@ -619,6 +643,14 @@ export default function DailyGameScreen() {
           visible={showDailyAbandonModal}
           onContinue={() => setShowDailyAbandonModal(false)}
           onAbandon={handleDailyAbandonConfirm}
+        />
+
+        {/* Modal nouveau record de série */}
+        <DailyStreakRecordModal
+          visible={streakRecordModal !== null}
+          newRecord={streakRecordModal?.newRecord ?? 0}
+          seedsAwarded={streakRecordModal?.seeds ?? 0}
+          onClose={() => setStreakRecordModal(null)}
         />
       </View>
 

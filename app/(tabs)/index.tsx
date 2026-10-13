@@ -18,9 +18,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
-import { usePlayerStore, isChallengeOnCooldown } from '../../src/store/playerStore';
+import { ONF_4X4_LEVEL_UNLOCK } from '../../src/constants/onf';
+import { usePlayerStore } from '../../src/store/playerStore';
 import { auth } from '../../src/services/firebase';
 import { getDailyDateString, subscribeDailyLeaderboard, DailyResult } from '../../src/services/dailyChallengeService';
+
 import { formatTime } from '../../src/utils/boardUtils';
 import { DifficultyLevel } from '../../src/core/models/Challenge';
 import { WorldRecord, subscribeAllWorldRecords } from '../../src/services/worldRecordService';
@@ -29,7 +31,7 @@ import { WoodButton } from '../../src/components/UI/WoodButton';
 import { BgImage } from '../../src/components/UI/BgImage';
 
 
-// ── Tous les défis (15 niveaux) ────────────────────────────────────────────────
+// ── Tous les défis (21 niveaux) ────────────────────────────────────────────────
 import niveau1  from '../../src/data/challenges/niveau_1.json';
 import niveau2  from '../../src/data/challenges/niveau_2.json';
 import niveau3  from '../../src/data/challenges/niveau_3.json';
@@ -45,6 +47,12 @@ import niveau12 from '../../src/data/challenges/niveau_12.json';
 import niveau13 from '../../src/data/challenges/niveau_13.json';
 import niveau14 from '../../src/data/challenges/niveau_14.json';
 import niveau15 from '../../src/data/challenges/niveau_15.json';
+import niveau16 from '../../src/data/challenges/niveau_16.json';
+import niveau17 from '../../src/data/challenges/niveau_17.json';
+import niveau18 from '../../src/data/challenges/niveau_18.json';
+import niveau19 from '../../src/data/challenges/niveau_19.json';
+import niveau20 from '../../src/data/challenges/niveau_20.json';
+import niveau21 from '../../src/data/challenges/niveau_21.json';
 
 const LEVELS: Array<{
   id: DifficultyLevel;
@@ -67,8 +75,14 @@ const LEVELS: Array<{
   { id: 'niveau_11', label: 'Niveau 11', emoji: '🏹', description: '11 cases · 7 vides · + Bûches',             isPremium: true,  color: '#827717' },
   { id: 'niveau_12', label: 'Niveau 12', emoji: '🪵', description: '12 cases · 7 vides · + Chalet',             isPremium: true,  color: '#6D4C41' },
   { id: 'niveau_13', label: 'Niveau 13', emoji: '🏠', description: '12 cases · 7 vides · Chalet',               isPremium: true,  color: '#4E342E' },
-  { id: 'niveau_14', label: 'Niveau 14', emoji: '⚡',  description: '12 cases · 8 vides · Expert',              isPremium: true,  color: '#E65100' },
+  { id: 'niveau_14', label: 'Niveau 14', emoji: '⚡',  description: '12 cases · 8 vides · Toutes tensions',     isPremium: true,  color: '#E65100' },
   { id: 'niveau_15', label: 'Niveau 15', emoji: '💀', description: '12 cases · 8 vides · Sans bonus',           isPremium: true,  color: '#3E2723' },
+  { id: 'niveau_16', label: 'Niveau 16', emoji: '🌿', description: '13 cases · 8 vides · Coeur de la Forêt',   isPremium: true,  color: '#1A237E' },
+  { id: 'niveau_17', label: 'Niveau 17', emoji: '🍄', description: '13 cases · 8 vides · + Champignon',        isPremium: true,  color: '#4A148C' },
+  { id: 'niveau_18', label: 'Niveau 18', emoji: '☠️', description: '13 cases · 8 vides · Sans bonus · Max',   isPremium: true,  color: '#212121' },
+  { id: 'niveau_19', label: 'Niveau 19', emoji: '🌲', description: '14 cases · 9 vides · + Arbre',             isPremium: true,  color: '#1B5E20' },
+  { id: 'niveau_20', label: 'Niveau 20', emoji: '🌳', description: '14 cases · 8 vides · Apothéose',           isPremium: true,  color: '#33691E' },
+  { id: 'niveau_21', label: 'Niveau 21', emoji: '🎆', description: '14 cases · 8 vides · Sans bonus · Feu !', isPremium: true,  color: '#0D0D0D' },
 ];
 
 const ALL_CHALLENGES_BY_LEVEL: Record<string, any[]> = {
@@ -87,6 +101,12 @@ const ALL_CHALLENGES_BY_LEVEL: Record<string, any[]> = {
   niveau_13: niveau13.challenges,
   niveau_14: niveau14.challenges,
   niveau_15: niveau15.challenges,
+  niveau_16: niveau16.challenges,
+  niveau_17: niveau17.challenges,
+  niveau_18: niveau18.challenges,
+  niveau_19: niveau19.challenges,
+  niveau_20: niveau20.challenges,
+  niveau_21: niveau21.challenges,
 };
 
 const ALL_CHALLENGES_FLAT = LEVELS.flatMap(l => ALL_CHALLENGES_BY_LEVEL[l.id] ?? []);
@@ -149,7 +169,7 @@ function LevelsScreen({
         <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
           <Text style={styles.backBtnText}>← Retour</Text>
         </TouchableOpacity>
-        <Text style={styles.levelsHeaderTitle}>Tous les défis</Text>
+        <Text style={styles.levelsHeaderTitle}>Tous les défis solo</Text>
         <View style={{ width: 80 }} />
       </View>
 
@@ -348,13 +368,6 @@ export default function HomeScreen() {
     return () => unsub();
   }, [todayStr]);
 
-  // ── Ticker cooldown (mis à jour chaque seconde si un défi est en pause) ──────
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (isDailyToday && dailyStatus) return;
@@ -428,7 +441,7 @@ export default function HomeScreen() {
         {/* ── Hero : panneau bois "Tous les défis" ── */}
         <View style={styles.heroGroup}>
           <WoodSign
-            label="Tous les défis"
+            label="Tous les défis solo"
             sublabel={`${totalCompleted}/${totalChallenges} complétés`}
             onPress={() => setShowLevels(true)}
           />
@@ -539,24 +552,49 @@ export default function HomeScreen() {
           );
         })()}
 
+        {/* ── Défi ONF — Grille Forestière 4×4 ── */}
+        {(() => {
+          // Débloqué par niveau OU par palier badge bois×9 (chantier 3)
+          const isOnfUnlocked = player.currentLevel >= ONF_4X4_LEVEL_UNLOCK || player.unlockedOnf;
+          const solved = player.onfSolvedCount;
+
+          if (!isOnfUnlocked) {
+            return (
+              <WoodButton
+                variant="locked"
+                label="Défi ONF"
+                sublabel={`Disponible au niveau ${ONF_4X4_LEVEL_UNLOCK} ou via 9 badges Bois`}
+                height={76}
+                onPress={() => {}}
+                disabled
+              />
+            );
+          }
+
+          return (
+            <WoodButton
+              variant="green"
+              label="Défi ONF"
+              sublabel={`${solved} grille${solved !== 1 ? 's' : ''} résolue${solved !== 1 ? 's' : ''} `}
+              height={76}
+              onPress={() => router.push('/game/onf')}
+            />
+          );
+        })()}
+
         {/* ── Continuer ── */}
         {nextChallenge && (() => {
           const challengeId = nextChallenge.challenge.id;
-          // `now` est le ticker 1s — le passer garantit que onCooldown bascule dès expiration
-          const { onCooldown, remainingMs } = isChallengeOnCooldown(player.challengeAbandonedAt, challengeId, now);
-          const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
-          const remMin = String(Math.floor(remainingSec / 60)).padStart(2, '0');
-          const remSec = String(remainingSec % 60).padStart(2, '0');
-          const levelSublabel = `${nextChallenge.level.emoji} ${nextChallenge.level.label} · Défi n°${nextChallenge.challenge.challengeNumber}`;
+          const levelSublabel = allCompleted
+            ? 'Tous les défis terminés !'
+            : `${nextChallenge.level.emoji} ${nextChallenge.level.label} · Défi N°${nextChallenge.challenge.challengeNumber}`;
           return (
             <WoodButton
-              variant={onCooldown ? 'locked' : 'green'}
-              lockIcon="⏸"
-              label={onCooldown ? `${nextChallenge.level.label} · Défi n°${nextChallenge.challenge.challengeNumber}` : allCompleted ? 'Tout terminé !' : totalCompleted === 0 ? 'Commencer' : 'Continuer'}
-              sublabel={onCooldown ? `Reprise dans ${remMin}:${remSec}` : levelSublabel}
+              variant="green"
+              label="Défi Solo"
+              sublabel={levelSublabel}
               height={76}
               onPress={() => router.push(`/game/${challengeId}`)}
-              disabled={onCooldown}
             />
           );
         })()}
@@ -599,7 +637,6 @@ const styles = StyleSheet.create({
 
   // Hero group
   heroGroup: { alignItems: 'center', gap: 0 },
-
 
   // Défi du Jour — états non interactifs
 

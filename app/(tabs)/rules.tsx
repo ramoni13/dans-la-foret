@@ -50,11 +50,13 @@ const ELEMENT_ORDER: ElementEntry[] = [
   { id: 'biche',      introLevel: 9,  nameKey: 'rules_element_biche',      ruleIds: ['no_same_biche', 'paired_cerf_biche', 'paired_exclusive_biche'] },
   { id: 'tas_buches', introLevel: 11, nameKey: 'rules_element_tas_buches', ruleIds: ['chain_tas_buches'] },
   { id: 'chalet',     introLevel: 12, nameKey: 'rules_element_chalet',     ruleIds: ['no_same_chalet', 'require_chalet_bucheron', 'chain_tas_buches_chalet'] },
+  { id: 'champignon', introLevel: 17, nameKey: 'rules_element_champignon', ruleIds: ['center_only_champignon', 'no_same_champignon'] },
+  { id: 'arbre',      introLevel: 19, nameKey: 'rules_element_arbre',      ruleIds: ['connected_arbre', 'connected_arbre_buches'] },
 ];
 
 // Indexer toutes les RuleCards par ID (collectees depuis LEVEL_META)
 const ALL_RULES_BY_ID = new Map<string, RuleCardData>();
-for (let lvl = 1; lvl <= 15; lvl++) {
+for (let lvl = 1; lvl <= 21; lvl++) {
   const meta = LEVEL_META[lvl];
   if (!meta) continue;
   for (const rule of meta.allRules) {

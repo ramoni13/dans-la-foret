@@ -26,9 +26,8 @@ import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { FailModal } from '../../src/components/Game/FailModal';
 import { LevelBriefingModal } from '../../src/components/LevelBriefing/LevelBriefingModal';
 import { useGame } from '../../src/hooks/useGame';
-import { usePlayerStore, isChallengeOnCooldown, getChallengeElapsed } from '../../src/store/playerStore';
+import { usePlayerStore, getChallengeElapsed } from '../../src/store/playerStore';
 import { AbandonConfirmModal } from '../../src/components/Game/AbandonConfirmModal';
-import { CooldownScreen } from '../../src/components/Game/CooldownScreen';
 import { auth } from '../../src/services/firebase';
 import { getPlayer, markCompleted, updateSeeds } from '../../src/services/playerService';
 import { awardBadgesFirestore } from '../../src/services/badgeService';
@@ -46,6 +45,7 @@ import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { LEVEL_META } from '../../src/data/levelMeta';
 import { calculateSeedReward } from '../../src/core/engine/hintEngine';
 import { evaluateBadges, getClosestBadges, GameContext } from '../../src/core/engine/badgeEngine';
+import { BadgeGoalPickerModal } from '../../src/components/Badges/BadgeGoalPickerModal';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 
@@ -63,6 +63,8 @@ import niveau10 from '../../src/data/challenges/niveau_10.json';
 import niveau11 from '../../src/data/challenges/niveau_11.json';
 import niveau12 from '../../src/data/challenges/niveau_12.json';
 import niveau13 from '../../src/data/challenges/niveau_13.json';
+import niveau14 from '../../src/data/challenges/niveau_14.json';
+import niveau15 from '../../src/data/challenges/niveau_15.json';
 import { Challenge } from '../../src/core/models/Challenge';
 
 const ALL_CHALLENGES: Record<string, Challenge[]> = {
@@ -79,6 +81,8 @@ const ALL_CHALLENGES: Record<string, Challenge[]> = {
   niveau_11: niveau11.challenges as Challenge[],
   niveau_12: niveau12.challenges as Challenge[],
   niveau_13: niveau13.challenges as Challenge[],
+  niveau_14: niveau14.challenges as Challenge[],
+  niveau_15: niveau15.challenges as Challenge[],
 };
 
 /** Calcule les niveaux entièrement complétés (tous les 10 défis présents). */
@@ -111,11 +115,7 @@ export default function GameScreen() {
     setBriefingForcedOpen(false);
     if (wasFirstOpen && challengeId) {
       const pState = usePlayerStore.getState();
-      const priorElapsed = getChallengeElapsed(
-        pState.challengeStartedAt,
-        pState.challengeAbandonedAt,
-        challengeId,
-      );
+      const priorElapsed = getChallengeElapsed(pState.challengeStartedAt, challengeId);
       game.startTimer(priorElapsed);
     }
   }, [game, briefingDone, challengeId]);
@@ -128,10 +128,15 @@ export default function GameScreen() {
   const badgesEvaluatedRef = useRef(false);
   // Compteur d'échecs de validation pendant la partie en cours
   const failCountForGameRef = useRef(0);
+  // Total de graines AVANT le gain — capturé juste avant addSeeds pour l'animation VictoryModal
+  const seedsBeforeGainRef = useRef(0);
+  // true si un objectif actif vient d'être atteint → bannière dans VictoryModal
+  const [goalJustCompleted, setGoalJustCompleted] = useState(false);
+  // true pour ouvrir le picker d'objectifs (depuis VictoryModal ou profil)
+  const [showGoalPicker, setShowGoalPicker] = useState(false);
 
-  // ── Abandon / Anti-triche ────────────────────────────────
+  // ── Abandon ───────────────────────────────────────────────
   const [showAbandonModal, setShowAbandonModal] = useState(false);
-  const [cooldownRemainingMs, setCooldownRemainingMs] = useState<number | null>(null);
 
   const handleAbandon = useCallback(() => {
     setShowAbandonModal(true);
@@ -167,27 +172,14 @@ export default function GameScreen() {
   useEffect(() => {
     if (!challengeId) return;
 
-    // Vérifier le cooldown avant de charger
     const pState = usePlayerStore.getState();
-    const cooldown = isChallengeOnCooldown(pState.challengeAbandonedAt, challengeId);
-    if (cooldown.onCooldown) {
-      setCooldownRemainingMs(cooldown.remainingMs);
-      return;
-    }
-    setCooldownRemainingMs(null);
-
     let found: Challenge | undefined;
     for (const challenges of Object.values(ALL_CHALLENGES)) {
       found = challenges.find(c => c.id === challengeId);
       if (found) break;
     }
     if (found) {
-      // Calculer l'offset de temps accumulé (reprises après abandon)
-      const priorElapsed = getChallengeElapsed(
-        pState.challengeStartedAt,
-        pState.challengeAbandonedAt,
-        challengeId,
-      );
+      const priorElapsed = getChallengeElapsed(pState.challengeStartedAt, challengeId);
 
       game.loadChallenge(found);
       player.setLastPlayed(found.id);
@@ -259,11 +251,23 @@ export default function GameScreen() {
 
     const failsDuringGame = failCountForGameRef.current;
 
-    // 1. Mise à jour locale immédiate (store Zustand)
+    // 1. Capturer bestTimes et sameChallengePlays AVANT markChallengeCompleted
+    //    — nécessaire pour que isPersonalBest() et playsOnThisChallenge soient corrects.
+    const stateBeforeUpdate = usePlayerStore.getState();
+    const bestTimesBeforeUpdate          = stateBeforeUpdate.stats.bestTimes;
+    const sameChallengePlaysBeforeUpdate = stateBeforeUpdate.stats.sameChallengePlays;
+    const completedChallengesBeforeUpdate = stateBeforeUpdate.completedChallenges;
+    // Objectifs actifs AVANT : pour détecter lesquels viennent d'être atteints
+    const activeGoalsBeforeUpdate = stateBeforeUpdate.activeBadgeGoals;
+
+    // 2. Mise à jour locale immédiate (store Zustand)
+    // Capturer le total AVANT addSeeds — la VictoryModal en a besoin pour l'animation
+    seedsBeforeGainRef.current = usePlayerStore.getState().seeds;
     player.markChallengeCompleted(challenge.id, game.elapsedTime, failsDuringGame);
     player.addSeeds(seedsEarned);
 
-    // 2. Évaluation des badges — APRÈS markChallengeCompleted
+    // 3. Évaluation des badges — storeState post-update pour noErrorStreak/dailyStreak,
+    //    mais bestTimes/sameChallengePlays/completedChallenges pris AVANT la mise à jour.
     const storeState = usePlayerStore.getState();
     const completedLevels = computeCompletedLevels(storeState.completedChallenges);
 
@@ -276,18 +280,21 @@ export default function GameScreen() {
       estimatedDurationMs: challenge.estimatedDuration * 1000,
       bonusUsed: game.bonusUsed,
       failCount: failsDuringGame,
-      noErrorStreak:     storeState.stats.noErrorStreak,
+      noErrorStreak:     storeState.stats.noErrorStreak,     // post-update : intentionnel
       dailyStreak:       storeState.dailyStreak,
       earnedBadges:      storeState.earnedBadges,
-      completedChallenges: storeState.completedChallenges,
+      completedChallenges: completedChallengesBeforeUpdate,  // AVANT : pour off-by-one correct
       completedLevels,
       friendWins:        storeState.stats.friendWins,
-      bestTimes:         storeState.stats.bestTimes,
+      bestTimes:         bestTimesBeforeUpdate,              // AVANT : pour isPersonalBest()
       totalFriendsInvited: storeState.stats.totalFriendsInvited,
       topDEJCount:       storeState.stats.topDEJCount,
       playedAt:          new Date(),
-      sameChallengePlays: storeState.stats.sameChallengePlays,
+      sameChallengePlays: sameChallengePlaysBeforeUpdate,    // AVANT : pour playsOnThisChallenge
       seasonalChallengesPlayed: storeState.stats.seasonalChallengesPlayed,
+      improvedChallengesCount: storeState.stats.improvedChallengesCount, // post-update : pour amelioration_fusee
+      activeBadgeGoals: activeGoalsBeforeUpdate,             // objectifs actifs : contrôle quels badges sont décernables
+      speedBadgeHits:  storeState.stats.speedBadgeHits,     // post-update : markChallengeCompleted vient d'incrémenter
       isWorldRecord: false,
       isFirstRecord: false,
     };
@@ -299,11 +306,21 @@ export default function GameScreen() {
       setBadgeQueue(newBadges);
     }
 
+    // Détecter si un objectif actif vient d'être complété (slot libéré)
+    // awardBadges() retire automatiquement les badges obtenus de activeBadgeGoals
+    const goalsAfter = usePlayerStore.getState().activeBadgeGoals;
+    if (goalsAfter.length < activeGoalsBeforeUpdate.length) {
+      setGoalJustCompleted(true);
+    }
+
     const updatedState = usePlayerStore.getState();
-    setClosestBadges(getClosestBadges({
+    // N'afficher que la progression des objectifs actifs (après mise à jour)
+    const activeGoalsAfterUpdate = updatedState.activeBadgeGoals;
+    const allClosest = getClosestBadges({
       ...ctx,
       earnedBadges: updatedState.earnedBadges,
-    }));
+    });
+    setClosestBadges(allClosest.filter(b => activeGoalsAfterUpdate.includes(b.badgeId)));
 
     // 3. Synchronisation Firestore en arrière-plan (si connecté, non anonyme)
     const uid = auth.currentUser?.uid;
@@ -380,17 +397,6 @@ export default function GameScreen() {
     (el, i) => el !== null && !fixedIndices.has(i)
   );
 
-  // ── Cooldown actif : afficher l'écran d'attente au lieu du jeu ──
-  if (cooldownRemainingMs != null) {
-    return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <CooldownScreen
-          remainingMs={cooldownRemainingMs}
-          onBack={() => router.replace('/(tabs)/')}
-        />
-      </View>
-    );
-  }
 
   if (!challenge || !boardDef) {
     return (
@@ -457,6 +463,7 @@ export default function GameScreen() {
           bonusDisabled={bonusDisabled}
           onActivateBonus={game.activateBonus}
           unlockedBonuses={player.unlockedBonuses}
+          dailyBonusUses={player.dailyBonusUses}
           highlightDeadline={game.highlightDeadline}
           instinctDeadline={game.instinctDeadline}
           highlightActive={game.highlightActive}
@@ -514,6 +521,8 @@ export default function GameScreen() {
           worldRecord={isNewWorldRecord ? null : worldRecord}
           isNewWorldRecord={isNewWorldRecord}
           previousRecordHolder={previousRecordHolder}
+          goalJustCompleted={goalJustCompleted}
+          onChooseGoal={() => setShowGoalPicker(true)}
           onNextChallenge={() => {
             const nextNum = String(challenge.challengeNumber + 1).padStart(3, '0');
             const nextId = `${challenge.level}_${nextNum}`;
@@ -530,6 +539,19 @@ export default function GameScreen() {
             game.resetGame();
             router.replace('/(tabs)/');
           }}
+        />
+
+        {/* ── Picker objectifs badge (ouvert depuis VictoryModal ou bannière) ── */}
+        <BadgeGoalPickerModal
+          visible={showGoalPicker}
+          earnedBadges={player.earnedBadges}
+          currentGoals={player.activeBadgeGoals}
+          onConfirm={(ids) => {
+            player.setActiveBadgeGoals(ids);
+            setShowGoalPicker(false);
+            setGoalJustCompleted(false);
+          }}
+          onClose={() => setShowGoalPicker(false)}
         />
 
         {/* ── Modal échec ── */}

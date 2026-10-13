@@ -54,8 +54,7 @@ import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { formatTime } from '../../src/utils/boardUtils';
 import { ConfirmModal } from '../../src/components/Game/ConfirmModal';
 
-// ── Constantes ──────────────────────────────────────────────
-const TOKEN_SEED_COST = 15;
+// (TOKEN_SEED_COST supprimé — chantier 4 : achat jeton via graines retiré)
 
 const IMG_HACHES = require('../../assets/elements/design_app/Haches.png');
 
@@ -349,7 +348,6 @@ export default function ChallengeScreen() {
   const [refreshing, setRefreshing]       = useState(false);
   const [generating, setGenerating]       = useState(false);
   const [showSearch, setShowSearch]       = useState(false);
-  const [showBuyTokenModal, setShowBuyTokenModal] = useState(false);
 
   // ── Chargement des défis ──────────────────────────────────
   const loadChallenges = useCallback(async (silent = false) => {
@@ -380,6 +378,8 @@ export default function ChallengeScreen() {
   };
 
   // ── Vérifier jetons (avant d'ouvrir la recherche) ─────────
+  // Achat de jeton via graines supprimé (chantier 4).
+  // Si pas de jeton → informer le joueur (pas d'alternative graines).
   const handleOpenSearch = () => {
     if (!uid || isAnon) {
       showAlert('Connexion requise', 'Connecte-toi pour défier un ami.');
@@ -387,31 +387,17 @@ export default function ChallengeScreen() {
     }
 
     const hasToken = player.friendChallengeTokens > 0;
-    const hasSeeds = player.seeds >= TOKEN_SEED_COST;
 
-    if (!hasToken && !hasSeeds) {
+    if (!hasToken) {
       showAlert(
-        'Pas de jeton',
-        `Il te faut un jeton défi ami (1 tous les 5 défis solo) ou ${TOKEN_SEED_COST} graines.`,
+        'Plus de jeton',
+        'Tu gagnes 1 jeton tous les 5 défis solo complétés.',
       );
-      return;
-    }
-
-    if (!hasToken && hasSeeds) {
-      // Ouvre la popup de confirmation d'achat
-      setShowBuyTokenModal(true);
       return;
     }
 
     // Jeton disponible → on le dépense directement
     player.spendFriendChallengeToken();
-    setShowSearch(true);
-  };
-
-  // ── Confirmation achat jeton via graines ──────────────────
-  const handleConfirmBuyToken = () => {
-    setShowBuyTokenModal(false);
-    player.spendSeeds(TOKEN_SEED_COST);
     setShowSearch(true);
   };
 
@@ -631,7 +617,7 @@ export default function ChallengeScreen() {
         <Text style={styles.launchHint}>
           {player.friendChallengeTokens > 0
             ? `${player.friendChallengeTokens} jeton${player.friendChallengeTokens > 1 ? 's' : ''} · 1 tous les 5 défis solo · Vainqueur : +${CHALLENGE_WINNER_SEEDS} 🌱`
-            : `Plus de jeton · Dépenser ${TOKEN_SEED_COST} 🌱 ou compléter 5 défis solo`
+            : 'Plus de jeton · Gagnes-en 1 tous les 5 défis solo'
           }
         </Text>
       </View>
@@ -729,20 +715,7 @@ export default function ChallengeScreen() {
         }}
       />
 
-      {/* ── Popup achat jeton via graines ── */}
-      <ConfirmModal
-        visible={showBuyTokenModal}
-        icon={'\uD83C\uDF31'}
-        iconBg={'#E8F5E9'}
-        iconBorder={'#A5D6A7'}
-        borderColor={Colors.forest.medium}
-        title={'Utiliser des graines ?'}
-        message={`Tu n'as plus de jeton d\u00e9fi ami.\nD\u00e9penser ${TOKEN_SEED_COST}\u00a0\uD83C\uDF31 pour en obtenir un ?`}
-        confirmLabel={`D\u00e9penser ${TOKEN_SEED_COST}\u00a0\uD83C\uDF31`}
-        cancelLabel={'Annuler'}
-        onConfirm={handleConfirmBuyToken}
-        onCancel={() => setShowBuyTokenModal(false)}
-      />
+      {/* Popup achat jeton supprimée (chantier 4) */}
     </View>
   );
 }

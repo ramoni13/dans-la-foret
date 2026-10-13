@@ -4,7 +4,7 @@
 // État 2 : connecté → hub 4 tuiles + sous-sections
 // ============================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,10 +16,14 @@ import {
   ActivityIndicator,
   Platform,
   Switch,
+  Modal,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from 'firebase/auth';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../../src/services/firebase';
 
 import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
@@ -38,8 +42,11 @@ import {
 } from '../../src/services/authService';
 import { BadgeCollection } from '../../src/components/Badges/BadgeCollection';
 import { BadgeUnlockProgress } from '../../src/components/Badges/BadgeUnlockProgress';
+import { ActiveGoalCard } from '../../src/components/Badges/ActiveGoalCard';
+import { BadgeGoalPickerModal } from '../../src/components/Badges/BadgeGoalPickerModal';
 import { LeaderboardScreen } from '../../src/components/Leaderboard/LeaderboardScreen';
 import { MusicPanel } from '../../src/components/Audio/MusicPanel';
+import { getBadgeProgress, ELIGIBLE_GOAL_BADGE_IDS, DEFAULT_BADGE_GOALS } from '../../src/core/engine/badgeEngine';
 
 // ── Types ───────────────────────────────────────────────────────────────────────
 type ActiveSection = 'hub' | 'stats' | 'badges' | 'classement' | 'reglages';
@@ -63,6 +70,9 @@ export default function ProfileScreen() {
 
   // ── Hub navigation ──────────────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<ActiveSection>('hub');
+
+  // ── Modal sélection objectifs badges (chantier 3) ────────────────────────────
+  const [showGoalPicker, setShowGoalPicker] = useState(false);
 
   // ── Bouton Retour dans la barre bois haute (via ForestFrame) ────────────────
   const goHub = React.useCallback(() => setActiveSection('hub'), []);
@@ -90,9 +100,64 @@ export default function ProfileScreen() {
     return unsub;
   }, []);
 
+  // ── Slots d'objectif libres ───────────────────────────────────────────────────
+  const earnedSet = new Set(player.earnedBadges);
+  // Objectifs en cours non encore obtenus
+  const activeNonEarned = player.activeBadgeGoals.filter(id => !earnedSet.has(id));
+  // Badges encore disponibles (non obtenus, non déjà en objectif actif)
+  const availableGoalCount = ELIGIBLE_GOAL_BADGE_IDS.filter(
+    id => !earnedSet.has(id) && !activeNonEarned.includes(id)
+  ).length;
+  const goalSlotsToFill = availableGoalCount > 0 ? Math.max(0, 3 - activeNonEarned.length) : 0;
+  const hasGoalSlotFree = goalSlotsToFill > 0;
+
   // ── Stats dérivées ────────────────────────────────────────────────────────────
   const allBestTimes = Object.values(player.stats.bestTimes);
   const fastestTime  = allBestTimes.length > 0 ? Math.min(...allBestTimes) : null;
+  // Temps moyen calculé depuis bestTimes (données historiques complètes, défis solo)
+  const avgBestTime  = allBestTimes.length > 0
+    ? Math.round(allBestTimes.reduce((a, b) => a + b, 0) / allBestTimes.length)
+    : null;
+  // Total défis résolus toutes catégories confondues
+  const totalAllModes = player.stats.totalSolved
+    + player.stats.dailyWon
+    + player.stats.friendWins
+    + player.onfSolvedCount;
+
+  // Stats chantier 5 (affichage dans la section statistiques)
+  const dailyPct  = player.stats.dailyPlayed > 0
+    ? Math.round(player.stats.dailyWon / player.stats.dailyPlayed * 100)
+    : null;
+  const friendPct = player.stats.friendPlayed > 0
+    ? Math.round((player.stats.friendWins / player.stats.friendPlayed) * 100)
+    : null;
+
+  // Contexte partiel pour getBadgeProgress (objectifs actifs — hors partie en cours)
+  const partialGameCtx = {
+    challengeId:              '',
+    levelId:                  `niveau_${player.currentLevel}`,
+    levelNumber:              player.currentLevel,
+    challengeNumber:          0,
+    elapsedMs:                0,
+    estimatedDurationMs:      0,
+    bonusUsed:                [],
+    failCount:                0,
+    noErrorStreak:            player.stats.noErrorStreak,
+    dailyStreak:              player.dailyStreak,
+    earnedBadges:             player.earnedBadges,
+    completedChallenges:      player.completedChallenges,
+    completedLevels:          [] as string[],
+    friendWins:               player.stats.friendWins,
+    bestTimes:                player.stats.bestTimes,
+    totalFriendsInvited:      player.stats.totalFriendsInvited,
+    topDEJCount:              player.stats.topDEJCount,
+    playedAt:                 new Date(),
+    sameChallengePlays:       player.stats.sameChallengePlays,
+    seasonalChallengesPlayed: player.stats.seasonalChallengesPlayed,
+    isWorldRecord:            false,
+    isFirstRecord:            false,
+    rank:                     undefined as any,
+  };
 
   // ── Compat web/mobile ────────────────────────────────────────────────────────
   const showAlert = (message: string) => {
@@ -163,6 +228,42 @@ export default function ProfileScreen() {
       player.logout();
       await AsyncStorage.removeItem('dlf_player_v1');
     });
+  };
+
+  // ── Réinitialisation badges (Ramoni uniquement) ───────────────────────────────
+  const handleResetBadges = () => {
+    showConfirm(
+      'Réinitialiser tous tes badges ? (local + Firestore)\nLes objectifs actifs seront remis aux défauts.',
+      async () => {
+        // 1. Zustand — réinitialisation locale immédiate (setState direct, un seul re-render)
+        usePlayerStore.setState({
+          earnedBadges:     [],
+          unlockedBonuses:  [],
+          unlockedThemes:   [],
+          unlockedOnf:      false,
+          badgeShowcase:    [undefined, undefined, undefined],
+          activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+        });
+
+        // 2. Firestore — réinitialisation cloud
+        const uid = auth.currentUser?.uid;
+        if (uid) {
+          try {
+            await updateDoc(doc(db, 'players', uid), {
+              earnedBadges:     [],
+              unlockedBonuses:  [],
+              unlockedThemes:   [],
+              unlockedOnf:      false,
+              badgeShowcase:    [],
+              activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+              updatedAt:        serverTimestamp(),
+            });
+          } catch (e) {
+            console.warn('[ResetBadges] Firestore error:', e);
+          }
+        }
+      }
+    );
   };
 
   // ── Chargement ───────────────────────────────────────────────────────────────
@@ -330,15 +431,52 @@ export default function ProfileScreen() {
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>📊 Statistiques</Text>
           <View style={styles.statsGrid}>
-            <StatCard label="Graines disponibles"  value={String(player.seeds)}                emoji="🌱" />
-            <StatCard label="Défis résolus"         value={String(player.stats.totalSolved)}    emoji="🏆" />
-            <StatCard label="Meilleure série"        value={String(player.stats.longestStreak)}  emoji="⭐" />
             <StatCard
-              label="Meilleur temps"
-              value={fastestTime ? formatTime(fastestTime) : '—'}
-              emoji="⏱"
+              label="Défis résolus"
+              value={String(totalAllModes)}
+              emoji="🏆"
+              hint={"Total de tous tes défis gagnés : défis solo, défi du jour, défis entre amis et mode ONF."}
             />
-            <StatCard label="Streak journalier"     value={String(player.dailyChallengeStreak)} emoji="🔥" />
+            <StatCard
+              label="Série journalière"
+              value={
+                player.longestDailyChallengeStreak > 0
+                  ? `${player.dailyChallengeStreak} (record : ${player.longestDailyChallengeStreak})`
+                  : String(player.dailyChallengeStreak)
+              }
+              emoji="🔥"
+              hint={
+                `Série actuelle : ${player.dailyChallengeStreak} jour(s) consécutif(s).\n\n` +
+                `Ton record : ${player.longestDailyChallengeStreak} jour(s).\n\n` +
+                `Si tu rates un jour, la série repart à zéro mais ton record est conservé.`
+              }
+            />
+            <StatCard
+              label="Précision journalière"
+              value={
+                dailyPct !== null
+                  ? `${dailyPct}%`
+                  : '—'
+              }
+              emoji="📅"
+              hint={`Ton taux de réussite sur le défi du jour : ${player.stats.dailyWon} réussi(s) sur ${player.stats.dailyPlayed} tenté(s).`}
+            />
+            <StatCard
+              label="Défis entre amis"
+              value={
+                friendPct !== null
+                  ? `${friendPct}%`
+                  : '—'
+              }
+              emoji="🤝"
+              hint={`Ton taux de victoire contre tes amis : ${player.stats.friendWins} victoire(s) sur ${player.stats.friendPlayed} partie(s) jouée(s).`}
+            />
+            <StatCard
+              label="Temps moyen"
+              value={avgBestTime !== null ? formatTime(avgBestTime) : '—'}
+              emoji="⏱"
+              hint={"Temps moyen de résolution de tes défis solo. Calculé sur l'ensemble de tes meilleurs temps."}
+            />
           </View>
         </ScrollView>
       </View>
@@ -352,6 +490,44 @@ export default function ProfileScreen() {
         <BgImage overlay={0.52} />
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>🏅 Badges</Text>
+
+          {/* ── Objectifs actifs ──────────────────────────────────────────── */}
+          <View style={goalStyles.goalSection}>
+            <Text style={goalStyles.goalTitle}>Mes objectifs</Text>
+
+            <View style={goalStyles.goalList}>
+              {/* 3 slots fixes : actif ou vide */}
+              {[0, 1, 2].map(slotIdx => {
+                const badgeId = player.activeBadgeGoals[slotIdx];
+                if (badgeId) {
+                  const progress = getBadgeProgress(badgeId, partialGameCtx as any);
+                  const isObtained = player.earnedBadges.includes(badgeId);
+                  return (
+                    <ActiveGoalCard
+                      key={badgeId}
+                      progress={progress ?? { badgeId, currentValue: 1, targetValue: 1, percentage: 1 }}
+                      obtained={isObtained}
+                      onChooseNewGoal={isObtained ? () => setShowGoalPicker(true) : undefined}
+                    />
+                  );
+                }
+                // Slot vide
+                return (
+                  <TouchableOpacity
+                    key={`empty-${slotIdx}`}
+                    style={goalStyles.emptySlot}
+                    onPress={() => setShowGoalPicker(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={goalStyles.emptySlotEmoji}>🎯</Text>
+                    <Text style={goalStyles.emptySlotText}>Sélectionner un objectif</Text>
+                    <Text style={goalStyles.emptySlotArrow}>+</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
           <BadgeCollection
             earnedBadges={player.earnedBadges}
             onBadgePress={() => {}}
@@ -363,7 +539,27 @@ export default function ProfileScreen() {
               unlockedThemes={player.unlockedThemes}
             />
           </View>
+
+          {/* ── Bouton dev Ramoni uniquement ── */}
+          {player.username === 'Ramoni' && (
+            <TouchableOpacity
+              style={devStyles.resetBadgesBtn}
+              onPress={handleResetBadges}
+              activeOpacity={0.8}
+            >
+              <Text style={devStyles.resetBadgesBtnText}>🔄 Réinitialiser mes badges</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
+
+        {/* Modal sélection objectifs */}
+        <BadgeGoalPickerModal
+          visible={showGoalPicker}
+          earnedBadges={player.earnedBadges}
+          currentGoals={player.activeBadgeGoals}
+          onConfirm={(ids) => player.setActiveBadgeGoals(ids)}
+          onClose={() => setShowGoalPicker(false)}
+        />
       </View>
     );
   }
@@ -477,12 +673,19 @@ export default function ProfileScreen() {
             onPress={() => setActiveSection('badges')}
             activeOpacity={0.8}
           >
+            {hasGoalSlotFree && (
+              <View style={goalDotStyles.badge}>
+                <Text style={goalDotStyles.badgeText}>{goalSlotsToFill}</Text>
+              </View>
+            )}
             <Text style={styles.tileEmoji}>🏅</Text>
             <Text style={styles.tileLabel}>Badges</Text>
             <Text style={styles.tileSub}>
-              {player.earnedBadges.length > 0
-                ? `${player.earnedBadges.length} obtenus`
-                : 'Aucun encore'}
+              {hasGoalSlotFree
+                ? `${3 - goalSlotsToFill}/3 objectifs`
+                : player.earnedBadges.length > 0
+                  ? `${player.earnedBadges.length} obtenus`
+                  : 'Aucun encore'}
             </Text>
           </TouchableOpacity>
 
@@ -515,14 +718,82 @@ export default function ProfileScreen() {
   );
 }
 
-// ── Composant StatCard ────────────────────────────────────────────────────────
-function StatCard({ label, value, emoji }: { label: string; value: string; emoji: string }) {
+// ── Modale d'explication d'une StatCard ───────────────────────────────────────
+const native = Platform.OS !== 'web';
+
+function StatHintModal({ visible, label, emoji, hint, onClose }: {
+  visible: boolean;
+  label: string;
+  emoji: string;
+  hint: string;
+  onClose: () => void;
+}) {
+  const scaleAnim   = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      scaleAnim.setValue(0.85);
+      opacityAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(scaleAnim, { toValue: 1, damping: 14, stiffness: 220, useNativeDriver: native }),
+        Animated.timing(opacityAnim, { toValue: 1, duration: 160, useNativeDriver: native }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(0.85);
+      opacityAnim.setValue(0);
+    }
+  }, [visible]);
+
   return (
-    <View style={statStyles.card}>
-      <Text style={statStyles.emoji}>{emoji}</Text>
-      <Text style={statStyles.value}>{value}</Text>
-      <Text style={statStyles.label}>{label}</Text>
-    </View>
+    <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
+      <Animated.View style={[statStyles.modalBackdrop, { opacity: opacityAnim }]}>
+        <Animated.View style={[statStyles.modalCard, { transform: [{ scale: scaleAnim }] }]}>
+          <Text style={statStyles.modalEmoji}>{emoji}</Text>
+          <Text style={statStyles.modalTitle}>{label}</Text>
+          <Text style={statStyles.modalBody}>{hint}</Text>
+          <TouchableOpacity style={statStyles.modalBtn} onPress={onClose} activeOpacity={0.8}>
+            <Text style={statStyles.modalBtnText}>Compris</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+// ── Composant StatCard ────────────────────────────────────────────────────────
+function StatCard({ label, value, emoji, hint }: { label: string; value: string; emoji: string; hint?: string }) {
+  const [modalVisible, setModalVisible] = useState(false);
+
+  return (
+    <>
+      <TouchableOpacity
+        style={statStyles.card}
+        onPress={hint != null ? () => setModalVisible(true) : undefined}
+        activeOpacity={hint != null ? 0.7 : 1}
+      >
+        <Text style={statStyles.emoji}>{emoji}</Text>
+        <Text style={statStyles.value}>{value}</Text>
+        <View style={statStyles.labelRow}>
+          <Text style={statStyles.label}>{label}</Text>
+          {hint != null && (
+            <View style={statStyles.hintBadge}>
+              <Text style={statStyles.hintIcon}>?</Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+
+      {hint != null && (
+        <StatHintModal
+          visible={modalVisible}
+          label={label}
+          emoji={emoji}
+          hint={hint}
+          onClose={() => setModalVisible(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -540,7 +811,60 @@ const statStyles = StyleSheet.create({
   },
   emoji: { fontSize: 24 },
   value: { fontSize: 22, fontWeight: '800', color: Colors.forest.dark },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   label: { fontSize: 11, color: Colors.ui.textLight, textAlign: 'center' },
+  hintBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.ui.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hintIcon: { fontSize: 9, fontWeight: '700', color: Colors.ui.textLight, lineHeight: 13 },
+  // Modale
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.60)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 28,
+  },
+  modalCard: {
+    backgroundColor: Colors.ui.card,
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
+    borderWidth: 2,
+    borderColor: Colors.ui.border,
+    elevation: 16,
+    gap: 10,
+  },
+  modalEmoji: { fontSize: 40 },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+    textAlign: 'center',
+  },
+  modalBody: {
+    fontSize: 14,
+    color: Colors.ui.textLight,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
+  modalBtn: {
+    marginTop: 6,
+    backgroundColor: Colors.forest.medium,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 36,
+    alignItems: 'center',
+    width: '100%',
+  },
+  modalBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
 
 const styles = StyleSheet.create({
@@ -763,4 +1087,103 @@ const styles = StyleSheet.create({
   forgotDesc: { fontSize: 13, color: Colors.ui.textLight, lineHeight: 18, textAlign: 'center' },
   forgotBack: { alignSelf: 'center', paddingVertical: 8 },
   forgotBackText: { fontSize: 13, color: Colors.forest.medium, fontWeight: '600' },
+});
+
+// ── Styles objectifs actifs ───────────────────────────────────────────────────
+const goalStyles = StyleSheet.create({
+  goalSection: {
+    backgroundColor: Colors.ui.card,
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.ui.border,
+    marginBottom: 16,
+  },
+  goalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+  },
+  goalEmpty: {
+    fontSize: 13,
+    color: Colors.ui.textLight,
+    lineHeight: 18,
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  goalList: {
+    gap: 8,
+  },
+  emptySlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.badges.or + '70',
+    borderStyle: 'dashed',
+    backgroundColor: Colors.badges.or + '08',
+  },
+  emptySlotEmoji: {
+    fontSize: 20,
+    width: 28,
+    textAlign: 'center',
+  },
+  emptySlotText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.forest.medium,
+  },
+  emptySlotArrow: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.badges.or,
+  },
+});
+
+const goalDotStyles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#E53935',
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    zIndex: 2,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFF',
+    lineHeight: 13,
+  },
+});
+
+// ── Styles dev (Ramoni uniquement) ────────────────────────────────────────────
+const devStyles = StyleSheet.create({
+  resetBadgesBtn: {
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#c0392b',
+    backgroundColor: '#c0392b18',
+  },
+  resetBadgesBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#c0392b',
+  },
 });
