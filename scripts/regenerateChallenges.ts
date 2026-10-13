@@ -118,8 +118,8 @@ const elementDefs: Record<string, ElementDefinition> = {
       { type: 'paired_specific', targetElementId: 'cerf', mode: 'require', scope: 'board' },
     ],
   },
-  Loup: {
-    id: 'loup', label: 'loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
+  loup: {
+    id: 'loup', label: 'Loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'mouton' },

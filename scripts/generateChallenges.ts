@@ -65,8 +65,8 @@ const elementDefs: Record<string, ElementDefinition> = {
       { type: 'paired_specific', targetElementId: 'cerf', mode: 'require', scope: 'board' },
     ],
   },
-  Loup: {
-    id: 'loup', label: 'loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
+  loup: {
+    id: 'loup', label: 'Loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'mouton' },
@@ -83,6 +83,21 @@ const elementDefs: Record<string, ElementDefinition> = {
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'require', scope: 'neighbor', targetElementId: 'bucheron', minCount: 1 },
+    ],
+  },
+  champignon: {
+    id: 'champignon', label: 'Champignon', icon: ICON, color: '#C0392B', maxPerBoard: 3,
+    constraints: [
+      { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
+    ],
+    placementRules: [
+      { type: 'center_only' },
+    ],
+  },
+  arbre: {
+    id: 'arbre', label: 'Arbre', icon: ICON, color: '#2E7D32', maxPerBoard: 6,
+    constraints: [
+      { type: 'connected_group_with', mode: 'require', scope: 'board', groupElementId: 'tas_buches' },
     ],
   },
 };
@@ -272,6 +287,64 @@ const boards: Record<string, BoardDefinition> = {
     backgroundAsset: null as any,
     availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'cerf', 'biche', 'loup', 'ruche', 'tas_buches'],
     specialCells: { corners: [0, 1, 9, 10], center: [4], edges: [2, 3, 5, 6, 7, 8] },
+  },
+
+  board_13_v1: {
+    id: 'board_13_v1', label: 'Coeur de la Foret', cellCount: 13,
+    connections: [
+      [1, 2, 6],                    // 0  — coin NW
+      [0, 2, 12],                   // 1  — sat NW-haut
+      [0, 1, 12],                   // 2  — sat NW-bas
+      [4, 5, 9],                    // 3  — coin NE
+      [3, 5, 12],                   // 4  — sat NE-haut
+      [3, 4, 12],                   // 5  — sat NE-bas
+      [0, 7, 8],                    // 6  — coin SW
+      [6, 8, 12],                   // 7  — sat SW-haut
+      [6, 7, 12],                   // 8  — sat SW-bas
+      [3, 10, 11],                  // 9  — coin SE
+      [9, 11, 12],                  // 10 — sat SE-haut
+      [9, 10, 12],                  // 11 — sat SE-bas
+      [1, 2, 4, 5, 7, 8, 10, 11],  // 12 — CENTRE
+    ],
+    cellPositions: [
+      { x: 8,  y: 18 }, { x: 30, y: 8  }, { x: 20, y: 38 },
+      { x: 92, y: 18 }, { x: 70, y: 8  }, { x: 80, y: 38 },
+      { x: 8,  y: 82 }, { x: 30, y: 92 }, { x: 20, y: 62 },
+      { x: 92, y: 82 }, { x: 70, y: 92 }, { x: 80, y: 62 },
+      { x: 50, y: 50 },
+    ],
+    backgroundAsset: null as any,
+    availableElements: ['bucheron', 'ours', 'mouton', 'chien', 'loup', 'ruche', 'cerf', 'biche', 'tas_buches', 'chalet', 'champignon'],
+    specialCells: { corners: [0, 3, 6, 9], center: [2, 5, 8, 11, 12], edges: [1, 4, 7, 10] },
+  },
+
+  board_14_v1: {
+    id: 'board_14_v1', label: 'Coeur Profond', cellCount: 14,
+    connections: [
+      [1, 4, 10],        // 0  — coin-NW
+      [0, 2, 4, 5],      // 1  — sat-N-G
+      [1, 3, 5, 6],      // 2  — sat-N-D
+      [2, 6, 13],        // 3  — coin-NE
+      [0, 1, 5, 7],      // 4  — inner-NW
+      [1, 2, 4, 6, 8],   // 5  — inner-N (hub)
+      [2, 3, 5, 9],      // 6  — inner-NE
+      [4, 8, 10, 11],    // 7  — inner-SW
+      [5, 7, 9, 11, 12], // 8  — inner-S (hub)
+      [6, 8, 12, 13],    // 9  — inner-SE
+      [0, 7, 11],        // 10 — coin-SW
+      [7, 8, 10, 12],    // 11 — sat-S-G
+      [8, 9, 11, 13],    // 12 — sat-S-D
+      [3, 9, 12],        // 13 — coin-SE
+    ],
+    cellPositions: [
+      { x:  8, y:  8 }, { x: 35, y:  8 }, { x: 65, y:  8 }, { x: 92, y:  8 },
+      { x: 25, y: 35 }, { x: 50, y: 32 }, { x: 75, y: 35 },
+      { x: 25, y: 65 }, { x: 50, y: 68 }, { x: 75, y: 65 },
+      { x:  8, y: 92 }, { x: 35, y: 92 }, { x: 65, y: 92 }, { x: 92, y: 92 },
+    ],
+    backgroundAsset: null as any,
+    availableElements: ['arbre', 'bucheron', 'ours', 'mouton', 'chien', 'loup', 'ruche', 'cerf', 'biche', 'tas_buches', 'chalet'],
+    specialCells: { corners: [0, 3, 10, 13], center: [4, 5, 6, 7, 8, 9], edges: [1, 2, 11, 12] },
   },
 };
 
@@ -657,6 +730,12 @@ const ALL_CONFIGS: Array<{ level: DifficultyLevel; count: number }> = [
   { level: 'niveau_13', count: 10 }, // ex niv 11 (12 cases)
   { level: 'niveau_14', count: 10 }, // ex niv 12 (12 cases)
   { level: 'niveau_15', count: 10 }, // ex niv 13 (12 cases, bonus désactivés)
+  { level: 'niveau_16', count: 10 }, // 13 cases — Cœur de la Forêt
+  { level: 'niveau_17', count: 10 }, // 13 cases + champignon
+  { level: 'niveau_18', count: 10 }, // 13 cases + champignon, bonus désactivés
+  { level: 'niveau_19', count: 10 }, // 14 cases — Cœur Profond + Arbre
+  { level: 'niveau_20', count: 10 }, // 14 cases — Apothéose
+  { level: 'niveau_21', count: 10 }, // 14 cases — Feu d'artifice final, bonus désactivés
 ];
 
 // ============================================================

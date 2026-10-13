@@ -24,6 +24,8 @@ const LEVELS = [
   'niveau_1', 'niveau_2', 'niveau_3', 'niveau_4', 'niveau_5',
   'niveau_6', 'niveau_7', 'niveau_8', 'niveau_9', 'niveau_10',
   'niveau_11', 'niveau_12', 'niveau_13', 'niveau_14', 'niveau_15',
+  'niveau_16', 'niveau_17', 'niveau_18',
+  'niveau_19', 'niveau_20', 'niveau_21',
 ];
 
 const CHALLENGES_DIR = path.resolve(__dirname, '../src/data/challenges');
@@ -76,8 +78,8 @@ const elementDefs: Record<string, ElementDefinition> = {
       { type: 'paired_specific', targetElementId: 'cerf', mode: 'require', scope: 'board' },
     ],
   },
-  Loup: {
-    id: 'loup', label: 'loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
+  loup: {
+    id: 'loup', label: 'Loup', icon: ICON, color: '#FF6B35', maxPerBoard: 4,
     constraints: [
       { type: 'neighbor_same', mode: 'forbid', scope: 'neighbor' },
       { type: 'neighbor_specific', mode: 'forbid', scope: 'neighbor', targetElementId: 'mouton' },
@@ -163,22 +165,22 @@ function seededShuffle<T>(arr: T[], rng: RngFunction): T[] {
 // ── Compositions daily (copie exacte de dailyChallengeService.ts) ────────────
 
 const DAILY_COMPOSITIONS: Composition[] = [
-  { bucheron: 3, ours: 2, mouton: 3, chien: 2, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 4, ours: 2, mouton: 2, chien: 2, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 2, ours: 2, mouton: 4, chien: 2, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 2, ours: 2, mouton: 2, chien: 3, Loup: 1, cerf: 1, biche: 1, ruche: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 2, chien: 2, ruche: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 2, ours: 2, mouton: 3, chien: 2, ruche: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 2, chien: 2, chalet: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 3, ours: 1, mouton: 2, chien: 3, chalet: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 2, chien: 3, tas_buches: 1, Loup: 1, cerf: 1, biche: 1, champignon: 1 },
-  { bucheron: 3, ours: 1, mouton: 3, chien: 2, tas_buches: 1, Loup: 1, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, Loup: 1, cerf: 1, biche: 1, tas_buches: 1, champignon: 2 },
-  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, Loup: 1, cerf: 1, biche: 1, tas_buches: 1, ruche: 1, champignon: 1 },
-  { bucheron: 3, ours: 2, mouton: 1, chien: 2, Loup: 1, cerf: 2, biche: 2, champignon: 2 },
-  { bucheron: 2, ours: 2, mouton: 1, chien: 2, Loup: 1, cerf: 3, biche: 3, champignon: 1 },
-  { bucheron: 2, ours: 2, mouton: 3, chien: 2, Loup: 2, cerf: 1, biche: 1, champignon: 2 },
-  { bucheron: 2, ours: 1, mouton: 4, chien: 2, Loup: 2, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 3, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 4, ours: 2, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 4, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 2, chien: 3, loup: 1, cerf: 1, biche: 1, ruche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 2, chien: 2, ruche: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 3, chien: 2, ruche: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 2, chien: 2, chalet: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 1, mouton: 2, chien: 3, chalet: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 2, chien: 3, tas_buches: 1, loup: 1, cerf: 1, biche: 1, champignon: 1 },
+  { bucheron: 3, ours: 1, mouton: 3, chien: 2, tas_buches: 1, loup: 1, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, loup: 1, cerf: 1, biche: 1, tas_buches: 1, champignon: 2 },
+  { bucheron: 3, ours: 2, mouton: 1, chien: 2, chalet: 1, loup: 1, cerf: 1, biche: 1, tas_buches: 1, ruche: 1, champignon: 1 },
+  { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 2, biche: 2, champignon: 2 },
+  { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 3, biche: 3, champignon: 1 },
+  { bucheron: 2, ours: 2, mouton: 3, chien: 2, loup: 2, cerf: 1, biche: 1, champignon: 2 },
+  { bucheron: 2, ours: 1, mouton: 4, chien: 2, loup: 2, cerf: 1, biche: 1, champignon: 2 },
 ];
 
 const TARGET_MAX_FIXED = 6;
