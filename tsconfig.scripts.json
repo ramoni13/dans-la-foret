@@ -17,7 +17,8 @@
     "src/constants/**/*.ts",
     "src/elements/**/*.ts",
     "src/boards/**/*.ts",
-    "src/services/dailyChallengeService.ts"
+    "src/services/dailyChallengeService.ts",
+    "src/services/onfChallengeService.ts"
   ],
   "exclude": [
     "node_modules",

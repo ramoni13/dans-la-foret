@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Viewer — board_13_v1 — Cœur de la Forêt</title>
+  <style>
+    body { font-family: monospace; background: #1a2a1a; color: #ccc; padding: 24px; margin: 0; }
+    h1 { color: #8BC34A; margin-bottom: 4px; }
+    p  { color: #888; margin: 0 0 20px; }
+
+    .layout { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+
+    .board-wrap {
+      position: relative;
+      width: 480px;
+      height: 480px;
+      background: #2a3a2a;
+      border: 2px solid #8BC34A;
+      border-radius: 12px;
+      flex-shrink: 0;
+    }
+
+    svg.connections {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    svg.connections line {
+      stroke: #8BC34A;
+      stroke-width: 2;
+      opacity: 0.55;
+    }
+
+    .cell {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #3a5a3a;
+      border: 2px solid #8BC34A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: bold;
+      color: #fff;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      user-select: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+    .cell.corner  { background: #5a3a1a; border-color: #e67e22; }
+    .cell.center  { background: #1a3a5a; border-color: #3498db; width: 56px; height: 56px; font-size: 15px; }
+    .cell.edge    { background: #3a5a3a; border-color: #8BC34A; }
+    .cell.hovered { border-color: #fff; background: #6a9a3a; }
+    .cell .label  { pointer-events: none; }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .legend-dot {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid;
+    }
+
+    .info-panel {
+      background: #111;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 16px;
+      min-width: 260px;
+      max-width: 380px;
+    }
+    .info-panel h3 { color: #8BC34A; margin: 0 0 12px; }
+    .info-section { margin-bottom: 16px; }
+    .info-section h4 { color: #aaa; margin: 0 0 6px; font-size: 12px; text-transform: uppercase; }
+    .info-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #222; font-size: 13px; }
+    .info-row .val { color: #8BC34A; }
+
+    .connections-list { font-size: 12px; line-height: 1.8; }
+    .connections-list span.idx { color: #8BC34A; font-weight: bold; min-width: 20px; display: inline-block; }
+    .connections-list span.neighbors { color: #ccc; }
+
+    .hover-info {
+      background: #0a1a0a;
+      border: 1px solid #8BC34A;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 12px;
+      min-height: 40px;
+      font-size: 13px;
+    }
+    .hover-info .cell-label { color: #8BC34A; font-weight: bold; font-size: 16px; }
+    .hover-info .cell-type  { color: #888; font-size: 11px; }
+    .hover-info .cell-conn  { color: #ccc; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    .stat-box { background: #0a1a0a; border-radius: 4px; padding: 8px; text-align: center; }
+    .stat-box .n { font-size: 22px; color: #8BC34A; font-weight: bold; }
+    .stat-box .l { font-size: 10px; color: #666; text-transform: uppercase; }
+
+    .symmetry-check { margin-top: 12px; font-size: 12px; }
+    .check { color: #4CAF50; }
+    .fail  { color: #e74c3c; }
+  </style>
+</head>
+<body>
+
+<h1>board_13_v1 — Cœur de la Forêt</h1>
+<p>Niveaux 16-17-18 · 13 cases · 4 coins · 8 satellites · 1 centre</p>
+
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#5a3a1a;border-color:#e67e22"></div>
+    <span>Coin (0,3,6,9)</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#3a5a3a;border-color:#8BC34A"></div>
+    <span>Satellite (1,2,4,5,7,8,10,11)</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#1a3a5a;border-color:#3498db"></div>
+    <span>Centre (12)</span>
+  </div>
+</div>
+
+<div class="layout">
+  <div>
+    <div class="board-wrap" id="board">
+      <svg class="connections" id="svg-connections"></svg>
+      <!-- Cells rendered by JS -->
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <h3>Informations</h3>
+
+    <div class="stats">
+      <div class="stat-box"><div class="n">13</div><div class="l">Cases</div></div>
+      <div class="stat-box"><div class="n" id="edge-count">-</div><div class="l">Connexions</div></div>
+      <div class="stat-box"><div class="n" id="max-deg">-</div><div class="l">Degré max</div></div>
+      <div class="stat-box"><div class="n" id="min-deg">-</div><div class="l">Degré min</div></div>
+    </div>
+
+    <div class="hover-info" id="hover-info">
+      <span style="color:#555">Survolez une case pour voir ses connexions</span>
+    </div>
+
+    <div class="info-section">
+      <h4>Connexions par case</h4>
+      <div class="connections-list" id="conn-list"></div>
+    </div>
+
+    <div class="symmetry-check" id="sym-check"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Données du plateau — copie exacte de board_13cells_v1.ts
+// ============================================================
+const CELLS = [
+  { x: 8,  y: 18 },  // 0  — coin NW
+  { x: 30, y: 8  },  // 1  — sat NW-haut
+  { x: 20, y: 38 },  // 2  — sat NW-bas
+  { x: 92, y: 18 },  // 3  — coin NE
+  { x: 70, y: 8  },  // 4  — sat NE-haut
+  { x: 80, y: 38 },  // 5  — sat NE-bas
+  { x: 8,  y: 82 },  // 6  — coin SW
+  { x: 30, y: 92 },  // 7  — sat SW-haut
+  { x: 20, y: 62 },  // 8  — sat SW-bas
+  { x: 92, y: 82 },  // 9  — coin SE
+  { x: 70, y: 92 },  // 10 — sat SE-haut
+  { x: 80, y: 62 },  // 11 — sat SE-bas
+  { x: 50, y: 50 },  // 12 — CENTRE
+];
+
+const CONNECTIONS = [
+  [1, 2, 6],                    // 0  — coin NW
+  [0, 2, 12],                   // 1  — sat NW-haut
+  [0, 1, 12],                   // 2  — sat NW-bas
+  [4, 5, 9],                    // 3  — coin NE
+  [3, 5, 12],                   // 4  — sat NE-haut
+  [3, 4, 12],                   // 5  — sat NE-bas
+  [0, 7, 8],                    // 6  — coin SW
+  [6, 8, 12],                   // 7  — sat SW-haut
+  [6, 7, 12],                   // 8  — sat SW-bas
+  [3, 10, 11],                  // 9  — coin SE
+  [9, 11, 12],                  // 10 — sat SE-haut
+  [9, 10, 12],                  // 11 — sat SE-bas
+  [1, 2, 4, 5, 7, 8, 10, 11],  // 12 — CENTRE
+];
+
+const SPECIAL = {
+  corners: new Set([0, 3, 6, 9]),
+  center:  new Set([12]),
+  edges:   new Set([1, 2, 4, 5, 7, 8, 10, 11]),
+};
+
+const LABELS = [
+  'NW', 'NW-h', 'NW-b', 'NE', 'NE-h', 'NE-b',
+  'SW', 'SW-h', 'SW-b', 'SE', 'SE-h', 'SE-b', 'CTR'
+];
+
+// ============================================================
+// Rendu
+// ============================================================
+const boardEl = document.getElementById('board');
+const svgEl   = document.getElementById('svg-connections');
+const SIZE = 480;
+
+function pct(v) { return v / 100 * SIZE; }
+
+// Déduplication des arêtes
+const edgeSet = new Set();
+const edges = [];
+CONNECTIONS.forEach((neighbors, i) => {
+  neighbors.forEach(j => {
+    const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+    if (!edgeSet.has(key)) {
+      edgeSet.add(key);
+      edges.push([i, j]);
+    }
+  });
+});
+
+// SVG connexions
+edges.forEach(([a, b]) => {
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', pct(CELLS[a].x));
+  line.setAttribute('y1', pct(CELLS[a].y));
+  line.setAttribute('x2', pct(CELLS[b].x));
+  line.setAttribute('y2', pct(CELLS[b].y));
+  line.dataset.a = a;
+  line.dataset.b = b;
+  svgEl.appendChild(line);
+});
+
+// Cases
+const cellEls = [];
+CELLS.forEach((pos, i) => {
+  const el = document.createElement('div');
+  el.className = 'cell' + (SPECIAL.corners.has(i) ? ' corner' : SPECIAL.center.has(i) ? ' center' : ' edge');
+  el.style.left = pct(pos.x) + 'px';
+  el.style.top  = pct(pos.y) + 'px';
+  el.innerHTML  = `<span class="label">${i}</span>`;
+  el.title      = `Case ${i} — ${LABELS[i]}`;
+
+  el.addEventListener('mouseenter', () => onHover(i));
+  el.addEventListener('mouseleave', () => onLeave());
+
+  boardEl.appendChild(el);
+  cellEls.push(el);
+});
+
+// Hover
+function onHover(idx) {
+  const neighbors = CONNECTIONS[idx];
+  // Highlight case + voisins
+  cellEls.forEach((el, i) => {
+    el.classList.remove('hovered');
+    if (i === idx || neighbors.includes(i)) el.classList.add('hovered');
+  });
+  // Highlight connexions
+  svgEl.querySelectorAll('line').forEach(line => {
+    const a = +line.dataset.a, b = +line.dataset.b;
+    if (a === idx || b === idx) {
+      line.style.stroke = '#fff';
+      line.style.opacity = '1';
+      line.style.strokeWidth = '3';
+    } else {
+      line.style.stroke = '#8BC34A';
+      line.style.opacity = '0.2';
+      line.style.strokeWidth = '2';
+    }
+  });
+  // Info panel
+  const type = SPECIAL.corners.has(idx) ? 'coin' : SPECIAL.center.has(idx) ? 'centre' : 'satellite';
+  document.getElementById('hover-info').innerHTML = `
+    <div class="cell-label">Case ${idx} — ${LABELS[idx]}</div>
+    <div class="cell-type">${type} · ${neighbors.length} voisin${neighbors.length > 1 ? 's' : ''}</div>
+    <div class="cell-conn">Connecté à : <strong>${neighbors.join(', ')}</strong></div>
+  `;
+}
+
+function onLeave() {
+  cellEls.forEach(el => el.classList.remove('hovered'));
+  svgEl.querySelectorAll('line').forEach(line => {
+    line.style.stroke = '#8BC34A';
+    line.style.opacity = '0.55';
+    line.style.strokeWidth = '2';
+  });
+  document.getElementById('hover-info').innerHTML = '<span style="color:#555">Survolez une case pour voir ses connexions</span>';
+}
+
+// Stats
+const degrees = CONNECTIONS.map(n => n.length);
+document.getElementById('edge-count').textContent = edges.length;
+document.getElementById('max-deg').textContent = Math.max(...degrees);
+document.getElementById('min-deg').textContent = Math.min(...degrees);
+
+// Liste connexions
+const connList = document.getElementById('conn-list');
+CONNECTIONS.forEach((neighbors, i) => {
+  const row = document.createElement('div');
+  const type = SPECIAL.corners.has(i) ? '🟠' : SPECIAL.center.has(i) ? '🔵' : '🟢';
+  row.innerHTML = `${type} <span class="idx">${i}</span> <span class="neighbors">→ ${neighbors.join(', ')}</span>`;
+  row.style.padding = '2px 0';
+  row.style.cursor = 'pointer';
+  row.addEventListener('mouseenter', () => onHover(i));
+  row.addEventListener('mouseleave', () => onLeave());
+  connList.appendChild(row);
+});
+
+// Vérification symétrie et graphe non-orienté
+const symCheck = document.getElementById('sym-check');
+let symOk = true;
+const errors = [];
+CONNECTIONS.forEach((neighbors, i) => {
+  neighbors.forEach(j => {
+    if (!CONNECTIONS[j].includes(i)) {
+      symOk = false;
+      errors.push(`Case ${i} → ${j} mais ${j} ↛ ${i}`);
+    }
+  });
+});
+symCheck.innerHTML = symOk
+  ? '<span class="check">✓ Graphe symétrique (non-orienté)</span>'
+  : `<span class="fail">✗ Asymétries détectées :<br>${errors.join('<br>')}</span>`;
+</script>
+</body>
+</html>

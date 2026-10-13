@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<!-- ===============================================================
+     VIEWER BOARD 14 CASES — Dans la Forêt
+     Visualiseur interactif du plateau 14 cases (proposition)
+     Structure : 4 coins + 4 bords extérieurs + 6 intérieurs
+
+     Numérotation :
+       Ligne haute  (ext) :  0=coin-NW  1=sat-N-gauche  2=sat-N-droite  3=coin-NE
+       Ligne med-h  (int) :  4=inner-NW  5=inner-N  6=inner-NE
+       Ligne med-b  (int) :  7=inner-SW  8=inner-S  9=inner-SE
+       Ligne basse  (ext) : 10=coin-SW  11=sat-S-gauche  12=sat-S-droite  13=coin-SE
+     =============================================================== -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🌲 Board 14 — Viewer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(160deg,#2d5a1b 0%,#3d7a28 50%,#2a5218 100%);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:16px 12px 32px;
+  color:#fdf6e3;
+}
+header{
+  width:100%;max-width:700px;
+  background:linear-gradient(135deg,#7a4a1e,#a06830);
+  border-radius:14px;padding:12px 20px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:0 4px 16px rgba(0,0,0,.3);margin-bottom:16px;
+}
+header h1{font-size:1.1rem;font-weight:700;flex:1}
+.badge{background:#d4a017;color:#333;font-size:.6rem;font-weight:800;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:1px}
+.card{width:100%;max-width:700px;background:rgba(255,255,255,.08);border-radius:18px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.25);}
+.section{padding:16px;border-bottom:1px solid rgba(255,255,255,.1);}
+.section h2{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.6);margin-bottom:12px;}
+.plateau-wrap{position:relative;flex-shrink:0;margin:0 auto;}
+.plateau-wrap svg{position:absolute;top:0;left:0;pointer-events:none}
+.node{
+  position:absolute;transform:translate(-50%,-50%);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:800;color:#fff;
+  box-shadow:0 3px 10px rgba(0,0,0,.4);
+  cursor:pointer;transition:all .15s;
+}
+.node:hover{transform:translate(-50%,-50%) scale(1.12);}
+.node-idx{font-size:.8rem;font-weight:800;}
+.node.corner{background:linear-gradient(135deg,#4a8c3f,#7bbf6a);border:3px solid #2d5a1b;}
+.node.edge{background:linear-gradient(135deg,#d4a017,#f0c040);color:#333;border:3px solid #a07800;}
+.node.inner{background:linear-gradient(135deg,#8B4513,#c06830);border:3px solid #5a2a00;}
+.legend{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:12px 16px;}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:600;}
+.leg-dot{width:18px;height:18px;border-radius:50%;}
+.leg-dot.corner{background:linear-gradient(135deg,#4a8c3f,#7bbf6a);}
+.leg-dot.edge{background:linear-gradient(135deg,#d4a017,#f0c040);}
+.leg-dot.inner{background:linear-gradient(135deg,#8B4513,#c06830);}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px;}
+.info-box{background:rgba(255,255,255,.1);border-radius:10px;padding:10px;text-align:center;}
+.info-box .val{font-size:1.6rem;font-weight:800;color:#d4a017;}
+.info-box .lbl{font-size:.65rem;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+.conn-table{padding:12px 16px;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:.72rem;}
+th{background:rgba(255,255,255,.15);padding:6px 10px;text-align:left;font-weight:700;}
+td{padding:5px 10px;border-top:1px solid rgba(255,255,255,.06);}
+td:first-child{font-weight:700;color:#d4a017;}
+.deg{display:inline-block;background:rgba(255,255,255,.15);border-radius:10px;padding:1px 6px;font-size:.65rem;margin-left:4px;}
+.variants-section{padding:12px 16px;}
+.variants-section h2{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.6);margin-bottom:12px;}
+.variant-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.vtab{padding:6px 14px;border-radius:20px;border:2px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.6);font-size:.75rem;font-weight:700;cursor:pointer;transition:all .15s;}
+.vtab.active{background:rgba(212,160,23,.85);color:#333;border-color:#d4a017;}
+.vtab:hover:not(.active){border-color:rgba(255,255,255,.5);color:#fff;}
+.note{background:rgba(255,255,255,.06);border-left:3px solid #d4a017;padding:10px 14px;font-size:.72rem;line-height:1.6;border-radius:0 8px 8px 0;margin:10px 16px;}
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.6rem">🌲</span>
+  <h1>Board 14 Cases — Viewer de conception</h1>
+  <span class="badge">Draft</span>
+</header>
+
+<div class="card">
+
+  <!-- Plateau -->
+  <div class="section">
+    <h2>Plateau interactif — variante <span id="active-variant-label">A</span></h2>
+    <div style="display:flex;justify-content:center;padding:8px 0">
+      <div class="plateau-wrap" id="plateau-wrap"></div>
+    </div>
+  </div>
+
+  <!-- Légende -->
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot corner"></div><span>Coin (4 cases)</span></div>
+    <div class="leg-item"><div class="leg-dot edge"></div><span>Bord ext. (4 cases)</span></div>
+    <div class="leg-item"><div class="leg-dot inner"></div><span>Intérieur (6 cases)</span></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="info-grid">
+    <div class="info-box"><div class="val">14</div><div class="lbl">Cases</div></div>
+    <div class="info-box"><div class="val" id="stat-edges">—</div><div class="lbl">Connexions</div></div>
+    <div class="info-box"><div class="val" id="stat-avg">—</div><div class="lbl">Deg. moyen</div></div>
+  </div>
+
+  <!-- Variantes -->
+  <div class="variants-section">
+    <h2>Variantes de connexions</h2>
+    <div class="variant-tabs">
+      <button class="vtab active" onclick="switchVariant('A',this)">Variante A</button>
+      <button class="vtab" onclick="switchVariant('B',this)">Variante B</button>
+      <button class="vtab" onclick="switchVariant('C',this)">Variante C</button>
+    </div>
+    <div class="note" id="variant-note">—</div>
+  </div>
+
+  <!-- Table connexions -->
+  <div class="conn-table">
+    <h2 style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.6);margin-bottom:10px;">Détail des connexions</h2>
+    <table id="conn-table">
+      <tr><th>Case</th><th>Type</th><th>Voisins</th><th>Degré</th></tr>
+    </table>
+  </div>
+
+</div>
+
+<script>
+// ── Positions des 14 cases (en %) ─────────────────────────────
+// Ligne haute ext  : 0(coin-NW)  1(sat-N-G)  2(sat-N-D)  3(coin-NE)
+// Ligne med-haute  : 4(inner-NW) 5(inner-N)  6(inner-NE)
+// Ligne med-basse  : 7(inner-SW) 8(inner-S)  9(inner-SE)
+// Ligne basse ext  :10(coin-SW) 11(sat-S-G) 12(sat-S-D) 13(coin-SE)
+//
+// Positions choisies pour ressembler à l'image (symétrie 4 axes)
+const POSITIONS = [
+  { x:  8, y:  8 }, // 0  coin-NW
+  { x: 35, y:  8 }, // 1  sat-N-gauche
+  { x: 65, y:  8 }, // 2  sat-N-droite
+  { x: 92, y:  8 }, // 3  coin-NE
+  { x: 25, y: 35 }, // 4  inner-NW
+  { x: 50, y: 32 }, // 5  inner-N
+  { x: 75, y: 35 }, // 6  inner-NE
+  { x: 25, y: 65 }, // 7  inner-SW
+  { x: 50, y: 68 }, // 8  inner-S
+  { x: 75, y: 65 }, // 9  inner-SE
+  { x:  8, y: 92 }, // 10 coin-SW
+  { x: 35, y: 92 }, // 11 sat-S-gauche
+  { x: 65, y: 92 }, // 12 sat-S-droite
+  { x: 92, y: 92 }, // 13 coin-SE
+];
+
+const TYPES = [
+  'corner','edge','edge','corner',  // 0-3
+  'inner','inner','inner',          // 4-6
+  'inner','inner','inner',          // 7-9
+  'corner','edge','edge','corner',  // 10-13
+];
+
+const TYPE_LABELS = {
+  corner: 'Coin',
+  edge:   'Bord',
+  inner:  'Intérieur',
+};
+
+// ── Variantes de connexions ───────────────────────────────────
+//
+// LECTURE DE L'IMAGE :
+//   - Les 4 coins sont reliés verticalement : 0↔10, 3↔13
+//   - Haut: 0↔1, 1↔2, 2↔3 (barre du haut)
+//   - Bas:  10↔11, 11↔12, 12↔13 (barre du bas)
+//   - Coins vers inner proches : 0↔4, 3↔6, 10↔7, 13↔9
+//   - Sats vers inner : 1↔4, 1↔5, 2↔5, 2↔6 (haut→inner)
+//                       11↔7, 11↔8, 12↔8, 12↔9 (bas→inner)
+//   - Inner ring haut: 4↔5, 5↔6
+//   - Inner ring bas:  7↔8, 8↔9
+//   - Inner haut↔bas: 4↔7, 5↔8, 6↔9  (les 6 inner forment un anneau)
+
+const VARIANTS = {
+  A: {
+    label: 'A',
+    note: 'Image de référence : connexions directes issues de la photo. Coins reliés verticalement (0↔10, 3↔13). Chaque sat relie 2 inner. Anneau interne complet (4↔5, 5↔6, 7↔8, 8↔9, 4↔7, 5↔8, 6↔9).',
+    connections: [
+      [1, 4, 10],        // 0  coin-NW
+      [0, 2, 4, 5],      // 1  sat-N-gauche
+      [1, 3, 5, 6],      // 2  sat-N-droite
+      [2, 6, 13],        // 3  coin-NE
+      [0, 1, 5, 7],      // 4  inner-NW
+      [1, 2, 4, 6, 8],   // 5  inner-N  (hub)
+      [2, 3, 5, 9],      // 6  inner-NE
+      [4, 8, 10, 11],    // 7  inner-SW
+      [5, 7, 9, 11, 12], // 8  inner-S  (hub)
+      [6, 8, 12, 13],    // 9  inner-SE
+      [0, 7, 11],        // 10 coin-SW
+      [7, 8, 10, 12],    // 11 sat-S-gauche
+      [8, 9, 11, 13],    // 12 sat-S-droite
+      [3, 9, 12],        // 13 coin-SE
+    ],
+  },
+  B: {
+    label: 'B',
+    note: 'Variante B : même structure que A mais sans les connexions inner 5↔8 (pas de "colonne centrale"). Les 6 inner forment 2 triangles séparés haut/bas. Degrés plus homogènes.',
+    connections: [
+      [1, 4, 10],        // 0  coin-NW
+      [0, 2, 4, 5],      // 1  sat-N-gauche
+      [1, 3, 5, 6],      // 2  sat-N-droite
+      [2, 6, 13],        // 3  coin-NE
+      [0, 1, 5, 7],      // 4  inner-NW
+      [1, 2, 4, 6],      // 5  inner-N  (sans 5↔8)
+      [2, 3, 5, 9],      // 6  inner-NE
+      [4, 8, 10, 11],    // 7  inner-SW
+      [7, 9, 11, 12],    // 8  inner-S  (sans 5↔8)
+      [6, 8, 12, 13],    // 9  inner-SE
+      [0, 7, 11],        // 10 coin-SW
+      [7, 8, 10, 12],    // 11 sat-S-gauche
+      [8, 9, 11, 13],    // 12 sat-S-droite
+      [3, 9, 12],        // 13 coin-SE
+    ],
+  },
+  C: {
+    label: 'C',
+    note: 'Variante C : A + connexions croisées inner (4↔6, 7↔9) — diagonales interne. Degrés plus élevés sur les inner, plus de contraintes de jeu.',
+    connections: [
+      [1, 4, 10],           // 0  coin-NW
+      [0, 2, 4, 5],         // 1  sat-N-gauche
+      [1, 3, 5, 6],         // 2  sat-N-droite
+      [2, 6, 13],           // 3  coin-NE
+      [0, 1, 5, 6, 7],      // 4  inner-NW (+4↔6)
+      [1, 2, 4, 6, 8],      // 5  inner-N
+      [2, 3, 4, 5, 9],      // 6  inner-NE (+4↔6)
+      [4, 8, 9, 10, 11],    // 7  inner-SW (+7↔9)
+      [5, 7, 9, 11, 12],    // 8  inner-S
+      [6, 7, 8, 12, 13],    // 9  inner-SE (+7↔9)
+      [0, 7, 11],           // 10 coin-SW
+      [7, 8, 10, 12],       // 11 sat-S-gauche
+      [8, 9, 11, 13],       // 12 sat-S-droite
+      [3, 9, 12],           // 13 coin-SE
+    ],
+  },
+};
+
+// ── État ──────────────────────────────────────────────────────
+let currentVariant = 'A';
+
+// ── Rendu ─────────────────────────────────────────────────────
+const SIZE = 420;
+const NODE_SIZE = 46;
+
+function renderBoard() {
+  const variant = VARIANTS[currentVariant];
+  const connections = variant.connections;
+  const wrap = document.getElementById('plateau-wrap');
+  wrap.innerHTML = '';
+  wrap.style.width = SIZE + 'px';
+  wrap.style.height = SIZE + 'px';
+
+  // SVG
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', SIZE);
+  svg.setAttribute('height', SIZE);
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('preserveAspectRatio', 'none');
+
+  const drawn = new Set();
+  connections.forEach((neighbors, i) => {
+    const pi = POSITIONS[i];
+    neighbors.forEach(j => {
+      const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+      if (drawn.has(key)) return;
+      drawn.add(key);
+      const pj = POSITIONS[j];
+      const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      ln.setAttribute('x1', pi.x); ln.setAttribute('y1', pi.y);
+      ln.setAttribute('x2', pj.x); ln.setAttribute('y2', pj.y);
+      ln.setAttribute('stroke', 'rgba(255,255,255,0.30)');
+      ln.setAttribute('stroke-width', '1.5');
+      svg.appendChild(ln);
+    });
+  });
+  wrap.appendChild(svg);
+
+  // Nœuds
+  POSITIONS.forEach((pos, idx) => {
+    const node = document.createElement('div');
+    node.className = `node ${TYPES[idx]}`;
+    node.style.left = pos.x + '%';
+    node.style.top = pos.y + '%';
+    node.style.width = NODE_SIZE + 'px';
+    node.style.height = NODE_SIZE + 'px';
+    const deg = connections[idx].length;
+    node.title = `Case ${idx} — ${TYPE_LABELS[TYPES[idx]]} — degré ${deg}\nVoisins : [${connections[idx].join(', ')}]`;
+    const lbl = document.createElement('span');
+    lbl.className = 'node-idx';
+    lbl.textContent = idx;
+    node.appendChild(lbl);
+    wrap.appendChild(node);
+  });
+
+  // Stats
+  const totalDeg = connections.reduce((acc, nb) => acc + nb.length, 0);
+  const edgeCount = totalDeg / 2;
+  document.getElementById('stat-edges').textContent = edgeCount;
+  document.getElementById('stat-avg').textContent = (totalDeg / 14).toFixed(1);
+
+  // Table
+  renderTable(connections);
+}
+
+function renderTable(connections) {
+  const table = document.getElementById('conn-table');
+  // Garder le header
+  while (table.rows.length > 1) table.deleteRow(1);
+
+  connections.forEach((nb, idx) => {
+    const tr = table.insertRow();
+    tr.insertCell().textContent = idx;
+    tr.cells[0].style.color = '#d4a017';
+    tr.cells[0].style.fontWeight = '700';
+    const tc = tr.insertCell();
+    tc.textContent = TYPE_LABELS[TYPES[idx]];
+    tc.style.color = TYPES[idx] === 'corner' ? '#7bbf6a' : TYPES[idx] === 'edge' ? '#f0c040' : '#c06830';
+    tr.insertCell().textContent = '[' + nb.join(', ') + ']';
+    const td = tr.insertCell();
+    td.innerHTML = `<span class="deg">${nb.length}</span>`;
+  });
+}
+
+function switchVariant(key, btn) {
+  currentVariant = key;
+  document.querySelectorAll('.vtab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('active-variant-label').textContent = key;
+  document.getElementById('variant-note').textContent = VARIANTS[key].note;
+  renderBoard();
+}
+
+// Init
+document.getElementById('variant-note').textContent = VARIANTS['A'].note;
+renderBoard();
+</script>
+
+</body>
+</html>

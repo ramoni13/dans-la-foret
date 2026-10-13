@@ -123,7 +123,7 @@ header h1{color:#fdf6e3;font-size:1.2rem;font-weight:700;flex:1}
 <header>
   <span style="font-size:1.6rem">🌲</span>
   <h1>Dans la Forêt — Viewer Défis</h1>
-  <span class="badge">v5 · 15 niveaux + Daily</span>
+  <span class="badge">v7 · 21 niveaux + Daily</span>
 </header>
 
 <div id="error-banner" class="error-banner">
@@ -228,12 +228,13 @@ const ELEMENTS = {
   chien:     { label:'Chien',          emoji:'🐕', color:'#D2691E' },
   cerf:      { label:'Cerf',           emoji:'🦌', color:'#8B6914' },
   biche:     { label:'Biche',          emoji:'🦌', color:'#C8A96E' },
-  renard:    { label:'Renard',         emoji:'🦊', color:'#FF6B35' },
+  loup:      { label:'Loup',           emoji:'🐺', color:'#FF6B35' },
   tas_buches:{ label:'Bûches',         emoji:'🪵', color:'#6D4C2A' },
   chalet:    { label:'Chalet',         emoji:'🏠', color:'#A0522D' },
   champignon:{ label:'Champignon',     emoji:'🍄', color:'#8B6914' },
+  arbre:     { label:'Arbre',          emoji:'🌲', color:'#2E7D32' },
 };
-const ELEMENT_ORDER = ['bucheron','ours','mouton','ruche','chien','cerf','biche','renard','tas_buches','chalet','champignon'];
+const ELEMENT_ORDER = ['arbre','bucheron','ours','mouton','ruche','chien','cerf','biche','loup','tas_buches','chalet','champignon'];
 
 // ── Topologies des plateaux ───────────────────────────────────
 const BOARDS = {
@@ -282,6 +283,16 @@ const BOARDS = {
     connections:[[1,3,5],[0,2,7],[1,4,6],[0,5,7,10],[2,6,7,11],[0,3,8],[2,4,9],[1,3,4,10,11,13],[5,10,12],[6,11,14],[3,7,8,12],[4,7,9,14],[8,10,13],[7,12,14],[9,11,13]],
     positions:[{x:12,y:5},{x:50,y:5},{x:88,y:5},{x:30,y:28},{x:70,y:28},{x:8,y:30},{x:92,y:30},{x:50,y:38},{x:8,y:62},{x:92,y:62},{x:30,y:62},{x:70,y:62},{x:12,y:90},{x:50,y:90},{x:88,y:90}],
   },
+  board_13_v1:{
+    cellCount:13, size:360, nodeSize:52,
+    connections:[[1,2],[0,2,12],[0,1,12],[4,5,9],[3,5,12],[3,4,12],[7,8],[6,8,12],[6,7,12],[3,10,11],[9,11,12],[9,10,12],[1,2,4,5,7,8,10,11]],
+    positions:[{x:8,y:18},{x:30,y:8},{x:20,y:38},{x:92,y:18},{x:70,y:8},{x:80,y:38},{x:8,y:82},{x:30,y:92},{x:20,y:62},{x:92,y:82},{x:70,y:92},{x:80,y:62},{x:50,y:50}],
+  },
+  board_14_v1:{
+    cellCount:14, size:380, nodeSize:50,
+    connections:[[1,4,10],[0,2,4,5],[1,3,5,6],[2,6,13],[0,1,5,7],[1,2,4,6,8],[2,3,5,9],[4,8,10,11],[5,7,9,11,12],[6,8,12,13],[0,7,11],[7,8,10,12],[8,9,11,13],[3,9,12]],
+    positions:[{x:8,y:8},{x:35,y:8},{x:65,y:8},{x:92,y:8},{x:25,y:35},{x:50,y:32},{x:75,y:35},{x:25,y:65},{x:50,y:68},{x:75,y:65},{x:8,y:92},{x:35,y:92},{x:65,y:92},{x:92,y:92}],
+  },
 };
 
 // ── Libellés des niveaux ──────────────────────────────────────
@@ -300,7 +311,13 @@ const LEVEL_LABELS = {
   niveau_12:'🪵 Niveau 12 — Forêt · + Bûches (11 cases, 6 vides)',
   niveau_13:'🏠 Niveau 13 — Forêt Profonde · + Chalet (12 cases, 7 vides)',
   niveau_14:'🏠 Niveau 14 — Forêt Profonde (12 cases, 8 vides)',
-  niveau_15:'💀 Niveau 15 — Légende (12 cases, 9 vides, sans bonus)',
+  niveau_15:'💀 Niveau 15 — Légende (12 cases, 8 vides, sans bonus)',
+  niveau_16:'🌑 Niveau 16 — Cœur de Forêt (13 cases, 8 vides)',
+  niveau_17:'🍄 Niveau 17 — Cœur de Forêt · + Champignon (13 cases, 8 vides)',
+  niveau_18:'☠️ Niveau 18 — Abîme (13 cases, 8 vides, sans bonus)',
+  niveau_19:'🌲 Niveau 19 — Cœur Profond · + Arbre (14 cases, 9 vides)',
+  niveau_20:'🌳 Niveau 20 — Cœur Profond · Apothéose (14 cases, 8 vides)',
+  niveau_21:'🎆 Niveau 21 — Feu d\'Artifice Final (14 cases, 8 vides, sans bonus)',
 };
 const LEVEL_KEYS = Object.keys(LEVEL_LABELS);
 
@@ -599,12 +616,12 @@ document.addEventListener('keydown',e=>{
 const ELEM_DEFS = {
   bucheron:   { id:'bucheron',   constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'}], placementRules:null },
   ours:       { id:'ours',       constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'}], placementRules:null },
-  mouton:     { id:'mouton',     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'renard'}], placementRules:null },
+  mouton:     { id:'mouton',     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'loup'}], placementRules:null },
   ruche:      { id:'ruche',      constraints:[{type:'neighbor_specific',targetElementId:'ours',mode:'require',scope:'neighbor',minCount:1}], placementRules:null },
   chien:      { id:'chien',      constraints:[{type:'neighbor_same',mode:'require',scope:'neighbor',minCount:1},{type:'connected_group',mode:'require',scope:'board'}], placementRules:null },
   cerf:       { id:'cerf',       constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'paired_specific',targetElementId:'biche',mode:'require',scope:'board'}], placementRules:null },
   biche:      { id:'biche',      constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'paired_specific',targetElementId:'cerf',mode:'require',scope:'board'}], placementRules:null },
-  renard:     { id:'renard',     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'mouton'}], placementRules:null },
+  loup:       { id:'loup',       constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'forbid',scope:'neighbor',targetElementId:'mouton'}], placementRules:null },
   tas_buches: { id:'tas_buches', constraints:[{type:'neighbor_specific_chain',targetElementId:'bucheron',chainTargetElementId:'chalet',mode:'require',scope:'neighbor'}], placementRules:null },
   chalet:     { id:'chalet',     constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'},{type:'neighbor_specific',mode:'require',scope:'neighbor',targetElementId:'bucheron',minCount:1}], placementRules:null },
   champignon: { id:'champignon', constraints:[{type:'neighbor_same',mode:'forbid',scope:'neighbor'}], placementRules:[{type:'center_only'}] },
@@ -780,22 +797,22 @@ function _seededShuffle(arr,rng){const r=[...arr];for(let i=r.length-1;i>0;i--){
 
 // ── Daily compositions ───────────────────────────────────────
 const _COMPS = [
-  {bucheron:3,ours:2,mouton:3,chien:2,renard:1,cerf:1,biche:1,champignon:2},
-  {bucheron:4,ours:2,mouton:2,chien:2,renard:1,cerf:1,biche:1,champignon:2},
-  {bucheron:2,ours:2,mouton:4,chien:2,renard:1,cerf:1,biche:1,champignon:2},
-  {bucheron:2,ours:2,mouton:2,chien:3,renard:1,cerf:1,biche:1,ruche:1,champignon:2},
-  {bucheron:3,ours:2,mouton:2,chien:2,ruche:1,renard:1,cerf:1,biche:1,champignon:2},
-  {bucheron:2,ours:2,mouton:3,chien:2,ruche:1,renard:1,cerf:1,biche:1,champignon:2},
-  {bucheron:3,ours:2,mouton:2,chien:2,chalet:1,renard:1,cerf:1,biche:1,champignon:2},
-  {bucheron:3,ours:1,mouton:2,chien:3,chalet:1,renard:1,cerf:1,biche:1,champignon:2},
-  {bucheron:3,ours:2,mouton:2,chien:3,tas_buches:1,renard:1,cerf:1,biche:1,champignon:1},
-  {bucheron:3,ours:1,mouton:3,chien:2,tas_buches:1,renard:1,cerf:1,biche:1,champignon:2},
-  {bucheron:3,ours:2,mouton:1,chien:2,chalet:1,renard:1,cerf:1,biche:1,tas_buches:1,champignon:2},
-  {bucheron:3,ours:2,mouton:1,chien:2,chalet:1,renard:1,cerf:1,biche:1,tas_buches:1,ruche:1,champignon:1},
-  {bucheron:3,ours:2,mouton:1,chien:2,renard:1,cerf:2,biche:2,champignon:2},
-  {bucheron:2,ours:2,mouton:1,chien:2,renard:1,cerf:3,biche:3,champignon:1},
-  {bucheron:2,ours:2,mouton:3,chien:2,renard:2,cerf:1,biche:1,champignon:2},
-  {bucheron:2,ours:1,mouton:4,chien:2,renard:2,cerf:1,biche:1,champignon:2},
+  {bucheron:3,ours:2,mouton:3,chien:2,loup:1,cerf:1,biche:1,champignon:2},
+  {bucheron:4,ours:2,mouton:2,chien:2,loup:1,cerf:1,biche:1,champignon:2},
+  {bucheron:2,ours:2,mouton:4,chien:2,loup:1,cerf:1,biche:1,champignon:2},
+  {bucheron:2,ours:2,mouton:2,chien:3,loup:1,cerf:1,biche:1,ruche:1,champignon:2},
+  {bucheron:3,ours:2,mouton:2,chien:2,ruche:1,loup:1,cerf:1,biche:1,champignon:2},
+  {bucheron:2,ours:2,mouton:3,chien:2,ruche:1,loup:1,cerf:1,biche:1,champignon:2},
+  {bucheron:3,ours:2,mouton:2,chien:2,chalet:1,loup:1,cerf:1,biche:1,champignon:2},
+  {bucheron:3,ours:1,mouton:2,chien:3,chalet:1,loup:1,cerf:1,biche:1,champignon:2},
+  {bucheron:3,ours:2,mouton:2,chien:3,tas_buches:1,loup:1,cerf:1,biche:1,champignon:1},
+  {bucheron:3,ours:1,mouton:3,chien:2,tas_buches:1,loup:1,cerf:1,biche:1,champignon:2},
+  {bucheron:3,ours:2,mouton:1,chien:2,chalet:1,loup:1,cerf:1,biche:1,tas_buches:1,champignon:2},
+  {bucheron:3,ours:2,mouton:1,chien:2,chalet:1,loup:1,cerf:1,biche:1,tas_buches:1,ruche:1,champignon:1},
+  {bucheron:3,ours:2,mouton:1,chien:2,loup:1,cerf:2,biche:2,champignon:2},
+  {bucheron:2,ours:2,mouton:1,chien:2,loup:1,cerf:3,biche:3,champignon:1},
+  {bucheron:2,ours:2,mouton:3,chien:2,loup:2,cerf:1,biche:1,champignon:2},
+  {bucheron:2,ours:1,mouton:4,chien:2,loup:2,cerf:1,biche:1,champignon:2},
 ];
 const _TARGET_MAX_FIXED=6, _ATT_PER_COMP=5, _MIN_FIXED=4, _MAX_FIXED=9;
 const _PLAYER_RANGES=[{min:10,max:15},{min:8,max:9},{min:6,max:7},{min:4,max:5},{min:2,max:3},{min:1,max:1}];
@@ -811,7 +828,7 @@ function _isPedagoValid(avail,full){
   const inF=id=>(fm.get(id)||0)>0, hasA=id=>(am.get(id)||0)>0;
   if(!avail.length||avail.every(t=>t.count===0))return false;
   if(inF('chalet')&&!hasA('chalet')&&!hasA('bucheron'))return false;
-  if(inF('renard')&&!hasA('renard')&&!hasA('mouton'))return false;
+  if(inF('loup')&&!hasA('loup')&&!hasA('mouton'))return false;
   if(inF('ruche')&&!hasA('ruche')&&!hasA('ours'))return false;
   if(inF('cerf')&&!hasA('cerf')&&!hasA('biche'))return false;
   if(inF('biche')&&!hasA('biche')&&!hasA('cerf'))return false;
@@ -822,12 +839,12 @@ function _isPedagoValid(avail,full){
 }
 function _isNarrCoherent(tc){
   const has=id=>tc.some(t=>t.elementId===id&&t.count>0);
-  if(has('renard')&&!has('mouton'))return false; if(has('chalet')&&!has('bucheron'))return false;
+  if(has('loup')&&!has('mouton'))return false; if(has('chalet')&&!has('bucheron'))return false;
   if(has('tas_buches')&&!has('bucheron'))return false; return true;
 }
 function _isNarrInteresting(avail,full){
   const has=id=>full.some(t=>t.elementId===id&&t.count>0), hasA=id=>avail.some(t=>t.elementId===id&&t.count>0);
-  if(has('renard')&&has('mouton')&&!hasA('renard')&&!hasA('mouton'))return false;
+  if(has('loup')&&has('mouton')&&!hasA('loup')&&!hasA('mouton'))return false;
   if(has('chalet')&&has('bucheron')&&!hasA('chalet')&&!hasA('bucheron'))return false;
   if(has('tas_buches')&&has('bucheron')&&!hasA('tas_buches')&&!hasA('bucheron'))return false;
   return true;
