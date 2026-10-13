@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // ECRAN REGLES
 // Affiche tous les elements dans l'ordre d'apparition.
 // Elements debloques : icone + nom + animations des regles (memes que le briefing).
@@ -265,8 +265,7 @@ const styles = StyleSheet.create({
     height: 38,
   },
   iconImgLocked: {
-    opacity: 0.25,
-    tintColor: '#9E9E9E',
+    opacity: 0.35,
   },
   cardTitleArea: {
     flex: 1,
