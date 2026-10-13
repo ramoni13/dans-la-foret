@@ -109,12 +109,11 @@ const ONF_COMPOSITIONS_4X4: Composition[] = [
   { cerf: 2, biche: 2, bucheron: 4, mouton: 3, ours: 3, loup: 2 },   // D05
   { cerf: 2, biche: 2, bucheron: 3, mouton: 4, ours: 3, loup: 2 },   // D06
 
-  // ── Famille E — 7–8 types (diversité maximale, ruche + champignon) ─────────
-  // Tester au runtime : si le solveur échoue systématiquement, retirer ces 4 entrées.
-  { bucheron: 3, mouton: 3, ours: 2, loup: 2, cerf: 2, biche: 2, champignon: 1, ruche: 1 }, // E01
-  { bucheron: 4, mouton: 2, ours: 2, loup: 2, cerf: 2, biche: 2, champignon: 1, ruche: 1 }, // E02
-  { bucheron: 3, mouton: 3, ours: 1, loup: 3, cerf: 2, biche: 2, champignon: 1, ruche: 1 }, // E03
-  { bucheron: 4, mouton: 3, ours: 1, loup: 2, cerf: 2, biche: 2, champignon: 1, ruche: 1 }, // E04
+  // ── Famille E — 7–8 types (ruche + champignon simultanés) ───────────────────
+  // Retirées : combinaison ruche (voisinage ours strict) + champignon (center_only)
+  // + cerf/biche (paired_specific) + contrainte row_col_unique → espace de recherche
+  // trop restreint, le solveur ne converge pas de manière fiable sur mobile.
+  // Les familles A–D couvrent suffisamment la diversité pédagogique.
 ];
 
 // ── Nettoyage : retirer les compositions avec count=0 ou Σ ≠ 16 ──────────────
@@ -135,7 +134,7 @@ function getFixedCount(solvedCount: number): number {
 
 // ── Générateur principal ──────────────────────────────────────────────────────
 
-const MAX_ATTEMPTS = 60;
+const MAX_ATTEMPTS = 40;
 
 /**
  * Génère un défi ONF 4×4.
@@ -193,7 +192,7 @@ export function generateOnfChallenge(
       totalAttempts++;
       if (totalAttempts > MAX_ATTEMPTS) break;
 
-      // 1. Solution complète
+      // 1. Trouver UNE solution complète (maxSolutions=1 pour ne pas explorer inutilement)
       const solverResult = solveOnf({
         boardDef,
         fixedPlacements: [],
@@ -201,6 +200,7 @@ export function generateOnfChallenge(
         elementDefs,
         rng: rngFn,
         gridMeta,
+        maxSolutions: 1,
       });
 
       if (solverResult.solutionCount === 0) continue;
