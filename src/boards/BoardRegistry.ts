@@ -14,6 +14,10 @@ import { board10cellsV3 } from './board_10cells_v3';
 import { board11cellsV1 } from './board_11cells_v1';
 import { board11cellsV2 } from './board_11cells_v2';
 import { board15cellsDaily } from './board_15cells_daily';
+import { board13cellsV1 } from './board_13cells_v1';
+import { board14cellsV1 } from './board_14cells_v1';
+import { board3x3Onf } from './board_3x3_onf';
+import { board4x4Onf } from './board_4x4_onf';
 
 export const BoardRegistry: Record<string, BoardDefinition> = {
   board_6_v1: board6cellsV1,   //  6 cases — Clairière
@@ -24,6 +28,11 @@ export const BoardRegistry: Record<string, BoardDefinition> = {
   board_11_v1: board11cellsV1, // 11 cases — Sous-bois Profond v1 (obsolète)
   board_11_v2: board11cellsV2, // 11 cases — Sous-bois Profond v2 (niveaux 11-12, nouvelle map lisible)
   board_12: board12cells,      // 12 cases — Forêt Profonde (niveaux 13-15)
+  board_13_v1: board13cellsV1, // 13 cases — Cœur de la Forêt (niveaux 16-18)
+  board_14_v1: board14cellsV1, // 14 cases — Cœur Profond (niveaux 19-21)
   // ── Défi journalier ──────────────────────────────────────────────────
   board_15_daily: board15cellsDaily, // 15 cases — Clairière Secrète (défi journalier)
+  // ── Mode ONF — Grille Forestière ─────────────────────────────────────
+  board_3x3_onf: board3x3Onf, //  9 cases — Clairière Carrée (ONF 3×3)
+  board_4x4_onf: board4x4Onf, // 16 cases — Forêt Carrée (ONF 4×4)
 };
