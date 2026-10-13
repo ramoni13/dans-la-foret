@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 
 import { BadgeDefinition, BadgeRarity, getBadgeTexts } from '../../constants/badges';
+import { MusicTrack } from '../../constants/music';
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
@@ -29,6 +30,8 @@ interface BadgeDetailModalProps {
   progress?: number;   // 0–1
   progressLabel?: string;
   onClose: () => void;
+  /** Piste musicale débloquée par ce badge (undefined = aucune) */
+  musicUnlockTrack?: MusicTrack;
 }
 
 const RARITY_COLORS: Record<BadgeRarity, string> = {
@@ -72,6 +75,7 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
   progress = 0,
   progressLabel,
   onClose,
+  musicUnlockTrack,
 }) => {
   const t = useT();
   const language = usePlayerStore(state => state.language);
@@ -172,6 +176,36 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
               {isSecret ? t('badge_secret_desc') : texts.description}
             </Text>
           </View>
+
+          {/* Titre musical débloqué par ce badge */}
+          {musicUnlockTrack && (
+            <View style={[
+              styles.musicBox,
+              earned ? styles.musicBoxEarned : styles.musicBoxLocked,
+            ]}>
+              <Text style={styles.musicBoxIcon}>🎵</Text>
+              <View style={styles.musicBoxText}>
+                <Text style={[
+                  styles.musicBoxTitle,
+                  earned && styles.musicBoxTitleEarned,
+                ]}>
+                  {earned ? 'Titre débloqué' : 'Débloque le titre'}
+                </Text>
+                <Text style={[
+                  styles.musicBoxTrack,
+                  earned && styles.musicBoxTrackEarned,
+                ]}>
+                  {musicUnlockTrack.title}
+                  <Text style={styles.musicBoxType}>
+                    {' '}— {musicUnlockTrack.type === 'ingame' ? 'Ambiance Défi' : 'Ambiance Forêt'}
+                  </Text>
+                </Text>
+                {musicUnlockTrack.description && (
+                  <Text style={styles.musicBoxDesc}>{musicUnlockTrack.description}</Text>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Statut : obtenu ou progression */}
           {earned ? (
@@ -376,6 +410,61 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.ui.textLight,
     textAlign: 'right',
+  },
+  musicBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 16,
+  },
+  musicBoxLocked: {
+    backgroundColor: Colors.ui.background,
+    borderColor: Colors.ui.border,
+  },
+  musicBoxEarned: {
+    backgroundColor: Colors.forest.accent + '12',
+    borderColor: Colors.forest.accent + '50',
+  },
+  musicBoxIcon: {
+    fontSize: 28,
+    lineHeight: 32,
+  },
+  musicBoxText: {
+    flex: 1,
+    gap: 2,
+  },
+  musicBoxTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.ui.textLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  musicBoxTitleEarned: {
+    color: Colors.forest.accent,
+  },
+  musicBoxTrack: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.forest.dark,
+  },
+  musicBoxTrackEarned: {
+    color: Colors.forest.dark,
+  },
+  musicBoxType: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: Colors.ui.textLight,
+  },
+  musicBoxDesc: {
+    fontSize: 12,
+    color: Colors.ui.textLight,
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   closeBtn: {
     marginTop: 16,

@@ -19,13 +19,14 @@ import {
   BadgeRarity,
   TOTAL_NON_SECRET_BADGES,
   TOTAL_SECRET_BADGES,
+  getBadgeTexts,
 } from '../../constants/badges';
+import { BADGE_MUSIC_UNLOCK_MAP } from '../../constants/music';
 import { Colors } from '../../constants/colors';
 import { BadgeCard } from './BadgeCard';
 import { BadgeDetailModal } from './BadgeDetailModal';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
-import { getBadgeTexts } from '../../constants/badges';
 
 type FilterOption = 'all' | BadgeRarity | 'secret' | 'saisonnier';
 
@@ -119,6 +120,7 @@ export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
         progress={selectedBadge ? (progressMap[selectedBadge.id] ?? 0) : 0}
         progressLabel={selectedBadge ? progressLabelMap[selectedBadge.id] : undefined}
         onClose={() => setSelectedBadge(null)}
+        musicUnlockTrack={selectedBadge ? BADGE_MUSIC_UNLOCK_MAP[selectedBadge.id] : undefined}
       />
       {/* Header stats */}
       <View style={styles.header}>
@@ -176,6 +178,7 @@ export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
                     size="normal"
                     label={texts.label}
                     onPress={() => handleBadgePress(badge)}
+                    musicUnlockTrackTitle={BADGE_MUSIC_UNLOCK_MAP[badge.id]?.title}
                   />
                 );
               })}

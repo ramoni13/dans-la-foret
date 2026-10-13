@@ -39,8 +39,8 @@ export type RarityUnlockId =
   | 'theme_automne'
   | 'theme_hiver'
   | 'theme_foret_mystique'
-  | 'mode_zen'
-  | 'defi_journalier'
+  | 'music_unlock'      // Anciennement mode_zen (chantier 3) — musique ambiante débloquée
+  | 'mode_onf'          // Anciennement defi_journalier (chantier 3) — mode ONF alternatif
   | 'niveau_14'
   | 'avatar_esprit';
 
@@ -54,8 +54,8 @@ export interface RarityUnlock {
 export const RARITY_UNLOCKS: RarityUnlock[] = [
   // ── Bois (9 badges bois) ──────────────────────────────────
   { rarity: 'bois',    count: 3,  unlock: 'seeds_10',           label: '+10 Graines offertes' },
-  { rarity: 'bois',    count: 6,  unlock: 'mode_zen',           label: 'Mode Zen débloqué' },
-  { rarity: 'bois',    count: 9,  unlock: 'defi_journalier',    label: 'Défi journalier débloqué' },
+  { rarity: 'bois',    count: 6,  unlock: 'music_unlock',       label: 'Musique ambiante débloquée' },
+  { rarity: 'bois',    count: 9,  unlock: 'mode_onf',           label: 'Mode ONF débloqué (voie alternative)' },
   // ── Pierre (9 badges pierre) ──────────────────────────────
   { rarity: 'pierre',  count: 3,  unlock: 'theme_automne',      label: 'Thème Automne débloqué' },
   { rarity: 'pierre',  count: 7,  unlock: 'seeds_50',           label: '+50 Graines offertes' },
@@ -226,9 +226,9 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     id: 'social_poignee',
     emoji: '🤝',
     label: 'Première rencontre',
-    description: 'Défie un ami pour la première fois',
+    description: 'Défie un nouvel ami pour la première fois',
     rarity: 'bois', category: 'social', isSecret: false, isSeasonal: false,
-    translations: { en: { label: 'First Meeting', description: 'Challenge a friend for the first time' } },
+    translations: { en: { label: 'First Meeting', description: 'Challenge a new friend for the first time' } },
   },
   {
     id: 'social_lion',

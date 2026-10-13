@@ -24,7 +24,8 @@ import { AudioPlayer } from 'expo-audio';
 import { Colors } from '../../constants/colors';
 import { useAudioStore } from '../../store/audioStore';
 import { usePlayerStore, VisualEffect } from '../../store/playerStore';
-import { MUSIC_CATALOG, MusicTrack, MUSIC_UNLOCK_COST } from '../../constants/music';
+import { MUSIC_CATALOG, MusicTrack } from '../../constants/music';
+import { BADGE_MAP } from '../../constants/badges';
 import { audioService } from '../../services/audioService';
 import { MusicUnlockModal } from './MusicUnlockModal';
 import { useT } from '../../i18n';
@@ -208,8 +209,21 @@ export function MusicPanel() {
   const previewTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
 
-  // Modal déblocage
+  // Modal déblocage (déclenché automatiquement quand un badge débloque une musique)
   const [unlockModalTrackId, setUnlockModalTrackId] = useState<string | null>(null);
+  const prevOwnedRef = useRef<string[]>(audioStore.ownedTrackIds);
+
+  // Détecter l'ajout d'une nouvelle piste via badge (syncOwnedFromBadges)
+  useEffect(() => {
+    const prev = prevOwnedRef.current;
+    const current = audioStore.ownedTrackIds;
+    const newlyUnlocked = current.filter(id => !prev.includes(id));
+    if (newlyUnlocked.length > 0) {
+      // Afficher le modal pour la première piste nouvellement débloquée
+      setUnlockModalTrackId(newlyUnlocked[0]);
+    }
+    prevOwnedRef.current = current;
+  }, [audioStore.ownedTrackIds]);
 
   // Séparer les morceaux par type, uniquement les possédés
   const ownedIngame = MUSIC_CATALOG.filter(
@@ -291,14 +305,12 @@ export function MusicPanel() {
     };
   }, []);
 
-  // ── Achat d'un titre avec des graines ────────────────────
-  const handleBuyTrack = (track: MusicTrack) => {
-    if (player.seeds < track.cost) return;
-    const success = player.spendSeeds(track.cost);
-    if (!success) return;
-    audioStore.unlockTrack(track.id);
-    setUnlockModalTrackId(track.id);
-  };
+  // ── Info de déblocage par badge spécifique ───────────────
+  /** Retourne la définition du badge requis pour débloquer un titre */
+  const getUnlockBadgeDef = (unlockBadgeId: string) => BADGE_MAP[unlockBadgeId] ?? null;
+
+  /** true si le joueur possède déjà ce badge */
+  const hasBadge = (badgeId: string) => player.earnedBadges.includes(badgeId);
 
   // ── Volume — slider simplifié via 5 boutons ───────────────
   const VOLUMES = [0, 0.25, 0.5, 0.75, 1.0];
@@ -403,20 +415,19 @@ export function MusicPanel() {
         <Text style={styles.resetTutorialsText}>{t('settings_reset_tutorials')}</Text>
       </TouchableOpacity>
 
-      {/* Section "À débloquer" */}
+      {/* Section "Titres verrouillés" — déblocage par badge spécifique */}
       {lockedTracks.length > 0 && (
         <>
           <View style={styles.divider} />
-          <Text style={styles.unlockTitle}>🛒 Titres disponibles</Text>
+          <Text style={styles.unlockTitle}>🔒 Titres à débloquer</Text>
           {lockedTracks.map(track => {
-            // La barre montre les graines disponibles du joueur / coût du titre
-            const currentSeeds = Math.min(player.seeds, track.cost);
-            const pct = track.cost > 0 ? currentSeeds / track.cost : 0;
-            const canBuy = player.seeds >= track.cost;
+            const badgeDef = track.unlockBadgeId ? getUnlockBadgeDef(track.unlockBadgeId) : null;
+            const alreadyHas = track.unlockBadgeId ? hasBadge(track.unlockBadgeId) : false;
             return (
               <View key={track.id} style={styles.lockedTrack}>
+                {/* En-tête : titre + type */}
                 <View style={styles.lockedTrackInfo}>
-                  <Text style={styles.lockedTrackTitle}>{track.title}</Text>
+                  <Text style={styles.lockedTrackTitle}>🔒 {track.title}</Text>
                   <Text style={styles.lockedTrackType}>
                     {track.type === 'ingame' ? '🎮 Ambiance Défi' : '🌲 Ambiance Forêt'}
                   </Text>
@@ -425,33 +436,28 @@ export function MusicPanel() {
                   )}
                 </View>
 
-                {/* Barre de progression : graines disponibles → 100 requises */}
-                <View style={styles.progressRow}>
-                  <View style={styles.progressBg}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${pct * 100}%` as any },
-                        canBuy && styles.progressFillReady,
-                      ]}
-                    />
+                {/* Badge requis */}
+                {badgeDef && (
+                  <View style={[
+                    styles.badgeRequirementRow,
+                    alreadyHas && styles.badgeRequirementRowDone,
+                  ]}>
+                    <Text style={styles.badgeRequirementEmoji}>{badgeDef.emoji}</Text>
+                    <View style={styles.badgeRequirementTextBlock}>
+                      <Text style={[
+                        styles.badgeRequirementLabel,
+                        alreadyHas && styles.badgeRequirementLabelDone,
+                      ]}>
+                        {alreadyHas ? 'Badge obtenu !' : `Badge requis : ${badgeDef.label}`}
+                      </Text>
+                      {!alreadyHas && (
+                        <Text style={styles.badgeRequirementDesc} numberOfLines={2}>
+                          {badgeDef.description}
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                  <Text style={styles.progressText}>
-                    {Math.min(player.seeds, track.cost)}/{track.cost} 🌱
-                  </Text>
-                </View>
-
-                {/* Bouton achat — actif si le joueur a assez de graines */}
-                <TouchableOpacity
-                  style={[styles.buyBtn, !canBuy && styles.buyBtnDisabled]}
-                  onPress={() => handleBuyTrack(track)}
-                  activeOpacity={canBuy ? 0.8 : 1}
-                  disabled={!canBuy}
-                >
-                  <Text style={styles.buyBtnText}>
-                    {canBuy ? `🛒 Acheter (${track.cost} 🌱)` : `Il te faut ${track.cost} 🌱`}
-                  </Text>
-                </TouchableOpacity>
+                )}
               </View>
             );
           })}
@@ -529,6 +535,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderColor: Colors.ui.border,
+    opacity: 0.85,
   },
   lockedTrackInfo: {
     gap: 2,
@@ -536,7 +543,7 @@ const styles = StyleSheet.create({
   lockedTrackTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.forest.dark,
+    color: Colors.ui.textLight,
   },
   lockedTrackType: {
     fontSize: 11,
@@ -548,47 +555,42 @@ const styles = StyleSheet.create({
     color: Colors.ui.textLight,
     fontStyle: 'italic',
   },
-  progressRow: {
+  badgeRequirementRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  progressBg: {
-    flex: 1,
-    height: 8,
-    backgroundColor: Colors.ui.border,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.forest.light,
-    borderRadius: 4,
-  },
-  progressFillReady: {
-    backgroundColor: Colors.forest.accent,
-  },
-  progressText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.ui.textLight,
-    minWidth: 60,
-    textAlign: 'right',
-  },
-  buyBtn: {
-    backgroundColor: Colors.forest.medium,
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: Colors.forest.dark + '0D',
     borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: Colors.forest.dark + '20',
   },
-  buyBtnDisabled: {
-    backgroundColor: Colors.ui.border,
-    opacity: 0.6,
+  badgeRequirementRowDone: {
+    backgroundColor: Colors.forest.accent + '18',
+    borderColor: Colors.forest.accent + '50',
   },
-  buyBtnText: {
-    color: '#fff',
-    fontSize: 13,
+  badgeRequirementEmoji: {
+    fontSize: 24,
+    lineHeight: 28,
+  },
+  badgeRequirementTextBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  badgeRequirementLabel: {
+    fontSize: 12,
     fontWeight: '700',
+    color: Colors.forest.dark,
+  },
+  badgeRequirementLabelDone: {
+    color: Colors.forest.accent,
+  },
+  badgeRequirementDesc: {
+    fontSize: 11,
+    color: Colors.ui.textLight,
+    fontStyle: 'italic',
+    lineHeight: 15,
   },
   // ── Effets visuels ──
   effectsTitle: {

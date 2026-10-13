@@ -41,16 +41,16 @@ const RARITY_COLORS: Record<BadgeRarity, string> = {
 };
 
 const UNLOCK_ICONS: Record<string, string> = {
-  seeds_10:           '🌱',
-  seeds_50:           '🌱',
-  bonus_instinct:     '🔴',
-  theme_automne:      '🍂',
-  theme_hiver:        '❄️',
+  seeds_10:             '🌱',
+  seeds_50:             '🌱',
+  bonus_instinct:       '🔴',
+  theme_automne:        '🍂',
+  theme_hiver:          '❄️',
   theme_foret_mystique: '🌙',
-  mode_zen:           '🧘',
-  defi_journalier:    '📅',
-  niveau_14:          '🔓',
-  avatar_esprit:      '🌿',
+  music_unlock:         '🎵',
+  mode_onf:             '🌲',
+  niveau_14:            '🔓',
+  avatar_esprit:        '🌿',
 };
 
 export const BadgeUnlockProgress: React.FC<BadgeUnlockProgressProps> = ({

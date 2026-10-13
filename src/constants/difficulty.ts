@@ -48,7 +48,9 @@ export type DifficultyLevel =
   | 'niveau_6' | 'niveau_7' | 'niveau_8'
   | 'niveau_9' | 'niveau_10'
   | 'niveau_11' | 'niveau_12'
-  | 'niveau_13' | 'niveau_14' | 'niveau_15';
+  | 'niveau_13' | 'niveau_14' | 'niveau_15'
+  | 'niveau_16' | 'niveau_17' | 'niveau_18'
+  | 'niveau_19' | 'niveau_20' | 'niveau_21'; // 14 cases — Cœur Profond (+ Arbre)
 
 export interface Composition {
   // ── Éléments de base (niv 1+) ──────────────────────────────
@@ -70,6 +72,8 @@ export interface Composition {
   chalet?: number;     // = voisin bucheron · ≠ voisin chalet · bucheron >= chalet (I6)
   // ── Défi journalier uniquement ────────────────────────────
   champignon?: number; // center_only · ≠ voisin champignon · max 3 (I8)
+  // ── Introduits niv 19+ ──────────────────────────────────────
+  arbre?: number;      // connected_group_with tas_buches (forêt connexe) · TOUJOURS >= 2 si > 0
 }
 
 export interface LevelParams {
@@ -427,26 +431,27 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
 
   niveau_14: {
     // 10 types : tous les éléments — 8 vides, 4 fixés
-    // Accélération — +1 vide, -1 fixé. Max contraintes actives.
+    // Même types qu'au niveau 13. Variété maximale : loup+mouton, chien, cerf/biche, tas_buches.
+    // Tous les totaux = 12 (I1). Invariants I2-I7 respectés.
     boardId: 'board_12',
     cellCount: 12,
     compositions: [
-      // chalet=2, Loup=2, chien=2, ruche=1
-      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
-      { bucheron: 2, ours: 3, mouton: 0, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
-      // chalet=2, Loup=2, chien=2, sans ruche
-      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
-      { bucheron: 2, ours: 3, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(2≥2)
-      // chalet=2, tas_buches=1, Loup=2, ruche=1, sans chien
-      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 0, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 1, loup: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
-      // chalet=2, chien=2, Loup=2, tas_buches=1, sans ruche
-      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, tas_buches: 1 },      // 12 I1✓ I4✓ I6✓ I7✓
-      // chalet=3, Loup=2, ruche=1, sans chien — bucheron=4
-      { bucheron: 4, ours: 2, mouton: 0, loup: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
-      // chalet=2, chien=2, ruche=1
-      { bucheron: 3, ours: 3, mouton: 1, chien: 2, chalet: 2, ruche: 1 },                      // 12 I1✓ I2✓ I3✓ I4✓ I6✓
+      // Famille A — loup + mouton + chalet + ruche (tension loup/mouton + chaîne chalet)
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, chalet: 2, ruche: 1 },                     // 3+2+2+2+2+1=12 I1✓ I2✓ I3✓ I6✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 2, ruche: 1, tas_buches: 1 },      // 3+2+1+2+2+1+1=12 I1✓ I2✓ I3✓ I6✓ I7✓
+      // Famille B — loup + mouton + chien + chalet (toutes tensions actives)
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 3+2+1+2+2+2=12 I1✓ I4✓ I6✓
+      { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 2+2+1+2+2+2+1=12 I1✓ I2✓ I3✓ I4✓ I6✓
+      // Famille C — loup + mouton + chien + ruche + tas_buches
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 1, ruche: 1 },           // 3+2+1+2+2+1+1=12 I1✓ I2✓ I3✓ I4✓ I6✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, tas_buches: 1, ruche: 1 },       // 3+2+1+2+2+1+1=12 I1✓ I2✓ I3✓ I4✓ I7✓
+      // Famille D — loup + chien + chalet + tas_buches (sans mouton)
+      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, tas_buches: 1 },      // 3+2+2+2+2+1=12 I1✓ I4✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 0, chien: 2, loup: 2, chalet: 1, ruche: 1 },           // 3+3+2+2+1+1=12 I1✓ I2✓ I3✓ I4✓ I6✓
+      // Famille E — cerf + biche + loup + chalet (antagonisme croisé)
+      { bucheron: 3, ours: 2, mouton: 1, loup: 1, cerf: 1, biche: 1, chalet: 2, ruche: 1 }, // 3+2+1+1+1+1+2+1=12 I1✓ I2✓ I3✓ I5✓ I6✓
+      // Famille F — cerf + biche + chalet + ruche (sans loup, complexité paires)
+      { bucheron: 3, ours: 2, mouton: 0, cerf: 2, biche: 2, chalet: 2, ruche: 1 },           // 3+2+2+2+2+1=12 I1✓ I2✓ I3✓ I5✓ I6✓
     ],
     emptyCellsRange: [8, 8],
     bonusDisabled: false,
@@ -454,33 +459,240 @@ export const LEVEL_PARAMS: Record<DifficultyLevel, LevelParams> = {
   },
 
   niveau_15: {
-    // 10 types : tous les éléments — 8 vides, 4 fixés — bonus désactivés
-    // Même vides que niv 14 — MAIS aucun bonus. Le joueur est seul.
+    // 10 types : tous les éléments — 8 vides, 4 fixés — BONUS DÉSACTIVÉS
+    // Maximum de complexité : toutes les tensions actives, joueur sans aide.
+    // Tous les totaux = 12 (I1). Invariants I2-I7 respectés.
     boardId: 'board_12',
     cellCount: 12,
     compositions: [
-      // Reprend les compositions du niv 14
-      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
-      { bucheron: 2, ours: 3, mouton: 0, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 12 I1✓ I2✓ I3✓ I4✓ I6✓
-      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(3≥2)
-      { bucheron: 2, ours: 3, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 12 I1✓ I4✓ I6✓(2≥2)
-      // chalet=2, Loup=2, tas_buches=1, ruche=1, sans chien
-      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 0, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },      // 12 I1✓ I2✓ I3✓ I6✓ I7✓
-      { bucheron: 3, ours: 3, mouton: 1, loup: 2, chalet: 2, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓
-      // chalet=2, chien=2, Loup=2, tas_buches=1, sans ruche
-      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, tas_buches: 1 },      // 12 I1✓ I4✓ I6✓ I7✓
-      // chalet=3, Loup=2, ruche=1 — bucheron=4
-      { bucheron: 4, ours: 2, mouton: 0, loup: 2, chalet: 3, ruche: 1 },                     // 12 I1✓ I2✓ I3✓ I6✓(4≥3)
-      // 1 couple — chalet=2, cerf=1, biche=1, ruche=1
-      { bucheron: 3, ours: 3, mouton: 1, cerf: 1, biche: 1, chalet: 2, ruche: 1 },             // 12 I1✓ I2✓ I3✓ I5✓ I6✓
-      // 2 couples — chalet=2, cerf=2, biche=2, ruche=1
-      { bucheron: 3, ours: 2, mouton: 0, cerf: 2, biche: 2, chalet: 2, ruche: 1 },             // 12 I1✓ I2✓ I3✓ I5✓ I6✓(3≥2)
-      { bucheron: 4, ours: 1, mouton: 0, cerf: 2, biche: 2, chalet: 2, ruche: 1 },             // 12 I1✓ I2✓ I3✓ I5✓ I6✓(4≥2)
+      // Famille A — loup + mouton + chien + chalet + ruche (tous types actifs)
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 3+2+1+2+2+2=12 I1✓ I4✓ I6✓
+      { bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2, ruche: 1 },           // 2+2+1+2+2+2+1=12 I1✓ I2✓ I3✓ I4✓ I6✓
+      { bucheron: 2, ours: 3, mouton: 1, chien: 2, loup: 2, chalet: 2 },                     // 2+3+1+2+2+2=12 I1✓ I4✓ I6✓
+      // Famille B — loup + mouton + chalet + ruche + tas_buches (chaîne complète)
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 2, ruche: 1, tas_buches: 1 },      // 3+2+1+2+2+1+1=12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 0, loup: 2, chalet: 2, ruche: 1, tas_buches: 1 },      // 3+3+2+2+1+1=12 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, chalet: 2, ruche: 1 },                     // 3+2+2+2+2+1=12 I1✓ I2✓ I3✓ I6✓
+      // Famille C — loup + chien + tas_buches + chalet (sans mouton — difficulté max)
+      { bucheron: 3, ours: 2, mouton: 0, chien: 2, loup: 2, chalet: 2, tas_buches: 1 },      // 3+2+2+2+2+1=12 I1✓ I4✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 0, chien: 2, loup: 2, chalet: 1, ruche: 1 },           // 3+3+2+2+1+1=12 I1✓ I2✓ I3✓ I4✓ I6✓
+      // Famille D — cerf + biche + loup + mouton + chalet (le plus complexe)
+      { bucheron: 3, ours: 2, mouton: 1, loup: 1, cerf: 1, biche: 1, chalet: 2, ruche: 1 }, // 3+2+1+1+1+1+2+1=12 I1✓ I2✓ I3✓ I5✓ I6✓
+      // Famille E — 2 couples cerf/biche + chalet + loup (contraintes paires max)
+      { bucheron: 3, ours: 2, mouton: 0, loup: 2, cerf: 1, biche: 1, chalet: 2, ruche: 1 }, // 3+2+2+1+1+2+1=12 I1✓ I2✓ I3✓ I5✓ I6✓
     ],
     emptyCellsRange: [8, 8],
     bonusDisabled: true,
     estimatedDurationRange: [240, 600],
+  },
+  // ────────────────────────────────────────────────────────────────
+  // PLATEAU 13 CASES (board_13_v1) — niveaux 16, 17, 18
+  // ────────────────────────────────────────────────────────────────
+
+  niveau_16: {
+    // 10 types : tous les éléments standard — 8 vides, 5 fixés
+    // ★ Respiration (nouveau board 13 cases) — densité + difficulté structurelle élevée
+    // Toutes les tensions actives. Totaux = 13 (I1). Invariants I2-I7 respectés.
+    boardId: 'board_13_v1',
+    cellCount: 13,
+    compositions: [
+      // Famille A — loup + mouton + chalet + ruche (chaîne complète)
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, chalet: 2, ruche: 1, tas_buches: 1 },       // 3+2+2+2+2+1+1=13 I1✓ I2✓ I3✓ I6✓ I7✓
+      { bucheron: 4, ours: 2, mouton: 1, loup: 2, chalet: 3, ruche: 1 },                       // 4+2+1+2+3+1=13 I1✓ I2✓ I3✓ I6✓(4≥3)
+      // Famille B — loup + mouton + chien + chalet (toutes tensions)
+      { bucheron: 3, ours: 2, mouton: 2, chien: 2, loup: 2, chalet: 2 },                       // 3+2+2+2+2+2=13 I1✓ I4✓ I6✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2, ruche: 1 },             // 3+2+1+2+2+2+1=13 I1✓ I2✓ I3✓ I4✓ I6✓
+      // Famille C — chalet + tas_buches + chien + ruche (chaîne complète)
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 2, tas_buches: 1 },        // 3+2+1+2+2+2+1=13 I1✓ I4✓ I6✓ I7✓
+      { bucheron: 3, ours: 3, mouton: 1, chien: 2, loup: 2, chalet: 2 },                       // 3+3+1+2+2+2=13 I1✓ I4✓ I6✓
+      // Famille D — cerf + biche + chalet + ruche (paires + chaîne)
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, cerf: 1, biche: 1, chalet: 2, ruche: 1 },   // 3+2+1+2+1+1+2+1=13 I1✓ I2✓ I3✓ I5✓ I6✓
+      { bucheron: 4, ours: 2, mouton: 0, loup: 2, cerf: 1, biche: 1, chalet: 2, ruche: 1 },   // 4+2+2+1+1+2+1=13 I1✓ I2✓ I3✓ I5✓ I6✓
+      // Famille E — cerf + biche + loup + chalet (antagonisme croisé max)
+      { bucheron: 3, ours: 2, mouton: 0, loup: 3, cerf: 2, biche: 2, chalet: 1 },             // 3+2+3+2+2+1=13 I1✓ I5✓ I6✓
+      // Famille F — loup dominant + chalet + ruche
+      { bucheron: 4, ours: 2, mouton: 0, loup: 3, chalet: 3, ruche: 1 },                       // 4+2+3+3+1=13 I1✓ I2✓ I3✓ I6✓(4≥3)
+    ],
+    emptyCellsRange: [8, 8],
+    bonusDisabled: false,
+    estimatedDurationRange: [240, 600],
+  },
+
+  niveau_17: {
+    // 11 types : tous les éléments + champignon — 8 vides, 5 fixés
+    // 5 cases centrales (2,5,8,11,12) → champignon 1-3 (≠ voisin champignon)
+    // Totaux = 13 (I1). Invariants I2-I7 respectés.
+    boardId: 'board_13_v1',
+    cellCount: 13,
+    compositions: [
+      // ── champignon=1 ──────────────────────────────────────────────
+      // Mouton dominant
+      { bucheron: 2, ours: 2, mouton: 4, loup: 2, chien: 2, champignon: 1 },                                        // 13 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 3, loup: 2, chalet: 2, champignon: 1 },                                       // 13 I1✓ I6✓
+      // Chien dominant
+      { bucheron: 2, ours: 2, mouton: 2, chien: 4, loup: 2, champignon: 1 },                                        // 13 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 4, loup: 2, champignon: 1 },                                        // 13 I1✓ I4✓
+      // Mix tous types
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, ruche: 1, chalet: 1, champignon: 1 }, // 13 I1✓ I2✓ I3✓ I4✓ I5✓ I6✓
+      { bucheron: 3, ours: 1, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 1, tas_buches: 1 },       // 13 I1✓ I4✓ I5✓ I7✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, cerf: 1, biche: 1, chalet: 1, ruche: 1, champignon: 1 },           // 13 I1✓ I2✓ I3✓ I5✓ I6✓
+      // ── champignon=2 ──────────────────────────────────────────────
+      // Mouton dominant
+      { bucheron: 2, ours: 2, mouton: 4, loup: 1, chien: 2, champignon: 2 },                                        // 13 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 3, loup: 2, chalet: 1, champignon: 2 },                                       // 13 I1✓ I6✓
+      // Chien dominant
+      { bucheron: 2, ours: 2, mouton: 1, chien: 4, loup: 2, champignon: 2 },                                        // 13 I1✓ I4✓
+      { bucheron: 3, ours: 1, mouton: 2, chien: 4, loup: 1, champignon: 2 },                                        // 13 I1✓ I4✓
+      // Mix tous types
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, ruche: 1, champignon: 2 },           // 13 I1✓ I2✓ I3✓ I4✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 2 },                     // 13 I1✓ I4✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 1, ruche: 1, tas_buches: 1, champignon: 2 },              // 13 I1✓ I2✓ I3✓ I6✓ I7✓
+      // ── champignon=3 ──────────────────────────────────────────────
+      // Mouton dominant
+      { bucheron: 2, ours: 2, mouton: 4, loup: 2, champignon: 3 },                                                  // 13 I1✓ (mouton x4, loup répulsion max)
+      // Chien dominant
+      { bucheron: 2, ours: 2, mouton: 2, chien: 4, champignon: 3 },                                                 // 13 I1✓ I4✓
+      // Mix tous types
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 3 },                    // 13 I1✓ I4✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, chalet: 1, champignon: 3 },                                       // 13 I1✓ I6✓
+    ],
+    emptyCellsRange: [8, 8],
+    bonusDisabled: false,
+    estimatedDurationRange: [300, 720],
+  },
+
+  niveau_18: {
+    // 11 types : tous les éléments + champignon — 9 vides, 4 fixés — BONUS DÉSACTIVÉS
+    // 5 cases centrales → champignon 1-3. Maximum de complexité. Joueur sans aide.
+    // Totaux = 13 (I1). Invariants I2-I7 respectés.
+    boardId: 'board_13_v1',
+    cellCount: 13,
+    compositions: [
+      // ── champignon=1 ──────────────────────────────────────────────
+      // Mouton dominant
+      { bucheron: 2, ours: 2, mouton: 4, loup: 2, chien: 2, champignon: 1 },                                        // 13 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 3, loup: 2, chalet: 2, champignon: 1 },                                       // 13 I1✓ I6✓
+      // Chien dominant
+      { bucheron: 2, ours: 2, mouton: 2, chien: 4, loup: 2, champignon: 1 },                                        // 13 I1✓ I4✓
+      { bucheron: 2, ours: 2, mouton: 1, chien: 4, loup: 2, chalet: 1, champignon: 1 },                             // 13 I1✓ I4✓ I6✓
+      // Mix tous types
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, ruche: 1, chalet: 1, champignon: 1 }, // 13 I1✓ I2✓ I3✓ I4✓ I5✓ I6✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, cerf: 1, biche: 1, chalet: 1, ruche: 1, champignon: 1 },           // 13 I1✓ I2✓ I3✓ I5✓ I6✓
+      { bucheron: 3, ours: 1, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, tas_buches: 1, champignon: 1 },       // 13 I1✓ I4✓ I5✓ I7✓
+      // ── champignon=2 ──────────────────────────────────────────────
+      // Mouton dominant
+      { bucheron: 2, ours: 2, mouton: 4, loup: 1, chien: 2, champignon: 2 },                                        // 13 I1✓ I4✓
+      { bucheron: 3, ours: 2, mouton: 3, loup: 2, chalet: 1, champignon: 2 },                                       // 13 I1✓ I6✓
+      // Chien dominant
+      { bucheron: 2, ours: 2, mouton: 1, chien: 4, loup: 2, champignon: 2 },                                        // 13 I1✓ I4✓
+      { bucheron: 3, ours: 1, mouton: 2, chien: 4, loup: 1, champignon: 2 },                                        // 13 I1✓ I4✓
+      // Mix tous types
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, ruche: 1, champignon: 2 },           // 13 I1✓ I2✓ I3✓ I4✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 1, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 2 },                     // 13 I1✓ I4✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 1, loup: 2, chalet: 1, ruche: 1, tas_buches: 1, champignon: 2 },              // 13 I1✓ I2✓ I3✓ I6✓ I7✓
+      // ── champignon=3 ──────────────────────────────────────────────
+      // Mouton dominant
+      { bucheron: 2, ours: 2, mouton: 4, loup: 2, champignon: 3 },                                                  // 13 I1✓
+      { bucheron: 3, ours: 2, mouton: 3, loup: 2, champignon: 3 },                                                  // 13 I1✓
+      // Chien dominant
+      { bucheron: 2, ours: 2, mouton: 2, chien: 4, champignon: 3 },                                                 // 13 I1✓ I4✓
+      // Mix tous types
+      { bucheron: 2, ours: 1, mouton: 2, chien: 2, loup: 1, cerf: 1, biche: 1, champignon: 3 },                    // 13 I1✓ I4✓ I5✓
+      { bucheron: 3, ours: 2, mouton: 2, loup: 2, chalet: 1, champignon: 3 },                                       // 13 I1✓ I6✓
+    ],
+    emptyCellsRange: [8, 8],
+    bonusDisabled: true,
+    estimatedDurationRange: [360, 900],
+  },
+  // ────────────────────────────────────────────────────────────────
+  // PLATEAU 14 CASES (board_14_v1) — niveaux 19, 20, 21
+  // Apothéose : tous les acteurs du jeu + Arbre (roi de la forêt)
+  // Arbre privilégié sur bucheron — forêt connexe obligatoire.
+  // Invariants : I1 (Σ=14), I2 (ruche≤1), I3 (ours≥1 si ruche),
+  //              I4 (chien≥2), I5 (cerf=biche), I6 (bucheron≥chalet),
+  //              I7 (bucheron≥1 si tas_buches), I9 (arbre≥2 si arbre>0)
+  // ────────────────────────────────────────────────────────────────
+
+  niveau_19: {
+    // 12 types : tous les éléments + Arbre — 9 vides, 5 fixés
+    // Introduction de l'Arbre. Compositions riches avec max de diversité.
+    // Arbres rois : arbre >= bucheron dans chaque composition.
+    boardId: 'board_14_v1',
+    cellCount: 14,
+    compositions: [
+      // ── Famille A — Arbre + tous les grands antagonismes ─────────
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 1, loup: 2, cerf: 1, biche: 1, ruche: 1, chalet: 1 },         // 14 I1✓ I2✓ I3✓ I5✓ I6✓ I9✓
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 2, loup: 2, chien: 2, cerf: 0, biche: 0, chalet: 1 },         // 14 I1✓ I4✓ I6✓ I9✓
+      { arbre: 4, bucheron: 2, ours: 2, mouton: 2, loup: 2, chien: 2 },                                        // 14 I1✓ I4✓ I9✓
+      // ── Famille B — Arbre + cerf/biche + chalet ──────────────────
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 1, cerf: 2, biche: 2, chalet: 1, ruche: 1 },                   // 14 I1✓ I2✓ I3✓ I5✓ I6✓ I9✓
+      { arbre: 4, bucheron: 2, ours: 1, mouton: 1, loup: 2, cerf: 2, biche: 2 },                               // 14 I1✓ I5✓ I9✓
+      // ── Famille C — Arbre + bûches + chalet (chaîne complète) ───
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 1, loup: 2, chalet: 2, tas_buches: 1, ruche: 1 },              // 14 I1✓ I2✓ I3✓ I6✓ I7✓ I9✓
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 2, loup: 1, chien: 2, tas_buches: 1, chalet: 1 },              // 14 I1✓ I4✓ I6✓ I7✓ I9✓
+      // ── Famille D — Arbre dominant + chien + antagonismes ───────
+      { arbre: 4, bucheron: 2, ours: 2, mouton: 2, loup: 2, chalet: 2 },                                       // 14 I1✓ I6✓ I9✓
+      { arbre: 4, bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 2 },                                        // 14 I1✓ I4✓ I9✓
+      // ── Famille E — Grand mix : tout le monde ────────────────────
+      { arbre: 2, bucheron: 2, ours: 1, mouton: 1, chien: 2, loup: 2, cerf: 1, biche: 1, chalet: 1, ruche: 1 }, // 14 I1✓ I2✓ I3✓ I4✓ I5✓ I6✓ I9✓
+    ],
+    emptyCellsRange: [9, 9],
+    bonusDisabled: false,
+    estimatedDurationRange: [300, 720],
+  },
+
+  niveau_20: {
+    // 12 types : tous les éléments + Arbre — 8 vides, 6 fixés
+    // Densité augmentée. Arbre ≥ bucheron toujours. Max diversité.
+    boardId: 'board_14_v1',
+    cellCount: 14,
+    compositions: [
+      // ── Famille A — Arbre + tous antagonismes croisés ────────────
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 1, loup: 2, cerf: 1, biche: 1, chalet: 1, ruche: 1 },         // 14 I1✓ I2✓ I3✓ I5✓ I6✓ I9✓
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 2, chalet: 1 },                             // 14 I1✓ I4✓ I6✓ I9✓
+      { arbre: 4, bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 2 },                                        // 14 I1✓ I4✓ I9✓
+      // ── Famille B — Arbre + cerf/biche + chalet + loup ──────────
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 1, loup: 1, cerf: 2, biche: 2, chalet: 1 },                   // 14 I1✓ I5✓ I6✓ I9✓
+      { arbre: 4, bucheron: 2, ours: 1, loup: 2, cerf: 2, biche: 2, ruche: 1 },                               // 14 I1✓ I2✓ I3✓ I5✓ I9✓
+      // ── Famille C — Arbre + bûches + chaîne complète ────────────
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 2, loup: 2, chalet: 1, tas_buches: 1, ruche: 1 },              // 14 I1✓ I2✓ I3✓ I6✓ I7✓ I9✓
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 1, tas_buches: 1 },              // 14 I1✓ I4✓ I6✓ I7✓ I9✓
+      // ── Famille D — Arbre dominant + grand mix ───────────────────
+      { arbre: 4, bucheron: 2, ours: 2, mouton: 0, loup: 2, cerf: 2, biche: 2 },                               // 14 I1✓ I5✓ I9✓
+      { arbre: 4, bucheron: 2, ours: 2, mouton: 2, loup: 2, chalet: 2 },                                       // 14 I1✓ I6✓ I9✓
+      // ── Famille E — Apothéose : tous présents ─────────────────────
+      { arbre: 2, bucheron: 2, ours: 1, mouton: 1, chien: 2, loup: 2, cerf: 1, biche: 1, chalet: 1, ruche: 1 }, // 14 I1✓ I2✓ I3✓ I4✓ I5✓ I6✓ I9✓
+    ],
+    emptyCellsRange: [8, 8],
+    bonusDisabled: false,
+    estimatedDurationRange: [360, 840],
+  },
+
+  niveau_21: {
+    // 12 types : tous les éléments + Arbre — 8 vides, 6 fixés — BONUS DÉSACTIVÉS
+    // Maximum absolu. Feu d'artifice final. Joueur sans aide.
+    boardId: 'board_14_v1',
+    cellCount: 14,
+    compositions: [
+      // ── Famille A — Tous les acteurs, tension maximale ────────────
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 1, loup: 2, cerf: 1, biche: 1, chalet: 1, ruche: 1 },         // 14 I1✓ I2✓ I3✓ I5✓ I6✓ I9✓
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 2, chalet: 1 },                             // 14 I1✓ I4✓ I6✓ I9✓
+      { arbre: 4, bucheron: 2, ours: 2, mouton: 2, chien: 2, loup: 2 },                                        // 14 I1✓ I4✓ I9✓
+      // ── Famille B — Cerf/biche + chalet + loup + arbre ──────────
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 1, loup: 1, cerf: 2, biche: 2, chalet: 1 },                   // 14 I1✓ I5✓ I6✓ I9✓
+      { arbre: 4, bucheron: 2, ours: 1, loup: 2, cerf: 2, biche: 2, ruche: 1 },                               // 14 I1✓ I2✓ I3✓ I5✓ I9✓
+      // ── Famille C — Bûches + chaîne + arbre ─────────────────────
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 2, loup: 2, chalet: 1, tas_buches: 1, ruche: 1 },              // 14 I1✓ I2✓ I3✓ I6✓ I7✓ I9✓
+      { arbre: 3, bucheron: 2, ours: 2, mouton: 1, chien: 2, loup: 2, chalet: 1, tas_buches: 1 },              // 14 I1✓ I4✓ I6✓ I7✓ I9✓
+      // ── Famille D — Arbre très dominant ──────────────────────────
+      { arbre: 5, bucheron: 2, ours: 2, mouton: 1, loup: 2, cerf: 1, biche: 1 },                               // 14 I1✓ I5✓ I9✓
+      { arbre: 5, bucheron: 2, ours: 2, mouton: 2, loup: 2, chalet: 1 },                                       // 14 I1✓ I6✓ I9✓
+      // ── Famille E — Grand feu d'artifice : tout le monde ─────────
+      { arbre: 2, bucheron: 2, ours: 1, mouton: 1, chien: 2, loup: 2, cerf: 1, biche: 1, chalet: 1, ruche: 1 }, // 14 I1✓ I2✓ I3✓ I4✓ I5✓ I6✓ I9✓
+    ],
+    emptyCellsRange: [8, 8],
+    bonusDisabled: true,
+    estimatedDurationRange: [420, 1200],
   },
 };
 

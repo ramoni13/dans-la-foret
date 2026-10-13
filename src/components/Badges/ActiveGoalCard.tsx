@@ -1,0 +1,134 @@
+// ============================================================
+// ACTIVEGOALCARD — Carte d'objectif de badge actif
+// Affiche : emoji, nom, description, barre de progression,
+// current/target en texte.
+// Utilisée dans la section Badges du profil.
+// ============================================================
+
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { BADGE_MAP } from '../../constants/badges';
+import { BadgeProgress } from '../../core/engine/badgeEngine';
+import { Colors } from '../../constants/colors';
+
+const RARITY_COLOR: Record<string, string> = {
+  bois:    Colors.badges.bois,
+  pierre:  Colors.badges.pierre,
+  or:      Colors.badges.or,
+  cristal: Colors.badges.cristal,
+};
+
+interface ActiveGoalCardProps {
+  progress: BadgeProgress;
+  obtained?: boolean; // true si le badge vient d'être obtenu
+  onChooseNewGoal?: () => void; // appelé quand le badge est obtenu et qu'on veut choisir un nouveau
+}
+
+export const ActiveGoalCard: React.FC<ActiveGoalCardProps> = ({ progress, obtained, onChooseNewGoal }) => {
+  const badge = BADGE_MAP[progress.badgeId];
+  if (!badge) return null;
+
+  const rarityColor = RARITY_COLOR[badge.rarity] ?? Colors.forest.medium;
+  const pct = Math.min(1, Math.max(0, progress.percentage));
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <Text style={styles.emoji}>{badge.emoji}</Text>
+        <View style={styles.textBlock}>
+          <Text style={styles.label} numberOfLines={1}>{badge.label}</Text>
+          <Text style={styles.description} numberOfLines={2}>{badge.description}</Text>
+        </View>
+        {obtained && (
+          <Text style={styles.obtained}>✓</Text>
+        )}
+      </View>
+
+      {/* Barre de progression */}
+      <View style={styles.barTrack}>
+        <View
+          style={[styles.barFill, { width: `${pct * 100}%` as any, backgroundColor: rarityColor }]}
+        />
+      </View>
+
+      {obtained && onChooseNewGoal ? (
+        <TouchableOpacity style={styles.chooseBtn} onPress={onChooseNewGoal} activeOpacity={0.8}>
+          <Text style={styles.chooseBtnText}>Choisir un objectif →</Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={styles.progressText}>
+          {obtained
+            ? 'Badge obtenu !'
+            : `${progress.currentValue} / ${progress.targetValue}`}
+        </Text>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.ui.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.ui.border,
+    padding: 12,
+    gap: 8,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  emoji: {
+    fontSize: 28,
+    width: 36,
+    textAlign: 'center',
+  },
+  textBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.forest.dark,
+  },
+  description: {
+    fontSize: 11,
+    color: Colors.ui.textLight,
+    lineHeight: 15,
+  },
+  obtained: {
+    fontSize: 20,
+    color: '#4CAF50',
+    fontWeight: '800',
+  },
+  barTrack: {
+    height: 6,
+    backgroundColor: Colors.ui.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 11,
+    color: Colors.ui.textLight,
+    textAlign: 'right',
+  },
+  chooseBtn: {
+    alignSelf: 'stretch',
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.forest.medium,
+    alignItems: 'center',
+  },
+  chooseBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+});

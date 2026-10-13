@@ -38,6 +38,7 @@ function RuleAnimation({ rule, a11yLabel }: { rule: RuleCardData; a11yLabel: str
     case 'forbid_neighbor':
       return <ForbidNeighborAnim rule={rule} accessibilityLabel={a11yLabel} />;
     case 'connected_group':
+    case 'connected_group_with':
       return <ConnectedGroupAnim rule={rule} accessibilityLabel={a11yLabel} />;
     case 'paired':
       return <PairedAnim rule={rule} accessibilityLabel={a11yLabel} />;

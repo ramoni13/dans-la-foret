@@ -1,56 +1,67 @@
 // ============================================================
 // CATALOGUE DE MUSIQUES
 // 2 types : "Ambiance Défi" (ingame) et "Ambiance Forêt" (hors défi)
-// Chaque titre peut être "owned" (possédé) ou verrouillé (achat à 100 graines)
+//
+// Déblocage :
+//   - unlockBadgeId absent → gratuit, disponible dès le début
+//   - unlockBadgeId: 'vitesse_Loup' → débloqué quand le joueur obtient ce badge
+//
+// Convention : 1 badge spécifique = 1 titre. Pas d'ambiguïté possible.
+// Pour ajouter un titre : créer une entrée avec le badge narrativement cohérent.
 // ============================================================
 
 export type MusicType = 'ingame' | 'menu';
 
 export interface MusicTrack {
   id: string;
-  title: string;          // Nom affiché au joueur
+  title: string;
   type: MusicType;
   file: any;              // require() du fichier audio
-  cost: number;           // 0 = gratuit (de base), >0 = à acheter
+  /**
+   * ID d'un badge SPÉCIFIQUE (BADGE_DEFINITIONS[].id) requis pour débloquer ce titre.
+   * undefined = gratuit (libre d'accès dès le début).
+   * Le titre est débloqué dès que playerStore.earnedBadges contient cet ID.
+   */
+  unlockBadgeId?: string;
   description?: string;
 }
 
-// Catalogue complet des morceaux
-// cost: 0 = inclus de base, 100 = achetable avec 100 graines
 export const MUSIC_CATALOG: MusicTrack[] = [
   {
     id: 'manor_cocktail',
     title: 'Manor Cocktail',
     type: 'menu',
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     file: require('../../assets/musics/manor_cocktail.mp3'),
-    cost: 0,
     description: 'Ambiance feutrée pour explorer les menus',
   },
   {
     id: 'foret_mystique',
     title: 'Forêt Mystique',
     type: 'ingame',
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     file: require('../../assets/musics/wtf2.mp3'),
-    cost: 0,
     description: 'Musique immersive pour les défis',
   },
   {
     id: 'elek',
     title: 'Elek',
     type: 'ingame',
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     file: require('../../assets/musics/elek.mp3'),
-    cost: 100,
+    unlockBadgeId: 'vitesse_Loup',   // 🦊 Ruse du Loup — terminer un défi en < 20 s
     description: 'Rythme électro pour les défis intenses',
   },
 ];
 
-// Morceaux gratuits (inclus par défaut)
+/** IDs des titres gratuits (pas de badge requis) */
 export const FREE_TRACK_IDS = MUSIC_CATALOG
-  .filter(t => t.cost === 0)
+  .filter(t => !t.unlockBadgeId)
   .map(t => t.id);
 
-// Seuil de graines pour débloquer un titre payant
-export const MUSIC_UNLOCK_COST = 100;
+/**
+ * Map : badgeId → MusicTrack qu'il débloque.
+ * Utilisé par BadgeCard et BadgeDetailModal pour afficher l'indicateur musical.
+ */
+export const BADGE_MUSIC_UNLOCK_MAP: Record<string, MusicTrack> = Object.fromEntries(
+  MUSIC_CATALOG
+    .filter(t => t.unlockBadgeId)
+    .map(t => [t.unlockBadgeId!, t])
+);

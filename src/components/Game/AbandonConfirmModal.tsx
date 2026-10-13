@@ -72,7 +72,10 @@ export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
 
           <Text style={styles.title}>Abandonner ce defi ?</Text>
           <Text style={styles.message}>
-            Le chrono ne s'arretera pas. Tu pourras retenter ce defi dans 15 minutes.
+            Tu pourras reprendre ce defi quand tu veux.
+          </Text>
+          <Text style={styles.warning}>
+            {'\u26D4'} Abandon = Record mondial inaccessible sur ce defi.
           </Text>
 
           {/* Actions */}
@@ -141,8 +144,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.ui.textLight,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 10,
     lineHeight: 22,
+  },
+  warning: {
+    fontSize: 13,
+    color: '#E65100',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 19,
+    fontWeight: '600',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   btnContinue: {
     backgroundColor: Colors.forest.medium,

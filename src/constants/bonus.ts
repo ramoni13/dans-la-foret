@@ -7,8 +7,11 @@ export interface BonusDefinition {
   label: string;
   description: string;
   icon: string;
-  cost: number;               // Coût en graines
+  /** @deprecated Coût en graines — conservé pour référence, plus utilisé en jeu (chantier 4) */
+  cost: number;
   requiresUnlock: boolean;    // true = débloqué uniquement via badges
+  /** Nombre d'utilisations journalières offertes (reset à minuit, chantier 4) */
+  dailyLimit: number;
 }
 
 export const BONUS_DEFINITIONS: Record<BonusId, BonusDefinition> = {
@@ -17,16 +20,18 @@ export const BONUS_DEFINITIONS: Record<BonusId, BonusDefinition> = {
     label: 'Cases valides',
     description: 'Indique les cases où le placement est possible selon les règles',
     icon: '💡',
-    cost: 3,
+    cost: 3,           // legacy — non utilisé depuis chantier 4
     requiresUnlock: false,
+    dailyLimit: 5,
   },
   instinct: {
     id: 'instinct',
     label: 'Instinct',
     description: 'Révèle les cases mal placées sur ton plateau',
     icon: '🔴',
-    cost: 6,
+    cost: 6,           // legacy — non utilisé depuis chantier 4
     requiresUnlock: true,  // Débloqué via 3 badges Or (RARITY_UNLOCKS)
+    dailyLimit: 5,
   },
 };
 

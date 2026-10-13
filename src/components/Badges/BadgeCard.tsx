@@ -28,6 +28,8 @@ interface BadgeCardProps {
   onPress?: () => void;
   animateOnMount?: boolean; // true = animation de débloquage
   size?: 'small' | 'normal';
+  /** Titre musical que ce badge débloque (undefined = pas de musique liée) */
+  musicUnlockTrackTitle?: string;
 }
 
 const RARITY_COLORS: Record<BadgeRarity, string> = {
@@ -61,6 +63,7 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
   onPress,
   animateOnMount = false,
   size = 'normal',
+  musicUnlockTrackTitle,
 }) => {
   const displayLabel = label ?? badge.label;
   const scaleAnim = useRef(new Animated.Value(animateOnMount ? 0 : 1)).current;
@@ -119,6 +122,16 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
           badge.rarity === 'cristal' && earned && !native && { shadowColor: glowColor as any },
         ]}
       >
+        {/* Indicateur musical — note en haut à droite */}
+        {!!musicUnlockTrackTitle && (
+          <View style={[
+            styles.musicBadge,
+            earned ? styles.musicBadgeEarned : styles.musicBadgeLocked,
+          ]}>
+            <Text style={styles.musicBadgeIcon}>🎵</Text>
+          </View>
+        )}
+
         {/* Emoji */}
         <Text style={[styles.emoji, { fontSize: emojiFontSize, opacity: emojiOpacity }]}>
           {isSecret ? '❓' : badge.emoji}
@@ -196,5 +209,26 @@ const styles = StyleSheet.create({
   earnedAt: {
     fontSize: 8,
     color: Colors.ui.textLight,
+  },
+  musicBadge: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  musicBadgeEarned: {
+    backgroundColor: Colors.forest.accent + 'CC',
+  },
+  musicBadgeLocked: {
+    backgroundColor: Colors.ui.border,
+  },
+  musicBadgeIcon: {
+    fontSize: 9,
+    lineHeight: 11,
   },
 });

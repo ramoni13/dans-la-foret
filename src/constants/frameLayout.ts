@@ -108,6 +108,14 @@ export function computeFrameLayout(screenW: number, screenH: number, insetsBotto
   /** Y du centre visuel de la barre haute (pour compteur graines) */
   const topBarCenterY = coinH / 2;
 
+  /**
+   * Y du bord supérieur d'une icône de taille SIZE_ICON = 36 dp
+   * alignée avec le bas du coin haut (plan chantier 2).
+   * Calcul : top = coinH - SIZE_ICON → le bas de l'icône affleure le bas du coin.
+   */
+  const SIZE_ICON = 36;
+  const iconTopY  = Math.max(0, coinH - SIZE_ICON);
+
   // ── Padding bas pour ScrollView (ne pas être caché par menu + bordure bas) ─
   const frameBottom = menuH70 + borderW;
 
@@ -121,6 +129,7 @@ export function computeFrameLayout(screenW: number, screenH: number, insetsBotto
     btnY, tapHalf,
     topBarH,
     topBarCenterY,
+    iconTopY,
     frameBottom,
   };
 }

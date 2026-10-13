@@ -12,6 +12,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Modal,
   Alert,
   Animated,
   Platform,
@@ -21,6 +22,7 @@ import { BonusId, BONUS_DEFINITIONS, BASE_BONUS_IDS, ADVANCED_BONUS_IDS } from '
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
+import { BADGE_MAP } from '../../constants/badges';
 import { BonusTutorialModal } from './BonusTutorialModal';
 
 const native = Platform.OS !== 'web';
@@ -34,6 +36,8 @@ interface HintOverlayProps {
   onActivateBonus: (bonusId: BonusId) => boolean;
   /** Bonus avancés débloqués via badges (instinct) */
   unlockedBonuses?: BonusId[];
+  /** Utilisations journalières restantes par bonus (chantier 4) */
+  dailyBonusUses?: Record<BonusId, number>;
   /** Timestamp (Date.now() + durée) quand le bonus highlight expire */
   highlightDeadline?: number | null;
   /** Timestamp (Date.now() + durée) quand le bonus instinct expire */
@@ -104,6 +108,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
   bonusDisabled,
   onActivateBonus,
   unlockedBonuses = [],
+  dailyBonusUses,
   highlightDeadline = null,
   instinctDeadline = null,
   highlightActive = false,
@@ -113,9 +118,13 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
   const t = useT();
   const dismissed = usePlayerStore(s => s.bonusTutorialDismissed);
   const dismissTutorial = usePlayerStore(s => s.dismissBonusTutorial);
+  const earnedBadges = usePlayerStore(s => s.earnedBadges);
+  const goldBadgeCount = earnedBadges.filter(id => BADGE_MAP[id]?.rarity === 'or').length;
 
   // Tutoriel modal state
   const [tutorialBonusId, setTutorialBonusId] = useState<BonusId | null>(null);
+  // Modale info bonus verrouillé
+  const [lockedInfoBonusId, setLockedInfoBonusId] = useState<BonusId | null>(null);
 
   const getDeadline = (bonusId: BonusId): number | null => {
     if (bonusId === 'highlight_valid_cells') return highlightDeadline;
@@ -146,9 +155,9 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
     // Bonus en cours → bloqué
     if (isCooldown(bonusId)) return;
 
-    // Bonus verrouillé
+    // Bonus verrouillé → modale informative
     if (def.requiresUnlock && !unlockedBonuses.includes(bonusId)) {
-      Alert.alert('Bonus verrouillé 🔒', 'Débloque 3 badges Or pour accéder au bonus Instinct.');
+      setLockedInfoBonusId(bonusId);
       return;
     }
 
@@ -157,12 +166,16 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
       return;
     }
 
-    if (seeds < def.cost) {
-      Alert.alert(
-        'Pas assez de graines 🌱',
-        `Ce bonus coûte ${def.cost} graines. Tu en as ${seeds}.`
-      );
-      return;
+    // Vérifier les utilisations journalières restantes (chantier 4)
+    if (!isPremium && dailyBonusUses) {
+      const remaining = dailyBonusUses[bonusId] ?? 0;
+      if (remaining <= 0) {
+        Alert.alert(
+          'Bonus épuisé',
+          `Tu as utilisé toutes tes utilisations journalières pour ce bonus. Reviens demain !`
+        );
+        return;
+      }
     }
 
     // ── Gardes de contexte ──────────────────────────────────
@@ -187,6 +200,8 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
     onActivateBonus(bonusId);
   };
 
+  // Les bonus avancés sont toujours visibles : grisés + 🔒 si non débloqués,
+  // actifs si débloqués. Tap sur le verrouillé → modale informative.
   const visibleBonusIds: BonusId[] = [
     ...BASE_BONUS_IDS,
     ...ADVANCED_BONUS_IDS,
@@ -205,11 +220,18 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
         {visibleBonusIds.map((bonusId) => {
           const def = BONUS_DEFINITIONS[bonusId];
           const alreadyUsed = bonusUsed.includes(def.id);
-          const canAfford = seeds >= def.cost;
           const locked = def.requiresUnlock && !unlockedBonuses.includes(bonusId);
           const cooldown = isCooldown(bonusId);
-          const disabled = bonusDisabled || !canAfford || locked || cooldown;
+          // Utilisations restantes (chantier 4) — ∞ si premium
+          const remainingUses = isPremium ? Infinity : (dailyBonusUses?.[bonusId] ?? def.dailyLimit);
+          const exhausted = !isPremium && remainingUses <= 0;
+          const disabled = bonusDisabled || exhausted || locked || cooldown;
           const dl = getDeadline(bonusId);
+
+          // Label utilisations : "∞" si premium, "X/5" sinon
+          const usesLabel = isPremium
+            ? '\u221e'
+            : `${remainingUses}/${def.dailyLimit}`;
 
           return (
             <View key={def.id} style={styles.bonusBtnWrapper}>
@@ -226,8 +248,8 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
                 disabled={cooldown}
               >
                 <Text style={styles.bonusIcon}>{locked ? '🔒' : def.icon}</Text>
-                <Text style={[styles.bonusCost, !canAfford && !locked && styles.bonusCostInsufficient]}>
-                  {locked ? '' : `${def.cost}🌱`}
+                <Text style={[styles.bonusCost, exhausted && !locked && styles.bonusCostInsufficient]}>
+                  {locked ? '' : usesLabel}
                 </Text>
               </TouchableOpacity>
 
@@ -242,6 +264,62 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
           <View style={styles.rightSlotWrapper}>{rightSlot}</View>
         )}
       </View>
+
+      {/* Modale info bonus verrouillé */}
+      {lockedInfoBonusId != null && (() => {
+        const lockedDef = BONUS_DEFINITIONS[lockedInfoBonusId];
+        return (
+          <Modal
+            transparent
+            animationType="fade"
+            visible
+            onRequestClose={() => setLockedInfoBonusId(null)}
+          >
+            <TouchableOpacity
+              style={styles.lockedModalOverlay}
+              activeOpacity={1}
+              onPress={() => setLockedInfoBonusId(null)}
+            >
+              <View style={styles.lockedModalCard}>
+                <Text style={styles.lockedModalIcon}>🔒</Text>
+                <Text style={styles.lockedModalTitle}>{lockedDef.label}</Text>
+                <Text style={styles.lockedModalDesc}>{lockedDef.description}</Text>
+                <View style={styles.lockedModalConditionBox}>
+                  <Text style={styles.lockedModalConditionLabel}>Condition de débloquage</Text>
+                  <Text style={styles.lockedModalConditionText}>
+                    Obtiens 3 badges Or pour accéder à ce bonus.
+                  </Text>
+                  <View style={styles.lockedModalProgress}>
+                    <Text style={styles.lockedModalProgressText}>
+                      Badges Or obtenus :
+                    </Text>
+                    <View style={styles.lockedModalProgressPills}>
+                      {[0, 1, 2].map(i => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.lockedModalProgressPill,
+                            i < goldBadgeCount && styles.lockedModalProgressPillFilled,
+                          ]}
+                        />
+                      ))}
+                      <Text style={styles.lockedModalProgressCount}>
+                        {goldBadgeCount}/3
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.lockedModalBtn}
+                  onPress={() => setLockedInfoBonusId(null)}
+                >
+                  <Text style={styles.lockedModalBtnText}>Compris</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        );
+      })()}
 
       {/* Modal tutoriel bonus */}
       {tutorialBonusId != null && (
@@ -336,6 +414,108 @@ const styles = StyleSheet.create({
   },
   bonusCostInsufficient: {
     color: '#F44336',
+  },
+  // ── Modale info bonus verrouillé ───────────────────────────
+  lockedModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  lockedModalCard: {
+    backgroundColor: '#FFF8EE',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  lockedModalIcon: {
+    fontSize: 40,
+  },
+  lockedModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#3B1E08',
+    textAlign: 'center',
+  },
+  lockedModalDesc: {
+    fontSize: 14,
+    color: '#5C3010',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  lockedModalConditionBox: {
+    backgroundColor: '#F5E6C8',
+    borderRadius: 12,
+    padding: 12,
+    width: '100%',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#D4A853',
+  },
+  lockedModalConditionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#A0622A',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  lockedModalConditionText: {
+    fontSize: 13,
+    color: '#5C3010',
+    lineHeight: 18,
+  },
+  lockedModalProgress: {
+    marginTop: 8,
+    gap: 6,
+  },
+  lockedModalProgressText: {
+    fontSize: 12,
+    color: '#A0622A',
+    fontWeight: '600',
+  },
+  lockedModalProgressPills: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  lockedModalProgressPill: {
+    width: 24,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E0C88A',
+    borderWidth: 1,
+    borderColor: '#D4A853',
+  },
+  lockedModalProgressPillFilled: {
+    backgroundColor: '#D4A853',
+    borderColor: '#B8860B',
+  },
+  lockedModalProgressCount: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#5C3010',
+    marginLeft: 2,
+  },
+  lockedModalBtn: {
+    marginTop: 4,
+    backgroundColor: '#5C3010',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+  },
+  lockedModalBtnText: {
+    color: '#FFF8EE',
+    fontWeight: '700',
+    fontSize: 14,
   },
   // ── Countdown pulsant superposé au bouton ──────────────────
   countdownOverlay: {

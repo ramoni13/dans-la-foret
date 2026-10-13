@@ -13,6 +13,7 @@ export const ELEMENT_SPRITES: Record<string, any> = {
   loup:       require('../../../../assets/elements/sprites/loup3D.png'),
   tas_buches: require('../../../../assets/elements/sprites/buches.png'),
   chalet:     require('../../../../assets/elements/sprites/chalet3D.png'),
+  arbre:      require('../../../../assets/elements/sprites/arbre3D.png'),
 };
 
 /** Retourne le sprite 3D si disponible, sinon l'icône pastille de l'ElementRegistry */

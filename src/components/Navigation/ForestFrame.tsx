@@ -117,14 +117,15 @@ function SeedsOverlay({ seeds, screenW, topBarCenterY }: {
 }
 
 // ── Bouton son ─────────────────────────────────────────────────────────────────
-function SoundButton({ topBarCenterY }: { topBarCenterY: number }) {
+// iconTopY : position Y du bord supérieur de l'icône (chantier 2 — aligné avec le bas du coin)
+function SoundButton({ iconTopY }: { iconTopY: number }) {
   const menuEnabled = useAudioStore(s => s.menuEnabled);
   const setMenu     = useAudioStore(s => s.setMenuEnabled);
   const SIZE = 36;
 
   return (
     <TouchableOpacity
-      style={[styles.soundBtn, { top: topBarCenterY - SIZE / 2, width: SIZE, height: SIZE }]}
+      style={[styles.soundBtn, { top: iconTopY, width: SIZE, height: SIZE }]}
       onPress={() => setMenu(!menuEnabled)}
       activeOpacity={0.8}
       accessibilityLabel={menuEnabled ? 'Couper le son' : 'Activer le son'}
@@ -142,7 +143,7 @@ export default function ForestFrame() {
   const segments  = useSegments() as string[];
   const activeTab = getActiveTab(segments);
   const seeds     = usePlayerStore(s => s.seeds);
-  const { backLabel, onBack } = useNavStore();
+  const { backLabel, onBack, pendingFriendChallenges, goalSlotsToFill } = useNavStore();
 
   const {
     coinW, coinH,
@@ -152,6 +153,7 @@ export default function ForestFrame() {
     btnY,
     tapHalf,
     topBarCenterY,
+    iconTopY,
   } = computeFrameLayout(screenW, screenH, insets.bottom);
 
   // Bordures H : de coinW/2 à coinW/2 (commence et finit au centre de chaque coin)
@@ -312,7 +314,7 @@ export default function ForestFrame() {
 
       {/* ── OVERLAYS (graines + son) ──────────────────────────────────────── */}
       <SeedsOverlay seeds={seeds} screenW={screenW} topBarCenterY={topBarCenterY} />
-      <SoundButton topBarCenterY={topBarCenterY} />
+      <SoundButton iconTopY={iconTopY} />
 
       {/* ── Bouton Retour (onglet profile) ───────────────────────────────── */}
       {backLabel != null && onBack != null && activeTab === 'profile' && (() => {
@@ -322,7 +324,7 @@ export default function ForestFrame() {
             onPress={onBack}
             activeOpacity={0.8}
             style={[styles.backCircleBtn, {
-              top:    topBarCenterY - SIZE / 2,
+              top:    iconTopY,
               left:   0,
               width:  SIZE,
               height: SIZE,
@@ -345,6 +347,12 @@ export default function ForestFrame() {
         const btnX     = menuLeft + btn.xC * menuW70;
         const isActive = activeTab === btn.key;
 
+        const hasBadge =
+          (btn.key === 'challenge' && pendingFriendChallenges > 0) ||
+          (btn.key === 'profile'   && goalSlotsToFill > 0);
+        const badgeCount =
+          btn.key === 'challenge' ? pendingFriendChallenges : goalSlotsToFill;
+
         return (
           <View
             key={btn.key}
@@ -358,12 +366,20 @@ export default function ForestFrame() {
               borderRadius:   tapHalf,
               alignItems:     'center',
               justifyContent: 'center',
-
             }}
           >
             {isActive && (
               <View pointerEvents="none" style={styles.activeDotWrapper}>
                 <ActiveDot />
+              </View>
+            )}
+            {hasBadge && (
+              <View pointerEvents="none" style={styles.badgeWrapper}>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {badgeCount > 9 ? '9+' : String(badgeCount)}
+                  </Text>
+                </View>
               </View>
             )}
             <TouchableOpacity
@@ -401,6 +417,28 @@ const styles = StyleSheet.create({
     left:       0,
     right:      0,
     alignItems: 'center',
+  },
+  badgeWrapper: {
+    position: 'absolute',
+    top:      0,
+    right:    0,
+  },
+  badge: {
+    minWidth:        16,
+    height:          16,
+    borderRadius:    8,
+    backgroundColor: '#E53935',
+    borderWidth:     1.5,
+    borderColor:     '#FFF',
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize:   9,
+    fontWeight: '800',
+    color:      '#FFF',
+    lineHeight: 12,
   },
   seedsText: {
     fontSize:         14,
