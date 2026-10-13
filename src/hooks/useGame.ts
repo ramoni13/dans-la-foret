@@ -53,7 +53,7 @@ export function useGame() {
     if (game.startTime && !game.isVictory) {
       timerRef.current = setInterval(() => {
         game.tick(Date.now() - (game.startTime ?? 0));
-      }, 100);
+      }, 1000); // 1s : précision suffisante pour l'affichage MM:SS, évite les violations setInterval sur web
     }
 
     return () => {
