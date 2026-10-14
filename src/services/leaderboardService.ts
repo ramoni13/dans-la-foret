@@ -30,6 +30,7 @@ export interface LeaderboardEntry {
   username: string;
   level: number;               // 1-15
   badgeCount: number;          // badges non-secrets
+  badgeScore: number;          // score pondéré par rareté (bois=1, pierre=3, or=6, cristal=12)
   seeds: number;
   completedCount: number;      // total défis complétés
   score: number;               // score composite pour tri
@@ -58,6 +59,7 @@ export async function upsertLeaderboardEntry(
   completedCount: number,
   badgeCount: number,
   seeds: number,
+  badgeScore = 0,
 ): Promise<void> {
   try {
     const level = computePlayerLevel(completedCount);
@@ -68,6 +70,7 @@ export async function upsertLeaderboardEntry(
       username,
       level,
       badgeCount,
+      badgeScore,
       seeds,
       completedCount,
       score,

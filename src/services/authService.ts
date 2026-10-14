@@ -141,7 +141,7 @@ export async function loginWithGoogle(): Promise<User> {
   if (!existing) {
     await createPlayer(
       cred.user.uid,
-      cred.user.displayName ?? 'Joueur'
+      cred.user.displayName ?? 'Joueur',
     );
   }
   return cred.user;

@@ -42,6 +42,8 @@ export interface PlayerProfile {
     friendPlayed: number;
     avgResolutionMs: number;
     totalResolutionCount: number;
+    // ── Badges vitesse ──────────────────────────────────
+    speedBadgeHits?: Record<string, number>;
   };
   isPremium: boolean;
   createdAt?: any;
@@ -57,8 +59,9 @@ export interface PlayerProfile {
   // ── Mode ONF — Grille Forestière 4×4 ────────────────
   onfSolvedCount: number;              // nb de grilles 4×4 résolues
   completedOnfChallengeIds: string[]; // IDs des défis ONF terminés (pour ne pas reproposer)
-  // ── Badges : objectifs actifs (chantier 3) ───────────
+  // ── Badges : objectifs actifs + compteurs dédiés ────
   activeBadgeGoals?: string[];
+  goalCounters?: Record<string, number>;
 }
 
 // ── Calcul du niveau courant d'un joueur ──────────────────────────────────────
@@ -85,7 +88,7 @@ function migrateProfile(raw: any): PlayerProfile {
   return {
     userId:             raw.userId ?? '',
     username:           raw.username ?? 'Joueur',
-    seeds:              raw.seeds ?? 3,
+    seeds:              raw.seeds ?? 0,
     completedChallenges: raw.completedChallenges ?? [],
     isPremium:          raw.isPremium ?? false,
     createdAt:          raw.createdAt,
@@ -108,6 +111,7 @@ function migrateProfile(raw: any): PlayerProfile {
       friendPlayed:             raw.stats?.friendPlayed ?? 0,
       avgResolutionMs:          raw.stats?.avgResolutionMs ?? 0,
       totalResolutionCount:     raw.stats?.totalResolutionCount ?? 0,
+      speedBadgeHits:           raw.stats?.speedBadgeHits ?? {},
     },
     earnedBadges:    raw.earnedBadges ?? [],
     badgeShowcase:   raw.badgeShowcase ?? [],
@@ -118,6 +122,7 @@ function migrateProfile(raw: any): PlayerProfile {
     onfSolvedCount: raw.onfSolvedCount ?? raw.onf4x4SolvedCount ?? 0,
     completedOnfChallengeIds: raw.completedOnfChallengeIds ?? [],
     activeBadgeGoals: raw.activeBadgeGoals ?? [],
+    goalCounters:     raw.goalCounters     ?? {},
   };
 }
 
@@ -157,7 +162,7 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
   const profile: PlayerProfile = {
     userId,
     username,
-    seeds: 3,
+    seeds: 0,
     completedChallenges: [],
     stats: {
       totalSolved: 0,
