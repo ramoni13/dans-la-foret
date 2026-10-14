@@ -20,6 +20,7 @@ import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { ONF_4X4_LEVEL_UNLOCK } from '../../src/constants/onf';
 import { usePlayerStore } from '../../src/store/playerStore';
+import { useNavStore } from '../../src/store/navStore';
 import { auth } from '../../src/services/firebase';
 import { getDailyDateString, subscribeDailyLeaderboard, DailyResult } from '../../src/services/dailyChallengeService';
 
@@ -164,13 +165,9 @@ function LevelsScreen({
     <View style={StyleSheet.absoluteFill}>
       <BgImage />
 
-      {/* Header avec bouton retour */}
+      {/* Header titre */}
       <View style={[styles.levelsHeader, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={styles.backBtnText}>← Retour</Text>
-        </TouchableOpacity>
         <Text style={styles.levelsHeaderTitle}>Tous les défis solo</Text>
-        <View style={{ width: 80 }} />
       </View>
 
       <ScrollView
@@ -326,6 +323,17 @@ export default function HomeScreen() {
   const { authReady, isAuthenticated } = player;
 
   const [showLevels, setShowLevels] = useState(false);
+  const { showBack, hideBack } = useNavStore();
+
+  // Synchronise le bouton Retour du ForestFrame avec l'écran niveaux
+  useEffect(() => {
+    if (showLevels) {
+      showBack(() => setShowLevels(false));
+    } else {
+      hideBack();
+    }
+    return () => { hideBack(); };
+  }, [showLevels]);
 
   // ── Records mondiaux ───────────────────────────────────────────────────────
   const [worldRecords, setWorldRecords] = useState<Map<string, WorldRecord>>(new Map());
@@ -676,21 +684,11 @@ const styles = StyleSheet.create({
 
   // ── Sous-écran niveaux ──────────────────────────────────────────────────────
   levelsHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
-  backBtn: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  backBtnText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   levelsHeaderTitle: {
     fontSize: 18,
     fontWeight: '800',

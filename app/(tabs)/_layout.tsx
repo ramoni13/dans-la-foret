@@ -14,7 +14,7 @@ import { onAuthChange } from '../../src/services/authService';
 import { getPlayer } from '../../src/services/playerService';
 import { updateDailyStreak } from '../../src/services/badgeService';
 import { getDailyDateString, sealDailyRecord } from '../../src/services/dailyChallengeService';
-import { auth, db } from '../../src/services/firebase';
+import { db } from '../../src/services/firebase';
 import {
   collection,
   query,
@@ -35,6 +35,10 @@ export default function TabsLayout() {
   // Verrou anti-boucle : une seule redirection par changement d'état auth
   const redirectedRef = useRef(false);
 
+  // Verrou : checkDailyLogin ne s'exécute qu'une seule fois par session,
+  // après que l'état auth et la restauration cloud soient connus.
+  const dailyLoginCheckedRef = useRef(false);
+
   // ── Un seul abonnement Firebase Auth pour toute l'app ──────────────────────
   useEffect(() => {
     const unsub = onAuthChange(async (firebaseUser) => {
@@ -47,9 +51,33 @@ export default function TabsLayout() {
       player.setAuthState(true, authenticated);
 
       if (authenticated) {
-        // Restaurer le profil Firestore
+        // Restaurer le profil Firestore AVANT de vérifier la connexion quotidienne
         const profile = await getPlayer(firebaseUser!.uid);
         if (profile) player.restoreFromCloud(profile);
+      }
+
+      // Vérifier la connexion quotidienne après que le profil soit restauré,
+      // seulement une fois par session (evite le double-déclenchement et
+      // le faux positif au premier lancement / inscription).
+      if (!dailyLoginCheckedRef.current) {
+        dailyLoginCheckedRef.current = true;
+
+        const isNewDay = player.checkDailyLogin();
+        if (isNewDay) {
+          player.addSeeds(3);
+
+          const uid    = firebaseUser?.uid;
+          const isAnon = firebaseUser?.isAnonymous ?? true;
+          if (uid && !isAnon) {
+            const state = usePlayerStore.getState();
+            updateDailyStreak(uid, state.dailyStreak, state.lastPlayedDate).catch(() => {});
+          }
+
+          // Sceller le record du jour précédent → crédite dailyWins au gagnant
+          const yesterday = new Date();
+          yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+          sealDailyRecord(getDailyDateString(yesterday)).catch(() => {});
+        }
       }
     });
     return unsub;
@@ -82,26 +110,6 @@ export default function TabsLayout() {
 
     prevAuthenticatedRef.current = authenticated;
   }, [user, segments]);
-
-  // ── Connexion quotidienne ──────────────────────────────────────────────────
-  useEffect(() => {
-    const isNewDay = player.checkDailyLogin();
-    if (isNewDay) {
-      player.addSeeds(3);
-
-      const uid    = auth.currentUser?.uid;
-      const isAnon = auth.currentUser?.isAnonymous ?? true;
-      if (uid && !isAnon) {
-        const state = usePlayerStore.getState();
-        updateDailyStreak(uid, state.dailyStreak, state.lastPlayedDate).catch(() => {});
-      }
-
-      // Sceller le record du jour précédent → crédite dailyWins au gagnant
-      const yesterday = new Date();
-      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-      sealDailyRecord(getDailyDateString(yesterday)).catch(() => {});
-    }
-  }, []); // Une seule fois au montage
 
   // ── Badge objectifs libres — badge rouge sur l'onglet Profil ─────────────
   useEffect(() => {

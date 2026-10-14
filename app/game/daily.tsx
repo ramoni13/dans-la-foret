@@ -225,7 +225,7 @@ export default function DailyGameScreen() {
   const [leaderboard, setLeaderboard] = useState<DailyResult[]>([]);
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
   const [seedsEarned, setSeedsEarned] = useState(0);
-  const seedsBeforeGainRef = useRef(0);
+  const [seedsBeforeGain, setSeedsBeforeGain] = useState(0);
   const [briefingDone, setBriefingDone] = useState(false);
   const [isNewDailyRecord, setIsNewDailyRecord] = useState(false);
   const [prevDailyRecordHolder, setPrevDailyRecordHolder] = useState<string | null>(null);
@@ -375,6 +375,7 @@ export default function DailyGameScreen() {
   // -- Validation --
   const handleValidate = useCallback(() => {
     if (game.dailyValidationUsed) return;
+    setSeedsBeforeGain(usePlayerStore.getState().seeds);
     const result = game.validateChallenge();
 
     // Echec du daily = pas de retry
@@ -430,7 +431,8 @@ export default function DailyGameScreen() {
 
     const storeState = usePlayerStore.getState();
     const reward = calculateDailyReward(rank, leaderboard.length + 1, storeState.dailyChallengeStreak);
-    seedsBeforeGainRef.current = usePlayerStore.getState().seeds;
+    // seedsBeforeGain a été capturé dans handleValidate (state React) — déjà disponible
+    // dans VictoryModal dès son premier rendu.
     setSeedsEarned(reward.total);
     player.addSeeds(reward.total);
 
@@ -446,10 +448,22 @@ export default function DailyGameScreen() {
       rank,
       earnedBadges: storeState.earnedBadges,
     };
+    const activeGoalsBeforeDaily = storeState.activeBadgeGoals;
     const newBadges = evaluateDailyBadges(dailyCtx);
     if (newBadges.length > 0) {
       player.awardBadges(newBadges);
       setBadgeQueue(newBadges);
+    }
+
+    // Auto-avance des objectifs si activée
+    // Détecter les objectifs actifs désormais obtenus (quelle que soit la source)
+    const allEarnedNowDaily = usePlayerStore.getState().earnedBadges;
+    const completedGoalIdsDaily = activeGoalsBeforeDaily.filter(id => allEarnedNowDaily.includes(id));
+    if (completedGoalIdsDaily.length > 0) {
+      const { autoGoal } = usePlayerStore.getState();
+      if (autoGoal) {
+        player.advanceGoalAuto(completedGoalIdsDaily, allEarnedNowDaily);
+      }
     }
 
     // 4. Soumission Firestore en arriere-plan
@@ -612,6 +626,7 @@ export default function DailyGameScreen() {
           visible={game.isVictory}
           elapsedTime={game.elapsedTime}
           seedsEarned={seedsEarned}
+          seedsBeforeGain={seedsBeforeGain}
           difficulty={'niveau_15' as any}
           challengeNumber={0}
           confettiPieces={confettiPieces}

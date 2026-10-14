@@ -30,6 +30,7 @@ import { useAudioStore } from '../../src/store/audioStore';
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { VictoryModal } from '../../src/components/Game/VictoryModal';
+import { OnfBriefingModal } from '../../src/components/LevelBriefing/OnfBriefingModal';
 import { useGame } from '../../src/hooks/useGame';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
@@ -79,10 +80,12 @@ export default function ONFGameScreen() {
   const [loading, setLoading] = useState(true);
   const [allCompleted, setAllCompleted] = useState(false);
   const [seedsEarned, setSeedsEarned] = useState(0);
-  const seedsBeforeGainRef = useRef(0);
+  const [seedsBeforeGain, setSeedsBeforeGain] = useState(0);
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
   /** Violations ligne/colonne calculées après la validation */
   const [rowColViolationCells, setRowColViolationCells] = useState<number[]>([]);
+  /** Briefing affiché avant la première partie ONF */
+  const [briefingDone, setBriefingDone] = useState(player.hasSeenOnfBriefing);
 
   const badgesEvaluatedRef = useRef(false);
   const confettiPieces = useConfetti(game.isVictory);
@@ -117,7 +120,10 @@ export default function ONFGameScreen() {
       game.loadChallenge(result.challenge);
       // Mode ONF : aucun bonus disponible
       game.setBonusDisabled(true);
-      game.startTimer(0);
+      // Le timer démarre après la fermeture du briefing (ou immédiatement si déjà vu)
+      if (usePlayerStore.getState().hasSeenOnfBriefing) {
+        game.startTimer(0);
+      }
       setLoading(false);
     }, 16);
 
@@ -127,6 +133,13 @@ export default function ONFGameScreen() {
   useEffect(() => {
     pickAndLoad();
   }, []);
+
+  // ── Fermeture du briefing ─────────────────────────────────
+  const handleBriefingClose = useCallback(() => {
+    player.markOnfBriefingSeen();
+    setBriefingDone(true);
+    setTimeout(() => game.startTimer(0), 50);
+  }, [player, game]);
 
   // ── Données dérivées ──────────────────────────────────────
   const challenge = game.challenge;
@@ -171,6 +184,7 @@ export default function ONFGameScreen() {
   // ── Validation ────────────────────────────────────────────
   const handleValidate = useCallback(() => {
     if (!challenge || !boardDef) return;
+    setSeedsBeforeGain(usePlayerStore.getState().seeds);
 
     // 1. Construire le plateau complet (cases fixes + joueur)
     const fullBoard = game.playerBoard.map((el, i) => {
@@ -209,7 +223,8 @@ export default function ONFGameScreen() {
     badgesEvaluatedRef.current = true;
 
     const earned = calculateOnfReward(game.elapsedTime);
-    seedsBeforeGainRef.current = usePlayerStore.getState().seeds;
+    // seedsBeforeGain a été capturé dans handleValidate (state React) — déjà disponible
+    // dans VictoryModal dès son premier rendu.
     setSeedsEarned(earned);
     player.addSeeds(earned);
 
@@ -399,6 +414,7 @@ export default function ONFGameScreen() {
           visible={game.isVictory}
           elapsedTime={game.elapsedTime}
           seedsEarned={seedsEarned}
+          seedsBeforeGain={seedsBeforeGain}
           difficulty={'niveau_1' as any}
           challengeNumber={0}
           confettiPieces={confettiPieces}
@@ -416,6 +432,14 @@ export default function ONFGameScreen() {
           }}
         />
       </View>
+
+      {/* ── Briefing ONF (première partie uniquement) ── */}
+      {challenge && !briefingDone && (
+        <OnfBriefingModal
+          challenge={challenge}
+          onClose={handleBriefingClose}
+        />
+      )}
     </GestureHandlerRootView>
   );
 }

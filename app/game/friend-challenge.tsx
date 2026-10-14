@@ -142,6 +142,7 @@ function OpponentResultModal({
   myTime,
   challengerTime,
   iWon,
+  seedsBeforeGain,
   onClose,
   confettiPieces: _confetti,
 }: {
@@ -149,6 +150,7 @@ function OpponentResultModal({
   myTime: number;
   challengerTime: number;
   iWon: boolean;
+  seedsBeforeGain?: number;
   onClose: () => void;
   confettiPieces: any[];
 }) {
@@ -156,18 +158,20 @@ function OpponentResultModal({
 
   // ── Compteur de graines animé ────────────────────────────────────────────
   // totalSeeds = vrai total APRÈS gain (addSeeds déjà appelé quand la modal s'ouvre)
-  // displayedSeeds part de (totalSeeds - seedsEarned) et monte vers totalSeeds
-  // une unité à la fois, synchronisé avec chaque graine qui arrive
+  // Si seedsBeforeGain est fourni, on l'utilise comme point de départ de l'animation.
+  // Sinon, fallback sur totalSeeds - seedsEarned.
   const totalSeeds = usePlayerStore(s => s.seeds);
   const seedsEarned = iWon ? CHALLENGE_WINNER_SEEDS : 0;
-  const [displayedSeeds, setDisplayedSeeds] = useState(totalSeeds - seedsEarned);
+  const startSeeds = iWon && seedsBeforeGain !== undefined ? seedsBeforeGain : (totalSeeds - seedsEarned);
+  const [displayedSeeds, setDisplayedSeeds] = useState(startSeeds);
   const [displayedGain, setDisplayedGain]   = useState(seedsEarned);
   const [animDone, setAnimDone]             = useState(false);
   const arrivedCount = useRef(0);
 
   useEffect(() => {
     if (visible) {
-      setDisplayedSeeds(totalSeeds - seedsEarned);
+      const start = iWon && seedsBeforeGain !== undefined ? seedsBeforeGain : (totalSeeds - seedsEarned);
+      setDisplayedSeeds(start);
       setDisplayedGain(seedsEarned);
       setAnimDone(false);
       arrivedCount.current = 0;
@@ -406,6 +410,8 @@ export default function FriendChallengeScreen() {
   const [opponentWon, setOpponentWon] = useState<boolean | null>(null);
   const [showAbandonModal, setShowAbandonModal] = useState(false);
   const confettiPieces = useConfetti(showResult);
+  // Total de graines AVANT le gain — pour l'animation de OpponentResultModal
+  const [seedsBeforeGain, setSeedsBeforeGain] = useState(0);
 
   useEffect(() => {
     if (game.isVictory && challenge) {
@@ -434,10 +440,11 @@ export default function FriendChallengeScreen() {
 
         // Récompense : 15 graines au vainqueur
         if (iWon) {
+          setSeedsBeforeGain(usePlayerStore.getState().seeds);
           player.addSeeds(CHALLENGE_WINNER_SEEDS);
           const currentUser = auth.currentUser;
           if (currentUser && !currentUser.isAnonymous) {
-            updateSeeds(params.opponentUid!, player.seeds + CHALLENGE_WINNER_SEEDS).catch(() => {});
+            updateSeeds(params.opponentUid!, usePlayerStore.getState().seeds).catch(() => {});
           }
         }
       } catch {
@@ -474,6 +481,11 @@ export default function FriendChallengeScreen() {
       if (isNewFriend && playerState.activeBadgeGoals.includes('social_poignee')) {
         if (!playerState.earnedBadges.includes('social_poignee')) {
           player.awardBadges(['social_poignee']);
+          // Auto-avance si activée — passer earnedBadges post-awardBadges pour éviter stale state
+          const { autoGoal, earnedBadges: earnedAfterSocial } = usePlayerStore.getState();
+          if (autoGoal) {
+            player.advanceGoalAuto(['social_poignee'], earnedAfterSocial);
+          }
         }
       }
     } catch {
@@ -600,6 +612,7 @@ export default function FriendChallengeScreen() {
             myTime={game.elapsedTime}
             challengerTime={challengerTime}
             iWon={opponentWon}
+            seedsBeforeGain={seedsBeforeGain}
             onClose={handleClose}
             confettiPieces={confettiPieces}
           />

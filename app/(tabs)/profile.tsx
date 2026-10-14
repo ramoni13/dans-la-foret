@@ -40,13 +40,14 @@ import {
   onAuthChange,
   sendPasswordReset,
 } from '../../src/services/authService';
+import { getPlayer, upsertPlayer } from '../../src/services/playerService';
 import { BadgeCollection } from '../../src/components/Badges/BadgeCollection';
-import { BadgeUnlockProgress } from '../../src/components/Badges/BadgeUnlockProgress';
 import { ActiveGoalCard } from '../../src/components/Badges/ActiveGoalCard';
 import { BadgeGoalPickerModal } from '../../src/components/Badges/BadgeGoalPickerModal';
 import { LeaderboardScreen } from '../../src/components/Leaderboard/LeaderboardScreen';
 import { MusicPanel } from '../../src/components/Audio/MusicPanel';
 import { getBadgeProgress, ELIGIBLE_GOAL_BADGE_IDS, DEFAULT_BADGE_GOALS } from '../../src/core/engine/badgeEngine';
+import { AdminCleanModal } from '../../src/components/Admin/AdminCleanModal';
 
 // ── Types ───────────────────────────────────────────────────────────────────────
 type ActiveSection = 'hub' | 'stats' | 'badges' | 'classement' | 'reglages';
@@ -73,6 +74,9 @@ export default function ProfileScreen() {
 
   // ── Modal sélection objectifs badges (chantier 3) ────────────────────────────
   const [showGoalPicker, setShowGoalPicker] = useState(false);
+
+  // ── Modal admin nettoyage base (Ramoni uniquement) ───────────────────────────
+  const [showAdminClean, setShowAdminClean] = useState(false);
 
   // ── Bouton Retour dans la barre bois haute (via ForestFrame) ────────────────
   const goHub = React.useCallback(() => setActiveSection('hub'), []);
@@ -133,6 +137,8 @@ export default function ProfileScreen() {
     : null;
 
   // Contexte partiel pour getBadgeProgress (objectifs actifs — hors partie en cours)
+  // failCount = -1 signifie "hors-partie" : les badges qui dépendent de failCount
+  // (ex. precision_pousse) affichent 0/1 et non 1/1 par défaut.
   const partialGameCtx = {
     challengeId:              '',
     levelId:                  `niveau_${player.currentLevel}`,
@@ -141,7 +147,7 @@ export default function ProfileScreen() {
     elapsedMs:                0,
     estimatedDurationMs:      0,
     bonusUsed:                [],
-    failCount:                0,
+    failCount:                -1,
     noErrorStreak:            player.stats.noErrorStreak,
     dailyStreak:              player.dailyStreak,
     earnedBadges:             player.earnedBadges,
@@ -154,6 +160,10 @@ export default function ProfileScreen() {
     playedAt:                 new Date(),
     sameChallengePlays:       player.stats.sameChallengePlays,
     seasonalChallengesPlayed: player.stats.seasonalChallengesPlayed,
+    improvedChallengesCount:  player.stats.improvedChallengesCount,
+    speedBadgeHits:           player.stats.speedBadgeHits,
+    activeBadgeGoals:         player.activeBadgeGoals,
+    goalCounters:             player.goalCounters,
     isWorldRecord:            false,
     isFirstRecord:            false,
     rank:                     undefined as any,
@@ -493,7 +503,18 @@ export default function ProfileScreen() {
 
           {/* ── Objectifs actifs ──────────────────────────────────────────── */}
           <View style={goalStyles.goalSection}>
-            <Text style={goalStyles.goalTitle}>Mes objectifs</Text>
+            <View style={goalStyles.goalHeader}>
+              <Text style={goalStyles.goalTitle}>Mes objectifs</Text>
+              <View style={goalStyles.autoRow}>
+                <Text style={goalStyles.autoLabel}>Choix automatique</Text>
+                <Switch
+                  value={player.autoGoal}
+                  onValueChange={player.setAutoGoal}
+                  trackColor={{ false: Colors.ui.border, true: Colors.forest.medium }}
+                  thumbColor="#fff"
+                />
+              </View>
+            </View>
 
             <View style={goalStyles.goalList}>
               {/* 3 slots fixes : actif ou vide */}
@@ -532,13 +553,6 @@ export default function ProfileScreen() {
             earnedBadges={player.earnedBadges}
             onBadgePress={() => {}}
           />
-          <View style={[styles.section, { marginTop: 16 }]}>
-            <BadgeUnlockProgress
-              earnedBadges={player.earnedBadges}
-              unlockedBonuses={player.unlockedBonuses as string[]}
-              unlockedThemes={player.unlockedThemes}
-            />
-          </View>
 
           {/* ── Bouton dev Ramoni uniquement ── */}
           {player.username === 'Ramoni' && (
@@ -557,7 +571,24 @@ export default function ProfileScreen() {
           visible={showGoalPicker}
           earnedBadges={player.earnedBadges}
           currentGoals={player.activeBadgeGoals}
-          onConfirm={(ids) => player.setActiveBadgeGoals(ids)}
+          onConfirm={(ids) => {
+            player.setActiveBadgeGoals(ids);
+            // Persister immédiatement dans Firestore (goalCounters remis à 0 dans setActiveBadgeGoals)
+            const uid = auth.currentUser?.uid;
+            const isAnon = auth.currentUser?.isAnonymous ?? true;
+            if (uid && !isAnon) {
+              const stateAfter = usePlayerStore.getState();
+              getPlayer(uid).then(profile => {
+                if (profile) {
+                  upsertPlayer({
+                    ...profile,
+                    activeBadgeGoals: stateAfter.activeBadgeGoals,
+                    goalCounters:     stateAfter.goalCounters,
+                  }).catch(() => {});
+                }
+              }).catch(() => {});
+            }
+          }}
           onClose={() => setShowGoalPicker(false)}
         />
       </View>
@@ -622,15 +653,29 @@ export default function ProfileScreen() {
             />
           </View>
 
+          {/* Nettoyer la base — Ramoni uniquement */}
+          {player.username === 'Ramoni' && (
+            <>
+              <TouchableOpacity
+                style={devStyles.adminCleanBtn}
+                onPress={() => setShowAdminClean(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={devStyles.adminCleanBtnText}>🧹 Nettoyer la base</Text>
+              </TouchableOpacity>
+              <AdminCleanModal
+                visible={showAdminClean}
+                onClose={() => setShowAdminClean(false)}
+              />
+            </>
+          )}
+
           {/* Déconnexion */}
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
             <Text style={styles.logoutBtnText}>🚪 Se déconnecter</Text>
           </TouchableOpacity>
 
-          {/* Réinitialisation */}
-          <TouchableOpacity style={styles.resetBtn} onPress={handleReset} activeOpacity={0.7}>
-            <Text style={styles.resetBtnText}>🗑️ Réinitialiser la progression</Text>
-          </TouchableOpacity>
+
         </ScrollView>
       </View>
     );
@@ -997,8 +1042,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F4433640',
-    backgroundColor: '#F4433608',
+    borderColor: '#F4433660',
+    backgroundColor: Colors.ui.card,
   },
   logoutBtnText: { fontSize: 14, color: '#F44336', fontWeight: '600' },
   resetBtn: {
@@ -1100,10 +1145,29 @@ const goalStyles = StyleSheet.create({
     borderColor: Colors.ui.border,
     marginBottom: 16,
   },
+  goalHeader: {
+    gap: 8,
+  },
   goalTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: Colors.forest.dark,
+  },
+  autoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    backgroundColor: Colors.ui.background,
+    borderRadius: 10,
+    paddingLeft: 10,
+    paddingRight: 6,
+  },
+  autoLabel: {
+    fontSize: 13,
+    color: Colors.ui.textLight,
+    fontWeight: '500',
   },
   goalEmpty: {
     fontSize: 13,
@@ -1179,11 +1243,24 @@ const devStyles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1.5,
     borderColor: '#c0392b',
-    backgroundColor: '#c0392b18',
+    backgroundColor: Colors.ui.card,
   },
   resetBadgesBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#c0392b',
+  },
+  adminCleanBtn: {
+    alignItems: 'center',
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#7B1FA260',
+    backgroundColor: Colors.ui.card,
+  },
+  adminCleanBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#7B1FA2',
   },
 });
