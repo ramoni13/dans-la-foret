@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // CATALOGUE DES BADGES — Dans la Forêt
 // 41 badges au total : 36 standard + 5 secrets
 // ============================================================
@@ -499,6 +499,78 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     translations: { en: { label: 'Daily Champion', description: 'Finish #1 worldwide on a daily challenge' } },
   },
 ];
+
+// ── Système de rangs forestiers ───────────────────────────────────────────────
+
+/** Valeur en points de chaque rareté */
+export const RARITY_POINTS: Record<BadgeRarity, number> = {
+  bois:    1,
+  pierre:  3,
+  or:      6,
+  cristal: 12,
+};
+
+/** Score maximum atteignable (9×1 + 16×3 + 14×6 + 8×12 = 237) */
+export const MAX_BADGE_SCORE = 237;
+
+export interface RankDefinition {
+  /** Identifiant unique du rang */
+  id: string;
+  /** Intitulé du métier (FR) */
+  label: string;
+  /** Intitulé anglais */
+  labelEn: string;
+  /** Emoji représentant le rang */
+  emoji: string;
+  /** Score minimum requis */
+  minScore: number;
+}
+
+export const RANK_DEFINITIONS: RankDefinition[] = [
+  { id: 'promeneur',          label: 'Promeneur',              labelEn: 'Wanderer',            emoji: '🚶', minScore: 0   },
+  { id: 'bucheron',           label: 'Bûcheron',               labelEn: 'Lumberjack',          emoji: '🪓', minScore: 5   },
+  { id: 'sylviculteur',       label: 'Sylviculteur',           labelEn: 'Silviculturist',      emoji: '🌱', minScore: 20  },
+  { id: 'garde_forestier',    label: 'Garde Forestier',        labelEn: 'Forest Ranger',       emoji: '🌲', minScore: 50  },
+  { id: 'technicien_onf',     label: 'Technicien ONF',         labelEn: 'ONF Technician',      emoji: '🗺️', minScore: 100 },
+  { id: 'ingenieur_forets',   label: 'Ingénieur des Forêts',   labelEn: 'Forest Engineer',     emoji: '🏔️', minScore: 160 },
+  { id: 'esprit_foret',       label: 'Esprit de la Forêt',     labelEn: 'Spirit of the Forest',emoji: '✨', minScore: 237 },
+];
+
+/**
+ * Calcule le score de badge pondéré par rareté pour un ensemble de badges obtenus.
+ * Bois=1pt, Pierre=3pts, Or=6pts, Cristal=12pts
+ */
+export function getBadgeScore(earnedBadgeIds: string[]): number {
+  const earnedSet = new Set(earnedBadgeIds);
+  return BADGE_DEFINITIONS.reduce((total, badge) => {
+    if (earnedSet.has(badge.id)) {
+      return total + RARITY_POINTS[badge.rarity];
+    }
+    return total;
+  }, 0);
+}
+
+/**
+ * Retourne le rang correspondant à un score donné.
+ * Toujours le rang le plus élevé dont le minScore est ≤ score.
+ */
+export function getRank(score: number): RankDefinition {
+  let current = RANK_DEFINITIONS[0];
+  for (const rank of RANK_DEFINITIONS) {
+    if (score >= rank.minScore) current = rank;
+  }
+  return current;
+}
+
+/**
+ * Retourne le rang suivant (null si déjà au rang maximum).
+ */
+export function getNextRank(score: number): RankDefinition | null {
+  for (const rank of RANK_DEFINITIONS) {
+    if (score < rank.minScore) return rank;
+  }
+  return null;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
