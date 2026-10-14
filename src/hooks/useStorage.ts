@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePlayerStore } from '../store/playerStore';
 import { useAudioStore } from '../store/audioStore';
 import { Lang, getSystemLocale } from '../i18n/locale';
+import { DEFAULT_BADGE_GOALS } from '../core/engine/badgeEngine';
 
 const STORAGE_KEY = 'dlf_player_v1';
 const AUDIO_STORAGE_KEY = 'dlf_audio_v1';
@@ -77,6 +78,10 @@ interface PersistedPlayerState {
   onfSolvedCount: number;
   // Amis défiés (pour badge social_poignee / social_cirque)
   challengedFriendIds: string[];
+  // Objectifs actifs + préférences
+  activeBadgeGoals: string[];
+  goalCounters: Record<string, number>;
+  autoGoal: boolean;
 }
 
 /** Extrait le sous-ensemble persistable depuis l'état Zustand courant */
@@ -104,6 +109,9 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     friendNotifBadgeEnabled:   state.friendNotifBadgeEnabled,
     onfSolvedCount:            state.onfSolvedCount,
     challengedFriendIds:       state.challengedFriendIds,
+    activeBadgeGoals:          state.activeBadgeGoals,
+    goalCounters:              state.goalCounters,
+    autoGoal:                  state.autoGoal,
   };
 }
 
@@ -115,9 +123,13 @@ export function useStorage() {
   // ── Chargement au démarrage ──────────────────────────────────────────────────
   // S'exécute UNE SEULE FOIS au montage — pas de dépendances variables.
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
+    // ── Chargement séquencé : player d'abord, puis audio, puis sync badges ──
+    // Les deux lectures sont lancées en parallèle mais syncOwnedFromBadges
+    // est appelé APRÈS hydrate() pour garantir que ownedTrackIds reflète
+    // bien les badges du joueur, quelle que soit l'ordre de résolution.
+    const playerPromise = AsyncStorage.getItem(STORAGE_KEY)
       .then(raw => {
-        if (!raw) return;
+        if (!raw) return null;
         try {
           const saved: PersistedPlayerState = JSON.parse(raw);
           usePlayerStore.setState({
@@ -164,17 +176,19 @@ export function useStorage() {
             friendNotifBadgeEnabled: saved.friendNotifBadgeEnabled ?? true,
             onfSolvedCount:         (saved as any).onfSolvedCount ?? 0,
             challengedFriendIds:    (saved as any).challengedFriendIds ?? [],
+            activeBadgeGoals:       (saved as any).activeBadgeGoals ?? [...DEFAULT_BADGE_GOALS],
+            goalCounters:           (saved as any).goalCounters ?? {},
+            autoGoal:               (saved as any).autoGoal ?? true,
           });
-          // Synchroniser immédiatement les musiques débloquées depuis les badges chargés
-          useAudioStore.getState().syncOwnedFromBadges(saved.earnedBadges ?? []);
+          return saved.earnedBadges ?? [];
         } catch {
           console.warn('[useStorage] Données corrompues, réinitialisation.');
+          return null;
         }
       })
-      .catch(err => console.warn('[useStorage] Erreur lecture:', err));
+      .catch(err => { console.warn('[useStorage] Erreur lecture:', err); return null; });
 
-    // ── Chargement état audio ────────────────────────────────────────────────
-    AsyncStorage.getItem(AUDIO_STORAGE_KEY)
+    const audioPromise = AsyncStorage.getItem(AUDIO_STORAGE_KEY)
       .then(rawAudio => {
         if (!rawAudio) return;
         try {
@@ -191,6 +205,14 @@ export function useStorage() {
         }
       })
       .catch(err => console.warn('[useStorage] Erreur lecture audio:', err));
+
+    // Synchroniser les musiques débloquées APRÈS les deux chargements :
+    // garantit que hydrate() ne peut plus écraser le résultat.
+    Promise.all([playerPromise, audioPromise]).then(([earnedBadges]) => {
+      if (earnedBadges) {
+        useAudioStore.getState().syncOwnedFromBadges(earnedBadges);
+      }
+    });
 
     // ── Sauvegarde audio via subscribe ──────────────────────────────────────
     const unsubscribeAudio = useAudioStore.subscribe((newA, prevA) => {
@@ -258,7 +280,10 @@ export function useStorage() {
         newState.friendNotifBadgeEnabled        !== prevState.friendNotifBadgeEnabled ||
         newState.onfSolvedCount                 !== prevState.onfSolvedCount ||
         newState.challengedFriendIds.length     !== prevState.challengedFriendIds.length ||
-        newState.earnedBadges.length            !== prevState.earnedBadges.length;
+        newState.earnedBadges.length            !== prevState.earnedBadges.length        ||
+        newState.activeBadgeGoals.join(',')     !== prevState.activeBadgeGoals.join(',') ||
+        newState.autoGoal                       !== prevState.autoGoal                   ||
+        JSON.stringify(newState.goalCounters)   !== JSON.stringify(prevState.goalCounters);
 
       if (!changed) return;
 
