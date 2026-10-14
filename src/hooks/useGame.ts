@@ -19,7 +19,7 @@ import {
   getValidCellsForElement,
   getErrorCells,
 } from '../core/engine/hintEngine';
-import { BONUS_DEFINITIONS, BonusId } from '../constants/bonus';
+import { BonusId } from '../constants/bonus';
 import { Colors } from '../constants/colors';
 
 /** Durée d'affichage des bonus (ms) */
@@ -156,12 +156,6 @@ export function useGame() {
     if (!game.currentChallenge) return false;
     // Mode sans bonus (ONF) — aucun bonus activable
     if (game.bonusDisabled) return false;
-
-    // Vérifier si l'instinct est débloqué via badges (requiresUnlock)
-    const bonusDef = BONUS_DEFINITIONS[bonusId];
-    if (bonusDef.requiresUnlock && !player.unlockedBonuses.includes(bonusId)) {
-      return false; // pas encore débloqué
-    }
 
     const spent = player.spendBonus(bonusId);
     if (!spent) return false;
