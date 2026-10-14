@@ -16,8 +16,12 @@ import { BadgeProgress } from '../../core/engine/badgeEngine';
 import { Colors } from '../../constants/colors';
 
 interface BadgeProgressInlineProps {
-  /** Les badges les plus proches (de getClosestBadges) */
+  /** Les badges objectifs actifs avec leur progression */
   closestBadges: BadgeProgress[];
+  /** IDs des badges obtenus ce tour — affichés avec ✓ et barre pleine */
+  obtainedBadgeIds?: string[];
+  /** IDs des nouveaux objectifs injectés par l'auto-avance — affichés avec badge "Nouveau" */
+  newGoalBadgeIds?: string[];
   onPress?: () => void; // Tap → ouvre la collection complète
 }
 
@@ -30,17 +34,14 @@ const RARITY_COLORS: Record<BadgeRarity, string> = {
 
 export const BadgeProgressInline: React.FC<BadgeProgressInlineProps> = ({
   closestBadges,
+  obtainedBadgeIds = [],
+  newGoalBadgeIds = [],
   onPress,
 }) => {
   if (closestBadges.length === 0) return null;
 
-  // Afficher uniquement le premier (le plus proche)
-  const top = closestBadges[0];
-  const badge = BADGE_MAP[top.badgeId];
-  if (!badge) return null;
-
-  const rarityColor = RARITY_COLORS[badge.rarity] ?? Colors.ui.textLight;
-  const pct = Math.min(top.percentage, 1);
+  const obtainedSet  = new Set(obtainedBadgeIds);
+  const newGoalSet   = new Set(newGoalBadgeIds);
 
   return (
     <TouchableOpacity
@@ -48,24 +49,48 @@ export const BadgeProgressInline: React.FC<BadgeProgressInlineProps> = ({
       onPress={onPress}
       activeOpacity={onPress ? 0.75 : 1}
     >
-      <View style={styles.header}>
-        <Text style={styles.emoji}>{badge.emoji}</Text>
-        <View style={styles.labelBlock}>
-          <Text style={styles.title} numberOfLines={1}>{badge.label}</Text>
-          <Text style={styles.desc} numberOfLines={1}>{badge.description}</Text>
-        </View>
-        <Text style={styles.counter}>{top.currentValue}/{top.targetValue}</Text>
-      </View>
+      {closestBadges.map((item, index) => {
+        const badge = BADGE_MAP[item.badgeId];
+        if (!badge) return null;
+        const isObtained  = obtainedSet.has(item.badgeId);
+        const isNew       = newGoalSet.has(item.badgeId);
+        const rarityColor = RARITY_COLORS[badge.rarity] ?? Colors.ui.textLight;
+        // Progression directe depuis goalCounters (toujours depuis 0)
+        const relCurrent   = isNew ? 0 : item.currentValue;
+        const relTarget    = Math.max(1, item.targetValue);
+        const pct          = isObtained ? 1 : isNew ? 0 : Math.min(relCurrent / relTarget, 1);
 
-      {/* Barre de progression */}
-      <View style={styles.bar}>
-        <View
-          style={[
-            styles.barFill,
-            { width: `${pct * 100}%`, backgroundColor: rarityColor },
-          ]}
-        />
-      </View>
+        return (
+          <View key={item.badgeId} style={index > 0 ? styles.separator : undefined}>
+            <View style={styles.header}>
+              <Text style={styles.emoji}>{badge.emoji}</Text>
+              <View style={styles.labelBlock}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.title} numberOfLines={1}>{badge.label}</Text>
+                  {isNew && (
+                    <View style={styles.newBadge}>
+                      <Text style={styles.newBadgeText}>Nouveau</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.desc} numberOfLines={1}>{badge.description}</Text>
+              </View>
+              {isObtained
+                ? <Text style={styles.obtained}>✓</Text>
+                : <Text style={styles.counter}>{relCurrent}/{relTarget}</Text>
+              }
+            </View>
+            <View style={styles.bar}>
+              <View
+                style={[
+                  styles.barFill,
+                  { width: `${pct * 100}%`, backgroundColor: isObtained ? '#4CAF50' : rarityColor },
+                ]}
+              />
+            </View>
+          </View>
+        );
+      })}
 
       {onPress && (
         <Text style={styles.cta}>Voir tous mes badges →</Text>
@@ -95,10 +120,28 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   title: {
     fontSize: 13,
     fontWeight: '700',
     color: Colors.forest.dark,
+    flexShrink: 1,
+  },
+  newBadge: {
+    backgroundColor: '#2E7D32',
+    borderRadius: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  newBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.3,
   },
   desc: {
     fontSize: 11,
@@ -108,6 +151,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: Colors.ui.textLight,
+  },
+  obtained: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#4CAF50',
+  },
+  separator: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.ui.border,
   },
   bar: {
     height: 6,

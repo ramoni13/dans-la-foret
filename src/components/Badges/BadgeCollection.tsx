@@ -20,6 +20,12 @@ import {
   TOTAL_NON_SECRET_BADGES,
   TOTAL_SECRET_BADGES,
   getBadgeTexts,
+  RANK_DEFINITIONS,
+  RARITY_POINTS,
+  MAX_BADGE_SCORE,
+  getBadgeScore,
+  getRank,
+  getNextRank,
 } from '../../constants/badges';
 import { BADGE_MUSIC_UNLOCK_MAP } from '../../constants/music';
 import { Colors } from '../../constants/colors';
@@ -69,6 +75,262 @@ const CATEGORY_ORDER: BadgeCategory[] = [
   'vitesse', 'precision', 'regularite', 'social',
   'amelioration', 'exploration', 'saisonnier', 'secret',
 ];
+
+// ── Panneau des rangs forestiers ─────────────────────────────────────────────
+
+const RARITY_ROWS: { key: BadgeRarity; color: string; labelKey: string }[] = [
+  { key: 'bois',    color: '#8B5E3C', labelKey: 'rank_points_bois'    },
+  { key: 'pierre',  color: '#78909C', labelKey: 'rank_points_pierre'  },
+  { key: 'or',      color: '#F9A825', labelKey: 'rank_points_or'      },
+  { key: 'cristal', color: '#00BCD4', labelKey: 'rank_points_cristal' },
+];
+
+interface RankPanelProps {
+  earnedBadges: string[];
+  language: string;
+  t: (key: string, vars?: Record<string, string>) => string;
+}
+
+const RankPanel: React.FC<RankPanelProps> = ({ earnedBadges, language, t }) => {
+  const score    = getBadgeScore(earnedBadges);
+  const rank     = getRank(score);
+  const nextRank = getNextRank(score);
+
+  const rankLabel = language === 'en' ? rank.labelEn : rank.label;
+
+  return (
+    <View style={rankStyles.container}>
+      {/* Titre section */}
+      <Text style={rankStyles.sectionTitle}>{t('rank_section_title')}</Text>
+
+      {/* Bloc score joueur */}
+      <View style={rankStyles.scoreBox}>
+        <Text style={rankStyles.scoreText}>
+          {t('rank_your_score', { score: String(score), max: String(MAX_BADGE_SCORE) })}
+        </Text>
+        <Text style={rankStyles.rankText}>
+          {rank.emoji} {rankLabel}
+        </Text>
+        {nextRank ? (
+          <Text style={rankStyles.nextText}>
+            {t('rank_next_rank', {
+              emoji: nextRank.emoji,
+              label: language === 'en' ? nextRank.labelEn : nextRank.label,
+              pts: String(nextRank.minScore),
+            })}
+          </Text>
+        ) : (
+          <Text style={rankStyles.maxText}>{t('rank_max_reached')}</Text>
+        )}
+        {/* Barre de progression vers le rang suivant */}
+        {nextRank && (
+          <View style={rankStyles.progressBar}>
+            <View style={[rankStyles.progressFill, {
+              width: `${Math.min(100, (score / nextRank.minScore) * 100)}%`,
+            }]} />
+          </View>
+        )}
+      </View>
+
+      {/* Barème des points */}
+      <Text style={rankStyles.pointsTitle}>{t('rank_points_title')}</Text>
+      <View style={rankStyles.pointsGrid}>
+        {RARITY_ROWS.map(row => (
+          <View key={row.key} style={rankStyles.pointsRow}>
+            <View style={[rankStyles.rarityDot, { backgroundColor: row.color }]} />
+            <Text style={rankStyles.pointsLabel}>{t(row.labelKey)}</Text>
+            <Text style={rankStyles.pointsValue}>+{RARITY_POINTS[row.key]}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Liste de tous les rangs */}
+      <View style={rankStyles.rankList}>
+        {RANK_DEFINITIONS.map((r, idx) => {
+          const isCurrentRank = r.id === rank.id;
+          const isUnlocked    = score >= r.minScore;
+          const label         = language === 'en' ? r.labelEn : r.label;
+          return (
+            <View
+              key={r.id}
+              style={[
+                rankStyles.rankRow,
+                isCurrentRank && rankStyles.rankRowCurrent,
+                idx < RANK_DEFINITIONS.length - 1 && rankStyles.rankRowBorder,
+              ]}
+            >
+              <Text style={[rankStyles.rankEmoji, !isUnlocked && rankStyles.rankLocked]}>
+                {isUnlocked ? r.emoji : '🔒'}
+              </Text>
+              <View style={rankStyles.rankInfo}>
+                <Text style={[rankStyles.rankName, isCurrentRank && rankStyles.rankNameCurrent, !isUnlocked && rankStyles.rankLocked]}>
+                  {label}
+                </Text>
+                <Text style={rankStyles.rankMin}>{r.minScore} pts</Text>
+              </View>
+              {isCurrentRank && (
+                <View style={rankStyles.currentBadge}>
+                  <Text style={rankStyles.currentBadgeText}>ton rang</Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+const rankStyles = StyleSheet.create({
+  container: {
+    marginTop: 24,
+    marginBottom: 32,
+    marginHorizontal: 4,
+    backgroundColor: Colors.ui.card,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.ui.border,
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+    textAlign: 'center',
+  },
+  scoreBox: {
+    backgroundColor: Colors.forest.dark + '0D',
+    borderRadius: 12,
+    padding: 14,
+    gap: 4,
+    alignItems: 'center',
+  },
+  scoreText: {
+    fontSize: 12,
+    color: Colors.ui.textLight,
+    fontWeight: '600',
+  },
+  rankText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+  },
+  nextText: {
+    fontSize: 11,
+    color: Colors.ui.textLight,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  maxText: {
+    fontSize: 12,
+    color: Colors.forest.accent,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  progressBar: {
+    width: '100%',
+    height: 6,
+    backgroundColor: Colors.ui.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: Colors.forest.medium,
+    borderRadius: 3,
+  },
+  pointsTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.ui.textLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 4,
+  },
+  pointsGrid: {
+    gap: 6,
+  },
+  pointsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rarityDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  pointsLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.ui.text,
+    fontWeight: '500',
+  },
+  pointsValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.forest.dark,
+  },
+  rankList: {
+    gap: 0,
+    borderWidth: 1,
+    borderColor: Colors.ui.border,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  rankRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+    backgroundColor: Colors.ui.background,
+  },
+  rankRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.ui.border,
+  },
+  rankRowCurrent: {
+    backgroundColor: Colors.forest.dark + '10',
+  },
+  rankEmoji: {
+    fontSize: 18,
+    width: 28,
+    textAlign: 'center',
+  },
+  rankLocked: {
+    opacity: 0.35,
+  },
+  rankInfo: {
+    flex: 1,
+    gap: 1,
+  },
+  rankName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.ui.text,
+  },
+  rankNameCurrent: {
+    color: Colors.forest.dark,
+  },
+  rankMin: {
+    fontSize: 11,
+    color: Colors.ui.textLight,
+  },
+  currentBadge: {
+    backgroundColor: Colors.forest.medium,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  currentBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+  },
+});
 
 export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
   earnedBadges,
@@ -196,6 +458,11 @@ export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
               })()}
             </Text>
           </View>
+        )}
+
+        {/* Pavé système de rangs — toujours visible en bas */}
+        {activeFilter === 'all' && (
+          <RankPanel earnedBadges={earnedBadges} language={language} t={t} />
         )}
       </ScrollView>
     </View>

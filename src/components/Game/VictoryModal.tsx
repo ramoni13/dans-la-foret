@@ -32,12 +32,15 @@ interface VictoryModalProps {
   visible: boolean;
   elapsedTime: number;
   seedsEarned: number;
+  seedsBeforeGain?: number;
   difficulty: DifficultyLevel;
   challengeNumber: number;
   onNextChallenge: () => void;
   onBackToMenu: () => void;
   confettiPieces: ConfettiPiece[];
   closestBadges?: BadgeProgress[];
+  obtainedBadgeIds?: string[];
+  newGoalBadgeIds?: string[];
   badgeQueue?: string[];
   onBadgeQueueEmpty?: () => void;
   worldRecord?: WorldRecord | null;
@@ -56,31 +59,42 @@ const DIFFICULTY_LABELS: Partial<Record<DifficultyLevel, string>> = {
 };
 
 export const VictoryModal: React.FC<VictoryModalProps> = ({
-  visible, elapsedTime, seedsEarned, difficulty, challengeNumber,
+  visible, elapsedTime, seedsEarned, seedsBeforeGain, difficulty, challengeNumber,
   onNextChallenge, onBackToMenu, confettiPieces,
-  closestBadges = [], badgeQueue = [], onBadgeQueueEmpty,
+  closestBadges = [], obtainedBadgeIds = [], newGoalBadgeIds = [], badgeQueue = [], onBadgeQueueEmpty,
   worldRecord = null, isNewWorldRecord = false, previousRecordHolder = null,
   goalJustCompleted = false, onChooseGoal,
 }) => {
 
   // ── Compteur affiché ─────────────────────────────────────────────────────
   // totalSeeds = vrai total incluant le gain (addSeeds déjà appelé)
-  // displayedSeeds part de (totalSeeds - seedsEarned) et monte à totalSeeds
-  // une unité à la fois, synchronisé avec chaque graine qui arrive
+  // Si seedsBeforeGain est fourni, on l'utilise comme point de départ de l'animation.
+  // Sinon, on recalcule à partir du store (fallback).
   const totalSeeds = usePlayerStore(s => s.seeds);
-  const [displayedSeeds, setDisplayedSeeds] = useState(totalSeeds);
+  const startSeeds = seedsBeforeGain ?? (totalSeeds - seedsEarned);
+  const [displayedSeeds, setDisplayedSeeds] = useState(startSeeds);
   const [displayedGain, setDisplayedGain]   = useState(seedsEarned);
   const [animDone, setAnimDone]             = useState(false);
   const arrivedCount = useRef(0);
 
   useEffect(() => {
     if (visible) {
-      setDisplayedSeeds(totalSeeds - seedsEarned); // part d'avant le gain → monte vers totalSeeds
+      const start = seedsBeforeGain ?? (totalSeeds - seedsEarned);
+      setDisplayedSeeds(start); // part du vrai score avant gain → monte vers totalSeeds
       setDisplayedGain(seedsEarned);
       setAnimDone(false);
       arrivedCount.current = 0;
     }
   }, [visible]);
+
+  // Mise à jour du gain affiché si seedsEarned change après l'ouverture
+  // (cas : badges + rang calculés dans le useEffect de [challengeId].tsx après isVictory)
+  // On ne réinitialise que si l'animation n'a pas encore démarré (arrivedCount = 0).
+  useEffect(() => {
+    if (visible && arrivedCount.current === 0) {
+      setDisplayedGain(seedsEarned);
+    }
+  }, [seedsEarned]);
 
   // ── Animation entrée carte ────────────────────────────────────────────────
   const scaleAnim   = useRef(new Animated.Value(0)).current;
@@ -226,7 +240,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
           {closestBadges.length > 0 && (
             <View style={styles.badgeProgressWrapper}>
-              <BadgeProgressInline closestBadges={closestBadges} />
+              <BadgeProgressInline closestBadges={closestBadges} obtainedBadgeIds={obtainedBadgeIds} newGoalBadgeIds={newGoalBadgeIds} />
             </View>
           )}
 

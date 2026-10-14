@@ -14,7 +14,7 @@ import {
   Dimensions,
 } from 'react-native';
 
-import { BADGE_MAP, BadgeRarity, getBadgeTexts } from '../../constants/badges';
+import { BADGE_MAP, BADGE_SEED_REWARDS, BadgeRarity, getBadgeTexts } from '../../constants/badges';
 import { Colors } from '../../constants/colors';
 import { notificationSuccess } from '../../utils/haptics';
 import { useT } from '../../i18n';
@@ -226,6 +226,7 @@ export const BadgeToast: React.FC<BadgeToastProps> = ({
   const borderColor = RARITY_BORDER[currentBadge.rarity] ?? Colors.ui.border;
   const texts       = getBadgeTexts(currentBadge, language);
   const remaining   = queue.length - currentIndex;
+  const seedsGained = BADGE_SEED_REWARDS[currentBadge.rarity] ?? 0;
 
   return (
     <Animated.View
@@ -274,6 +275,11 @@ export const BadgeToast: React.FC<BadgeToastProps> = ({
           <Text style={styles.headline}>{t('badge_unlocked')}</Text>
           <Text style={styles.label} numberOfLines={1}>{texts.label}</Text>
           <Text style={styles.desc} numberOfLines={2}>{texts.description}</Text>
+          {seedsGained > 0 && (
+            <View style={[styles.seedRow, { backgroundColor: borderColor + '22' }]}>
+              <Text style={[styles.seedText, { color: borderColor }]}>+{seedsGained} 🌱</Text>
+            </View>
+          )}
         </View>
 
         {/* Droite : compteur + bouton OK */}
@@ -368,6 +374,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.ui.textLight,
     lineHeight: 15,
+  },
+  seedRow: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginTop: 4,
+  },
+  seedText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
   right: {
     alignItems: 'center',

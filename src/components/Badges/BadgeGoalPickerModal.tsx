@@ -21,6 +21,7 @@ interface BadgeGoalPickerModalProps {
   visible: boolean;
   earnedBadges: string[];
   currentGoals: string[];
+  /** Appelé avec les IDs des nouveaux objectifs sélectionnés */
   onConfirm: (ids: string[]) => void;
   onClose: () => void;
 }
@@ -109,6 +110,7 @@ export const BadgeGoalPickerModal: React.FC<BadgeGoalPickerModalProps> = ({
   const handleConfirm = () => {
     // Objectifs finaux = objectifs actifs en cours + nouvelles sélections
     const merged = [...activeGoals, ...selected];
+    // goalCounters remis à 0 pour les nouvelles sélections dans setActiveBadgeGoals
     onConfirm(merged);
     onClose();
   };

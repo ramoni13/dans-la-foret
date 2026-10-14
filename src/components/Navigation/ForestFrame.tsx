@@ -39,7 +39,6 @@ import {
 const COIN_IMG      = require('../../../assets/cadre/coin.png');
 const MENU_IMG      = require('../../../assets/cadre/menu_bas.png');
 const BLOC_GRAINES  = require('../../../assets/elements/design_app/bloc_graines.png');
-const FLECHE_GAUCHE = require('../../../assets/elements/design_app/fleche_gauche.png');
 
 // URI du SVG bordure — react-native-svg l'affiche sans bundler
 const BORDURE_IMG = require('../../../assets/cadre/bordure.jpg');
@@ -316,30 +315,17 @@ export default function ForestFrame() {
       <SeedsOverlay seeds={seeds} screenW={screenW} topBarCenterY={topBarCenterY} />
       <SoundButton iconTopY={iconTopY} />
 
-      {/* ── Bouton Retour (onglet profile) ───────────────────────────────── */}
-      {backLabel != null && onBack != null && activeTab === 'profile' && (() => {
-        const SIZE = 36;
-        return (
-          <TouchableOpacity
-            onPress={onBack}
-            activeOpacity={0.8}
-            style={[styles.backCircleBtn, {
-              top:    iconTopY,
-              left:   0,
-              width:  SIZE,
-              height: SIZE,
-              borderRadius: SIZE / 2,
-            }]}
-            accessibilityLabel="Retour"
-          >
-            <Image
-              source={FLECHE_GAUCHE}
-              style={{ width: SIZE * 0.55, height: SIZE * 0.55 }}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        );
-      })()}
+      {/* ── Bouton Retour (tous onglets) ─────────────────────────────────── */}
+      {backLabel != null && onBack != null && (
+        <TouchableOpacity
+          onPress={onBack}
+          activeOpacity={0.8}
+          style={[styles.backTextBtn, { top: iconTopY }]}
+          accessibilityLabel="Retour"
+        >
+          <Text style={styles.backTextBtnLabel}>← Retour</Text>
+        </TouchableOpacity>
+      )}
 
       {/* ── Zones de tap + voyant actif ──────────────────────────────────── */}
       {BUTTONS.map((btn) => {
@@ -466,17 +452,29 @@ const styles = StyleSheet.create({
   soundIcon: {
     fontSize: 20,
   },
-  backCircleBtn: {
-    position:        'absolute',
-    backgroundColor: '#5C3010',
-    borderWidth:     2,
-    borderColor:     '#3B1E08',
-    alignItems:      'center',
-    justifyContent:  'center',
-    shadowColor:     '#000',
-    shadowOffset:    { width: 0, height: 2 },
-    shadowOpacity:   0.5,
-    shadowRadius:    3,
-    elevation:       4,
+  backTextBtn: {
+    position:              'absolute',
+    left:                  0,
+    backgroundColor:       '#C8540A',
+    paddingHorizontal:     12,
+    paddingVertical:       8,
+    borderTopRightRadius:  18,
+    borderBottomRightRadius: 18,
+    borderTopLeftRadius:   0,
+    borderBottomLeftRadius: 0,
+    borderWidth:           1.5,
+    borderLeftWidth:       0,
+    borderColor:           '#FF8C42',
+    shadowColor:           '#000',
+    shadowOffset:          { width: 2, height: 2 },
+    shadowOpacity:         0.45,
+    shadowRadius:          4,
+    elevation:             6,
+    zIndex:                20,
+  },
+  backTextBtnLabel: {
+    fontSize:   14,
+    fontWeight: '700',
+    color:      '#fff',
   },
 });

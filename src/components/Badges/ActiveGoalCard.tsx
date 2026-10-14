@@ -29,7 +29,11 @@ export const ActiveGoalCard: React.FC<ActiveGoalCardProps> = ({ progress, obtain
   if (!badge) return null;
 
   const rarityColor = RARITY_COLOR[badge.rarity] ?? Colors.forest.medium;
-  const pct = Math.min(1, Math.max(0, progress.percentage));
+
+  // Progression directe depuis goalCounters (toujours depuis 0)
+  const relCurrent = Math.max(0, progress.currentValue);
+  const relTarget  = Math.max(1, progress.targetValue);
+  const pct = Math.min(1, Math.max(0, relCurrent / relTarget));
 
   return (
     <View style={styles.card}>
@@ -59,7 +63,7 @@ export const ActiveGoalCard: React.FC<ActiveGoalCardProps> = ({ progress, obtain
         <Text style={styles.progressText}>
           {obtained
             ? 'Badge obtenu !'
-            : `${progress.currentValue} / ${progress.targetValue}`}
+            : `${relCurrent} / ${progress.targetValue}`}
         </Text>
       )}
     </View>
