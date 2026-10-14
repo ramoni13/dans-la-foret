@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // CATALOGUE DES BADGES — Dans la Forêt
 // 41 badges au total : 36 standard + 5 secrets
 // ============================================================
@@ -497,6 +497,15 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: 'Termine #1 mondial sur un défi journalier',
     rarity: 'cristal', category: 'regularite', isSecret: false, isSeasonal: false,
     translations: { en: { label: 'Daily Champion', description: 'Finish #1 worldwide on a daily challenge' } },
+  },
+  // ── Badge premium exclusif ────────────────────────────────────────────────────
+  {
+    id: 'ami_de_la_foret',
+    emoji: '🌲',
+    label: 'Ami de la Forêt',
+    description: 'A soutenu la forêt et l\'ONF en passant en premium',
+    rarity: 'or', category: 'exploration', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Friend of the Forest', description: 'Supported the forest and the ONF with a premium purchase' } },
   },
 ];
 

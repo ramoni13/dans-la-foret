@@ -120,6 +120,8 @@ interface PlayerState {
   lastOnfCompoKey: string | null;      // clé de la dernière composition jouée (anti-répétition)
   completedOnfChallengeIds: string[]; // IDs des défis ONF terminés (pour ne pas reproposer)
   hasSeenOnfBriefing: boolean;        // briefing ONF affiché au moins une fois
+  onfDailyCount: number;              // grilles ONF jouées aujourd'hui (reset quotidien, free = max 3)
+  lastOnfDailyDate: string;           // "YYYY-MM-DD" du dernier reset onfDailyCount
 
   // ── Badges : objectifs actifs (chantier 3) ───────────────────────────────────
   activeBadgeGoals: string[];  // max 3 badgeIds choisis par le joueur
@@ -224,9 +226,12 @@ interface PlayerState {
   markOnfChallengeCompleted: (challengeId: string) => void;
   /** Marque le briefing ONF comme vu (ne s'affiche plus après). */
   markOnfBriefingSeen: () => void;
+  /** Incrémente le compteur de grilles ONF jouées aujourd'hui (limite free = 3). */
+  incrementOnfDaily: () => void;
 
   // ── Actions statistiques génériques (chantier 5) ──────────────────────────
   incrementStat: (key: keyof PlayerStats, amount?: number) => void;
+
 }
 
 // ── Fonctions utilitaires anti-triche (hors store pour éviter stale closures) ─
@@ -309,7 +314,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   username: 'Joueur',
   seeds: 0,
   completedChallenges: [],
-  isPremium: true,                  // TODO: passer à false avant publication
+  isPremium: false,
   lastPlayedChallengeId: null,
   friendChallengeTokens: 3,
 
@@ -365,6 +370,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   lastOnfCompoKey: null,
   completedOnfChallengeIds: [],
   hasSeenOnfBriefing: false,
+  onfDailyCount: 0,
+  lastOnfDailyDate: '',
 
   activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
   goalCounters: {},
@@ -372,7 +379,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   challengedFriendIds: [],
 
-  dailyBonusUses: { highlight_valid_cells: 5, instinct: 5 },
+  dailyBonusUses: { highlight_valid_cells: 3, instinct: 3 },
   lastBonusResetDate: null,
 
   // ── setAuthState ──────────────────────────────────────────
@@ -551,10 +558,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         ? state.completedChallenges
         : [...state.completedChallenges, challengeId];
 
-      // Jeton défi ami : 1 jeton tous les 5 défis complétés
-      const prevCount   = state.completedChallenges.length;
-      const newCount    = newCompleted.length;
-      const tokenEarned = !alreadyCompleted && Math.floor(newCount / 5) > Math.floor(prevCount / 5);
+      // Les jetons défi ami se rechargent quotidiennement (reset dans checkDailyLogin)
 
       // noErrorStreak : incrémente seulement si la partie s'est terminée
       // sans AUCUN bouton Valider raté (failCount[challengeId] === 0).
@@ -644,9 +648,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       return {
         completedChallenges: newCompleted,
         currentLevel: computePlayerLevel(newCompleted.length),
-        friendChallengeTokens: tokenEarned
-          ? state.friendChallengeTokens + 1
-          : state.friendChallengeTokens,
         challengeStartedAt: restStarted,
         goalCounters: newGoalCounters,
         stats: {
@@ -686,7 +687,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setLastPlayed: (challengeId) => set({ lastPlayedChallengeId: challengeId }),
 
   // ── unlockPremium ─────────────────────────────────────────
-  unlockPremium: () => set({ isPremium: true }),
+  unlockPremium: () => {
+    set({ isPremium: true });
+    usePlayerStore.getState().awardBadges(['ami_de_la_foret']);
+    // Contribue à la cagnotte partagée Firestore (fire-and-forget)
+    import('../services/foretCommuneService').then(({ addForetCommunePoints }) => {
+      addForetCommunePoints(2_000).catch(() => {});
+    });
+  },
 
   // ── logout ────────────────────────────────────────────────
   logout: () => set({
@@ -738,10 +746,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     onfSolvedCount: 0,
     lastOnfCompoKey: null,
     completedOnfChallengeIds: [],
-  activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
-  goalCounters: {},
-  autoGoal: true,
-    dailyBonusUses: { highlight_valid_cells: 5, instinct: 5 },
+    onfDailyCount: 0,
+    lastOnfDailyDate: '',
+    activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+    goalCounters: {},
+    autoGoal: true,
+    dailyBonusUses: { highlight_valid_cells: 3, instinct: 3 },
     lastBonusResetDate: null,
   }),
 
@@ -824,10 +834,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const today     = todayISO();
     const yesterday = yesterdayISO();
 
-    // Reset des bonus journaliers si nouvelle journée (chantier 4)
+    // Reset quotidien : bonus, jetons amis et compteur ONF (à minuit)
     if (lastBonusResetDate !== today) {
       set({
-        dailyBonusUses: { highlight_valid_cells: 5, instinct: 5 },
+        dailyBonusUses: { highlight_valid_cells: 3, instinct: 3 },
+        friendChallengeTokens: 3,
+        onfDailyCount: 0,
+        lastOnfDailyDate: today,
         lastBonusResetDate: today,
       });
     }
@@ -947,6 +960,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   // ── Briefing ONF ──────────────────────────────────────────
   markOnfBriefingSeen: () => set({ hasSeenOnfBriefing: true }),
+
+  // ── Compteur quotidien ONF ────────────────────────────────
+  incrementOnfDaily: () => set(state => ({
+    onfDailyCount: state.onfDailyCount + 1,
+  })),
 
   // ── Objectifs de badges actifs (chantier 3) ───────────────
   setActiveBadgeGoals: (ids) => set(state => {

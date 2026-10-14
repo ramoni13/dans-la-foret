@@ -7,10 +7,7 @@ export interface BonusDefinition {
   label: string;
   description: string;
   icon: string;
-  /** @deprecated Coût en graines — conservé pour référence, plus utilisé en jeu (chantier 4) */
-  cost: number;
-  requiresUnlock: boolean;    // true = débloqué uniquement via badges
-  /** Nombre d'utilisations journalières offertes (reset à minuit, chantier 4) */
+  /** Nombre d'utilisations journalières offertes (reset à minuit) — illimité en premium */
   dailyLimit: number;
 }
 
@@ -20,23 +17,19 @@ export const BONUS_DEFINITIONS: Record<BonusId, BonusDefinition> = {
     label: 'Cases valides',
     description: 'Indique les cases où le placement est possible selon les règles',
     icon: '💡',
-    cost: 3,           // legacy — non utilisé depuis chantier 4
-    requiresUnlock: false,
-    dailyLimit: 5,
+    dailyLimit: 3,
   },
   instinct: {
     id: 'instinct',
     label: 'Instinct',
     description: 'Révèle les cases mal placées sur ton plateau',
     icon: '🔴',
-    cost: 6,           // legacy — non utilisé depuis chantier 4
-    requiresUnlock: false, // Disponible pour tous, 5 utilisations/jour
-    dailyLimit: 5,
+    dailyLimit: 3,
   },
 };
 
-/** Bonus toujours disponibles (pas de débloquage requis) */
+/** Bonus disponibles pour tous les joueurs */
 export const BASE_BONUS_IDS: BonusId[] = ['highlight_valid_cells', 'instinct'];
 
-/** Bonus avancés qui nécessitent un débloquage via badges */
+/** Bonus avancés réservés au premium (aucun pour l'instant) */
 export const ADVANCED_BONUS_IDS: BonusId[] = [];
