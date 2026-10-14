@@ -30,13 +30,13 @@ export const BONUS_DEFINITIONS: Record<BonusId, BonusDefinition> = {
     description: 'Révèle les cases mal placées sur ton plateau',
     icon: '🔴',
     cost: 6,           // legacy — non utilisé depuis chantier 4
-    requiresUnlock: true,  // Débloqué via 3 badges Or (RARITY_UNLOCKS)
+    requiresUnlock: false, // Disponible pour tous, 5 utilisations/jour
     dailyLimit: 5,
   },
 };
 
 /** Bonus toujours disponibles (pas de débloquage requis) */
-export const BASE_BONUS_IDS: BonusId[] = ['highlight_valid_cells'];
+export const BASE_BONUS_IDS: BonusId[] = ['highlight_valid_cells', 'instinct'];
 
 /** Bonus avancés qui nécessitent un débloquage via badges */
-export const ADVANCED_BONUS_IDS: BonusId[] = ['instinct'];
+export const ADVANCED_BONUS_IDS: BonusId[] = [];
