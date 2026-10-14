@@ -148,6 +148,28 @@
 
   "rules_tab_title": "Rules",
   "rules_subtitle": "Forest dwellers",
+  "rules_tab_inhabitants": "Inhabitants",
+  "rules_tab_challenges": "Challenges",
+
+  "challenges_tab_title": "Challenges",
+  "challenges_tab_subtitle": "4 ways to play",
+
+  "challenges_solo_title": "Solo Challenges",
+  "challenges_solo_desc1": "The classic game mode",
+  "challenges_solo_desc2": "Open to everyone with the same puzzles for all players",
+  "challenges_solo_desc3": "World time records to beat",
+  "challenges_solo_desc4": "Progressive difficulty with bigger and bigger grids",
+  "challenges_solo_desc5": "New elements appearing as you level up",
+  "challenges_solo_desc6": "More and more empty cells",
+
+  "challenges_daily_title": "Daily Challenge",
+  "challenges_daily_desc": "Every day, a new secret 15-cell grid awaits all players. Only one validation attempt — no bonuses, no mistakes allowed. Complete it before midnight and climb the world leaderboard. Keep your daily streak going!",
+
+  "challenges_friends_title": "Friend Challenges",
+  "challenges_friends_desc": "Create a unique challenge and share it with your friends via a link. Everyone plays the same grid independently. Best time wins!",
+
+  "challenges_onf_title": "Forest Grid (ONF)",
+  "challenges_onf_desc": "A forest-themed Sudoku! Fill a square grid following the usual adjacency rules AND the Sudoku rule: only one of each element per row and per column. Available from level 14.",
   "rules_locked": "Unlocked at level {{level}}",
   "rules_unlocked_at": "Appeared at level {{level}}",
   "rules_element_bucheron": "Lumberjack",
@@ -176,5 +198,46 @@
   "element_arbre": "Tree",
   "a11y_connected_group_with": "All {{e1}} (and {{e2}} if present) form one connected forest",
   "rules_element_arbre": "Tree",
-  "rules_desc_arbre": "Trees form a single connected forest. If logs are present, they are part of this forest."
+  "rules_desc_arbre": "Trees form a single connected forest. If logs are present, they are part of this forest.",
+
+  "onf_briefing_header_title": "Forest Grid",
+  "onf_briefing_intro_title": "The Forest Grid",
+  "onf_briefing_intro_subtitle": "Like Sudoku, but with forest creatures!",
+  "onf_briefing_intro_rule1": "Place each element while following the forest rules.",
+  "onf_briefing_intro_rule2": "Each row and column can contain only one of each element.",
+  "onf_briefing_intro_rule3": "The usual animal rules still apply.",
+  "onf_briefing_new_rule": "New rule",
+  "onf_briefing_sudoku_title": "The Sudoku Rule",
+  "onf_briefing_sudoku_row": "In each row: only 1 of each element",
+  "onf_briefing_sudoku_col": "In each column: only 1 of each element",
+  "onf_briefing_sudoku_desc": "Orange-highlighted cells show the row constraint, blue shows the column constraint.",
+  "onf_briefing_recap_title": "Ready to play?",
+  "onf_briefing_recap_subtitle": "Forest Grid",
+  "onf_briefing_recap_elements": "Puzzle elements",
+  "onf_briefing_recap_forest_rules": "Follow each creature's adjacency rules.",
+  "onf_briefing_recap_sudoku_rule": "Only 1 of each element per row and per column.",
+  "onf_briefing_recap_validate": "Fill all cells, then validate to check.",
+  "onf_briefing_swipe_hint": "Swipe to continue",
+
+  "rank_section_title": "Forest Ranks",
+  "rank_points_title": "How are points calculated?",
+  "rank_points_bois": "Wood Badge = 1 pt",
+  "rank_points_pierre": "Stone Badge = 3 pts",
+  "rank_points_or": "Gold Badge = 6 pts",
+  "rank_points_cristal": "Crystal Badge = 12 pts",
+  "rank_your_score": "Your score: {{score}} / {{max}} pts",
+  "rank_your_rank": "Your rank: {{emoji}} {{label}}",
+  "rank_next_rank": "Next rank: {{emoji}} {{label}} ({{pts}} pts)",
+  "rank_max_reached": "Maximum rank reached!",
+
+  "rank_promeneur": "Wanderer",
+  "rank_bucheron": "Lumberjack",
+  "rank_sylviculteur": "Silviculturist",
+  "rank_garde_forestier": "Forest Ranger",
+  "rank_technicien_onf": "ONF Technician",
+  "rank_ingenieur_forets": "Forest Engineer",
+  "rank_esprit_foret": "Spirit of the Forest",
+
+  "goal_section_title": "My goals",
+  "goal_auto_label": "Automatic selection"
 }
