@@ -1106,16 +1106,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.ui.border,
-    backgroundColor: Colors.ui.card,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(26,58,26,0.82)',
     alignItems: 'center',
   },
   langBtnActive: {
-    backgroundColor: Colors.forest.medium + '15',
-    borderColor: Colors.forest.medium,
+    backgroundColor: 'rgba(26,58,26,0.82)',
+    borderColor: Colors.forest.accent,
   },
-  langBtnText: { fontSize: 13, fontWeight: '600', color: Colors.ui.textLight },
-  langBtnTextActive: { color: Colors.forest.dark, fontWeight: '700' },
+  langBtnText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  langBtnTextActive: { color: '#fff', fontWeight: '700' },
 
   // Mot de passe oublié
   forgotBtn: { alignSelf: 'center', marginTop: 4, paddingVertical: 8 },

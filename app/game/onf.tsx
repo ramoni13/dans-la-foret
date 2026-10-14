@@ -39,6 +39,7 @@ import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
+import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 
 import {
   pickOnfChallenge,
@@ -86,6 +87,10 @@ export default function ONFGameScreen() {
   const [rowColViolationCells, setRowColViolationCells] = useState<number[]>([]);
   /** Briefing affiché avant la première partie ONF */
   const [briefingDone, setBriefingDone] = useState(player.hasSeenOnfBriefing);
+  const [showPremium, setShowPremium] = useState(false);
+  /** Limite quotidienne ONF atteinte (free uniquement) */
+  const ONF_DAILY_LIMIT = 3;
+  const dailyLimitReached = !player.isPremium && player.onfDailyCount >= ONF_DAILY_LIMIT;
 
   const badgesEvaluatedRef = useRef(false);
   const confettiPieces = useConfetti(game.isVictory);
@@ -230,6 +235,8 @@ export default function ONFGameScreen() {
 
     // Marquer le défi comme complété (local store — incrémente aussi onfSolvedCount)
     player.markOnfChallengeCompleted(challenge.id);
+    // Incrémenter le compteur quotidien (limite free = 3/jour)
+    player.incrementOnfDaily();
 
     // Sync Firestore en arrière-plan
     const uid = player.userId;
@@ -275,6 +282,44 @@ export default function ONFGameScreen() {
       setRowColViolationCells([]);
     }
   }, [game.playerBoard]);
+
+  // ── Limite quotidienne atteinte (free) ───────────────────
+  if (dailyLimitReached) {
+    return (
+      <View style={[styles.loading, { paddingTop: insets.top }]}>
+        <Text style={styles.allCompletedEmoji}>🌲</Text>
+        <Text style={styles.allCompletedTitle}>
+          Limite journalière atteinte
+        </Text>
+        <Text style={styles.allCompletedText}>
+          Tu as joué {ONF_DAILY_LIMIT} grilles aujourd'hui.{'\n'}
+          Reviens demain ou passe en premium pour jouer sans limite.
+        </Text>
+        <TouchableOpacity
+          style={styles.errorBtn}
+          onPress={() => router.replace('/(tabs)')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.errorBtnText}>Retour à l'accueil</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.premiumBtn}
+          onPress={() => setShowPremium(true)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.premiumBtnText}>🌲 Passer en premium</Text>
+        </TouchableOpacity>
+        <PremiumCard
+          visible={showPremium}
+          onClose={() => setShowPremium(false)}
+          onPurchase={() => {
+            player.unlockPremium();
+            setShowPremium(false);
+          }}
+        />
+      </View>
+    );
+  }
 
   // ── Chargement ────────────────────────────────────────────
   if (loading) {
@@ -494,6 +539,20 @@ const styles = StyleSheet.create({
   errorBtnText: {
     color: '#fff',
     fontSize: 15,
+    fontWeight: '700',
+  },
+  premiumBtn: {
+    marginTop: 12,
+    backgroundColor: 'rgba(139,195,74,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(139,195,74,0.6)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  premiumBtnText: {
+    color: Colors.forest.accent,
+    fontSize: 14,
     fontWeight: '700',
   },
 

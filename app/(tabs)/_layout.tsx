@@ -62,8 +62,11 @@ export default function TabsLayout() {
       if (!dailyLoginCheckedRef.current) {
         dailyLoginCheckedRef.current = true;
 
+        // Lire lastPlayedDate AVANT checkDailyLogin (qui va l'écrire)
+        // pour détecter un nouveau compte (jamais joué = chaîne vide).
+        const isReturningPlayer = usePlayerStore.getState().lastPlayedDate !== '';
         const isNewDay = player.checkDailyLogin();
-        if (isNewDay) {
+        if (isNewDay && isReturningPlayer) {
           player.addSeeds(3);
 
           const uid    = firebaseUser?.uid;

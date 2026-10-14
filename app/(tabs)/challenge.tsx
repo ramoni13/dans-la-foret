@@ -34,6 +34,7 @@ import { Timestamp } from 'firebase/firestore';
 
 import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
+import { FRIENDS_UNLOCK_LEVEL } from '../../src/constants/unlocks';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { auth } from '../../src/services/firebase';
@@ -53,8 +54,9 @@ import { ElementRegistry } from '../../src/elements/ElementRegistry';
 import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { formatTime } from '../../src/utils/boardUtils';
 import { ConfirmModal } from '../../src/components/Game/ConfirmModal';
+import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 
-// (TOKEN_SEED_COST supprimé — chantier 4 : achat jeton via graines retiré)
+// Jetons : 3 par jour (reset quotidien), illimités en premium
 
 const IMG_HACHES = require('../../assets/elements/design_app/Haches.png');
 
@@ -348,6 +350,7 @@ export default function ChallengeScreen() {
   const [refreshing, setRefreshing]       = useState(false);
   const [generating, setGenerating]       = useState(false);
   const [showSearch, setShowSearch]       = useState(false);
+  const [showPremium, setShowPremium]     = useState(false);
 
   // ── Chargement des défis ──────────────────────────────────
   const loadChallenges = useCallback(async (silent = false) => {
@@ -390,8 +393,8 @@ export default function ChallengeScreen() {
 
     if (!hasToken) {
       showAlert(
-        'Plus de jeton',
-        'Tu gagnes 1 jeton tous les 5 défis solo complétés.',
+        'Plus de jeton aujourd\'hui',
+        'Tes 3 jetons quotidiens sont épuisés. Reviens demain ou passe en premium pour des jetons illimités.',
       );
       return;
     }
@@ -566,6 +569,22 @@ export default function ChallengeScreen() {
     );
   }
 
+  // ── Rendu : niveau insuffisant ────────────────────────────
+  if (player.currentLevel < FRIENDS_UNLOCK_LEVEL) {
+    return (
+      <View style={StyleSheet.absoluteFill}>
+        <BgImage overlay={0.52} />
+        <View style={[styles.centered, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
+          <Text style={styles.emptyEmoji}>🔒</Text>
+          <Text style={[styles.emptyTitle, { color: '#fff' }]}>Disponible au niveau {FRIENDS_UNLOCK_LEVEL}</Text>
+          <Text style={[styles.emptyDesc, { color: 'rgba(255,255,255,0.75)' }]}>
+            Complète les premiers niveaux solo pour débloquer les défis entre amis.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   // ── Rendu principal ───────────────────────────────────────
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'reçus',    label: 'Reçus',    count: received.length  },
@@ -597,7 +616,9 @@ export default function ChallengeScreen() {
         }}
       >
         <View style={styles.tokenBadge}>
-          <Text style={styles.tokenText}>🎟️ {player.friendChallengeTokens}</Text>
+          <Text style={styles.tokenText}>
+            🎟️ {player.isPremium ? '∞' : `${player.friendChallengeTokens} / 3`}
+          </Text>
         </View>
       </View>
 
@@ -615,11 +636,22 @@ export default function ChallengeScreen() {
           }
         </TouchableOpacity>
         <Text style={styles.launchHint}>
-          {player.friendChallengeTokens > 0
-            ? `${player.friendChallengeTokens} jeton${player.friendChallengeTokens > 1 ? 's' : ''} · 1 tous les 5 défis solo · Vainqueur : +${CHALLENGE_WINNER_SEEDS} 🌱`
-            : 'Plus de jeton · Gagnes-en 1 tous les 5 défis solo'
+          {player.isPremium
+            ? `Jetons illimités · Vainqueur : +${CHALLENGE_WINNER_SEEDS} 🌱`
+            : player.friendChallengeTokens > 0
+              ? `${player.friendChallengeTokens} jeton${player.friendChallengeTokens > 1 ? 's' : ''} aujourd'hui · Vainqueur : +${CHALLENGE_WINNER_SEEDS} 🌱`
+              : 'Plus de jeton aujourd\'hui · Reviens demain'
           }
         </Text>
+        {!player.isPremium && player.friendChallengeTokens === 0 && (
+          <TouchableOpacity
+            style={styles.btnPremium}
+            onPress={() => setShowPremium(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.btnPremiumText}>🌲 Passer en premium</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Onglets ── */}
@@ -716,6 +748,15 @@ export default function ChallengeScreen() {
       />
 
       {/* Popup achat jeton supprimée (chantier 4) */}
+
+      <PremiumCard
+        visible={showPremium}
+        onClose={() => setShowPremium(false)}
+        onPurchase={() => {
+          player.unlockPremium();
+          setShowPremium(false);
+        }}
+      />
     </View>
   );
 }
@@ -1006,6 +1047,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.75)',
     textAlign: 'center',
+  },
+  btnPremium: {
+    marginTop: 10,
+    backgroundColor: 'rgba(139,195,74,0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(139,195,74,0.6)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  btnPremiumText: {
+    color: Colors.forest.accent,
+    fontSize: 13,
+    fontWeight: '700',
   },
   tabBar: {
     flexDirection: 'row',

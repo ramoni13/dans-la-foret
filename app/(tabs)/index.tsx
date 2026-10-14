@@ -3,7 +3,7 @@
 // Fond illustré + Défi du Jour + Continuer + bouton vers les défis
 // ============================================================
 
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,10 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { ONF_4X4_LEVEL_UNLOCK } from '../../src/constants/onf';
@@ -27,9 +28,10 @@ import { getDailyDateString, subscribeDailyLeaderboard, DailyResult } from '../.
 import { formatTime } from '../../src/utils/boardUtils';
 import { DifficultyLevel } from '../../src/core/models/Challenge';
 import { WorldRecord, subscribeAllWorldRecords } from '../../src/services/worldRecordService';
-import { WoodSign } from '../../src/components/UI/WoodSign';
 import { WoodButton } from '../../src/components/UI/WoodButton';
 import { BgImage } from '../../src/components/UI/BgImage';
+import { ForetCommuneWidget } from '../../src/components/ForetCommune/ForetCommuneWidget';
+import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 
 
 // ── Tous les défis (21 niveaux) ────────────────────────────────────────────────
@@ -83,7 +85,7 @@ const LEVELS: Array<{
   { id: 'niveau_18', label: 'Niveau 18', emoji: '☠️', description: '13 cases · 8 vides · Sans bonus · Max',   isPremium: true,  color: '#212121' },
   { id: 'niveau_19', label: 'Niveau 19', emoji: '🌲', description: '14 cases · 9 vides · + Arbre',             isPremium: true,  color: '#1B5E20' },
   { id: 'niveau_20', label: 'Niveau 20', emoji: '🌳', description: '14 cases · 8 vides · Apothéose',           isPremium: true,  color: '#33691E' },
-  { id: 'niveau_21', label: 'Niveau 21', emoji: '🎆', description: '14 cases · 8 vides · Sans bonus · Feu !', isPremium: true,  color: '#0D0D0D' },
+  { id: 'niveau_21', label: 'Niveau 21', emoji: '🎆', description: '14 cases · 8 vides · Sans bonus · Feu Artifice !', isPremium: true,  color: '#0D0D0D' },
 ];
 
 const ALL_CHALLENGES_BY_LEVEL: Record<string, any[]> = {
@@ -313,6 +315,224 @@ function LevelsScreen({
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Bottom-sheet : choix Défi Solo
+// ══════════════════════════════════════════════════════════════════════════════
+function SoloModal({
+  visible,
+  onClose,
+  onPlay,
+  onSeeAll,
+  nextChallenge,
+  totalCompleted,
+  totalChallenges,
+  allCompleted,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onPlay: () => void;
+  onSeeAll: () => void;
+  nextChallenge: { challenge: any; level: typeof LEVELS[0] } | null;
+  totalCompleted: number;
+  totalChallenges: number;
+  allCompleted: boolean;
+}) {
+  const insets = useSafeAreaInsets();
+  const progress = totalChallenges > 0 ? totalCompleted / totalChallenges : 0;
+
+  // Libellé du bouton "Jouer"
+  let playLabel = 'Commencer l\'aventure';
+  let playSublabel = '';
+  if (allCompleted) {
+    playLabel   = 'Rejouer depuis le début';
+    playSublabel = `${totalCompleted} / ${totalChallenges} · Tous terminés 🏆`;
+  } else if (nextChallenge) {
+    const levelChallenges = ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? [];
+    const defIdx = levelChallenges.findIndex((c: any) => c.id === nextChallenge.challenge.id) + 1;
+    playLabel    = `▶  Jouer`;
+    playSublabel = `${nextChallenge.level.emoji} ${nextChallenge.level.label} · Défi ${defIdx} / ${levelChallenges.length}`;
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent={Platform.OS === 'android'}
+    >
+      {/* Overlay — tap pour fermer */}
+      <TouchableOpacity
+        style={soloStyles.overlay}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        {/* Carte bottom-sheet — stoppe la propagation */}
+        <TouchableOpacity
+          style={[soloStyles.sheet, { paddingBottom: Math.max(insets.bottom, 20) + 4 }]}
+          activeOpacity={1}
+          onPress={() => {}}
+        >
+          {/* Handle */}
+          <View style={soloStyles.handle} />
+
+          {/* Bouton fermer */}
+          <TouchableOpacity
+            style={soloStyles.closeBtn}
+            onPress={onClose}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={soloStyles.closeBtnText}>×</Text>
+          </TouchableOpacity>
+
+          {/* Titre */}
+          <Text style={soloStyles.title}>🌲  Défi Solo</Text>
+
+          {/* Progression */}
+          <Text style={soloStyles.progressText}>
+            {totalCompleted} / {totalChallenges} complétés
+          </Text>
+          <View style={soloStyles.barBg}>
+            <View style={[soloStyles.barFill, { width: `${Math.round(progress * 100)}%` }]} />
+          </View>
+
+          {/* Séparateur */}
+          <View style={soloStyles.separator} />
+
+          {/* Bouton principal — Jouer */}
+          <TouchableOpacity
+            style={soloStyles.btnPlay}
+            onPress={onPlay}
+            activeOpacity={0.85}
+          >
+            <Text style={soloStyles.btnPlayLabel}>{playLabel}</Text>
+            {playSublabel ? (
+              <Text style={soloStyles.btnPlaySublabel}>{playSublabel}</Text>
+            ) : null}
+          </TouchableOpacity>
+
+          {/* Bouton secondaire — Voir tous les niveaux */}
+          <TouchableOpacity
+            style={soloStyles.btnSeeAll}
+            onPress={onSeeAll}
+            activeOpacity={0.8}
+          >
+            <Text style={soloStyles.btnSeeAllText}>📋  Voir tous les niveaux</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+const soloStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#1A3A1A',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderColor: 'rgba(139,195,74,0.2)',
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: {
+    color: '#fff',
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: '700',
+  },
+  title: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  progressText: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  barBg: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#4A7C59',
+  },
+  separator: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+    marginVertical: 20,
+  },
+  btnPlay: {
+    backgroundColor: '#4A7C59',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  btnPlayLabel: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  btnPlaySublabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 3,
+  },
+  btnSeeAll: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  btnSeeAllText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Écran principal
 // ══════════════════════════════════════════════════════════════════════════════
 export default function HomeScreen() {
@@ -322,7 +542,9 @@ export default function HomeScreen() {
   const player = usePlayerStore();
   const { authReady, isAuthenticated } = player;
 
-  const [showLevels, setShowLevels] = useState(false);
+  const [showSoloModal, setShowSoloModal] = useState(false);
+  const [showLevels, setShowLevels]       = useState(false);
+  const [showPremium, setShowPremium]     = useState(false);
   const { showBack, hideBack } = useNavStore();
 
   // Synchronise le bouton Retour du ForestFrame avec l'écran niveaux
@@ -376,6 +598,43 @@ export default function HomeScreen() {
     return () => unsub();
   }, [todayStr]);
 
+  // ── Animations "chute du ciel" ────────────────────────────────────────────
+  const fallSolo   = useRef(new Animated.Value(-400)).current;
+  const fallDaily  = useRef(new Animated.Value(-400)).current;
+  const fallOnf    = useRef(new Animated.Value(-400)).current;
+  const fallWidget = useRef(new Animated.Value(-400)).current;
+
+  // Redéclenché à chaque focus sur l'onglet (retour depuis un autre menu)
+  useFocusEffect(
+    useCallback(() => {
+      if (!authReady || !isAuthenticated) return;
+
+      // Remise à -500 avant chaque lancement pour rejouer depuis le haut
+      fallSolo.setValue(-500);
+      fallDaily.setValue(-500);
+      fallOnf.setValue(-500);
+      fallWidget.setValue(-500);
+
+      // Chute séquentielle : chaque élément attend la fin du précédent
+      // bounciness élevé = rebond visible, speed faible = chute lente
+      const makeSpring = (anim: Animated.Value, delay: number) =>
+        Animated.spring(anim, {
+          toValue: 0,
+          delay,
+          bounciness: 14,
+          speed: 5,
+          useNativeDriver: true,
+        });
+
+      Animated.parallel([
+        makeSpring(fallSolo,   0),
+        makeSpring(fallDaily,  220),
+        makeSpring(fallOnf,    440),
+        makeSpring(fallWidget, 660),
+      ]).start();
+    }, [authReady, isAuthenticated])
+  );
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (isDailyToday && dailyStatus) return;
@@ -421,7 +680,7 @@ export default function HomeScreen() {
     );
   }
 
-  // ── Sous-écran niveaux ────────────────────────────────────────────────────
+  // ── Sous-écran niveaux (plein écran, par-dessus tout) ────────────────────
   if (showLevels) {
     return (
       <LevelsScreen
@@ -442,22 +701,34 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
         contentContainerStyle={[
           styles.container,
-          { paddingTop: innerTop, paddingBottom: frameBottom + 16 },
+          { paddingTop: innerTop + 32, paddingBottom: frameBottom + 160 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Hero : panneau bois "Tous les défis" ── */}
-        <View style={styles.heroGroup}>
-          <WoodSign
-            label="Tous les défis solo"
-            sublabel={`${totalCompleted}/${totalChallenges} complétés`}
-            onPress={() => setShowLevels(true)}
+        {/* ── Défi Solo ── */}
+        <Animated.View style={{ transform: [{ translateY: fallSolo }] }}>
+          <WoodButton
+            variant="green"
+            label="Défi Solo"
+            sublabel={
+              allCompleted
+                ? `${totalCompleted} / ${totalChallenges} · Tous terminés 🏆`
+                : nextChallenge
+                  ? `${nextChallenge.level.emoji} ${nextChallenge.level.label} · Défi ${
+                      (ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? [])
+                        .indexOf(nextChallenge.challenge) + 1
+                    } / ${(ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? []).length}`
+                  : `${totalCompleted} / ${totalChallenges} complétés`
+            }
+            height={76}
+            onPress={() => setShowSoloModal(true)}
           />
-        </View>
+        </Animated.View>
 
         {/* ── Défi du Jour ── */}
+        <Animated.View style={{ transform: [{ translateY: fallDaily }] }}>
         {(() => {
-          const DAILY_UNLOCK_LEVEL = 12;
+          const DAILY_UNLOCK_LEVEL = 9;
           const DEV_USERS = ['Ramoni', 'Cedric'];
           const dailyUnlocked = player.currentLevel >= DAILY_UNLOCK_LEVEL || DEV_USERS.includes(player.username ?? '');
 
@@ -559,8 +830,10 @@ export default function HomeScreen() {
             </View>
           );
         })()}
+        </Animated.View>
 
         {/* ── Défi ONF — Grille Forestière 4×4 ── */}
+        <Animated.View style={{ transform: [{ translateY: fallOnf }] }}>
         {(() => {
           // Débloqué par niveau OU par palier badge bois×9 (chantier 3)
           const isOnfUnlocked = player.currentLevel >= ONF_4X4_LEVEL_UNLOCK || player.unlockedOnf;
@@ -572,7 +845,7 @@ export default function HomeScreen() {
               <WoodButton
                 variant="locked"
                 label="Défi ONF"
-                sublabel={`Disponible au niveau ${ONF_4X4_LEVEL_UNLOCK} ou via 9 badges Bois`}
+                sublabel={`Disponible au niveau ${ONF_4X4_LEVEL_UNLOCK}`}
                 height={76}
                 onPress={() => {}}
                 disabled
@@ -602,25 +875,64 @@ export default function HomeScreen() {
             />
           );
         })()}
+        </Animated.View>
 
-        {/* ── Continuer ── */}
-        {nextChallenge && (() => {
-          const challengeId = nextChallenge.challenge.id;
-          const levelSublabel = allCompleted
-            ? 'Tous les défis terminés !'
-            : `${nextChallenge.level.emoji} ${nextChallenge.level.label} · Défi N°${nextChallenge.challenge.challengeNumber}`;
-          return (
-            <WoodButton
-              variant="green"
-              label="Défi Solo"
-              sublabel={levelSublabel}
-              height={76}
-              onPress={() => router.push(`/game/${challengeId}`)}
-            />
-          );
-        })()}
+        {/* ── Soutenir la forêt — masqué, intégré dans ForetCommuneWidget ── */}
+        {/* {!player.isPremium && (
+          <WoodButton
+            variant="yellow"
+            label="🌲 Soutenir la forêt"
+            sublabel="2,99 € · dont 1 € reversé à l'ONF"
+            height={76}
+            onPress={() => setShowPremium(true)}
+          />
+        )} */}
 
       </ScrollView>
+
+      {/* ── PremiumCard (overlay modal) ── */}
+      <PremiumCard
+        visible={showPremium}
+        onClose={() => setShowPremium(false)}
+        onPurchase={() => {
+          player.unlockPremium();
+          setShowPremium(false);
+        }}
+      />
+
+      {/* ── Forêt Commune — ancrée en bas, laisse voir la maison ── */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          bottom: frameBottom + 8,
+          left: 16,
+          right: 16,
+          transform: [{ translateY: fallWidget }],
+        }}
+        pointerEvents="box-none"
+      >
+        <ForetCommuneWidget />
+      </Animated.View>
+
+      {/* ── SoloModal (bottom-sheet) ── */}
+      <SoloModal
+        visible={showSoloModal}
+        onClose={() => setShowSoloModal(false)}
+        onPlay={() => {
+          setShowSoloModal(false);
+          if (nextChallenge) {
+            router.push(`/game/${nextChallenge.challenge.id}`);
+          }
+        }}
+        onSeeAll={() => {
+          setShowSoloModal(false);
+          setShowLevels(true);
+        }}
+        nextChallenge={nextChallenge}
+        totalCompleted={totalCompleted}
+        totalChallenges={totalChallenges}
+        allCompleted={allCompleted}
+      />
     </View>
   );
 }
@@ -655,9 +967,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 24,
   },
-
-  // Hero group
-  heroGroup: { alignItems: 'center', gap: 0 },
 
   // Défi du Jour — états non interactifs
 
