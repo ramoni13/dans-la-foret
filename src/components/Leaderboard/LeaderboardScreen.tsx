@@ -18,6 +18,8 @@ import {
 } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { useFrameLayout } from '../../constants/frameLayout';
+import { getRank, RANK_DEFINITIONS } from '../../constants/badges';
+import { usePlayerStore } from '../../store/playerStore';
 
 import { LeaderboardEntry, DailyWinsEntry, subscribeLeaderboard, subscribeDailyWinsLeaderboard } from '../../services/leaderboardService';
 import { RecordHolderEntry, subscribeRecordHolders } from '../../services/worldRecordService';
@@ -51,6 +53,15 @@ interface RowProps {
 
 const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
   const medal = MEDAL[rank];
+  const language = usePlayerStore(state => state.language);
+
+  // Calcul du rang forestier depuis badgeScore (présent si la synchro est récente)
+  const badgeScore = (entry as any).badgeScore ?? 0;
+  const forestRank = getRank(badgeScore);
+  const forestRankLabel = language === 'en' ? forestRank.labelEn : forestRank.label;
+  // N'afficher le rang que si le joueur a au moins un badge (score > 0)
+  const showForestRank = badgeScore > 0 || entry.badgeCount > 0;
+
   return (
     <View style={[styles.row, isMe && styles.rowMe]}>
       {/* Rang */}
@@ -69,6 +80,11 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
         <Text style={[styles.username, isMe && styles.usernameMe]} numberOfLines={1}>
           {entry.username}{isMe ? ' (toi)' : ''}
         </Text>
+        {showForestRank && tab !== 'records' && tab !== 'daily' && (
+          <Text style={styles.forestRank} numberOfLines={1}>
+            {forestRank.emoji} {forestRankLabel}
+          </Text>
+        )}
         <Text style={styles.subinfo}>
           {tab === 'records'
             ? `🏆 ${(entry as any).recordCount ?? 0} records mondiaux`
@@ -304,7 +320,7 @@ export const LeaderboardScreen: React.FC = () => {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const ROW_HEIGHT = 68;
+const ROW_HEIGHT = 76;
 
 const styles = StyleSheet.create({
   container: {
@@ -393,7 +409,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    height: ROW_HEIGHT,
+    minHeight: ROW_HEIGHT,
     shadowColor: Colors.ui.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
@@ -435,10 +451,16 @@ const styles = StyleSheet.create({
   usernameMe: {
     color: Colors.forest.medium,
   },
+  forestRank: {
+    fontSize: 11,
+    color: Colors.forest.medium,
+    fontWeight: '600',
+    marginTop: 1,
+  },
   subinfo: {
     fontSize: 11,
     color: Colors.ui.textLight,
-    marginTop: 2,
+    marginTop: 1,
   },
   valueCol: {
     alignItems: 'flex-end',
