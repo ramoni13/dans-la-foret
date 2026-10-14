@@ -15,7 +15,7 @@ import {
   BADGE_SEED_REWARDS,
   RARITY_UNLOCKS,
 } from '../constants/badges';
-import { DEFAULT_BADGE_GOALS } from '../core/engine/badgeEngine';
+import { DEFAULT_BADGE_GOALS, pickNextAutoGoal } from '../core/engine/badgeEngine';
 
 // ── Helpers de date ────────────────────────────────────────────────────────────
 
@@ -119,9 +119,24 @@ interface PlayerState {
   onfSolvedCount: number;              // nb de grilles 4×4 résolues
   lastOnfCompoKey: string | null;      // clé de la dernière composition jouée (anti-répétition)
   completedOnfChallengeIds: string[]; // IDs des défis ONF terminés (pour ne pas reproposer)
+  hasSeenOnfBriefing: boolean;        // briefing ONF affiché au moins une fois
 
   // ── Badges : objectifs actifs (chantier 3) ───────────────────────────────────
   activeBadgeGoals: string[];  // max 3 badgeIds choisis par le joueur
+  /**
+   * Compteurs dédiés par badge objectif actif.
+   * Remis à 0 à chaque activation (sélection ou auto-avance).
+   * Incrémenté dans markChallengeCompleted si la condition du badge est remplie ce défi.
+   * Utilisé par evaluateBadges pour décider si le badge est obtenu.
+   * Clé = badgeId (uniquement précision_* et vitesse_* — les badges à condition par défi).
+   */
+  goalCounters: Record<string, number>;
+  /**
+   * Quand true (défaut), un slot libéré après l'obtention d'un badge est
+   * automatiquement rempli par le prochain badge éligible de la même catégorie.
+   * Quand false, le joueur choisit manuellement.
+   */
+  autoGoal: boolean;
 
   // ── Défis amis : amis uniques défiés (pour badge social_poignee / social_cirque) ──
   /** UIDs des amis à qui le joueur a envoyé au moins un défi. Jamais de doublons. */
@@ -155,7 +170,21 @@ interface PlayerState {
   /** Attribue plusieurs badges en UN SEUL set() — évite la cascade de re-renders */
   awardBadges: (badgeIds: string[]) => void;
   setBadgeShowcase: (badges: [string?, string?, string?]) => void;
+  /**
+   * Définit les objectifs actifs et remet à 0 les compteurs des nouveaux objectifs.
+   * @param ids   IDs des badges à mettre en objectif
+   */
   setActiveBadgeGoals: (ids: string[]) => void;
+  setAutoGoal: (enabled: boolean) => void;
+  /**
+   * Appelé après awardBadges() quand autoGoal=true.
+   * Pour chaque badge complété dans les objectifs actifs, tente de le remplacer
+   * par le prochain badge éligible de la même catégorie.
+   * Remet à 0 le goalCounter du nouveau badge injecté.
+   * @param completedGoalIds IDs des badges qui viennent d'être obtenus ET qui étaient en objectif actif
+   * @param updatedEarnedBadges Liste earnedBadges APRÈS awardBadges() — évite le stale state Zustand batché
+   */
+  advanceGoalAuto: (completedGoalIds: string[], updatedEarnedBadges: string[]) => void;
 
   // ── Actions bonus journaliers (chantier 4) ───────────────────────────────────
   spendBonus: (bonusId: BonusId) => boolean;
@@ -193,6 +222,8 @@ interface PlayerState {
   setLastOnfCompoKey: (key: string) => void;
   /** Marque un défi ONF comme terminé (ajoute son ID, incrémente le compteur). */
   markOnfChallengeCompleted: (challengeId: string) => void;
+  /** Marque le briefing ONF comme vu (ne s'affiche plus après). */
+  markOnfBriefingSeen: () => void;
 
   // ── Actions statistiques génériques (chantier 5) ──────────────────────────
   incrementStat: (key: keyof PlayerStats, amount?: number) => void;
@@ -276,7 +307,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   userId: null,
   username: 'Joueur',
-  seeds: 99,                        // 99 graines pour les tests — TODO: passer à 3 avant publication
+  seeds: 0,
   completedChallenges: [],
   isPremium: true,                  // TODO: passer à false avant publication
   lastPlayedChallengeId: null,
@@ -333,8 +364,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   onfSolvedCount: 0,
   lastOnfCompoKey: null,
   completedOnfChallengeIds: [],
+  hasSeenOnfBriefing: false,
 
   activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+  goalCounters: {},
+  autoGoal: true,
 
   challengedFriendIds: [],
 
@@ -416,13 +450,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         bestTimes:                profile.stats.bestTimes,
         currentStreak:            profile.stats.currentStreak,
         longestStreak:            profile.stats.longestStreak,
-        noErrorStreak:            profile.stats.noErrorStreak ?? 0,
-        friendWins:               profile.stats.friendWins ?? 0,
-        totalFriendsInvited:      profile.stats.totalFriendsInvited ?? 0,
-        topDEJCount:              profile.stats.topDEJCount ?? 0,
+        // Compteurs : prendre le max local/cloud pour ne pas écraser les données offline
+        noErrorStreak:            Math.max(get().stats.noErrorStreak, profile.stats.noErrorStreak ?? 0),
+        improvedChallengesCount:  Math.max(get().stats.improvedChallengesCount, profile.stats.improvedChallengesCount ?? 0),
+        friendWins:               Math.max(get().stats.friendWins, profile.stats.friendWins ?? 0),
+        totalFriendsInvited:      Math.max(get().stats.totalFriendsInvited, profile.stats.totalFriendsInvited ?? 0),
+        topDEJCount:              Math.max(get().stats.topDEJCount, profile.stats.topDEJCount ?? 0),
         sameChallengePlays:       profile.stats.sameChallengePlays ?? {},
         failCount:                profile.stats.failCount ?? {},
-        improvedChallengesCount:  profile.stats.improvedChallengesCount ?? 0,
         seasonalChallengesPlayed: profile.stats.seasonalChallengesPlayed ?? 0,
         abandonCount:             (profile.stats as any).abandonCount ?? {},
         dailyPlayed:              (profile.stats as any).dailyPlayed ?? 0,
@@ -430,7 +465,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         friendPlayed:             (profile.stats as any).friendPlayed ?? 0,
         avgResolutionMs:          (profile.stats as any).avgResolutionMs ?? 0,
         totalResolutionCount:     (profile.stats as any).totalResolutionCount ?? 0,
-        speedBadgeHits:           (profile.stats as any).speedBadgeHits ?? {},
+        // speedBadgeHits : merger (max par badge) pour ne pas perdre les hits offline
+        speedBadgeHits: (() => {
+          const localHits = get().stats.speedBadgeHits ?? {};
+          const cloudHits = (profile.stats as any).speedBadgeHits ?? {};
+          const merged: Record<string, number> = { ...localHits };
+          for (const [k, v] of Object.entries(cloudHits)) {
+            merged[k] = Math.max(merged[k] ?? 0, v as number);
+          }
+          return merged;
+        })(),
       },
       earnedBadges:    mergedEarned,
       unlockedBonuses: computeUnlockedBonuses(mergedEarned),
@@ -449,10 +493,33 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       ),
       onfSolvedCount: (profile as any).onfSolvedCount ?? (profile as any).onf4x4SolvedCount ?? 0,
       completedOnfChallengeIds: (profile as any).completedOnfChallengeIds ?? [],
-      // Objectifs actifs : restaurer depuis le cloud ; si vide (ancien profil), appliquer les défauts
+      // Objectifs actifs : merger local vs cloud.
+      // Priorité au local si la version locale est plus propre (ne contient pas de badges déjà obtenus).
+      // Priorité au cloud si le local est vide ou si le cloud est plus récent (ex: autre appareil).
       activeBadgeGoals: (() => {
         const cloudGoals: string[] = (profile as any).activeBadgeGoals ?? [];
-        return cloudGoals.length > 0 ? cloudGoals : [...DEFAULT_BADGE_GOALS];
+        const localGoals: string[] = get().activeBadgeGoals;
+        const allEarned = new Set([
+          ...get().earnedBadges,
+          ...(profile.earnedBadges ?? []),
+        ]);
+        // Nettoyer les deux versions des badges obtenus
+        const cleanCloud = cloudGoals.filter(id => !allEarned.has(id));
+        const cleanLocal = localGoals.filter(id => !allEarned.has(id));
+        // Garder la version avec le plus de slots remplis (local prioritaire en cas d'égalité)
+        const merged = cleanLocal.length >= cleanCloud.length ? cleanLocal : cleanCloud;
+        return merged.length > 0 ? merged : [...DEFAULT_BADGE_GOALS];
+      })(),
+      // goalCounters : merger local + cloud — prendre le max par badge
+      // pour ne pas perdre les progrès offline (offline peut être plus avancé que cloud)
+      goalCounters: (() => {
+        const cloudCounters: Record<string, number> = (profile as any).goalCounters ?? {};
+        const localCounters: Record<string, number> = get().goalCounters ?? {};
+        const merged: Record<string, number> = { ...cloudCounters };
+        for (const [k, v] of Object.entries(localCounters)) {
+          merged[k] = Math.max(merged[k] ?? 0, v);
+        }
+        return merged;
       })(),
     });
   },
@@ -546,6 +613,34 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         }
       }
 
+      // ── goalCounters : compteurs dédiés par badge objectif actif ──────────────
+      // Incrémenter uniquement si le badge est en objectif actif et que la condition
+      // propre à ce badge est remplie pour CE défi. Indépendant des métriques globales.
+      const newGoalCounters = { ...state.goalCounters };
+      for (const badgeId of state.activeBadgeGoals) {
+        if (state.earnedBadges.includes(badgeId)) continue; // déjà obtenu
+        // Vitesse : condition = finir sous le seuil du niveau courant
+        const speedEntry = speedThresholds.find(([id]) => id === badgeId);
+        if (speedEntry) {
+          if (elapsedSec < speedEntry[1]) {
+            newGoalCounters[badgeId] = (newGoalCounters[badgeId] ?? 0) + 1;
+          }
+          continue;
+        }
+        // Précision : condition = pas d'erreur pendant cette partie
+        if (badgeId.startsWith('precision_')) {
+          if (errorCount === 0) {
+            newGoalCounters[badgeId] = (newGoalCounters[badgeId] ?? 0) + 1;
+          } else {
+            // Échec → reset du compteur précision dédié
+            newGoalCounters[badgeId] = 0;
+          }
+          continue;
+        }
+        // Les autres catégories (régularité, social, amélioration, exploration) utilisent
+        // leurs métriques globales directement — pas besoin de goalCounters.
+      }
+
       return {
         completedChallenges: newCompleted,
         currentLevel: computePlayerLevel(newCompleted.length),
@@ -553,6 +648,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           ? state.friendChallengeTokens + 1
           : state.friendChallengeTokens,
         challengeStartedAt: restStarted,
+        goalCounters: newGoalCounters,
         stats: {
           ...state.stats,
           totalSolved: alreadyCompleted ? state.stats.totalSolved : state.stats.totalSolved + 1,
@@ -598,7 +694,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // authReady reste true : Firebase a déjà répondu, on sait qu'on est déconnecté
     userId: null,
     username: 'Joueur',
-    seeds: 3,
+    seeds: 0,
     completedChallenges: [],
     isPremium: false,
     lastPlayedChallengeId: null,
@@ -642,7 +738,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     onfSolvedCount: 0,
     lastOnfCompoKey: null,
     completedOnfChallengeIds: [],
-    activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+  activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+  goalCounters: {},
+  autoGoal: true,
     dailyBonusUses: { highlight_valid_cells: 5, instinct: 5 },
     lastBonusResetDate: null,
   }),
@@ -657,35 +755,41 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   // Version groupée : UN SEUL set() pour N badges.
   // Élimine la cascade de re-renders causée par des appels awardBadge() répétés.
   awardBadges: (badgeIds) => {
-    if (badgeIds.length === 0) return;
     set(state => {
       // Filtrer les badges déjà obtenus (idempotence)
       const toAdd = badgeIds.filter(id => !state.earnedBadges.includes(id));
-      if (toAdd.length === 0) return state;
 
-      // Cumuler les graines de tous les nouveaux badges en une passe
+      const newEarned = toAdd.length > 0
+        ? [...state.earnedBadges, ...toAdd]
+        : state.earnedBadges;
+
+      // Retirer des objectifs actifs TOUS les badges désormais obtenus —
+      // y compris ceux déjà dans earnedBadges qui traîneraient encore dans activeBadgeGoals.
+      // Ce nettoyage doit toujours s'exécuter, même quand toAdd est vide.
+      const newActiveBadgeGoals = state.activeBadgeGoals.filter(
+        id => !newEarned.includes(id)
+      );
+      const goalsUnchanged = newActiveBadgeGoals.length === state.activeBadgeGoals.length;
+
+      // Rien à faire du tout : no-op pour éviter un re-render inutile
+      if (toAdd.length === 0 && goalsUnchanged) return state;
+
+      // Cumuler les graines des nouveaux badges seulement
       const totalSeeds = toAdd.reduce((acc, id) => {
         const def = BADGE_MAP[id];
         return acc + (def ? BADGE_SEED_REWARDS[def.rarity] : 0);
       }, 0);
 
-      const newEarned = [...state.earnedBadges, ...toAdd];
-
       // Recalculer les bonus/thèmes UNE SEULE FOIS pour tous les badges
-      const newUnlockedBonuses = computeUnlockedBonuses(newEarned);
-      const newUnlockedThemes  = computeUnlockedThemes(newEarned);
-
-      // Retirer des objectifs actifs les badges nouvellement obtenus (chantier 3)
-      const newActiveBadgeGoals = state.activeBadgeGoals.filter(
-        id => !toAdd.includes(id)
-      );
+      const newUnlockedBonuses = toAdd.length > 0 ? computeUnlockedBonuses(newEarned) : state.unlockedBonuses;
+      const newUnlockedThemes  = toAdd.length > 0 ? computeUnlockedThemes(newEarned)  : state.unlockedThemes;
 
       return {
         earnedBadges:    newEarned,
         seeds:           state.seeds + totalSeeds,
         unlockedBonuses: newUnlockedBonuses,
         unlockedThemes:  newUnlockedThemes,
-        unlockedOnf:     computeUnlockedONF(newEarned),
+        unlockedOnf:     toAdd.length > 0 ? computeUnlockedONF(newEarned) : state.unlockedOnf,
         activeBadgeGoals: newActiveBadgeGoals,
       };
     });
@@ -841,10 +945,66 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     };
   }),
 
+  // ── Briefing ONF ──────────────────────────────────────────
+  markOnfBriefingSeen: () => set({ hasSeenOnfBriefing: true }),
+
   // ── Objectifs de badges actifs (chantier 3) ───────────────
-  setActiveBadgeGoals: (ids) => set({
-    activeBadgeGoals: ids.slice(0, 3).filter((id, i, arr) => arr.indexOf(id) === i),
+  setActiveBadgeGoals: (ids) => set(state => {
+    const deduped = ids.slice(0, 3).filter((id, i, arr) => arr.indexOf(id) === i);
+    // Remettre à 0 le compteur de chaque badge nouvellement ajouté comme objectif.
+    // Les badges déjà actifs conservent leur compteur (reprise sans perte).
+    const newCounters = { ...state.goalCounters };
+    for (const id of deduped) {
+      if (!state.activeBadgeGoals.includes(id)) {
+        // Nouveau badge → compteur à zéro
+        newCounters[id] = 0;
+      }
+    }
+    // Nettoyer les compteurs des objectifs qui ne sont plus actifs
+    for (const id of Object.keys(newCounters)) {
+      if (!deduped.includes(id) && !state.earnedBadges.includes(id)) {
+        delete newCounters[id];
+      }
+    }
+    return {
+      activeBadgeGoals: deduped,
+      goalCounters: newCounters,
+    };
   }),
+
+  // ── Toggle choix automatique des objectifs ────────────────
+  setAutoGoal: (enabled) => set({ autoGoal: enabled }),
+
+  // ── Auto-avance des objectifs après badge obtenu ──────────
+  advanceGoalAuto: (completedGoalIds, updatedEarnedBadges) => {
+    if (completedGoalIds.length === 0) return;
+    // updatedEarnedBadges est passé depuis l'appelant APRÈS awardBadges() pour éviter
+    // le stale state causé par le batching React 18 des set() Zustand successifs.
+
+    set(state => {
+      let goals = [...state.activeBadgeGoals];
+      const newCounters = { ...state.goalCounters };
+
+      for (const completedId of completedGoalIds) {
+        // Retirer le badge complété des objectifs actifs et nettoyer son compteur
+        goals = goals.filter(id => id !== completedId);
+        delete newCounters[completedId];
+
+        // Trouver le prochain badge éligible et l'ajouter
+        const nextId = pickNextAutoGoal(completedId, updatedEarnedBadges, goals);
+        if (nextId) {
+          goals = [...goals, nextId];
+          // Nouveau badge → compteur à zéro (repart de 0 quoi qu'il arrive)
+          newCounters[nextId] = 0;
+        }
+      }
+
+      return {
+        activeBadgeGoals: goals.slice(0, 3),
+        goalCounters: newCounters,
+      };
+    });
+  },
 
   // ── Dépense de bonus journalier (chantier 4) ──────────────
   spendBonus: (bonusId) => {

@@ -127,14 +127,9 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   hydrate: (data) => {
     set(s => {
-      // Recalculer les possédés depuis les thèmes si ownedTrackIds est fourni,
-      // sinon garder les gratuits. Les thèmes seront resynchronisés via
-      // syncOwnedFromThemes() juste après le chargement du playerStore.
-      // ownedTrackIds n'est plus persisté directement : il est recalculé depuis
-      // earnedBadges via syncOwnedFromBadges() appelé juste après le chargement.
-      // On garde uniquement les gratuits comme base sûre.
-      const ownedFromStorage = [...FREE_TRACK_IDS];
-
+      // Ne PAS toucher ownedTrackIds ici : il est calculé exclusivement depuis
+      // earnedBadges via syncOwnedFromBadges(), appelé après hydrate() dans useStorage.
+      // L'écraser ici provoquerait une race condition si audio se charge après player.
       return {
         ...s,
         ingameEnabled:         data.ingameEnabled          ?? s.ingameEnabled,
@@ -142,7 +137,6 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         volume:                data.volume                  ?? s.volume,
         selectedIngameTrackId: data.selectedIngameTrackId  ?? s.selectedIngameTrackId,
         selectedMenuTrackId:   data.selectedMenuTrackId    ?? s.selectedMenuTrackId,
-        ownedTrackIds: ownedFromStorage,
       };
     });
   },
