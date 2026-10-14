@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // MOTEUR D'ÉVALUATION DES BADGES
 // Fonction pure, idempotente, O(n) sur le catalogue.
 // ============================================================
@@ -21,7 +21,7 @@ export interface GameContext {
   /** Nombre de fois où le joueur a appuyé sur Valider et s'est trompé pendant cette partie.
    *  0 = défi terminé du premier coup. C'est ce qui conditionne noErrorStreak. */
   failCount: number;
-  noErrorStreak: number;        // défis CONSÉCUTIFS sans erreur APRÈS mise à jour du store
+  noErrorStreak: number;        // défis CONSÉCUTIFS sans erreur APRÈS mise à jour du store (pour métriques globales)
   dailyStreak: number;          // jours consécutifs joués (APRÈS mise à jour du jour courant)
   earnedBadges: string[];       // badges déjà obtenus — pour idempotence (AVANT cette partie)
   completedChallenges: string[]; // tous les défis déjà validés AVANT ajout du défi courant
@@ -40,8 +40,16 @@ export interface GameContext {
   /** Objectifs badge actifs du joueur — seuls ces badges (éligibles) peuvent être décernés */
   activeBadgeGoals?: string[];
   /**
-   * Compteurs de victoires sous seuil vitesse par badge (post-update : markChallengeCompleted
-   * vient de l'incrémenter si ce finish était sous le seuil).
+   * Compteurs dédiés par badge objectif actif (post-update : markChallengeCompleted vient
+   * de les incrémenter). Chaque compteur part de 0 à l'activation et compte uniquement
+   * les défis où la condition propre au badge a été satisfaite.
+   * Utilisé pour vitesse_* et precision_* — les badges à condition par défi.
+   */
+  goalCounters?: Record<string, number>;
+  /**
+   * Compteurs de victoires sous seuil vitesse par badge (post-update).
+   * Conservé pour compatibilité mais non utilisé pour les badges en objectif actif
+   * (goalCounters prend le relais). Utilisé pour les badges vitesse hors objectif actif.
    */
   speedBadgeHits?: Record<string, number>;
 }
@@ -81,9 +89,9 @@ export function evaluateBadges(ctx: GameContext): string[] {
   const earned = new Set(ctx.earnedBadges);
   const newBadges: string[] = [];
   // Set des objectifs actifs pour lookup O(1)
-  const activeGoals = new Set(ctx.activeBadgeGoals ?? []);
+  const activeGoals   = new Set(ctx.activeBadgeGoals ?? []);
   // Set des éligibles pour savoir si un badge nécessite une activation
-  const eligibleSet = new Set(ELIGIBLE_GOAL_BADGE_IDS);
+  const eligibleSet   = new Set(ELIGIBLE_GOAL_BADGE_IDS);
 
   function award(badgeId: string) {
     if (earned.has(badgeId)) return;
@@ -104,11 +112,13 @@ export function evaluateBadges(ctx: GameContext): string[] {
   const dayOfWeek       = ctx.playedAt.getDay(); // 0=Dim
   const monthDay        = ctx.playedAt.getMonth() + 1;
   const dateDay         = ctx.playedAt.getDate();
+  const goalCounters    = ctx.goalCounters ?? {};
 
   // ── VITESSE ─────────────────────────────────────────────────────────────────
-  // Chaque badge vitesse nécessite SPEED_BADGE_TARGET (5) victoires sous le seuil.
-  // Le compteur speedBadgeHits[badgeId] est incrémenté dans markChallengeCompleted
-  // (post-update) avec les mêmes seuils par niveau.
+  // Pour les badges en objectif actif : goalCounters[badgeId] compte les défis sous seuil
+  // depuis l'activation (repart de 0 à chaque activation). Cible = SPEED_BADGE_TARGET (5).
+  // Pour les badges hors objectif : speedBadgeHits (compteur global, non utilisé ici car
+  // award() bloque les badges éligibles non actifs).
   //
   //   Badge          | Niv 1 | +/niv | Niv 5 | Niv 10 | Niv 13
   //   vitesse_tortue |  30 s |   +5  |  50 s |   75 s |   90 s
@@ -116,28 +126,25 @@ export function evaluateBadges(ctx: GameContext): string[] {
   //   vitesse_oiseau |  12 s |   +2  |  20 s |   30 s |   36 s
   //   vitesse_eclair |   7 s |   +1  |  11 s |   16 s |   19 s
   //   vitesse_tornade|   4 s |  +0.5 |   6 s |    8 s |   10 s
-  const hits = ctx.speedBadgeHits ?? {};
-  if ((hits['vitesse_tortue']  ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_tortue');
-  if ((hits['vitesse_Loup']    ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_Loup');
-  if ((hits['vitesse_oiseau']  ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_oiseau');
-  if ((hits['vitesse_eclair']  ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_eclair');
-  if ((hits['vitesse_tornade'] ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_tornade');
+  if ((goalCounters['vitesse_tortue']  ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_tortue');
+  if ((goalCounters['vitesse_Loup']    ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_Loup');
+  if ((goalCounters['vitesse_oiseau']  ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_oiseau');
+  if ((goalCounters['vitesse_eclair']  ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_eclair');
+  if ((goalCounters['vitesse_tornade'] ?? 0) >= SPEED_BADGE_TARGET) award('vitesse_tornade');
 
   // ── PRÉCISION ────────────────────────────────────────────────────────────────
-  // errorCount === 0 = validation réussie du premier coup (pas de bouton Valider échoué).
-  // La victoire elle-même est toujours errorCount=0 (le jeu ne permet la victoire qu'à 0 erreur),
-  // mais on distingue "0 erreur à chaque validation" via noErrorStreak.
-  // Le badge "Première pousse" se gagne après 1 défi sans AUCUN échec intermédiaire.
-  if (ctx.failCount === 0) {
-    // Aucun bouton Valider raté pendant cette partie
-    award('precision_pousse');
-    if (ctx.noErrorStreak >= 3)  award('precision_oeil');
-    if (ctx.noErrorStreak >= 10) award('precision_hibou');
-    if (ctx.noErrorStreak >= 25) award('precision_arc');
-    if (ctx.noErrorStreak >= 50) award('precision_couronne');
-  }
+  // goalCounters[badgeId] compte les défis consécutifs sans erreur depuis l'activation.
+  // Remis à 0 si errorCount > 0 (dans markChallengeCompleted) ou à l'activation.
+  // Cibles : pousse=3, oeil=3, hibou=10, arc=25, couronne=50.
+  if ((goalCounters['precision_pousse']   ?? 0) >= 3)  award('precision_pousse');
+  if ((goalCounters['precision_oeil']     ?? 0) >= 3)  award('precision_oeil');
+  if ((goalCounters['precision_hibou']    ?? 0) >= 10) award('precision_hibou');
+  if ((goalCounters['precision_arc']      ?? 0) >= 25) award('precision_arc');
+  if ((goalCounters['precision_couronne'] ?? 0) >= 50) award('precision_couronne');
 
   // ── RÉGULARITÉ ───────────────────────────────────────────────────────────────
+  // dailyStreak est une métrique monotone croissante (ou reset sur rupture) —
+  // pas de problème d'activation tardive car chaque badge a un seuil distinct.
   if (ctx.dailyStreak >= 3)   award('regularite_aube');
   if (ctx.dailyStreak >= 7)   award('regularite_fougere');
   if (ctx.dailyStreak >= 30)  award('regularite_arbre');
@@ -154,23 +161,19 @@ export function evaluateBadges(ctx: GameContext): string[] {
   }
 
   // ── SOCIAL ───────────────────────────────────────────────────────────────────
-  if (ctx.totalFriendsInvited >= 1)  award('social_poignee');
-  if (ctx.friendWins >= 5)           award('social_lion');
-  if (ctx.friendWins >= 20)          award('social_loup');
-  if (ctx.friendWins >= 50)          award('social_roi');
-  if (ctx.totalFriendsInvited >= 5)  award('social_cirque');
-  if (ctx.topDEJCount >= 5)          award('social_trophee');
+  if (ctx.totalFriendsInvited >= 1) award('social_poignee');
+  if (ctx.friendWins >= 5)          award('social_lion');
+  if (ctx.friendWins >= 20)         award('social_loup');
+  if (ctx.friendWins >= 50)         award('social_roi');
+  if (ctx.totalFriendsInvited >= 5) award('social_cirque');
+  if (ctx.topDEJCount >= 5)         award('social_trophee');
 
   // ── AMÉLIORATION ─────────────────────────────────────────────────────────────
-  if (isPersonalBest(ctx)) {
-    award('amelioration_graphe');
-  }
+  if ((ctx.improvedChallengesCount ?? 0) >= 3)  award('amelioration_graphe');
 
   // "Persévérant" : a rejoué le même défi >= 3 fois (sameChallengePlays est AVANT cette partie)
   const playsOnThisChallenge = (ctx.sameChallengePlays[ctx.challengeId] ?? 0) + 1;
-  if (playsOnThisChallenge >= 3) {
-    award('amelioration_cycle');
-  }
+  if (playsOnThisChallenge >= 3) award('amelioration_cycle');
 
   // "Perfection absolue" : terminé en < 20% du temps estimé ET sans aucun échec
   if (ratio < 0.20 && ctx.failCount === 0) {
@@ -178,38 +181,26 @@ export function evaluateBadges(ctx: GameContext): string[] {
   }
 
   // "Fusée" : 10 défis distincts dont le temps a été amélioré (record personnel battu)
-  // improvedChallengesCount est fourni dans le contexte (post-update : markChallengeCompleted
-  // l'incrémente si isPersonalBest, et on le lit APRÈS pour avoir la valeur à jour).
-  if ((ctx.improvedChallengesCount ?? 0) >= 10) {
-    award('amelioration_fusee');
-  }
+  if ((ctx.improvedChallengesCount ?? 0) >= 10) award('amelioration_fusee');
 
   // ── EXPLORATION ──────────────────────────────────────────────────────────────
-  // "Premiers pas" : niveaux 1, 2, 3 entièrement complétés
   if (['niveau_1', 'niveau_2', 'niveau_3'].every(n => completedLevels.includes(n))) {
     award('exploration_graine');
   }
-
-  // "Explorateur confirmé" : niveaux 1 à 5
   if (['niveau_1', 'niveau_2', 'niveau_3', 'niveau_4', 'niveau_5'].every(n => completedLevels.includes(n))) {
     award('exploration_herbe');
   }
-
-  // "Vieux chêne" : niveaux 1 à 9
   const n1_9 = ['niveau_1','niveau_2','niveau_3','niveau_4','niveau_5',
                  'niveau_6','niveau_7','niveau_8','niveau_9'];
   if (n1_9.every(n => completedLevels.includes(n))) {
     award('exploration_chene');
   }
-
-  // "Maître des profondeurs" : tous les niveaux (1 à 13)
   const allLevels = [...n1_9, 'niveau_10','niveau_11','niveau_12','niveau_13'];
   if (allLevels.every(n => completedLevels.includes(n))) {
     award('exploration_crane');
   }
 
   // "Sans bonus" : complète le dernier défi d'un niveau (n°10) sans bonus
-  // et tous les 9 précédents sont déjà complétés
   if (ctx.bonusUsed.length === 0 && ctx.challengeNumber === 10) {
     const levelDone = completedInLevel(ctx.levelId, completedBefore).length >= 9;
     if (levelDone) {
@@ -219,9 +210,7 @@ export function evaluateBadges(ctx: GameContext): string[] {
 
   // "Collectionneur" : 50 défis complétés (APRÈS ajout du défi courant)
   const totalDone = completedBefore.length + 1;
-  if (totalDone >= 50) {
-    award('exploration_collectionneur');
-  }
+  if (totalDone >= 50) award('exploration_collectionneur');
 
   // ── SECRETS ──────────────────────────────────────────────────────────────────
 
@@ -396,22 +385,49 @@ export function getClosestBadges(ctx: GameContext): BadgeProgress[] {
     });
   }
 
+  // ── Compteurs exploration basés sur les niveaux complétés ────────────────────
+  const levelsCompleted = ctx.completedLevels ?? [];
+  const niv3done  = ['niveau_1','niveau_2','niveau_3'].filter(n => levelsCompleted.includes(n)).length;
+  const niv5done  = ['niveau_1','niveau_2','niveau_3','niveau_4','niveau_5'].filter(n => levelsCompleted.includes(n)).length;
+  const niv9done  = ['niveau_1','niveau_2','niveau_3','niveau_4','niveau_5',
+                     'niveau_6','niveau_7','niveau_8','niveau_9'].filter(n => levelsCompleted.includes(n)).length;
+  const niv13done = [...['niveau_1','niveau_2','niveau_3','niveau_4','niveau_5',
+                     'niveau_6','niveau_7','niveau_8','niveau_9'],
+                     'niveau_10','niveau_11','niveau_12','niveau_13'].filter(n => levelsCompleted.includes(n)).length;
+
   // ── Autres badges : current/target linéaires ──────────────────────────────────
   const progressMap: Record<string, [number, number]> = {
-    precision_pousse:          [ctx.failCount === 0 ? 1 : 0, 1],
-    precision_oeil:            [ctx.noErrorStreak, 3],
+    // Précision (noErrorStreak : défis consécutifs sans erreur)
+    // failCount === -1 = hors partie (profil) → afficher la valeur actuelle du streak
+    // failCount > 0 = partie avec erreurs → streak sera 0 après reset (on affiche 0)
+    precision_pousse:          [ctx.failCount <= 0 ? ctx.noErrorStreak : 0, 3],
+    precision_oeil:            [ctx.failCount <= 0 ? ctx.noErrorStreak : 0, 3],
     precision_hibou:           [ctx.noErrorStreak, 10],
     precision_arc:             [ctx.noErrorStreak, 25],
     precision_couronne:        [ctx.noErrorStreak, 50],
+    // Régularité
     regularite_aube:           [ctx.dailyStreak, 3],
     regularite_fougere:        [ctx.dailyStreak, 7],
     regularite_arbre:          [ctx.dailyStreak, 30],
     regularite_foret:          [ctx.dailyStreak, 100],
+    // Social
+    social_poignee:            [ctx.totalFriendsInvited >= 1 ? 1 : 0, 1],
     social_lion:               [ctx.friendWins, 5],
     social_loup:               [ctx.friendWins, 20],
     social_roi:                [ctx.friendWins, 50],
     social_cirque:             [ctx.totalFriendsInvited, 5],
     social_trophee:            [ctx.topDEJCount, 5],
+    // Amélioration
+    amelioration_graphe:       [ctx.improvedChallengesCount ?? 0, 3],
+    amelioration_cycle:        [Math.min(ctx.sameChallengePlays?.[ctx.challengeId] ?? 0, 3), 3],
+    amelioration_etoile:       [(ctx.failCount === 0 && ctx.estimatedDurationMs > 0 && ctx.elapsedMs / ctx.estimatedDurationMs < 0.20) ? 1 : 0, 1],
+    amelioration_fusee:        [ctx.improvedChallengesCount ?? 0, 10],
+    // Exploration (niveaux)
+    exploration_graine:        [niv3done,  3],
+    exploration_herbe:         [niv5done,  5],
+    exploration_chene:         [niv9done,  9],
+    exploration_crane:         [niv13done, 13],
+    exploration_cible:         [(ctx.bonusUsed?.length === 0 && ctx.challengeNumber === 10) ? 1 : 0, 1],
     exploration_collectionneur:[totalDone, 50],
   };
 
@@ -434,43 +450,72 @@ export function getClosestBadges(ctx: GameContext): BadgeProgress[] {
 
 /**
  * Retourne la progression d'un badge spécifique depuis le contexte de jeu.
- * Utilisé par ActiveGoalCard pour afficher la progression d'un objectif actif.
+ * Pour vitesse_* et precision_*, utilise goalCounters (compteur dédié depuis activation).
+ * Pour les autres badges, utilise les métriques globales directement.
+ *
+ * @param badgeId  ID du badge à calculer
+ * @param ctx      Contexte de jeu courant (doit inclure goalCounters pour vitesse/précision)
  */
 export function getBadgeProgress(badgeId: string, ctx: GameContext): BadgeProgress | null {
-  const all = getClosestBadges(ctx);
-  const found = all.find(p => p.badgeId === badgeId);
-  if (found) return found;
-
-  // Si le badge n'est pas dans le top 5, recalculer spécifiquement pour lui
   const earned = new Set(ctx.earnedBadges);
   if (earned.has(badgeId)) return null; // déjà obtenu
 
+  const goalCounters2 = ctx.goalCounters ?? {};
   const totalDone = ctx.completedChallenges.length;
 
-  // Vitesse : progression par comptage
+  // Vitesse : goalCounters[badgeId] = nb de défis sous seuil depuis activation
   const speedBadgeIdsSet = new Set(['vitesse_tortue', 'vitesse_Loup', 'vitesse_oiseau', 'vitesse_eclair', 'vitesse_tornade']);
   if (speedBadgeIdsSet.has(badgeId)) {
-    const speedHits2 = ctx.speedBadgeHits ?? {};
-    const current = Math.min(speedHits2[badgeId] ?? 0, SPEED_BADGE_TARGET);
+    const current = Math.min(goalCounters2[badgeId] ?? 0, SPEED_BADGE_TARGET);
     return { badgeId, currentValue: current, targetValue: SPEED_BADGE_TARGET, percentage: current / SPEED_BADGE_TARGET, unit: 'count' };
   }
 
-  // Autres
+  // Précision : goalCounters[badgeId] = nb de défis consécutifs sans erreur depuis activation
+  const precisionTargets: Record<string, number> = {
+    precision_pousse: 3, precision_oeil: 3, precision_hibou: 10,
+    precision_arc: 25, precision_couronne: 50,
+  };
+  if (precisionTargets[badgeId] !== undefined) {
+    const target  = precisionTargets[badgeId];
+    const current = Math.min(goalCounters2[badgeId] ?? 0, target);
+    return { badgeId, currentValue: current, targetValue: target, percentage: target > 0 ? current / target : 0, unit: 'count' };
+  }
+
+  // Niveaux complétés pour l'exploration
+  const levelsCompleted2 = ctx.completedLevels ?? [];
+  const niv3done2  = ['niveau_1','niveau_2','niveau_3'].filter(n => levelsCompleted2.includes(n)).length;
+  const niv5done2  = ['niveau_1','niveau_2','niveau_3','niveau_4','niveau_5'].filter(n => levelsCompleted2.includes(n)).length;
+  const niv9done2  = ['niveau_1','niveau_2','niveau_3','niveau_4','niveau_5',
+                      'niveau_6','niveau_7','niveau_8','niveau_9'].filter(n => levelsCompleted2.includes(n)).length;
+  const niv13done2 = [...['niveau_1','niveau_2','niveau_3','niveau_4','niveau_5',
+                      'niveau_6','niveau_7','niveau_8','niveau_9'],
+                      'niveau_10','niveau_11','niveau_12','niveau_13'].filter(n => levelsCompleted2.includes(n)).length;
+
+  // Autres badges : métriques globales directes
   const progressMap: Record<string, [number, number]> = {
-    precision_pousse:           [ctx.failCount === 0 ? 1 : 0, 1],
-    precision_oeil:             [ctx.noErrorStreak, 3],
-    precision_hibou:            [ctx.noErrorStreak, 10],
-    precision_arc:              [ctx.noErrorStreak, 25],
-    precision_couronne:         [ctx.noErrorStreak, 50],
+    // Régularité
     regularite_aube:            [ctx.dailyStreak, 3],
     regularite_fougere:         [ctx.dailyStreak, 7],
     regularite_arbre:           [ctx.dailyStreak, 30],
     regularite_foret:           [ctx.dailyStreak, 100],
+    // Social
+    social_poignee:             [ctx.totalFriendsInvited >= 1 ? 1 : 0, 1],
     social_lion:                [ctx.friendWins, 5],
     social_loup:                [ctx.friendWins, 20],
     social_roi:                 [ctx.friendWins, 50],
     social_cirque:              [ctx.totalFriendsInvited, 5],
     social_trophee:             [ctx.topDEJCount, 5],
+    // Amélioration
+    amelioration_graphe:        [ctx.improvedChallengesCount ?? 0, 3],
+    amelioration_cycle:         [Math.min((ctx.sameChallengePlays?.[ctx.challengeId] ?? 0) + 1, 3), 3],
+    amelioration_etoile:        [(ctx.failCount === 0 && ctx.estimatedDurationMs > 0 && ctx.elapsedMs / ctx.estimatedDurationMs < 0.20) ? 1 : 0, 1],
+    amelioration_fusee:         [ctx.improvedChallengesCount ?? 0, 10],
+    // Exploration
+    exploration_graine:         [niv3done2,  3],
+    exploration_herbe:          [niv5done2,  5],
+    exploration_chene:          [niv9done2,  9],
+    exploration_crane:          [niv13done2, 13],
+    exploration_cible:          [(ctx.bonusUsed?.length === 0 && ctx.challengeNumber === 10) ? 1 : 0, 1],
     exploration_collectionneur: [totalDone, 50],
   };
 
@@ -483,6 +528,112 @@ export function getBadgeProgress(badgeId: string, ctx: GameContext): BadgeProgre
       targetValue:  Math.round(target),
       percentage:   target > 0 ? clamped / target : 0,
     };
+  }
+
+  return null;
+}
+
+/**
+ * Retourne la valeur courante brute de la métrique associée à un badge.
+ * Utilisé pour capturer la valeur de départ quand un objectif est sélectionné.
+ * Retourne 0 si le badge n'a pas de métrique mesurable (exploration sans ctx complet, etc.)
+ */
+export function getBadgeCurrentValue(badgeId: string, ctx: Partial<GameContext>): number {
+  const speedBadgeIdsSet = new Set(['vitesse_tortue', 'vitesse_Loup', 'vitesse_oiseau', 'vitesse_eclair', 'vitesse_tornade']);
+  if (speedBadgeIdsSet.has(badgeId)) {
+    return (ctx.speedBadgeHits ?? {})[badgeId] ?? 0;
+  }
+
+  const totalDone = (ctx.completedChallenges ?? []).length;
+
+  const valueMap: Record<string, number> = {
+    precision_pousse:           ctx.noErrorStreak ?? 0, // streak consécutif sans erreur
+    precision_oeil:             ctx.noErrorStreak ?? 0,
+    precision_hibou:            ctx.noErrorStreak ?? 0,
+    precision_arc:              ctx.noErrorStreak ?? 0,
+    precision_couronne:         ctx.noErrorStreak ?? 0,
+    regularite_aube:            ctx.dailyStreak ?? 0,
+    regularite_fougere:         ctx.dailyStreak ?? 0,
+    regularite_arbre:           ctx.dailyStreak ?? 0,
+    regularite_foret:           ctx.dailyStreak ?? 0,
+    social_poignee:             0, // binaire
+    social_lion:                ctx.friendWins ?? 0,
+    social_loup:                ctx.friendWins ?? 0,
+    social_roi:                 ctx.friendWins ?? 0,
+    social_cirque:              ctx.totalFriendsInvited ?? 0,
+    social_trophee:             ctx.topDEJCount ?? 0,
+    amelioration_graphe:        ctx.improvedChallengesCount ?? 0,
+    amelioration_cycle:         0, // sameChallengePlays non accessible ici simplement
+    amelioration_etoile:        0, // binaire
+    amelioration_fusee:         ctx.improvedChallengesCount ?? 0,
+    exploration_graine:         0, // niveau-based, difficile à capturer ici
+    exploration_herbe:          0,
+    exploration_chene:          0,
+    exploration_crane:          0,
+    exploration_cible:          0,
+    exploration_collectionneur: totalDone,
+    daily_first:                0,
+    daily_week:                 0,
+    daily_month:                0,
+    daily_champion:             0,
+  };
+
+  return valueMap[badgeId] ?? 0;
+}
+
+// Séquences ordonnées par catégorie (du plus accessible au plus difficile).
+// pickNextAutoGoal parcourt ces listes dans l'ordre et retourne le premier
+// badge non obtenu et non déjà en objectif actif.
+const GOAL_SEQUENCES: Record<string, string[]> = {
+  vitesse:      ['vitesse_tortue', 'vitesse_Loup', 'vitesse_oiseau', 'vitesse_eclair', 'vitesse_tornade'],
+  precision:    ['precision_pousse', 'precision_oeil', 'precision_hibou', 'precision_arc', 'precision_couronne'],
+  regularite:   ['regularite_aube', 'regularite_fougere', 'regularite_arbre', 'regularite_foret'],
+  amelioration: ['amelioration_graphe', 'amelioration_cycle', 'amelioration_etoile', 'amelioration_fusee'],
+  exploration:  ['exploration_graine', 'exploration_herbe', 'exploration_chene', 'exploration_crane', 'exploration_cible', 'exploration_collectionneur'],
+  social:       ['social_poignee', 'social_lion', 'social_loup', 'social_roi', 'social_cirque', 'social_trophee'],
+  daily:        ['daily_first', 'daily_week', 'daily_month', 'daily_champion'],
+};
+
+// Ordre de fallback entre catégories quand la catégorie du badge complété est épuisée
+const CATEGORY_ORDER = ['vitesse', 'precision', 'regularite', 'amelioration', 'exploration', 'social', 'daily'];
+
+/**
+ * Sélectionne automatiquement le prochain badge objectif pour remplacer un slot libéré.
+ *
+ * Stratégie :
+ * 1. Dans la même catégorie que le badge complété, prend le badge suivant dans la séquence.
+ * 2. Si la catégorie est épuisée, cherche dans les autres catégories dans CATEGORY_ORDER.
+ * 3. Retourne null si aucun badge disponible.
+ *
+ * @param completedBadgeId  ID du badge qui vient d'être obtenu
+ * @param earnedBadges      Badges déjà obtenus (incluant le badge complété)
+ * @param currentGoals      Objectifs actifs actuels (après retrait du badge complété)
+ * @returns ID du prochain badge à ajouter, ou null
+ */
+export function pickNextAutoGoal(
+  completedBadgeId: string,
+  earnedBadges: string[],
+  currentGoals: string[],
+): string | null {
+  const earnedSet = new Set(earnedBadges);
+  const goalSet   = new Set(currentGoals);
+
+  const isAvailable = (id: string) => !earnedSet.has(id) && !goalSet.has(id);
+
+  const completedDef     = BADGE_MAP[completedBadgeId];
+  const completedCategory = completedDef?.category ?? null;
+
+  // 1. Même catégorie en priorité : premier badge disponible dans la séquence ordonnée
+  if (completedCategory && GOAL_SEQUENCES[completedCategory]) {
+    const next = GOAL_SEQUENCES[completedCategory].find(isAvailable);
+    if (next) return next;
+  }
+
+  // 2. Autres catégories dans l'ordre de CATEGORY_ORDER
+  for (const cat of CATEGORY_ORDER) {
+    if (cat === completedCategory) continue; // déjà épuisée
+    const next = (GOAL_SEQUENCES[cat] ?? []).find(isAvailable);
+    if (next) return next;
   }
 
   return null;
