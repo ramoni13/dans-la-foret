@@ -148,6 +148,28 @@
 
   "rules_tab_title": "Règles",
   "rules_subtitle": "Les habitants de la forêt",
+  "rules_tab_inhabitants": "Les habitants",
+  "rules_tab_challenges": "Les défis",
+
+  "challenges_tab_title": "Les défis",
+  "challenges_tab_subtitle": "4 façons de jouer",
+
+  "challenges_solo_title": "Défis solos",
+  "challenges_solo_desc1": "Le mode de jeu classique",
+  "challenges_solo_desc2": "Ouvert à tous avec les mêmes défis pour tout le monde",
+  "challenges_solo_desc3": "Des records mondiaux de temps à battre",
+  "challenges_solo_desc4": "Difficulté progressive avec des grilles de plus en plus grandes",
+  "challenges_solo_desc5": "De nouveaux éléments qui apparaissent au fil des niveaux",
+  "challenges_solo_desc6": "De plus en plus de cases vides",
+
+  "challenges_daily_title": "Défi du Jour",
+  "challenges_daily_desc": "Chaque jour, une nouvelle grille secrète de 15 cases attend tous les joueurs. Un seul droit à la validation — pas de bonus, pas d'erreur permise. Réussis-le avant minuit et grimpe dans le classement mondial. Enchaîne les jours pour garder ta série !",
+
+  "challenges_friends_title": "Défis entre amis",
+  "challenges_friends_desc": "Crée un défi unique et partage-le avec tes amis via un lien. Chacun joue la même grille de son côté. Le meilleur temps l'emporte !",
+
+  "challenges_onf_title": "Grille Forestière (ONF)",
+  "challenges_onf_desc": "Un Sudoku version forêt ! Remplis une grille carrée en respectant les règles de voisinage habituelles ET la règle Sudoku : un seul exemplaire de chaque élément par ligne et par colonne. Disponible dès le niveau 14.",
   "rules_locked": "Débloqué au niveau {{level}}",
   "rules_unlocked_at": "Apparu au niveau {{level}}",
   "rules_element_bucheron": "Bûcheron",
@@ -176,5 +198,46 @@
   "element_arbre": "Arbre",
   "a11y_connected_group_with": "Tous les {{e1}} (et les {{e2}} si présentes) forment une seule forêt connexe",
   "rules_element_arbre": "Arbre",
-  "rules_desc_arbre": "Les arbres forment une seule forêt connexe. Si des bûches sont présentes, elles font partie de cette forêt."
+  "rules_desc_arbre": "Les arbres forment une seule forêt connexe. Si des bûches sont présentes, elles font partie de cette forêt.",
+
+  "onf_briefing_header_title": "Grille Forestière",
+  "onf_briefing_intro_title": "La Grille Forestière",
+  "onf_briefing_intro_subtitle": "Comme le Sudoku, mais avec les habitants de la forêt !",
+  "onf_briefing_intro_rule1": "Place chaque élément en respectant les règles de la forêt.",
+  "onf_briefing_intro_rule2": "Chaque ligne et chaque colonne ne peut contenir qu'un seul exemplaire de chaque élément.",
+  "onf_briefing_intro_rule3": "Les règles habituelles des animaux s'appliquent toujours.",
+  "onf_briefing_new_rule": "Nouvelle règle",
+  "onf_briefing_sudoku_title": "La règle Sudoku",
+  "onf_briefing_sudoku_row": "Dans chaque ligne : 1 seul exemplaire de chaque élément",
+  "onf_briefing_sudoku_col": "Dans chaque colonne : 1 seul exemplaire de chaque élément",
+  "onf_briefing_sudoku_desc": "Les cases surlignées en orange montrent la contrainte de ligne, en bleu la contrainte de colonne.",
+  "onf_briefing_recap_title": "Prêt à jouer ?",
+  "onf_briefing_recap_subtitle": "Grille Forestière",
+  "onf_briefing_recap_elements": "Éléments du défi",
+  "onf_briefing_recap_forest_rules": "Respecte les règles de voisinage de chaque habitant.",
+  "onf_briefing_recap_sudoku_rule": "1 seul exemplaire de chaque élément par ligne et par colonne.",
+  "onf_briefing_recap_validate": "Remplis toutes les cases, puis valide pour vérifier.",
+  "onf_briefing_swipe_hint": "Glisser pour voir la suite",
+
+  "rank_section_title": "Rangs forestiers",
+  "rank_points_title": "Comment sont calculés les points ?",
+  "rank_points_bois": "Badge Bois = 1 pt",
+  "rank_points_pierre": "Badge Pierre = 3 pts",
+  "rank_points_or": "Badge Or = 6 pts",
+  "rank_points_cristal": "Badge Cristal = 12 pts",
+  "rank_your_score": "Ton score : {{score}} / {{max}} pts",
+  "rank_your_rank": "Ton rang : {{emoji}} {{label}}",
+  "rank_next_rank": "Prochain rang : {{emoji}} {{label}} ({{pts}} pts)",
+  "rank_max_reached": "Rang maximum atteint !",
+
+  "rank_promeneur": "Promeneur",
+  "rank_bucheron": "Bûcheron",
+  "rank_sylviculteur": "Sylviculteur",
+  "rank_garde_forestier": "Garde Forestier",
+  "rank_technicien_onf": "Technicien ONF",
+  "rank_ingenieur_forets": "Ingénieur des Forêts",
+  "rank_esprit_foret": "Esprit de la Forêt",
+
+  "goal_section_title": "Mes objectifs",
+  "goal_auto_label": "Choix automatique"
 }
