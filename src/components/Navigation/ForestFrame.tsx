@@ -142,7 +142,7 @@ export default function ForestFrame() {
   const segments  = useSegments() as string[];
   const activeTab = getActiveTab(segments);
   const seeds     = usePlayerStore(s => s.seeds);
-  const { backLabel, onBack, pendingFriendChallenges, goalSlotsToFill } = useNavStore();
+  const { backLabel, onBack, hideBack, pendingFriendChallenges, goalSlotsToFill } = useNavStore();
 
   const {
     coinW, coinH,
@@ -370,7 +370,10 @@ export default function ForestFrame() {
             )}
             <TouchableOpacity
               style={[StyleSheet.absoluteFill, { borderRadius: tapHalf }]}
-              onPress={() => router.push(btn.route as any)}
+              onPress={() => {
+                if (btn.key !== 'profile') hideBack();
+                router.push(btn.route as any);
+              }}
               activeOpacity={0.75}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
