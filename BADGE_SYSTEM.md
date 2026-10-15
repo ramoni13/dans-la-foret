@@ -62,7 +62,6 @@
 │  3. player.awardBadges(newBadges)                               │
 │     → Un seul set() Zustand                                     │
 │     → Cumule les graines (BADGE_SEED_REWARDS)                   │
-│     → Recalcule unlockedBonuses + unlockedThemes                │
 │     (playerStore.ts)                                            │
 └─────────────────────────┬───────────────────────────────────────┘
                           │
@@ -82,7 +81,7 @@
 
 | Fichier | Rôle |
 |---------|------|
-| `src/constants/badges.ts` | Catalogue des 41 badges + paliers RARITY_UNLOCKS + BADGE_SEED_REWARDS |
+| `src/constants/badges.ts` | Catalogue des 41 badges + BADGE_SEED_REWARDS + RARITY_POINTS + RANK_DEFINITIONS |
 | `src/core/engine/badgeEngine.ts` | Évaluateur pur + getClosestBadges() |
 | `src/services/badgeService.ts` | CRUD Firestore (awardBadges, getShowcase…) |
 | `src/store/playerStore.ts` | État local (earnedBadges, seeds, streaks, stats) |
@@ -92,7 +91,7 @@
 | `src/components/Badges/BadgeCollection.tsx` | Grille complète avec filtres |
 | `src/components/Badges/BadgeDetailModal.tsx` | Fiche de détail (bottom sheet) |
 | `src/components/Badges/BadgeProgressInline.tsx` | Mini-barre VictoryModal |
-| `src/components/Badges/BadgeUnlockProgress.tsx` | Barres de paliers par rareté |
+
 | `src/components/Badges/BadgeCard.tsx` | Carte badge individuelle |
 | `src/components/Badges/BadgeShowcase.tsx` | Vitrine 3 badges (mode défi amis) |
 
@@ -489,7 +488,7 @@ rangPoints = (completedCount * 10) + (badgeCount * 25) + (missionsCompleted * 5)
 
 ## 6. Les Défis Journaliers — Spécification complète
 
-> ⚠️ **Statut actuel :** Référencé dans le système (RARITY_UNLOCKS `defi_journalier`, stats `topDEJCount`, badge `social_trophee`) mais **0% implémenté**. Aucun écran, aucun service, aucune Cloud Function.
+> ⚠️ **Statut actuel :** Référencé dans le système (stats `topDEJCount`, badge `social_trophee`) mais **0% implémenté**. Aucun écran, aucun service, aucune Cloud Function.
 
 ### 6.1 Concept
 
@@ -501,7 +500,7 @@ Chaque jour à minuit (heure locale du serveur), **un nouveau défi du jour est 
 - **Un seul essai** : si tu valides et que c'est faux, cela compte comme tentative ratée mais tu peux réessayer
 - **Temps enregistré** : le premier temps validé avec succès est ton score définitif
 - **Visible par tous** : le classement du jour est public
-- **Déblocage** : disponible pour tous (gratuit), débloqué après 9 badges Bois selon le système actuel — **à revoir : rendre gratuit dès le départ**
+- **Déblocage** : disponible pour tous dès le départ (gratuit)
 
 ### 6.3 Sélection du défi du jour
 
@@ -708,8 +707,7 @@ Comparaison marché :
 | Badge Cristal | 75 🌱 | Très rare (6 max total) |
 | Victoire (calculSeedReward) | 1–10 🌱 estimé | Chaque défi |
 | Victoire défi ami | 15 🌱 | Occasionnel |
-| Palier bois 7 | +50 🌱 | Une fois |
-| Palier bois 3 | +10 🌱 | Une fois |
+| Montée de rang (selon rang) | 5–200 🌱 | À chaque nouveau rang |
 
 **Total badges seuls (si tous obtenus) : 1 065 🌱**
 
@@ -751,9 +749,10 @@ Comparaison marché :
 - Les **badges secrets** créent de la surprise et du mystère (très bon mécanisme)
 - Les **badges saisonniers** donnent une raison de revenir à des moments précis de l'année
 
-#### Système de déblocage par paliers
-- Les paliers RARITY_UNLOCKS lient les badges à des **récompenses concrètes** (bonus, thèmes)
-- Crée une **progression méta** au-delà des niveaux
+#### Système de rangs forestiers
+- Les badges accumulent un **score pondéré** (Bois=1pt, Pierre=3pts, Or=6pts, Cristal=12pts)
+- 7 rangs de Promeneur à Esprit de la Forêt — chaque montée de rang donne des graines
+- Crée une **progression méta** visible et permanente
 
 ### 10.2 ❌ Points faibles
 
@@ -1012,9 +1011,7 @@ Certains badges **débloquent automatiquement** un item dans la Clairière (en p
 | Badge Pierre | +20 🌱 | 14 max | Augmenté (était 15) |
 | Badge Or | +40 🌱 | 12 max | Augmenté (était 30) |
 | Badge Cristal | +100 🌱 | 6 max | Augmenté (était 75) |
-| Palier Bois ×3 | +15 🌱 | 1 fois | Augmenté (était 10) |
-| Palier Bois ×6 | Mode Zen | 1 fois | Inchangé |
-| Palier Pierre ×7 | +75 🌱 | 1 fois | Augmenté (était 50) |
+| Montée de rang forestier | 5–200 🌱 | Par rang débloqué | Selon `RANK_SEED_REWARDS` |
 | Mission quotidienne ×1 | +5 🌱 | 1/jour | **NOUVEAU** |
 | Mission quotidienne ×2 | +8 🌱 | 1/jour | **NOUVEAU** |
 | Mission quotidienne ×3 | +12 🌱 | 1/jour | **NOUVEAU** |
@@ -1319,8 +1316,6 @@ interface PlayerProfileV3 extends PlayerProfile {
   earnedBadges: string[];
   earnedAt: Record<string, string>;        // NOUVEAU : badgeId → "YYYY-MM-DD"
   badgeShowcase: string[];
-  unlockedBonuses: string[];
-  unlockedThemes: string[];
   
   // Clairière
   clairiere: {
