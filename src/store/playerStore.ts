@@ -13,7 +13,6 @@ export type VisualEffect = 'leaves' | 'butterflies' | 'birds' | 'none';
 import {
   BADGE_MAP,
   BADGE_SEED_REWARDS,
-  RARITY_UNLOCKS,
 } from '../constants/badges';
 import { DEFAULT_BADGE_GOALS, pickNextAutoGoal } from '../core/engine/badgeEngine';
 
@@ -85,9 +84,6 @@ interface PlayerState {
 
   // ── Badges ──────────────────────────────────────────────────────────────────
   earnedBadges: string[];                   // IDs des badges obtenus
-  unlockedBonuses: BonusId[];               // bonus débloqués via badges (instinct)
-  unlockedThemes: string[];                 // thèmes débloqués via badges
-  unlockedOnf: boolean;                     // mode ONF débloqué via badge bois×9 (chantier 3)
   badgeShowcase: [string?, string?, string?]; // 3 badges choisis pour la vitrine
 
   // ── Streak quotidien ────────────────────────────────────────────────────────
@@ -246,64 +242,6 @@ export function getChallengeElapsed(
   return Date.now() - startedAt;
 }
 
-// ── Calcul des bonus/thèmes débloqués depuis les badges ──────────────────────
-
-function computeUnlockedBonuses(earnedBadges: string[]): BonusId[] {
-  const bonuses: BonusId[] = [];
-  const rarityCount: Record<string, number> = {};
-
-  for (const id of earnedBadges) {
-    const def = BADGE_MAP[id];
-    if (!def) continue;
-    rarityCount[def.rarity] = (rarityCount[def.rarity] ?? 0) + 1;
-  }
-
-  for (const unlock of RARITY_UNLOCKS) {
-    const count = rarityCount[unlock.rarity] ?? 0;
-    if (count >= unlock.count) {
-      if (unlock.unlock === 'bonus_instinct') bonuses.push('instinct');
-    }
-  }
-
-  return bonuses;
-}
-
-function computeUnlockedThemes(earnedBadges: string[]): string[] {
-  const themes: string[] = [];
-  const rarityCount: Record<string, number> = {};
-
-  for (const id of earnedBadges) {
-    const def = BADGE_MAP[id];
-    if (!def) continue;
-    rarityCount[def.rarity] = (rarityCount[def.rarity] ?? 0) + 1;
-  }
-
-  for (const unlock of RARITY_UNLOCKS) {
-    const count = rarityCount[unlock.rarity] ?? 0;
-    if (count >= unlock.count) {
-      if (unlock.unlock === 'theme_automne')        themes.push('automne');
-      if (unlock.unlock === 'theme_hiver')          themes.push('hiver');
-      if (unlock.unlock === 'theme_foret_mystique') themes.push('foret_mystique');
-      if (unlock.unlock === 'music_unlock')         themes.push('music'); // chantier 3
-    }
-  }
-
-  return themes;
-}
-
-/** Retourne true si le joueur a débloqué le mode ONF via le palier badge bois×9. */
-function computeUnlockedONF(earnedBadges: string[]): boolean {
-  const rarityCount: Record<string, number> = {};
-  for (const id of earnedBadges) {
-    const def = BADGE_MAP[id];
-    if (!def) continue;
-    rarityCount[def.rarity] = (rarityCount[def.rarity] ?? 0) + 1;
-  }
-  return RARITY_UNLOCKS.some(
-    u => u.unlock === 'mode_onf' && (rarityCount[u.rarity] ?? 0) >= u.count
-  );
-}
-
 // ── Store ─────────────────────────────────────────────────────────────────────
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -345,9 +283,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   earnedBadges: [],
-  unlockedBonuses: [],
-  unlockedThemes: [],
-  unlockedOnf: false,
   badgeShowcase: [undefined, undefined, undefined],
 
   dailyStreak: 0,
@@ -484,9 +419,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         })(),
       },
       earnedBadges:    mergedEarned,
-      unlockedBonuses: computeUnlockedBonuses(mergedEarned),
-      unlockedThemes:  computeUnlockedThemes(mergedEarned),
-      unlockedOnf:     computeUnlockedONF(mergedEarned),
       badgeShowcase:   (profile.badgeShowcase as [string?, string?, string?]) ?? [undefined, undefined, undefined],
       dailyStreak:       mergedDailyStreak,
       lastPlayedDate:    mergedLastPlayed,
@@ -730,9 +662,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       speedBadgeHits: {},
     },
     earnedBadges: [],
-    unlockedBonuses: [],
-    unlockedThemes: [],
-    unlockedOnf: false,
     badgeShowcase: [undefined, undefined, undefined],
     dailyStreak: 0,
     lastPlayedDate: '',
@@ -790,16 +719,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         return acc + (def ? BADGE_SEED_REWARDS[def.rarity] : 0);
       }, 0);
 
-      // Recalculer les bonus/thèmes UNE SEULE FOIS pour tous les badges
-      const newUnlockedBonuses = toAdd.length > 0 ? computeUnlockedBonuses(newEarned) : state.unlockedBonuses;
-      const newUnlockedThemes  = toAdd.length > 0 ? computeUnlockedThemes(newEarned)  : state.unlockedThemes;
-
       return {
         earnedBadges:    newEarned,
         seeds:           state.seeds + totalSeeds,
-        unlockedBonuses: newUnlockedBonuses,
-        unlockedThemes:  newUnlockedThemes,
-        unlockedOnf:     toAdd.length > 0 ? computeUnlockedONF(newEarned) : state.unlockedOnf,
         activeBadgeGoals: newActiveBadgeGoals,
       };
     });

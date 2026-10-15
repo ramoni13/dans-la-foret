@@ -51,8 +51,6 @@ export interface PlayerProfile {
   // ── Champs badges ────────────────────────────────────
   earnedBadges: string[];
   badgeShowcase: string[];   // max 3 IDs
-  unlockedBonuses: string[];
-  unlockedThemes: string[];
   // ── Streak quotidien ─────────────────────────────────
   dailyStreak: number;
   lastPlayedDate: string;    // "YYYY-MM-DD"
@@ -115,8 +113,6 @@ function migrateProfile(raw: any): PlayerProfile {
     },
     earnedBadges:    raw.earnedBadges ?? [],
     badgeShowcase:   raw.badgeShowcase ?? [],
-    unlockedBonuses: raw.unlockedBonuses ?? [],
-    unlockedThemes:  raw.unlockedThemes ?? [],
     dailyStreak:       raw.dailyStreak ?? 0,
     lastPlayedDate:    raw.lastPlayedDate ?? '',
     onfSolvedCount: raw.onfSolvedCount ?? raw.onf4x4SolvedCount ?? 0,
@@ -189,8 +185,6 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
     updatedAt: serverTimestamp(),
     earnedBadges: [],
     badgeShowcase: [],
-    unlockedBonuses: [],
-    unlockedThemes: [],
     dailyStreak: 0,
     lastPlayedDate: '',
     onfSolvedCount: 0,

@@ -56,8 +56,6 @@ interface PersistedPlayerState {
   // Badges
   earnedBadges: string[];
   badgeShowcase: string[];
-  unlockedBonuses: string[];
-  unlockedThemes: string[];
   // Streak quotidien
   dailyStreak: number;
   lastPlayedDate: string;
@@ -95,8 +93,6 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     stats:               state.stats,
     earnedBadges:        state.earnedBadges,
     badgeShowcase:       state.badgeShowcase.filter(Boolean) as string[],
-    unlockedBonuses:     state.unlockedBonuses as string[],
-    unlockedThemes:      state.unlockedThemes,
     dailyStreak:         state.dailyStreak,
     lastPlayedDate:      state.lastPlayedDate,
     bonusTutorialDismissed: state.bonusTutorialDismissed as string[],
@@ -162,8 +158,6 @@ export function useStorage() {
             },
             earnedBadges:    saved.earnedBadges    ?? [],
             badgeShowcase:   (saved.badgeShowcase  ?? []) as [string?, string?, string?],
-            unlockedBonuses: (saved.unlockedBonuses ?? []) as import('../constants/bonus').BonusId[],
-            unlockedThemes:  saved.unlockedThemes  ?? [],
             dailyStreak:     saved.dailyStreak     ?? 0,
             lastPlayedDate:  saved.lastPlayedDate  ?? '',
             bonusTutorialDismissed: (saved.bonusTutorialDismissed ?? []) as import('../constants/bonus').BonusId[],
@@ -255,8 +249,6 @@ export function useStorage() {
         newState.lastPlayedDate      !== prevState.lastPlayedDate      ||
         newState.earnedBadges.length !== prevState.earnedBadges.length ||
         newState.completedChallenges.length !== prevState.completedChallenges.length ||
-        newState.unlockedBonuses.length     !== prevState.unlockedBonuses.length     ||
-        newState.unlockedThemes.length      !== prevState.unlockedThemes.length      ||
         newState.badgeShowcase.join(',')    !== prevState.badgeShowcase.join(',')    ||
         // Stats : comparer les valeurs numériques directes
         newState.stats.totalSolved              !== prevState.stats.totalSolved              ||

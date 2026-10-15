@@ -3,16 +3,14 @@
 // Gestion des préférences musicales du joueur
 //
 // - 2 types : "Ambiance Défi" (ingame) et "Ambiance Forêt" (menu)
-// - Morceaux débloqués via paliers de badges (RARITY_UNLOCKS dans playerStore)
 // - Morceau sélectionné par type (persisté dans AsyncStorage via useStorage)
 // - Toggles on/off par type
 // - Volume global
 //
 // Source de vérité des musiques débloquées :
-//   playerStore.unlockedThemes contient 'music' si 6 badges Bois sont obtenus.
-//   audioStore.ownedTrackIds est calculé depuis FREE_TRACK_IDS + les pistes dont
-//   le unlockTheme figure dans playerStore.unlockedThemes.
-//   → Appeler syncOwnedFromThemes(unlockedThemes) à chaque changement de badges.
+//   audioStore.ownedTrackIds est calculé depuis FREE_TRACK_IDS + les pistes
+//   dont le badge associé (BADGE_MUSIC_UNLOCK_MAP) figure dans earnedBadges.
+//   → Appeler syncOwnedFromBadges(earnedBadges) à chaque changement de badges.
 // ============================================================
 
 import { create } from 'zustand';
