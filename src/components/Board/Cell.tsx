@@ -120,20 +120,25 @@ const CellComponent: React.FC<CellProps> = ({
 
     if (prevEl === null && elementId !== null) {
       // ── PLACEMENT : pop-in spring ──────────────────────────
-      // stopAnimation() garantit que le thread natif libère la valeur avant
-      // setValue — nécessaire si une animation native était en cours sur ce nœud.
-      contentScale.stopAnimation();
-      contentOpacity.stopAnimation();
-      contentScale.setValue(0);
-      contentOpacity.setValue(1);
-      const anim = Animated.spring(contentScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 200,
-        useNativeDriver: native,
+      // stopAnimation(callback) garantit que le thread natif a libéré le nœud
+      // AVANT d'appeler setValue — évite la race condition où le natif ignore
+      // la nouvelle valeur parce qu'il est encore en train de traiter le stop.
+      // Sans le callback, setValue() est immédiat côté JS mais le thread natif
+      // n'a pas encore acquitté le stop → contentScale reste à 0 → token invisible.
+      contentScale.stopAnimation(() => {
+        contentOpacity.stopAnimation(() => {
+          contentScale.setValue(0);
+          contentOpacity.setValue(1);
+          const anim = Animated.spring(contentScale, {
+            toValue: 1,
+            friction: 5,
+            tension: 200,
+            useNativeDriver: native,
+          });
+          contentAnimRef.current = anim;
+          anim.start(() => { contentAnimRef.current = null; });
+        });
       });
-      contentAnimRef.current = anim;
-      anim.start(() => { contentAnimRef.current = null; });
       impactLight();
 
     } else if (prevEl !== null && elementId === null) {
@@ -156,28 +161,31 @@ const CellComponent: React.FC<CellProps> = ({
 
     } else if (prevEl !== null && elementId !== null && prevEl !== elementId) {
       // ── SWAP : un élément remplace un autre → petit pop ────
-      contentScale.stopAnimation();
-      contentOpacity.stopAnimation();
-      contentScale.setValue(0.7);
-      contentOpacity.setValue(1);
-      const anim = Animated.spring(contentScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 200,
-        useNativeDriver: native,
+      contentScale.stopAnimation(() => {
+        contentOpacity.stopAnimation(() => {
+          contentScale.setValue(0.7);
+          contentOpacity.setValue(1);
+          const anim = Animated.spring(contentScale, {
+            toValue: 1,
+            friction: 5,
+            tension: 200,
+            useNativeDriver: native,
+          });
+          contentAnimRef.current = anim;
+          anim.start(() => { contentAnimRef.current = null; });
+        });
       });
-      contentAnimRef.current = anim;
-      anim.start(() => { contentAnimRef.current = null; });
       impactLight();
 
     } else if (elementId !== null) {
       // ── Chargement initial ou même élément (pas d'animation) ──
-      // stopAnimation() avant setValue pour libérer le nœud natif de toute
-      // animation résiduelle (ex: retrait en cours sur thread natif).
-      contentScale.stopAnimation();
-      contentOpacity.stopAnimation();
-      contentScale.setValue(1);
-      contentOpacity.setValue(1);
+      // Callback de stopAnimation pour libérer le nœud natif avant setValue.
+      contentScale.stopAnimation(() => {
+        contentOpacity.stopAnimation(() => {
+          contentScale.setValue(1);
+          contentOpacity.setValue(1);
+        });
+      });
     }
 
     return () => {
