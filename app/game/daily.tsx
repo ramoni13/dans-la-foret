@@ -372,8 +372,10 @@ export default function DailyGameScreen() {
   // -- Tap sur une case --
   const handleCellPress = useCallback((cellIndex: number) => {
     if (game.selectedElement) {
-      game.tryPlaceElement(cellIndex, game.selectedElement);
-      game.selectElement(null);
+      // placeAndDeselect fusionne les deux mutations en un seul set() Zustand
+      // → un seul render → useEffect([elementId]) de Cell s'exécute une seule
+      // fois → contentScale monte correctement de 0 à 1 (token visible).
+      game.placeAndDeselect(cellIndex, game.selectedElement);
     } else if (game.playerBoard[cellIndex] && !fixedCells.has(cellIndex)) {
       game.removeElement(cellIndex);
     }

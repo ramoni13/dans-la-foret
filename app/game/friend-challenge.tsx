@@ -392,8 +392,7 @@ export default function FriendChallengeScreen() {
   // ── Tap sur une case du plateau ─────────────────────────────────────────────
   const handleCellPress = useCallback((cellIndex: number) => {
     if (game.selectedElement) {
-      game.tryPlaceElement(cellIndex, game.selectedElement);
-      game.selectElement(null);
+      game.placeAndDeselect(cellIndex, game.selectedElement);
     } else if (game.playerBoard[cellIndex] && !fixedCells.has(cellIndex)) {
       game.removeElement(cellIndex);
     }
