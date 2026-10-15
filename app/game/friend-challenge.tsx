@@ -43,6 +43,8 @@ import { formatTime } from '../../src/utils/boardUtils';
 import { Colors } from '../../src/constants/colors';
 import { ConfirmModal } from '../../src/components/Game/ConfirmModal';
 import { Challenge } from '../../src/core/models/Challenge';
+import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
+import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 import {
   FriendChallengeData,
   createFriendChallenge,
@@ -412,12 +414,51 @@ export default function FriendChallengeScreen() {
   const confettiPieces = useConfetti(showResult);
   // Total de graines AVANT le gain — pour l'animation de OpponentResultModal
   const [seedsBeforeGain, setSeedsBeforeGain] = useState(0);
+  const [rankUpVisible, setRankUpVisible]         = useState(false);
+  const [rankUpNewRank, setRankUpNewRank]          = useState(RANK_DEFINITIONS[0]);
+  const [rankUpPrevLabel, setRankUpPrevLabel]      = useState('');
+  const [rankUpSeeds, setRankUpSeeds]              = useState(0);
+  const [rankUpSeedsBefore, setRankUpSeedsBefore]  = useState(0);
 
   useEffect(() => {
     if (game.isVictory && challenge) {
       setShowResult(true);
-      // Incrémenter friendPlayed pour tous les participants (chantier 5)
+      // Capture du score AVANT l'incrément de friendPlayed
+      const stateBeforeFriend = usePlayerStore.getState();
+      const activityStatsBefore: PlayerActivityStats = {
+        soloCompleted:   stateBeforeFriend.completedChallenges.length,
+        friendCompleted: stateBeforeFriend.stats.friendPlayed,
+        onfCompleted:    stateBeforeFriend.onfSolvedCount,
+        dailyCompleted:  stateBeforeFriend.stats.dailyWon,
+      };
+      const scoreBeforeFriend = getPlayerScore(stateBeforeFriend.earnedBadges, activityStatsBefore);
+      const rankBeforeFriend  = getRank(scoreBeforeFriend);
+
+      // Incrémenter friendPlayed pour tous les participants
       player.incrementStat('friendPlayed');
+
+      // ── Détection changement de rang ─────────────────────────────────────
+      const stateAfterFriend = usePlayerStore.getState();
+      const activityStatsAfter: PlayerActivityStats = {
+        soloCompleted:   stateAfterFriend.completedChallenges.length,
+        friendCompleted: stateAfterFriend.stats.friendPlayed,
+        onfCompleted:    stateAfterFriend.onfSolvedCount,
+        dailyCompleted:  stateAfterFriend.stats.dailyWon,
+      };
+      const scoreAfterFriend = getPlayerScore(stateAfterFriend.earnedBadges, activityStatsAfter);
+      const rankAfterFriend  = getRank(scoreAfterFriend);
+      if (rankAfterFriend.id !== rankBeforeFriend.id) {
+        const rankSeeds = RANK_SEED_REWARDS[rankAfterFriend.id] ?? 0;
+        if (rankSeeds > 0) {
+          setRankUpSeedsBefore(usePlayerStore.getState().seeds);
+          player.addSeeds(rankSeeds);
+        }
+        const lang = usePlayerStore.getState().language;
+        setRankUpPrevLabel(lang === 'en' ? rankBeforeFriend.labelEn : rankBeforeFriend.label);
+        setRankUpNewRank(rankAfterFriend);
+        setRankUpSeeds(rankSeeds);
+        setTimeout(() => setRankUpVisible(true), 1800);
+      }
     }
   }, [game.isVictory]);
 
@@ -574,6 +615,7 @@ export default function FriendChallengeScreen() {
               highlightActive={false}
               getCellColor={(idx) => game.getCellColor(idx)}
               onCellPress={handleCellPress}
+              challengeKey={challenge?.id}
             />
           </View>
         </View>
@@ -654,6 +696,16 @@ export default function FriendChallengeScreen() {
           cancelLabel={'Abandonner'}
           onConfirm={() => setShowAbandonModal(false)}
           onCancel={handleConfirmAbandon}
+        />
+
+        {/* ── Modal changement de rang ── */}
+        <RankUpModal
+          visible={rankUpVisible}
+          newRank={rankUpNewRank}
+          previousRankLabel={rankUpPrevLabel}
+          seedsAwarded={rankUpSeeds}
+          seedsBeforeGain={rankUpSeedsBefore}
+          onClose={() => setRankUpVisible(false)}
         />
 
       </View>

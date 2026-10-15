@@ -37,7 +37,7 @@ import {
   trySetWorldRecord,
 } from '../../src/services/worldRecordService';
 import { upsertLeaderboardEntry } from '../../src/services/leaderboardService';
-import { getBadgeScore, getRank, RANK_DEFINITIONS } from '../../src/constants/badges';
+import { getBadgeScore, getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
 import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
@@ -321,7 +321,14 @@ export default function GameScreen() {
     };
 
     // Capture du score AVANT l'attribution des badges
-    const scoreBeforeBadges = getBadgeScore(storeState.earnedBadges);
+    // storeState est post-markChallengeCompleted : completedChallenges inclut déjà ce défi solo
+    const activityStatsBefore: PlayerActivityStats = {
+      soloCompleted:   storeState.completedChallenges.length,
+      friendCompleted: storeState.stats.friendPlayed,
+      onfCompleted:    storeState.onfSolvedCount,
+      dailyCompleted:  storeState.stats.dailyWon,
+    };
+    const scoreBeforeBadges = getPlayerScore(storeState.earnedBadges, activityStatsBefore);
     const rankBefore = getRank(scoreBeforeBadges);
 
     const newBadges = evaluateBadges(ctx);
@@ -333,8 +340,15 @@ export default function GameScreen() {
     }
 
     // ── Détection changement de rang ──────────────────────────────────────────
-    const allEarnedAfterBadges = usePlayerStore.getState().earnedBadges;
-    const scoreAfterBadges = getBadgeScore(allEarnedAfterBadges);
+    const stateAfterBadges = usePlayerStore.getState();
+    const allEarnedAfterBadges = stateAfterBadges.earnedBadges;
+    const activityStatsAfter: PlayerActivityStats = {
+      soloCompleted:   stateAfterBadges.completedChallenges.length,
+      friendCompleted: stateAfterBadges.stats.friendPlayed,
+      onfCompleted:    stateAfterBadges.onfSolvedCount,
+      dailyCompleted:  stateAfterBadges.stats.dailyWon,
+    };
+    const scoreAfterBadges = getPlayerScore(allEarnedAfterBadges, activityStatsAfter);
     const rankAfter = getRank(scoreAfterBadges);
     if (rankAfter.id !== rankBefore.id) {
       const rankSeeds = RANK_SEED_REWARDS[rankAfter.id] ?? 0;
@@ -455,7 +469,13 @@ export default function GameScreen() {
             : profile.completedChallenges.length + 1;
           const allEarnedBadges = [...profile.earnedBadges, ...newBadges];
           const updatedBadges   = allEarnedBadges.length;
-          const updatedScore    = getBadgeScore(allEarnedBadges);
+          const leaderboardActivityStats: PlayerActivityStats = {
+            soloCompleted:   updatedCompleted,
+            friendCompleted: (profile.stats as any).friendPlayed ?? 0,
+            onfCompleted:    profile.onfSolvedCount ?? 0,
+            dailyCompleted:  (profile.stats as any).dailyWon ?? 0,
+          };
+          const updatedScore = getPlayerScore(allEarnedBadges, leaderboardActivityStats);
           await upsertLeaderboardEntry(
             uid,
             username,
@@ -591,6 +611,7 @@ export default function GameScreen() {
               highlightActive={game.validHintCells.length > 0 || game.errorHintCells.length > 0}
               getCellColor={(idx) => game.getCellColor(idx)}
               onCellPress={handleCellPress}
+              challengeKey={challenge?.id}
             />
           </View>
         </View>

@@ -4,7 +4,7 @@
 // État 2 : connecté → hub 4 tuiles + sous-sections
 // ============================================================
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import { User } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../src/services/firebase';
 
+import { useFocusEffect } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { BgImage } from '../../src/components/UI/BgImage';
@@ -88,6 +89,19 @@ export default function ProfileScreen() {
     }
     return () => { hideBack(); };
   }, [activeSection]);
+
+  // ── Retour au hub quand on quitte l'onglet ───────────────────────────────────
+  useFocusEffect(
+    useCallback(() => {
+      // Appelé quand l'onglet reçoit le focus — rien à faire ici
+      return () => {
+        // Appelé quand l'onglet perd le focus (changement d'onglet)
+        // On remet le hub pour que le prochain accès parte du hub
+        setActiveSection('hub');
+        hideBack();
+      };
+    }, [hideBack])
+  );
 
   // ── Mot de passe oublié ──────────────────────────────────────────────────────
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -248,9 +262,6 @@ export default function ProfileScreen() {
         // 1. Zustand — réinitialisation locale immédiate (setState direct, un seul re-render)
         usePlayerStore.setState({
           earnedBadges:     [],
-          unlockedBonuses:  [],
-          unlockedThemes:   [],
-          unlockedOnf:      false,
           badgeShowcase:    [undefined, undefined, undefined],
           activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
         });
@@ -261,9 +272,6 @@ export default function ProfileScreen() {
           try {
             await updateDoc(doc(db, 'players', uid), {
               earnedBadges:     [],
-              unlockedBonuses:  [],
-              unlockedThemes:   [],
-              unlockedOnf:      false,
               badgeShowcase:    [],
               activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
               updatedAt:        serverTimestamp(),

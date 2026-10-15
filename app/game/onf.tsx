@@ -40,6 +40,8 @@ import { Colors } from '../../src/constants/colors';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
+import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
+import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 
 import {
   pickOnfChallenge,
@@ -94,6 +96,11 @@ export default function ONFGameScreen() {
 
   const badgesEvaluatedRef = useRef(false);
   const confettiPieces = useConfetti(game.isVictory);
+  const [rankUpVisible, setRankUpVisible]         = useState(false);
+  const [rankUpNewRank, setRankUpNewRank]          = useState(RANK_DEFINITIONS[0]);
+  const [rankUpPrevLabel, setRankUpPrevLabel]      = useState('');
+  const [rankUpSeeds, setRankUpSeeds]              = useState(0);
+  const [rankUpSeedsBefore, setRankUpSeedsBefore]  = useState(0);
 
   // ── Sélection et chargement d'un défi ────────────────────
   const pickAndLoad = useCallback(() => {
@@ -231,12 +238,47 @@ export default function ONFGameScreen() {
     // seedsBeforeGain a été capturé dans handleValidate (state React) — déjà disponible
     // dans VictoryModal dès son premier rendu.
     setSeedsEarned(earned);
+
+    // Capture du score AVANT markOnfChallengeCompleted (qui incrémente onfSolvedCount)
+    const stateBeforeOnf = usePlayerStore.getState();
+    const activityStatsBefore: PlayerActivityStats = {
+      soloCompleted:   stateBeforeOnf.completedChallenges.length,
+      friendCompleted: stateBeforeOnf.stats.friendPlayed,
+      onfCompleted:    stateBeforeOnf.onfSolvedCount,
+      dailyCompleted:  stateBeforeOnf.stats.dailyWon,
+    };
+    const scoreBeforeOnf = getPlayerScore(stateBeforeOnf.earnedBadges, activityStatsBefore);
+    const rankBeforeOnf  = getRank(scoreBeforeOnf);
+
     player.addSeeds(earned);
 
     // Marquer le défi comme complété (local store — incrémente aussi onfSolvedCount)
     player.markOnfChallengeCompleted(challenge.id);
     // Incrémenter le compteur quotidien (limite free = 3/jour)
     player.incrementOnfDaily();
+
+    // ── Détection changement de rang ─────────────────────────
+    const stateAfterOnf = usePlayerStore.getState();
+    const activityStatsAfter: PlayerActivityStats = {
+      soloCompleted:   stateAfterOnf.completedChallenges.length,
+      friendCompleted: stateAfterOnf.stats.friendPlayed,
+      onfCompleted:    stateAfterOnf.onfSolvedCount,
+      dailyCompleted:  stateAfterOnf.stats.dailyWon,
+    };
+    const scoreAfterOnf = getPlayerScore(stateAfterOnf.earnedBadges, activityStatsAfter);
+    const rankAfterOnf  = getRank(scoreAfterOnf);
+    if (rankAfterOnf.id !== rankBeforeOnf.id) {
+      const rankSeeds = RANK_SEED_REWARDS[rankAfterOnf.id] ?? 0;
+      if (rankSeeds > 0) {
+        setRankUpSeedsBefore(usePlayerStore.getState().seeds);
+        player.addSeeds(rankSeeds);
+      }
+      const lang = usePlayerStore.getState().language;
+      setRankUpPrevLabel(lang === 'en' ? rankBeforeOnf.labelEn : rankBeforeOnf.label);
+      setRankUpNewRank(rankAfterOnf);
+      setRankUpSeeds(rankSeeds);
+      setTimeout(() => setRankUpVisible(true), 1800);
+    }
 
     // Sync Firestore en arrière-plan
     const uid = player.userId;
@@ -256,8 +298,6 @@ export default function ONFGameScreen() {
         isPremium: updatedState.isPremium,
         earnedBadges: updatedState.earnedBadges,
         badgeShowcase: updatedState.badgeShowcase.filter((b): b is string => !!b),
-        unlockedBonuses: updatedState.unlockedBonuses,
-        unlockedThemes: updatedState.unlockedThemes,
         dailyStreak: updatedState.dailyStreak,
         lastPlayedDate: updatedState.lastPlayedDate,
         onfSolvedCount: updatedState.onfSolvedCount,
@@ -442,6 +482,7 @@ export default function ONFGameScreen() {
             highlightActive={false}
             getCellColor={getCellColorOnf}
             onCellPress={handleCellPress}
+            challengeKey={challenge?.id}
           />
         </View>
 
@@ -485,6 +526,16 @@ export default function ONFGameScreen() {
           onClose={handleBriefingClose}
         />
       )}
+
+      {/* ── Modal changement de rang ── */}
+      <RankUpModal
+        visible={rankUpVisible}
+        newRank={rankUpNewRank}
+        previousRankLabel={rankUpPrevLabel}
+        seedsAwarded={rankUpSeeds}
+        seedsBeforeGain={rankUpSeedsBefore}
+        onClose={() => setRankUpVisible(false)}
+      />
     </GestureHandlerRootView>
   );
 }

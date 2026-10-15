@@ -57,6 +57,8 @@ import { DailyBriefingModal } from '../../src/components/LevelBriefing/DailyBrie
 import { DailyStreakRecordModal } from '../../src/components/Game/DailyStreakRecordModal';
 import { Challenge, FixedPlacement, TokenCount } from '../../src/core/models/Challenge';
 import { notificationError } from '../../src/utils/haptics';
+import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
+import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 
 const native = Platform.OS !== 'web';
 
@@ -231,6 +233,11 @@ export default function DailyGameScreen() {
   const [prevDailyRecordHolder, setPrevDailyRecordHolder] = useState<string | null>(null);
 
   const [streakRecordModal, setStreakRecordModal] = useState<{ newRecord: number; seeds: number } | null>(null);
+  const [rankUpVisible, setRankUpVisible]         = useState(false);
+  const [rankUpNewRank, setRankUpNewRank]          = useState(RANK_DEFINITIONS[0]);
+  const [rankUpPrevLabel, setRankUpPrevLabel]      = useState('');
+  const [rankUpSeeds, setRankUpSeeds]              = useState(0);
+  const [rankUpSeedsBefore, setRankUpSeedsBefore]  = useState(0);
 
   const badgesEvaluatedRef = useRef(false);
   // uid capturé à la victoire pour la détection record
@@ -449,10 +456,45 @@ export default function DailyGameScreen() {
       earnedBadges: storeState.earnedBadges,
     };
     const activeGoalsBeforeDaily = storeState.activeBadgeGoals;
+
+    // Capture du score AVANT attribution des badges
+    // storeState est post-submitDailyResult : dailyWon inclut déjà ce défi
+    const activityStatsBefore: PlayerActivityStats = {
+      soloCompleted:   storeState.completedChallenges.length,
+      friendCompleted: storeState.stats.friendPlayed,
+      onfCompleted:    storeState.onfSolvedCount,
+      dailyCompleted:  storeState.stats.dailyWon,
+    };
+    const scoreBeforeBadges = getPlayerScore(storeState.earnedBadges, activityStatsBefore);
+    const rankBefore = getRank(scoreBeforeBadges);
+
     const newBadges = evaluateDailyBadges(dailyCtx);
     if (newBadges.length > 0) {
       player.awardBadges(newBadges);
       setBadgeQueue(newBadges);
+    }
+
+    // ── Détection changement de rang ──────────────────────────────────────────
+    const stateAfterBadges = usePlayerStore.getState();
+    const activityStatsAfter: PlayerActivityStats = {
+      soloCompleted:   stateAfterBadges.completedChallenges.length,
+      friendCompleted: stateAfterBadges.stats.friendPlayed,
+      onfCompleted:    stateAfterBadges.onfSolvedCount,
+      dailyCompleted:  stateAfterBadges.stats.dailyWon,
+    };
+    const scoreAfterBadges = getPlayerScore(stateAfterBadges.earnedBadges, activityStatsAfter);
+    const rankAfter = getRank(scoreAfterBadges);
+    if (rankAfter.id !== rankBefore.id) {
+      const rankSeeds = RANK_SEED_REWARDS[rankAfter.id] ?? 0;
+      if (rankSeeds > 0) {
+        setRankUpSeedsBefore(usePlayerStore.getState().seeds);
+        player.addSeeds(rankSeeds);
+      }
+      const lang = usePlayerStore.getState().language;
+      setRankUpPrevLabel(lang === 'en' ? rankBefore.labelEn : rankBefore.label);
+      setRankUpNewRank(rankAfter);
+      setRankUpSeeds(rankSeeds);
+      setTimeout(() => setRankUpVisible(true), 1800);
     }
 
     // Auto-avance des objectifs si activée
@@ -609,6 +651,7 @@ export default function DailyGameScreen() {
             highlightActive={false}
             getCellColor={(idx) => game.getCellColor(idx)}
             onCellPress={handleCellPress}
+            challengeKey={challenge?.id ?? dailyDate}
           />
         </View>
 
@@ -666,6 +709,16 @@ export default function DailyGameScreen() {
           newRecord={streakRecordModal?.newRecord ?? 0}
           seedsAwarded={streakRecordModal?.seeds ?? 0}
           onClose={() => setStreakRecordModal(null)}
+        />
+
+        {/* Modal changement de rang */}
+        <RankUpModal
+          visible={rankUpVisible}
+          newRank={rankUpNewRank}
+          previousRankLabel={rankUpPrevLabel}
+          seedsAwarded={rankUpSeeds}
+          seedsBeforeGain={rankUpSeedsBefore}
+          onClose={() => setRankUpVisible(false)}
         />
       </View>
 

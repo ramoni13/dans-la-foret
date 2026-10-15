@@ -836,7 +836,7 @@ export default function HomeScreen() {
         <Animated.View style={{ transform: [{ translateY: fallOnf }] }}>
         {(() => {
           // Débloqué par niveau OU par palier badge bois×9 (chantier 3)
-          const isOnfUnlocked = player.currentLevel >= ONF_4X4_LEVEL_UNLOCK || player.unlockedOnf;
+          const isOnfUnlocked = player.currentLevel >= ONF_4X4_LEVEL_UNLOCK;
           const solved = player.completedOnfChallengeIds.length;
           const total = 100;
 
