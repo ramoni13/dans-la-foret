@@ -20,6 +20,12 @@ interface BoardRendererProps {
   highlightActive: boolean;   // un bonus visuel est actif → pas de pulsation cases vides
   getCellColor: (cellIndex: number) => string;
   onCellPress: (cellIndex: number) => void;
+  /**
+   * Clé unique du challenge en cours (ex: challenge.id ou une string arbitraire).
+   * Quand cette valeur change, toutes les Cell sont recréées (useRef réinitialisés).
+   * Évite le bug où contentScale reste à 0 entre deux parties successives.
+   */
+  challengeKey?: string;
 }
 
 export const BoardRenderer: React.FC<BoardRendererProps> = ({
@@ -30,6 +36,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
   highlightActive,
   getCellColor,
   onCellPress,
+  challengeKey,
 }) => {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
@@ -85,27 +92,34 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
   }, [boardDef]);
 
   // ── Cases ──────────────────────────────────────────────────
-  const cells = boardDef.cellPositions.map((pos, idx) => {
-    const { x, y } = cellPositionToPx(
-      pos,
-      containerSize.width,
-      containerSize.height,
-      effectiveCellSize
-    );
-    return (
-      <Cell
-        key={idx}
-        cellIndex={idx}
-        elementId={playerBoard[idx] ?? null}
-        isFixed={fixedCells.has(idx)}
-        backgroundColor={getCellColor(idx)}
-        hasSelection={hasSelection}
-        onPress={onCellPress}
-        cellSize={effectiveCellSize}
-        positionStyle={{ left: x, top: y }}
-      />
-    );
-  });
+  const cells = React.useMemo(() =>
+    boardDef.cellPositions.map((pos, idx) => {
+      const { x, y } = cellPositionToPx(
+        pos,
+        containerSize.width,
+        containerSize.height,
+        effectiveCellSize
+      );
+      // challengeKey dans la key garantit la destruction/recréation des Cell
+      // à chaque nouveau challenge → useRef d'animation réinitialisés → pas
+      // d'élément visuellement invisible entre deux parties successives.
+      const cellKey = challengeKey != null ? `${challengeKey}-${idx}` : idx;
+      return (
+        <Cell
+          key={cellKey}
+          cellIndex={idx}
+          elementId={playerBoard[idx] ?? null}
+          isFixed={fixedCells.has(idx)}
+          backgroundColor={getCellColor(idx)}
+          hasSelection={hasSelection}
+          onPress={onCellPress}
+          cellSize={effectiveCellSize}
+          positionStyle={{ left: x, top: y }}
+        />
+      );
+    }),
+  [boardDef, playerBoard, fixedCells, getCellColor, onCellPress, hasSelection,
+   containerSize, effectiveCellSize, challengeKey]);
 
   return (
     <ImageBackground

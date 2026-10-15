@@ -149,7 +149,10 @@ const CellComponent: React.FC<CellProps> = ({
       impactLight();
 
     } else if (elementId !== null) {
-      // ── Chargement initial (pas d'animation) ───────────────
+      // ── Chargement initial ou même élément (pas d'animation) ──
+      // Force la réinitialisation des valeurs animées pour éviter qu'un
+      // contentScale résiduel à 0 (fin d'animation de retrait non terminée
+      // lors d'un changement de challenge) laisse le token invisible.
       contentScale.setValue(1);
       contentOpacity.setValue(1);
     }
