@@ -28,7 +28,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAudioStore } from '../../src/store/audioStore';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
-import { useDebugStore } from '../../src/store/debugStore';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { OnfBriefingModal } from '../../src/components/LevelBriefing/OnfBriefingModal';
@@ -39,7 +38,6 @@ import { formatTime } from '../../src/utils/boardUtils';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
-import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
 import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
@@ -79,10 +77,6 @@ export default function ONFGameScreen() {
   const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
   const { borderW } = useFrameLayout();
-  const debugEntries = useDebugStore(s => s.entries);
-  const debugClear   = useDebugStore(s => s.clear);
-  const [showDebug, setShowDebug] = useState(false);
-
   // ── État local ────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
   const [allCompleted, setAllCompleted] = useState(false);
@@ -99,7 +93,6 @@ export default function ONFGameScreen() {
   const dailyLimitReached = !player.isPremium && player.onfDailyCount >= ONF_DAILY_LIMIT;
 
   const badgesEvaluatedRef = useRef(false);
-  const confettiPieces = useConfetti(game.isVictory);
   const [rankUpVisible, setRankUpVisible]         = useState(false);
   const [rankUpNewRank, setRankUpNewRank]          = useState(RANK_DEFINITIONS[0]);
   const [rankUpPrevLabel, setRankUpPrevLabel]      = useState('');
@@ -107,27 +100,26 @@ export default function ONFGameScreen() {
   const [rankUpSeedsBefore, setRankUpSeedsBefore]  = useState(0);
 
   // ── Sélection et chargement d'un défi ────────────────────
-  const pickAndLoad = useCallback(() => {
-    setLoading(true);
+  //
+  // Deux chemins selon le contexte :
+  // • Premier chargement (initialLoad=true) : écran de loading affiché
+  //   pour laisser React rendre avant le calcul synchrone du solveur.
+  // • Rechargement suivant (initialLoad=false, ex: "Nouveau défi") :
+  //   le JSX principal reste monté — on évite de démonter/remonter
+  //   GestureHandlerRootView et toutes les Cell (source du bug d'opacité
+  //   sur le thread natif Android avec useNativeDriver:true).
+  const pickAndLoad = useCallback((initialLoad = false) => {
     setAllCompleted(false);
     setRowColViolationCells([]);
     badgesEvaluatedRef.current = false;
 
-    // setTimeout de 16ms pour laisser React rendre l'écran de chargement
-    // avant que le chargement du défi (synchrone) ne s'exécute.
-    const timeout = setTimeout(() => {
+    const run = () => {
       const state = usePlayerStore.getState();
       const completedIds = state.completedOnfChallengeIds;
 
       const result = pickOnfChallenge(completedIds);
 
-      if (result.allCompleted) {
-        setAllCompleted(true);
-        setLoading(false);
-        return;
-      }
-
-      if (!result.challenge) {
+      if (result.allCompleted || !result.challenge) {
         setAllCompleted(true);
         setLoading(false);
         return;
@@ -141,13 +133,23 @@ export default function ONFGameScreen() {
         game.startTimer(0);
       }
       setLoading(false);
-    }, 16);
+    };
 
-    return () => clearTimeout(timeout);
+    if (initialLoad) {
+      // Premier chargement : afficher l'écran de chargement d'abord,
+      // puis exécuter le solveur après un tick (évite le freeze UI).
+      setLoading(true);
+      const timeout = setTimeout(run, 16);
+      return () => clearTimeout(timeout);
+    } else {
+      // Rechargement : exécuter directement sans passer par loading=true,
+      // le JSX principal reste monté et les Cell ne sont pas recréées.
+      run();
+    }
   }, []);
 
   useEffect(() => {
-    pickAndLoad();
+    pickAndLoad(true);
   }, []);
 
   // ── Fermeture du briefing ─────────────────────────────────
@@ -506,7 +508,6 @@ export default function ONFGameScreen() {
           seedsBeforeGain={seedsBeforeGain}
           difficulty={'niveau_1' as any}
           challengeNumber={0}
-          confettiPieces={confettiPieces}
           badgeQueue={badgeQueue}
           onBadgeQueueEmpty={() => setBadgeQueue([])}
           isNewWorldRecord={false}
@@ -540,24 +541,6 @@ export default function ONFGameScreen() {
         onClose={() => setRankUpVisible(false)}
       />
 
-      {/* ── OVERLAY DEBUG TEMPORAIRE ─────────────────────────── */}
-      <View style={onfDebugStyles.toggle}>
-        <TouchableOpacity onPress={() => { setShowDebug(v => !v); }} style={onfDebugStyles.toggleBtn}>
-          <Text style={onfDebugStyles.toggleText}>{showDebug ? 'Masquer logs' : 'Logs'}</Text>
-        </TouchableOpacity>
-        {showDebug && (
-          <TouchableOpacity onPress={debugClear} style={onfDebugStyles.clearBtn}>
-            <Text style={onfDebugStyles.toggleText}>Effacer</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      {showDebug && (
-        <View style={onfDebugStyles.overlay} pointerEvents="none">
-          {debugEntries.slice().reverse().map((e, i) => (
-            <Text key={i} style={onfDebugStyles.line}>{e.t}ms {e.msg}</Text>
-          ))}
-        </View>
-      )}
     </GestureHandlerRootView>
   );
 }
@@ -733,46 +716,3 @@ const styles = StyleSheet.create({
   },
 });
 
-const onfDebugStyles = StyleSheet.create({
-  toggle: {
-    position: 'absolute',
-    bottom: 120,
-    right: 8,
-    flexDirection: 'row',
-    gap: 4,
-    zIndex: 9999,
-  },
-  toggleBtn: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  clearBtn: {
-    backgroundColor: 'rgba(180,0,0,0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  toggleText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  overlay: {
-    position: 'absolute',
-    top: 60,
-    left: 0,
-    right: 0,
-    bottom: 110,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    padding: 6,
-    zIndex: 9998,
-  },
-  line: {
-    color: '#0f0',
-    fontSize: 9,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    lineHeight: 13,
-  },
-});
