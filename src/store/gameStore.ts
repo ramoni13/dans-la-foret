@@ -49,6 +49,7 @@ interface GameState {
   loadDailyChallenge: (challenge: Challenge) => void;
   setBonusDisabled: (disabled: boolean) => void;
   placeElement: (cellIndex: number, elementId: string) => void;
+  placeAndDeselect: (cellIndex: number, elementId: string) => void;
   removeElement: (cellIndex: number) => void;
   moveElement: (fromCell: number, toCell: number) => void;
   selectElement: (elementId: string | null) => void;
@@ -139,6 +140,22 @@ export const useGameStore = create<GameState>((set, get) => ({
     const newBoard = [...playerBoard];
     newBoard[cellIndex] = elementId;
     set({ playerBoard: newBoard });
+  },
+
+  // Place un élément ET désélectionne en un seul set() atomique.
+  // Évite deux renders Zustand successifs (useSyncExternalStore) qui
+  // laissaient contentScale à 0 entre les deux flushes, rendant le
+  // token visuellement invisible sur la grille.
+  placeAndDeselect: (cellIndex, elementId) => {
+    const { currentChallenge, playerBoard } = get();
+    if (!currentChallenge) return;
+
+    const isFixed = currentChallenge.fixedPlacements.some(fp => fp.cellIndex === cellIndex);
+    if (isFixed) return;
+
+    const newBoard = [...playerBoard];
+    newBoard[cellIndex] = elementId;
+    set({ playerBoard: newBoard, selectedElement: null });
   },
 
   removeElement: (cellIndex) => {
