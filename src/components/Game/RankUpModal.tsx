@@ -28,12 +28,12 @@ const native = Platform.OS !== 'web';
 // ── Graines récompenses par rang ──────────────────────────────────────────────
 export const RANK_SEED_REWARDS: Record<string, number> = {
   promeneur:        0,
-  bucheron:         5,
-  sylviculteur:     15,
-  garde_forestier:  30,
-  technicien_onf:   60,
-  ingenieur_forets: 100,
-  esprit_foret:     200,
+  bucheron:         10,
+  sylviculteur:     25,
+  garde_forestier:  50,
+  technicien_onf:   100,
+  ingenieur_forets: 200,
+  esprit_foret:     500,
 };
 
 // ── Feux d'artifice ───────────────────────────────────────────────────────────
