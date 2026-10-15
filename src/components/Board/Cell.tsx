@@ -27,7 +27,7 @@ import {
   ViewStyle,
   Platform,
 } from 'react-native';
-import { dlog } from '../../store/debugStore';
+
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import ReAnimated, {
   useSharedValue,
@@ -118,38 +118,26 @@ const CellComponent: React.FC<CellProps> = ({
       contentAnimRef.current = null;
     }
 
-    // ── LOG DEBUG ──────────────────────────────────────────────
-    const scaleVal = (contentScale as any)._value ?? '?';
-    const opacVal  = (contentOpacity as any)._value ?? '?';
-    dlog(`Cell[${cellIndex}] ${prevEl ?? 'null'}->${elementId ?? 'null'} sc=${scaleVal} op=${opacVal}`);
-
     if (prevEl === null && elementId !== null) {
       // ── PLACEMENT : pop-in spring ──────────────────────────
-      dlog(`Cell[${cellIndex}] PLACE ${elementId}`);
+      // stopAnimation() garantit que le thread natif libère la valeur avant
+      // setValue — nécessaire si une animation native était en cours sur ce nœud.
+      contentScale.stopAnimation();
+      contentOpacity.stopAnimation();
       contentScale.setValue(0);
-      // Animer contentOpacity via timing (même si durée courte) pour garantir
-      // la propagation sur le thread natif (setValue seul est non fiable avec
-      // useNativeDriver:true quand la valeur est déjà gérée nativement).
-      const anim = Animated.parallel([
-        Animated.spring(contentScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 200,
-          useNativeDriver: native,
-        }),
-        Animated.timing(contentOpacity, {
-          toValue: 1,
-          duration: 1,          // quasi-instantané, juste pour passer par le driver natif
-          useNativeDriver: native,
-        }),
-      ]);
+      contentOpacity.setValue(1);
+      const anim = Animated.spring(contentScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 200,
+        useNativeDriver: native,
+      });
       contentAnimRef.current = anim;
       anim.start(() => { contentAnimRef.current = null; });
       impactLight();
 
     } else if (prevEl !== null && elementId === null) {
       // ── RETRAIT : shrink + fade ────────────────────────────
-      dlog(`Cell[${cellIndex}] REMOVE ${prevEl}`);
       const anim = Animated.parallel([
         Animated.timing(contentScale, {
           toValue: 0,
@@ -168,41 +156,28 @@ const CellComponent: React.FC<CellProps> = ({
 
     } else if (prevEl !== null && elementId !== null && prevEl !== elementId) {
       // ── SWAP : un élément remplace un autre → petit pop ────
-      dlog(`Cell[${cellIndex}] SWAP ${prevEl}->${elementId}`);
+      contentScale.stopAnimation();
+      contentOpacity.stopAnimation();
       contentScale.setValue(0.7);
-      const anim = Animated.parallel([
-        Animated.spring(contentScale, {
-          toValue: 1,
-          friction: 5,
-          tension: 200,
-          useNativeDriver: native,
-        }),
-        Animated.timing(contentOpacity, {
-          toValue: 1,
-          duration: 1,
-          useNativeDriver: native,
-        }),
-      ]);
+      contentOpacity.setValue(1);
+      const anim = Animated.spring(contentScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 200,
+        useNativeDriver: native,
+      });
       contentAnimRef.current = anim;
       anim.start(() => { contentAnimRef.current = null; });
       impactLight();
 
     } else if (elementId !== null) {
       // ── Chargement initial ou même élément (pas d'animation) ──
-      const anim = Animated.parallel([
-        Animated.timing(contentScale, {
-          toValue: 1,
-          duration: 1,
-          useNativeDriver: native,
-        }),
-        Animated.timing(contentOpacity, {
-          toValue: 1,
-          duration: 1,
-          useNativeDriver: native,
-        }),
-      ]);
-      contentAnimRef.current = anim;
-      anim.start(() => { contentAnimRef.current = null; });
+      // stopAnimation() avant setValue pour libérer le nœud natif de toute
+      // animation résiduelle (ex: retrait en cours sur thread natif).
+      contentScale.stopAnimation();
+      contentOpacity.stopAnimation();
+      contentScale.setValue(1);
+      contentOpacity.setValue(1);
     }
 
     return () => {
