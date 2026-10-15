@@ -23,9 +23,11 @@ import {
   RANK_DEFINITIONS,
   RARITY_POINTS,
   MAX_BADGE_SCORE,
-  getBadgeScore,
+  getPlayerScore,
   getRank,
   getNextRank,
+  PlayerActivityStats,
+  ACTIVITY_POINTS,
 } from '../../constants/badges';
 import { BADGE_MUSIC_UNLOCK_MAP } from '../../constants/music';
 import { Colors } from '../../constants/colors';
@@ -92,7 +94,18 @@ interface RankPanelProps {
 }
 
 const RankPanel: React.FC<RankPanelProps> = ({ earnedBadges, language, t }) => {
-  const score    = getBadgeScore(earnedBadges);
+  const stats = usePlayerStore(s => s.stats);
+  const onfSolvedCount = usePlayerStore(s => s.onfSolvedCount);
+  const completedChallenges = usePlayerStore(s => s.completedChallenges);
+
+  const activityStats: PlayerActivityStats = {
+    soloCompleted:   completedChallenges.length,
+    friendCompleted: stats.friendPlayed,
+    onfCompleted:    onfSolvedCount,
+    dailyCompleted:  stats.dailyWon,
+  };
+
+  const score    = getPlayerScore(earnedBadges, activityStats);
   const rank     = getRank(score);
   const nextRank = getNextRank(score);
 
@@ -106,7 +119,7 @@ const RankPanel: React.FC<RankPanelProps> = ({ earnedBadges, language, t }) => {
       {/* Bloc score joueur */}
       <View style={rankStyles.scoreBox}>
         <Text style={rankStyles.scoreText}>
-          {t('rank_your_score', { score: String(score), max: String(MAX_BADGE_SCORE) })}
+          {t('rank_your_score', { score: String(score) })}
         </Text>
         <Text style={rankStyles.rankText}>
           {rank.emoji} {rankLabel}
@@ -132,7 +145,7 @@ const RankPanel: React.FC<RankPanelProps> = ({ earnedBadges, language, t }) => {
         )}
       </View>
 
-      {/* Barème des points */}
+      {/* Barème des points — badges */}
       <Text style={rankStyles.pointsTitle}>{t('rank_points_title')}</Text>
       <View style={rankStyles.pointsGrid}>
         {RARITY_ROWS.map(row => (
@@ -142,6 +155,31 @@ const RankPanel: React.FC<RankPanelProps> = ({ earnedBadges, language, t }) => {
             <Text style={rankStyles.pointsValue}>+{RARITY_POINTS[row.key]}</Text>
           </View>
         ))}
+      </View>
+
+      {/* Barème des points — activité */}
+      <Text style={rankStyles.pointsTitle}>{t('rank_activity_title')}</Text>
+      <View style={rankStyles.pointsGrid}>
+        <View style={rankStyles.pointsRow}>
+          <Text style={rankStyles.activityIcon}>🌲</Text>
+          <Text style={rankStyles.pointsLabel}>{t('rank_activity_solo')}</Text>
+          <Text style={rankStyles.pointsValue}>+{ACTIVITY_POINTS.solo}</Text>
+        </View>
+        <View style={rankStyles.pointsRow}>
+          <Text style={rankStyles.activityIcon}>🤝</Text>
+          <Text style={rankStyles.pointsLabel}>{t('rank_activity_friend')}</Text>
+          <Text style={rankStyles.pointsValue}>+{ACTIVITY_POINTS.friend}</Text>
+        </View>
+        <View style={rankStyles.pointsRow}>
+          <Text style={rankStyles.activityIcon}>🗺️</Text>
+          <Text style={rankStyles.pointsLabel}>{t('rank_activity_onf')}</Text>
+          <Text style={rankStyles.pointsValue}>+{ACTIVITY_POINTS.onf}</Text>
+        </View>
+        <View style={rankStyles.pointsRow}>
+          <Text style={rankStyles.activityIcon}>📅</Text>
+          <Text style={rankStyles.pointsLabel}>{t('rank_activity_daily')}</Text>
+          <Text style={rankStyles.pointsValue}>+{ACTIVITY_POINTS.daily}</Text>
+        </View>
       </View>
 
       {/* Liste de tous les rangs */}
@@ -261,6 +299,11 @@ const rankStyles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  activityIcon: {
+    fontSize: 14,
+    width: 22,
+    textAlign: 'center',
   },
   pointsLabel: {
     flex: 1,
