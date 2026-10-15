@@ -115,6 +115,15 @@ export function useGame() {
     return true;
   };
 
+  // ── Place ET désélectionne en un seul set() atomique ──────
+  // À préférer à tryPlaceElement + selectElement(null) pour éviter
+  // deux renders Zustand successifs (bug token invisible).
+  const placeAndDeselect = (cellIndex: number, elementId: string): boolean => {
+    if (!game.currentChallenge) return false;
+    game.placeAndDeselect(cellIndex, elementId);
+    return true;
+  };
+
   // ── Couleur d'une case selon son état ─────────────────────
   const getCellColor = (cellIndex: number): string => {
     // Priorité : erreur (rouge) > valide (vert) > fixe > vide
@@ -206,6 +215,7 @@ export function useGame() {
     instinctDeadline,
     boardDef,
     tryPlaceElement,
+    placeAndDeselect,
     getCellColor,
     activateBonus,
     bonusDisabled: game.bonusDisabled,
