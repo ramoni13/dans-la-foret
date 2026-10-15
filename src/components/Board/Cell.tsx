@@ -27,6 +27,7 @@ import {
   ViewStyle,
   Platform,
 } from 'react-native';
+import { dlog } from '../../store/debugStore';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import ReAnimated, {
   useSharedValue,
@@ -103,26 +104,44 @@ const CellComponent: React.FC<CellProps> = ({
   const contentScale   = useRef(new Animated.Value(elementId ? 1 : 0)).current;
   const contentOpacity = useRef(new Animated.Value(elementId ? 1 : 0)).current;
   const prevElementRef = useRef(elementId);
+  // Référence vers l'animation de contenu en cours, pour pouvoir la stopper
+  // avant d'en démarrer une nouvelle (évite les conflits avec useNativeDriver).
+  const contentAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     const prevEl = prevElementRef.current;
     prevElementRef.current = elementId;
 
+    // Stopper toute animation de contenu en cours avant d'en lancer une nouvelle.
+    if (contentAnimRef.current) {
+      contentAnimRef.current.stop();
+      contentAnimRef.current = null;
+    }
+
+    // ── LOG DEBUG ──────────────────────────────────────────────
+    const scaleVal = (contentScale as any)._value ?? '?';
+    const opacVal  = (contentOpacity as any)._value ?? '?';
+    dlog(`Cell[${cellIndex}] ${prevEl ?? 'null'}->${elementId ?? 'null'} sc=${scaleVal} op=${opacVal}`);
+
     if (prevEl === null && elementId !== null) {
       // ── PLACEMENT : pop-in spring ──────────────────────────
+      dlog(`Cell[${cellIndex}] PLACE ${elementId}`);
       contentScale.setValue(0);
       contentOpacity.setValue(1);
-      Animated.spring(contentScale, {
+      const anim = Animated.spring(contentScale, {
         toValue: 1,
         friction: 5,
         tension: 200,
         useNativeDriver: native,
-      }).start();
+      });
+      contentAnimRef.current = anim;
+      anim.start(() => { contentAnimRef.current = null; });
       impactLight();
 
     } else if (prevEl !== null && elementId === null) {
       // ── RETRAIT : shrink + fade ────────────────────────────
-      Animated.parallel([
+      dlog(`Cell[${cellIndex}] REMOVE ${prevEl}`);
+      const anim = Animated.parallel([
         Animated.timing(contentScale, {
           toValue: 0,
           duration: 180,
@@ -133,29 +152,39 @@ const CellComponent: React.FC<CellProps> = ({
           duration: 180,
           useNativeDriver: native,
         }),
-      ]).start();
+      ]);
+      contentAnimRef.current = anim;
+      anim.start(() => { contentAnimRef.current = null; });
       impactMedium();
 
     } else if (prevEl !== null && elementId !== null && prevEl !== elementId) {
       // ── SWAP : un élément remplace un autre → petit pop ────
+      dlog(`Cell[${cellIndex}] SWAP ${prevEl}->${elementId}`);
       contentScale.setValue(0.7);
       contentOpacity.setValue(1);
-      Animated.spring(contentScale, {
+      const anim = Animated.spring(contentScale, {
         toValue: 1,
         friction: 5,
         tension: 200,
         useNativeDriver: native,
-      }).start();
+      });
+      contentAnimRef.current = anim;
+      anim.start(() => { contentAnimRef.current = null; });
       impactLight();
 
     } else if (elementId !== null) {
       // ── Chargement initial ou même élément (pas d'animation) ──
-      // Force la réinitialisation des valeurs animées pour éviter qu'un
-      // contentScale résiduel à 0 (fin d'animation de retrait non terminée
-      // lors d'un changement de challenge) laisse le token invisible.
       contentScale.setValue(1);
       contentOpacity.setValue(1);
     }
+
+    return () => {
+      // Cleanup si le composant est démonté pendant une animation
+      if (contentAnimRef.current) {
+        contentAnimRef.current.stop();
+        contentAnimRef.current = null;
+      }
+    };
   }, [elementId]);
 
   // ── Pulsation cases vides quand un jeton est sélectionné ────
