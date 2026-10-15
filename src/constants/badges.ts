@@ -31,43 +31,6 @@ export interface BadgeDefinition {
   };
 }
 
-// ── Seuils de déblocage de contenu ────────────────────────────────────────────
-export type RarityUnlockId =
-  | 'seeds_10'
-  | 'seeds_50'
-  | 'bonus_instinct'
-  | 'theme_automne'
-  | 'theme_hiver'
-  | 'theme_foret_mystique'
-  | 'music_unlock'      // Anciennement mode_zen (chantier 3) — musique ambiante débloquée
-  | 'mode_onf'          // Anciennement defi_journalier (chantier 3) — mode ONF alternatif
-  | 'niveau_14'
-  | 'avatar_esprit';
-
-export interface RarityUnlock {
-  rarity: BadgeRarity;
-  count: number;         // Nombre de badges de cette rareté requis
-  unlock: RarityUnlockId;
-  label: string;
-}
-
-export const RARITY_UNLOCKS: RarityUnlock[] = [
-  // ── Bois (9 badges bois) ──────────────────────────────────
-  { rarity: 'bois',    count: 3,  unlock: 'seeds_10',           label: '+10 Graines offertes' },
-  { rarity: 'bois',    count: 6,  unlock: 'music_unlock',       label: 'Musique ambiante débloquée' },
-  { rarity: 'bois',    count: 9,  unlock: 'mode_onf',           label: 'Mode ONF débloqué (voie alternative)' },
-  // ── Pierre (9 badges pierre) ──────────────────────────────
-  { rarity: 'pierre',  count: 3,  unlock: 'theme_automne',      label: 'Thème Automne débloqué' },
-  { rarity: 'pierre',  count: 7,  unlock: 'seeds_50',           label: '+50 Graines offertes' },
-  { rarity: 'pierre',  count: 9,  unlock: 'theme_hiver',        label: 'Thème Hiver débloqué' },
-  // ── Or (14 badges or) ─────────────────────────────────────
-  { rarity: 'or',      count: 3,  unlock: 'bonus_instinct',     label: 'Bonus Instinct débloqué' },
-  { rarity: 'or',      count: 7,  unlock: 'theme_foret_mystique', label: 'Thème Forêt Mystique débloqué' },
-  { rarity: 'or',      count: 12, unlock: 'niveau_14',          label: 'Niveau 14 débloqué' },
-  // ── Cristal (9 badges cristal) ────────────────────────────
-  { rarity: 'cristal', count: 3,  unlock: 'avatar_esprit',      label: 'Avatar Esprit de la Forêt débloqué' },
-];
-
 // ── Récompenses en graines par rareté ─────────────────────────────────────────
 export const BADGE_SEED_REWARDS: Record<BadgeRarity, number> = {
   bois:    5,
@@ -511,16 +474,30 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
 // ── Système de rangs forestiers ───────────────────────────────────────────────
 
-/** Valeur en points de chaque rareté */
+/** Valeur en points de chaque rareté de badge */
 export const RARITY_POINTS: Record<BadgeRarity, number> = {
-  bois:    1,
-  pierre:  3,
-  or:      6,
-  cristal: 12,
+  bois:    5,
+  pierre:  10,
+  or:      20,
+  cristal: 50,
 };
 
-/** Score maximum atteignable (9×1 + 16×3 + 14×6 + 8×12 = 237) */
-export const MAX_BADGE_SCORE = 237;
+/**
+ * Points attribués selon le type de défi complété.
+ * Solo=1pt, Ami=2pts, ONF=3pts, Daily=5pts
+ */
+export const ACTIVITY_POINTS = {
+  solo:   1,
+  friend: 2,
+  onf:    3,
+  daily:  5,
+} as const;
+
+/**
+ * Score maximum atteignable via les badges uniquement.
+ * 12×Bois(5) + 17×Pierre(10) + 15×Or(20) + 7×Cristal(50) = 60+170+300+350 = 880
+ */
+export const MAX_BADGE_SCORE = 880;
 
 export interface RankDefinition {
   /** Identifiant unique du rang */
@@ -531,23 +508,32 @@ export interface RankDefinition {
   labelEn: string;
   /** Emoji représentant le rang */
   emoji: string;
-  /** Score minimum requis */
+  /** Score minimum requis (badges + activité) */
   minScore: number;
 }
 
+/**
+ * Paliers recalibrés pour intégrer la composante activité (défis).
+ *
+ * Score de référence (joueur régulier 6 mois) :
+ *   ~400 pts badges + ~100 pts solo + ~40 pts amis + ~150 pts ONF + ~900 pts daily ≈ 1590 pts
+ *
+ * Score hardcore (1 an, tous les badges) :
+ *   880 pts badges + 150 solo + 100 amis + 200 ONF + 1825 daily ≈ 3155 pts
+ */
 export const RANK_DEFINITIONS: RankDefinition[] = [
-  { id: 'promeneur',          label: 'Promeneur',              labelEn: 'Wanderer',            emoji: '🚶', minScore: 0   },
-  { id: 'bucheron',           label: 'Bûcheron',               labelEn: 'Lumberjack',          emoji: '🪓', minScore: 5   },
-  { id: 'sylviculteur',       label: 'Sylviculteur',           labelEn: 'Silviculturist',      emoji: '🌱', minScore: 20  },
-  { id: 'garde_forestier',    label: 'Garde Forestier',        labelEn: 'Forest Ranger',       emoji: '🌲', minScore: 50  },
-  { id: 'technicien_onf',     label: 'Technicien ONF',         labelEn: 'ONF Technician',      emoji: '🗺️', minScore: 100 },
-  { id: 'ingenieur_forets',   label: 'Ingénieur des Forêts',   labelEn: 'Forest Engineer',     emoji: '🏔️', minScore: 160 },
-  { id: 'esprit_foret',       label: 'Esprit de la Forêt',     labelEn: 'Spirit of the Forest',emoji: '✨', minScore: 237 },
+  { id: 'promeneur',          label: 'Promeneur',              labelEn: 'Wanderer',             emoji: '🚶', minScore: 0    },
+  { id: 'bucheron',           label: 'Bûcheron',               labelEn: 'Lumberjack',           emoji: '🪓', minScore: 30   },
+  { id: 'sylviculteur',       label: 'Sylviculteur',           labelEn: 'Silviculturist',       emoji: '🌱', minScore: 100  },
+  { id: 'garde_forestier',    label: 'Garde Forestier',        labelEn: 'Forest Ranger',        emoji: '🌲', minScore: 300  },
+  { id: 'technicien_onf',     label: 'Technicien ONF',         labelEn: 'ONF Technician',       emoji: '🗺️', minScore: 700  },
+  { id: 'ingenieur_forets',   label: 'Ingénieur des Forêts',   labelEn: 'Forest Engineer',      emoji: '🏔️', minScore: 1500 },
+  { id: 'esprit_foret',       label: 'Esprit de la Forêt',     labelEn: 'Spirit of the Forest', emoji: '✨', minScore: 3000 },
 ];
 
 /**
  * Calcule le score de badge pondéré par rareté pour un ensemble de badges obtenus.
- * Bois=1pt, Pierre=3pts, Or=6pts, Cristal=12pts
+ * Bois=5pts, Pierre=10pts, Or=20pts, Cristal=50pts
  */
 export function getBadgeScore(earnedBadgeIds: string[]): number {
   const earnedSet = new Set(earnedBadgeIds);
@@ -557,6 +543,44 @@ export function getBadgeScore(earnedBadgeIds: string[]): number {
     }
     return total;
   }, 0);
+}
+
+/**
+ * Paramètres d'activité du joueur nécessaires au calcul du score de rang.
+ */
+export interface PlayerActivityStats {
+  /** Nombre de défis solo complétés */
+  soloCompleted: number;
+  /** Nombre de défis entre amis complétés (victoires joueur B) */
+  friendCompleted: number;
+  /** Nombre de grilles ONF résolues */
+  onfCompleted: number;
+  /** Nombre de défis du jour réussis */
+  dailyCompleted: number;
+}
+
+/**
+ * Calcule la contribution de l'activité (défis) au score de rang.
+ * Solo=1pt, Ami=2pts, ONF=3pts, Daily=5pts
+ */
+export function getPlayerActivityScore(stats: PlayerActivityStats): number {
+  return (
+    stats.soloCompleted   * ACTIVITY_POINTS.solo   +
+    stats.friendCompleted * ACTIVITY_POINTS.friend  +
+    stats.onfCompleted    * ACTIVITY_POINTS.onf     +
+    stats.dailyCompleted  * ACTIVITY_POINTS.daily
+  );
+}
+
+/**
+ * Calcule le score de rang global : badges + activité.
+ * C'est ce score qui détermine le rang forestier du joueur.
+ */
+export function getPlayerScore(
+  earnedBadgeIds: string[],
+  stats: PlayerActivityStats,
+): number {
+  return getBadgeScore(earnedBadgeIds) + getPlayerActivityScore(stats);
 }
 
 /**
