@@ -31,7 +31,7 @@ app/
   _layout.tsx              ← Root : GestureHandlerRootView + StorageBridge + AudioBridge
   (tabs)/
     _layout.tsx            ← Tabs layout + UNIQUE onAuthChange Firebase + garde auth
-    index.tsx              ← Accueil (progression globale + prochain défi + carte daily)
+    index.tsx              ← Accueil (progression globale + prochain défi + cartes daily/ONF)
     levels.tsx             ← Sélection des niveaux + bouton daily
     rules.tsx              ← Onglet Règles (éléments + animations briefing)
     challenge.tsx          ← Défis entre amis
@@ -39,6 +39,7 @@ app/
   game/
     [challengeId].tsx      ← Écran de jeu principal (drag & drop complet)
     daily.tsx              ← Défi du Jour (15 cases, 1 validation, pas de bonus)
+    onf.tsx                ← Mode ONF Grille Forestière (?size=3 ou ?size=4)
     friend-challenge.tsx   ← Défi ami
 ```
 
@@ -57,8 +58,8 @@ src/
       Challenge.ts    ← Challenge + FixedPlacement + TokenCount + DifficultyLevel (niveau_1…15)
       FriendChallenge.ts
     engine/
-      validator.ts    ← validateBoard(), checkVictory(), isPlacementValid()
-      solver.ts       ← Backtracking, s'arrête à 2 solutions (isUnique)
+      validator.ts    ← validateBoard(), checkVictory(), isPlacementValid(), validateRowColUnique(), isPlacementValidOnf()
+      solver.ts       ← Backtracking, s'arrête à 2 solutions (isUnique) + solveOnf() pour mode ONF
       hintEngine.ts   ← getValidCellsForElement(), calculateSeedReward()
       badgeEngine.ts  ← evaluateBadges(), getClosestBadges(), GameContext
     generators/
@@ -72,6 +73,8 @@ src/
     BoardRegistry.ts    ← Record<string, BoardDefinition>
     board_6cells_v1.ts … board_12cells.ts  (8 plateaux)
     board_15cells_daily.ts ← 15 cases, Clairière Secrète (défi du jour)
+    board_3x3_onf.ts    ← 9 cases grille carrée + gridMeta (mode ONF)
+    board_4x4_onf.ts    ← 16 cases grille carrée + gridMeta (mode ONF)
   store/
     gameStore.ts    ← état partie en cours (Zustand)
     playerStore.ts  ← profil + progression + badges + graines
@@ -89,6 +92,7 @@ src/
     badgeService.ts     ← awardBadgesFirestore(), updateDailyStreak()
     challengeService.ts ← défis amis Firestore
     dailyChallengeService.ts ← génération daily (PRNG, 16 compositions, solver), Firestore
+    onfChallengeService.ts   ← génération ONF temps réel (solveOnf), calculateOnfReward()
     leaderboardService.ts
     worldRecordService.ts ← subscribeWorldRecord(), trySetWorldRecord()
     audioService.ts
@@ -96,8 +100,9 @@ src/
   constants/
     colors.ts       ← Colors (forest, cell, elements, ui, badges)
     bonus.ts        ← BonusId + BONUS_DEFINITIONS + BASE/ADVANCED_BONUS_IDS
-    badges.ts       ← BADGE_DEFINITIONS (41), BADGE_MAP, BADGE_SEED_REWARDS, RARITY_UNLOCKS
+    badges.ts       ← BADGE_DEFINITIONS (41), BADGE_MAP, BADGE_SEED_REWARDS, RARITY_POINTS, RANK_DEFINITIONS
     difficulty.ts   ← LEVEL_PARAMS (15 niveaux) + Composition + LevelParams
+    onf.ts          ← ONF_UNLOCK_LEVEL (5) + ONF_4X4_UNLOCK_COUNT (10)
     music.ts
   data/
     levelMeta.ts        ← LEVEL_META[1..15] (RuleCard, LevelMeta)
@@ -143,6 +148,7 @@ Les règles de jeu sont **uniquement** dans `ElementDefinition.constraints`. Jam
 - `connected_group` — tous les exemplaires forment 1 groupe connexe (chien = meute)
 - `paired_specific` — couplage 1-pour-1 (cerf ↔ biche)
 - `position_only` / `count_on_board`
+- `row_col_unique` — mode ONF uniquement : max 1 élément identique par ligne ET par colonne (vérifiée via `gridMeta`, pas déclarée dans ElementDefinition)
 
 ### Éléments disponibles (10)
 | id | Règle distinctive |
@@ -158,7 +164,7 @@ Les règles de jeu sont **uniquement** dans `ElementDefinition.constraints`. Jam
 | tas_buches | `neighbor_specific_chain` : voisin bucheron + voisin chalet si chalet présent |
 | chalet | voisin bucheron obligatoire, ≠ voisin chalet, bucheron ≥ chalet |
 
-### Plateaux (8 dans BoardRegistry)
+### Plateaux (10 dans BoardRegistry)
 | id | Cases | Niveaux |
 |---|---|---|
 | board_6_v1 | 6 | 1 |
@@ -169,6 +175,11 @@ Les règles de jeu sont **uniquement** dans `ElementDefinition.constraints`. Jam
 | board_11_v1 | 11 | (obsolète) |
 | board_11_v2 | 11 | 11–12 |
 | board_12 | 12 | 13–15 |
+| board_15_daily | 15 | Défi du Jour |
+| board_3x3_onf | 9 | Mode ONF 3×3 (grille carrée, `gridMeta`) |
+| board_4x4_onf | 16 | Mode ONF 4×4 (grille carrée, `gridMeta`) |
+
+`BoardDefinition` a un champ optionnel `gridMeta?: { rows: number[][], cols: number[][] }` — présent uniquement sur les plateaux ONF.
 
 ### Challenge (src/core/models/Challenge.ts)
 - `solution: string[]` — solution unique pré-calculée par le solveur
@@ -201,6 +212,8 @@ Profil + progression + badges + graines. Points critiques :
 - `awardBadges(ids[])` — un seul `set()` pour N badges (zéro re-render intermédiaire)
 - `markChallengeCompleted(id, timeMs, failCount)` — errorCount = nb échecs de validation pendant la partie (pas errorCount de la solution)
 - `checkDailyLogin()` → retourne true si première connexion du jour → `addSeeds(3)` dans `(tabs)/_layout.tsx`
+- `onfSolvedCount` — compteur unifié de grilles ONF résolues (ne fait PAS progresser `currentLevel`)
+- `incrementOnfSolved()` — appelé après victoire ONF (jamais `markChallengeCompleted`)
 
 ### audioStore
 - `ingameEnabled` — son pendant le jeu
@@ -240,12 +253,20 @@ Profil + progression + badges + graines. Points critiques :
 Catégories : vitesse, précision, régularité, social, amélioration, exploration, secrets (5), saisonniers (4)
 Raretés : bois (5🌱) → pierre (15🌱) → or (30🌱) → cristal (75🌱)
 
-**Déblocages par paliers** (`RARITY_UNLOCKS`) :
-- 3 bois → +10 graines
-- 5 pierre → bonus Flash
-- 3 or → bonus Instinct
-- 3 pierre → thème Automne
-- etc.
+**Rang forestier** : le score est la somme de deux composantes.
+
+**Badges** (Bois=5pts, Pierre=10pts, Or=20pts, Cristal=50pts) — score max badges : 880 pts
+
+**Activité** (défis complétés) :
+- Défi solo : +1 pt
+- Défi entre amis : +2 pts
+- Grille ONF : +3 pts
+- Défi du jour : +5 pts
+
+7 rangs de Promeneur à Esprit de la Forêt (paliers : 0 / 30 / 100 / 300 / 700 / 1500 / 3000 pts).
+Score calculé par `getPlayerScore(earnedBadges, activityStats)` dans `src/constants/badges.ts`.
+Chaque changement de rang déclenche une récompense en graines (voir `RANK_SEED_REWARDS` dans `RankUpModal.tsx`).
+La détection de rang est active dans **tous les modes** : solo, daily, ONF, ami.
 
 `evaluateBadges(GameContext)` dans `badgeEngine.ts` — appelé après chaque victoire.
 
@@ -330,6 +351,23 @@ Le générateur (`challengeGenerator.ts`) garantit :
 
 ---
 
+## Mode ONF — Grille Forestière (Sudoku Forestier)
+
+- **Écrans** : `app/game/onf.tsx` — route `/game/onf?size=3` ou `/game/onf?size=4`
+- **Mécanique** : grille N×N orthogonale + règles de voisinage standard + contrainte `row_col_unique` (max 1 élément identique par ligne ET par colonne)
+- **Progression** : `currentLevel >= ONF_UNLOCK_LEVEL (5)` → 3×3 débloqué ; `currentLevel >= ONF_4X4_LEVEL_UNLOCK (14)` → 4×4 débloqué
+- **Solveur** : `solveOnf()` dans `solver.ts` — backtracking + élagage ligne/colonne via `isPlacementValidOnf()`
+- **Validation** : bouton Valider → `validateBoard()` + `validateRowColUnique()` (union violations) ; victoire = `checkVictory()` seul (solution pré-calculée satisfait déjà la contrainte)
+- **Générateur** : `src/services/onfChallengeService.ts` — compositions 3×3 et 4×4, retry max 50
+- **Récompense** : `calculateOnfReward(gridSize, elapsedMs)` → 3–7 graines selon taille + bonus vitesse
+- **Affichage contrainte** : surlignage ligne/colonne (Option A) — `getCellColorOnf` dans `onf.tsx` calcule les cases à fond jaune depuis `gridMeta`
+- **Éléments exclus** : `chien` (connected_group + sudoku impossible), `champignon` (center_only, pas de specialCells ONF)
+- **Carte d'accueil** : `app/(tabs)/index.tsx` — bouton ONF verrouillé si `currentLevel < ONF_4X4_LEVEL_UNLOCK` ; débloqué sinon
+- **Constantes** : `src/constants/onf.ts` — `ONF_UNLOCK_LEVEL = 5`, `ONF_4X4_UNLOCK_COUNT = 10`, `ONF_4X4_LEVEL_UNLOCK = 14`
+- **Pas de Firestore spécifique** : pas de collection dédiée ONF ; seeds synchées via le flux standard ; compteur unifié `onfSolvedCount` dans `PlayerProfile` (était `onf4x4SolvedCount` — migré via `migrateProfile`)
+
+---
+
 ## Défi du Jour (daily challenge)
 
 - **Écran** : `app/game/daily.tsx` — 15 cases, 1 seule validation, aucun bonus
@@ -360,7 +398,25 @@ Le générateur (`challengeGenerator.ts`) garantit :
 ## Entités HTML dans React Native
 
 **Ne jamais utiliser** `&#xXXXX;` ou `&name;` dans `<Text>`. React Native ne les interprète pas.
-Utiliser des séquences Unicode JSX : `{'\uXXXX'}` ou `{'\uD83D\uDEAB'}` pour les emoji (paires de substitution).
+
+**Ne jamais encoder les caractères accentués** comme `\u00e9` (é), `\u00e8` (è), `\u00e0` (à), `\u00b7` (·), `\u00d7` (×), `\u00a0` (espace insécable) dans les chaînes JSX. Écrire directement le caractère UTF-8 dans le fichier source.
+
+```tsx
+// MAUVAIS
+'r\u00e9solue'    // illisible, source de bugs
+'\u00b7 Sudoku'   // idem
+
+// CORRECT
+'résolue'         // UTF-8 direct dans le source
+'· Sudoku'        // idem
+```
+
+**Exception autorisée** : les emoji multi-codepoint (paires de substitution) peuvent utiliser `{'\uD83D\uDD25'}` si le caractère est difficile à insérer directement — mais préférer l'emoji brut `{'🔥'}`.
+
+Après chaque modification de fichier `.tsx`, vérifier avec :
+```powershell
+Select-String -Path "app\(tabs)\*.tsx","src\components\**\*.tsx" -Pattern '\\u[0-9a-fA-F]{4}'
+```
 
 ---
 
