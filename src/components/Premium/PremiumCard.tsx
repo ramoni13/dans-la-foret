@@ -27,10 +27,10 @@ export interface PremiumCardProps {
 }
 
 const AVANTAGES: { emoji: string; text: string }[] = [
-  { emoji: '🤝', text: 'Défi entre amis illimité' },
-  { emoji: '🌲', text: 'Mode ONF illimité' },
-  { emoji: '💡', text: 'Bonus Cases Valides illimité' },
-  { emoji: '🔴', text: 'Bonus Instinct illimité' },
+  { emoji: '🤝', text: 'Défi entre amis : 3/jour -> illimité' },
+  { emoji: '🌲', text: 'Mode ONF : 3/jour -> illimité' },
+  { emoji: '💡', text: 'Bonus Cases Valides : 3/jour -> illimité' },
+  { emoji: '🔴', text: 'Bonus Instinct : 3/jour -> illimité' },
   { emoji: '🏅', text: 'Badge exclusif "Ami de la Forêt"' },
 ];
 
