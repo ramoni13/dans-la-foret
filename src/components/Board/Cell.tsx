@@ -127,13 +127,22 @@ const CellComponent: React.FC<CellProps> = ({
       // ── PLACEMENT : pop-in spring ──────────────────────────
       dlog(`Cell[${cellIndex}] PLACE ${elementId}`);
       contentScale.setValue(0);
-      contentOpacity.setValue(1);
-      const anim = Animated.spring(contentScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 200,
-        useNativeDriver: native,
-      });
+      // Animer contentOpacity via timing (même si durée courte) pour garantir
+      // la propagation sur le thread natif (setValue seul est non fiable avec
+      // useNativeDriver:true quand la valeur est déjà gérée nativement).
+      const anim = Animated.parallel([
+        Animated.spring(contentScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 200,
+          useNativeDriver: native,
+        }),
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 1,          // quasi-instantané, juste pour passer par le driver natif
+          useNativeDriver: native,
+        }),
+      ]);
       contentAnimRef.current = anim;
       anim.start(() => { contentAnimRef.current = null; });
       impactLight();
@@ -161,21 +170,39 @@ const CellComponent: React.FC<CellProps> = ({
       // ── SWAP : un élément remplace un autre → petit pop ────
       dlog(`Cell[${cellIndex}] SWAP ${prevEl}->${elementId}`);
       contentScale.setValue(0.7);
-      contentOpacity.setValue(1);
-      const anim = Animated.spring(contentScale, {
-        toValue: 1,
-        friction: 5,
-        tension: 200,
-        useNativeDriver: native,
-      });
+      const anim = Animated.parallel([
+        Animated.spring(contentScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 200,
+          useNativeDriver: native,
+        }),
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 1,
+          useNativeDriver: native,
+        }),
+      ]);
       contentAnimRef.current = anim;
       anim.start(() => { contentAnimRef.current = null; });
       impactLight();
 
     } else if (elementId !== null) {
       // ── Chargement initial ou même élément (pas d'animation) ──
-      contentScale.setValue(1);
-      contentOpacity.setValue(1);
+      const anim = Animated.parallel([
+        Animated.timing(contentScale, {
+          toValue: 1,
+          duration: 1,
+          useNativeDriver: native,
+        }),
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 1,
+          useNativeDriver: native,
+        }),
+      ]);
+      contentAnimRef.current = anim;
+      anim.start(() => { contentAnimRef.current = null; });
     }
 
     return () => {
