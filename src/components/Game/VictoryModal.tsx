@@ -37,7 +37,7 @@ interface VictoryModalProps {
   challengeNumber: number;
   onNextChallenge: () => void;
   onBackToMenu: () => void;
-  confettiPieces: ConfettiPiece[];
+  confettiPieces?: ConfettiPiece[];
   closestBadges?: BadgeProgress[];
   obtainedBadgeIds?: string[];
   newGoalBadgeIds?: string[];
@@ -282,7 +282,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
         </Animated.View>
       </Animated.View>
 
-      <Confetti pieces={confettiPieces} />
+      <Confetti pieces={confettiPieces ?? null} />
 
       {badgeQueue.length > 0 && onBadgeQueueEmpty && (
         <BadgeToast queue={badgeQueue} onQueueEmpty={onBadgeQueueEmpty} />
