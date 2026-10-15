@@ -28,6 +28,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAudioStore } from '../../src/store/audioStore';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
+import { useDebugStore } from '../../src/store/debugStore';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { OnfBriefingModal } from '../../src/components/LevelBriefing/OnfBriefingModal';
@@ -78,6 +79,9 @@ export default function ONFGameScreen() {
   const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
   const { borderW } = useFrameLayout();
+  const debugEntries = useDebugStore(s => s.entries);
+  const debugClear   = useDebugStore(s => s.clear);
+  const [showDebug, setShowDebug] = useState(false);
 
   // ── État local ────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
@@ -535,6 +539,25 @@ export default function ONFGameScreen() {
         seedsBeforeGain={rankUpSeedsBefore}
         onClose={() => setRankUpVisible(false)}
       />
+
+      {/* ── OVERLAY DEBUG TEMPORAIRE ─────────────────────────── */}
+      <View style={onfDebugStyles.toggle}>
+        <TouchableOpacity onPress={() => { setShowDebug(v => !v); }} style={onfDebugStyles.toggleBtn}>
+          <Text style={onfDebugStyles.toggleText}>{showDebug ? 'Masquer logs' : 'Logs'}</Text>
+        </TouchableOpacity>
+        {showDebug && (
+          <TouchableOpacity onPress={debugClear} style={onfDebugStyles.clearBtn}>
+            <Text style={onfDebugStyles.toggleText}>Effacer</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      {showDebug && (
+        <View style={onfDebugStyles.overlay} pointerEvents="none">
+          {debugEntries.slice().reverse().map((e, i) => (
+            <Text key={i} style={onfDebugStyles.line}>{e.t}ms {e.msg}</Text>
+          ))}
+        </View>
+      )}
     </GestureHandlerRootView>
   );
 }
@@ -707,5 +730,49 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     backgroundColor: Colors.ui.background,
     paddingVertical: 4,
+  },
+});
+
+const onfDebugStyles = StyleSheet.create({
+  toggle: {
+    position: 'absolute',
+    bottom: 120,
+    right: 8,
+    flexDirection: 'row',
+    gap: 4,
+    zIndex: 9999,
+  },
+  toggleBtn: {
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  clearBtn: {
+    backgroundColor: 'rgba(180,0,0,0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  toggleText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    bottom: 110,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    padding: 6,
+    zIndex: 9998,
+  },
+  line: {
+    color: '#0f0',
+    fontSize: 9,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    lineHeight: 13,
   },
 });
