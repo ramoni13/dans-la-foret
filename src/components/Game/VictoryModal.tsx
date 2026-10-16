@@ -36,6 +36,7 @@ interface VictoryModalProps {
   difficulty: DifficultyLevel;
   challengeNumber: number;
   onNextChallenge: () => void;
+  nextChallengeLabel?: string;
   onBackToMenu: () => void;
   confettiPieces?: ConfettiPiece[];
   closestBadges?: BadgeProgress[];
@@ -46,8 +47,10 @@ interface VictoryModalProps {
   worldRecord?: WorldRecord | null;
   isNewWorldRecord?: boolean;
   previousRecordHolder?: string | null;
-  goalJustCompleted?: boolean;
-  onChooseGoal?: () => void;
+  // ── PERFECT x2 ────────────────────────────────────────────────────────────
+  isPerfectRun?: boolean;
+  perfectSeedsBonus?: number;
+  onPerfectBonusCollected?: () => void;
 }
 
 const DIFFICULTY_LABELS: Partial<Record<DifficultyLevel, string>> = {
@@ -60,10 +63,10 @@ const DIFFICULTY_LABELS: Partial<Record<DifficultyLevel, string>> = {
 
 export const VictoryModal: React.FC<VictoryModalProps> = ({
   visible, elapsedTime, seedsEarned, seedsBeforeGain, difficulty, challengeNumber,
-  onNextChallenge, onBackToMenu, confettiPieces,
+  onNextChallenge, nextChallengeLabel, onBackToMenu, confettiPieces,
   closestBadges = [], obtainedBadgeIds = [], newGoalBadgeIds = [], badgeQueue = [], onBadgeQueueEmpty,
   worldRecord = null, isNewWorldRecord = false, previousRecordHolder = null,
-  goalJustCompleted = false, onChooseGoal,
+  isPerfectRun = false, perfectSeedsBonus = 0, onPerfectBonusCollected,
 }) => {
 
   // ── Compteur affiché ─────────────────────────────────────────────────────
@@ -75,7 +78,9 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   const [displayedSeeds, setDisplayedSeeds] = useState(startSeeds);
   const [displayedGain, setDisplayedGain]   = useState(seedsEarned);
   const [animDone, setAnimDone]             = useState(false);
-  const arrivedCount = useRef(0);
+  const arrivedCount  = useRef(0);
+  // Nombre de particules capturé au démarrage de la 1re animation (stable, ne change pas mid-vol)
+  const launchedCount = useRef(0);
 
   useEffect(() => {
     if (visible) {
@@ -140,27 +145,84 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
     setDisplayedSeeds(prev => prev + 1);             // compteur haut monte vers totalSeeds
     setDisplayedGain(prev => Math.max(0, prev - 1)); // gain bas descend vers 0
     pulse();
-    if (arrivedCount.current >= Math.max(1, seedsEarned)) {
+    // Comparaison sur launchedCount.current (stable), pas sur seedsEarned (peut changer)
+    if (arrivedCount.current >= launchedCount.current) {
       setAnimDone(true);
+      // Si run parfait : déclencher l'overlay après la fin de la 1re animation
+      if (isPerfectRun && perfectSeedsBonus > 0) {
+        setTimeout(() => setShowPerfectOverlay(true), 500);
+      }
     }
-  }, [seedsEarned, pulse]);
+  }, [pulse, isPerfectRun, perfectSeedsBonus]);
 
   // ── Déclenchement : 600ms après l'ouverture ──────────────────────────────
-  const [flyKey, setFlyKey] = useState(0);
+  const [flyKey, setFlyKey]   = useState(0);
   const [flyActive, setFlyActive] = useState(false);
+  // particleCount est figé au moment du lancement — ne dépend pas de seedsEarned changeant
+  const [particleCount, setParticleCount] = useState(0);
+  // Ref pour éviter le double-déclenchement si seedsEarned change pendant le délai de 600ms
+  const flyScheduledRef = useRef(false);
 
   useEffect(() => {
-    if (!visible) { setFlyActive(false); return; }
+    if (!visible) {
+      setFlyActive(false);
+      flyScheduledRef.current = false;
+      return;
+    }
     if (seedsEarned <= 0) return;
+    // Ne pas re-déclencher si déjà planifié ou en cours
+    if (flyScheduledRef.current || flyActive) return;
+    flyScheduledRef.current = true;
+    // Capturer la valeur au moment de la planification
+    const count = Math.max(1, seedsEarned);
     const t = setTimeout(() => {
+      setParticleCount(count);
+      launchedCount.current = count;
+      arrivedCount.current  = 0;
       setFlyKey(k => k + 1);
       setFlyActive(true);
     }, 600);
     return () => clearTimeout(t);
   }, [visible, seedsEarned]);
 
-  // Une particule par graine gagnée
-  const particleCount = Math.max(1, seedsEarned);
+  // ── PERFECT x2 ────────────────────────────────────────────────────────────
+  const [showPerfectOverlay, setShowPerfectOverlay] = useState(false);
+  const [perfectFlyActive, setPerfectFlyActive]     = useState(false);
+  const [perfectFlyKey, setPerfectFlyKey]           = useState(0);
+  const perfectScaleAnim = useRef(new Animated.Value(0)).current;
+  const perfectOpacityAnim = useRef(new Animated.Value(0)).current;
+
+  // Reset à chaque ouverture/fermeture
+  useEffect(() => {
+    if (!visible) {
+      setShowPerfectOverlay(false);
+      setPerfectFlyActive(false);
+      perfectScaleAnim.setValue(0);
+      perfectOpacityAnim.setValue(0);
+    }
+  }, [visible]);
+
+  // Lancer l'animation PERFECT quand showPerfectOverlay passe à true
+  useEffect(() => {
+    if (!showPerfectOverlay) return;
+    // Apparition + pulse
+    perfectScaleAnim.setValue(0);
+    perfectOpacityAnim.setValue(0);
+    Animated.parallel([
+      Animated.timing(perfectOpacityAnim, { toValue: 1, duration: 200, useNativeDriver: native }),
+      Animated.spring(perfectScaleAnim, { toValue: 1, damping: 7, stiffness: 200, useNativeDriver: native }),
+    ]).start(() => {
+      // Réafficher le gain bonus dans le label stats
+      if (perfectSeedsBonus > 0) setDisplayedGain(perfectSeedsBonus);
+      // Appeler le callback pour addSeeds côté parent (le x2 effectif)
+      onPerfectBonusCollected?.();
+      // Délai visuel avant de lancer la 2e pluie de graines
+      setTimeout(() => {
+        setPerfectFlyKey(k => k + 1);
+        setPerfectFlyActive(true);
+      }, 400);
+    });
+  }, [showPerfectOverlay]);
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
   return (
@@ -244,18 +306,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             </View>
           )}
 
-          {goalJustCompleted && onChooseGoal && (
-            <TouchableOpacity style={styles.goalBanner} onPress={onChooseGoal} activeOpacity={0.85}>
-              <Text style={styles.goalBannerEmoji}>🎯</Text>
-              <View style={styles.goalBannerText}>
-                <Text style={styles.goalBannerTitle}>Objectif atteint !</Text>
-                <Text style={styles.goalBannerSub}>Choisir un nouvel objectif →</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-
           <TouchableOpacity style={styles.btnPrimary} onPress={onNextChallenge} activeOpacity={0.8}>
-            <Text style={styles.btnPrimaryText}>Défi suivant →</Text>
+            <Text style={styles.btnPrimaryText}>{nextChallengeLabel ?? 'Défi suivant →'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnSecondary} onPress={onBackToMenu} activeOpacity={0.8}>
             <Text style={styles.btnSecondaryText}>Retour au menu</Text>
@@ -276,6 +328,37 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               targetX={toX}
               targetY={toY}
               onSeedArrived={onSeedArrived}
+            />
+          )}
+
+          {/* ── Overlay PERFECT x2 ──────────────────────────────────────── */}
+          {showPerfectOverlay && (
+            <Animated.View
+              style={[
+                styles.perfectOverlay,
+                { opacity: perfectOpacityAnim, transform: [{ scale: perfectScaleAnim }] },
+              ]}
+              pointerEvents="none"
+            >
+              <Text style={styles.perfectLabel}>PERFECT x2 !</Text>
+              <Text style={styles.perfectSub}>+{perfectSeedsBonus} graines bonus</Text>
+            </Animated.View>
+          )}
+
+          {/* ── 2e pluie de graines (bonus parfait) ─────────────────────── */}
+          {perfectFlyActive && fromY !== null && toY !== null && (
+            <SeedFlyAnimation
+              key={`perfect_${perfectFlyKey}`}
+              count={Math.max(1, perfectSeedsBonus)}
+              fromX={fromX}
+              fromY={fromY}
+              targetX={toX}
+              targetY={toY}
+              onSeedArrived={() => {
+                setDisplayedSeeds(prev => prev + 1);
+                setDisplayedGain(prev => Math.max(0, prev - 1));
+                pulse();
+              }}
             />
           )}
 
@@ -399,6 +482,39 @@ const styles = StyleSheet.create({
   btnSecondaryText: { color: Colors.ui.textLight, fontSize: 14 },
 
   badgeProgressWrapper: { width: '100%', marginBottom: 16 },
+
+  // ── PERFECT x2 ────────────────────────────────────────────────────────────
+  perfectOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 24,
+    zIndex: 20,
+  },
+  perfectLabel: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#FFD700',
+    textAlign: 'center',
+    letterSpacing: 1.5,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
+  perfectSub: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF8E7',
+    marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
 
   goalBanner: {
     flexDirection: 'row',

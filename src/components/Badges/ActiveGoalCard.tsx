@@ -6,7 +6,7 @@
 // ============================================================
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { BADGE_MAP } from '../../constants/badges';
 import { BadgeProgress } from '../../core/engine/badgeEngine';
 import { Colors } from '../../constants/colors';
@@ -21,10 +21,9 @@ const RARITY_COLOR: Record<string, string> = {
 interface ActiveGoalCardProps {
   progress: BadgeProgress;
   obtained?: boolean; // true si le badge vient d'être obtenu
-  onChooseNewGoal?: () => void; // appelé quand le badge est obtenu et qu'on veut choisir un nouveau
 }
 
-export const ActiveGoalCard: React.FC<ActiveGoalCardProps> = ({ progress, obtained, onChooseNewGoal }) => {
+export const ActiveGoalCard: React.FC<ActiveGoalCardProps> = ({ progress, obtained }) => {
   const badge = BADGE_MAP[progress.badgeId];
   if (!badge) return null;
 
@@ -55,17 +54,11 @@ export const ActiveGoalCard: React.FC<ActiveGoalCardProps> = ({ progress, obtain
         />
       </View>
 
-      {obtained && onChooseNewGoal ? (
-        <TouchableOpacity style={styles.chooseBtn} onPress={onChooseNewGoal} activeOpacity={0.8}>
-          <Text style={styles.chooseBtnText}>Choisir un objectif →</Text>
-        </TouchableOpacity>
-      ) : (
-        <Text style={styles.progressText}>
-          {obtained
-            ? 'Badge obtenu !'
-            : `${relCurrent} / ${progress.targetValue}`}
-        </Text>
-      )}
+      <Text style={styles.progressText}>
+        {obtained
+          ? 'Badge obtenu !'
+          : `${relCurrent} / ${progress.targetValue}`}
+      </Text>
     </View>
   );
 };
@@ -123,16 +116,5 @@ const styles = StyleSheet.create({
     color: Colors.ui.textLight,
     textAlign: 'right',
   },
-  chooseBtn: {
-    alignSelf: 'stretch',
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.forest.medium,
-    alignItems: 'center',
-  },
-  chooseBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
-  },
+
 });
