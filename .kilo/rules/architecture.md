@@ -100,7 +100,7 @@ src/
   constants/
     colors.ts       ← Colors (forest, cell, elements, ui, badges)
     bonus.ts        ← BonusId + BONUS_DEFINITIONS + BASE/ADVANCED_BONUS_IDS
-    badges.ts       ← BADGE_DEFINITIONS (41), BADGE_MAP, BADGE_SEED_REWARDS, RARITY_POINTS, RANK_DEFINITIONS
+    badges.ts       ← BADGE_DEFINITIONS (60), BADGE_MAP, BADGE_SEED_REWARDS, RARITY_POINTS, RANK_DEFINITIONS
     difficulty.ts   ← LEVEL_PARAMS (15 niveaux) + Composition + LevelParams
     onf.ts          ← ONF_UNLOCK_LEVEL (5) + ONF_4X4_UNLOCK_COUNT (10)
     music.ts
@@ -248,7 +248,7 @@ Profil + progression + badges + graines. Points critiques :
 
 ---
 
-## Système de badges (41 badges)
+## Système de badges (60 badges)
 
 Catégories : vitesse, précision, régularité, social, amélioration, exploration, secrets (5), saisonniers (4)
 Raretés : bois (5🌱) → pierre (15🌱) → or (30🌱) → cristal (75🌱)
