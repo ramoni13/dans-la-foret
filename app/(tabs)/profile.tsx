@@ -25,7 +25,7 @@ import { User } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../src/services/firebase';
 
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { BgImage } from '../../src/components/UI/BgImage';
@@ -44,7 +44,7 @@ import {
 import { getPlayer, upsertPlayer } from '../../src/services/playerService';
 import { BadgeCollection } from '../../src/components/Badges/BadgeCollection';
 import { ActiveGoalCard } from '../../src/components/Badges/ActiveGoalCard';
-import { BadgeGoalPickerModal } from '../../src/components/Badges/BadgeGoalPickerModal';
+
 import { LeaderboardScreen } from '../../src/components/Leaderboard/LeaderboardScreen';
 import { MusicPanel } from '../../src/components/Audio/MusicPanel';
 import { getBadgeProgress, ELIGIBLE_GOAL_BADGE_IDS, DEFAULT_BADGE_GOALS } from '../../src/core/engine/badgeEngine';
@@ -58,6 +58,7 @@ type ActiveSection = 'hub' | 'stats' | 'badges' | 'classement' | 'reglages';
 export default function ProfileScreen() {
   const player = usePlayerStore();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { frameBottom, innerTop, innerPadH } = useFrameLayout();
   const { showBack, hideBack } = useNavStore();
 
@@ -72,9 +73,6 @@ export default function ProfileScreen() {
 
   // ── Hub navigation ──────────────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<ActiveSection>('hub');
-
-  // ── Modal sélection objectifs badges (chantier 3) ────────────────────────────
-  const [showGoalPicker, setShowGoalPicker] = useState(false);
 
   // ── Modal admin nettoyage base (Ramoni uniquement) ───────────────────────────
   const [showAdminClean, setShowAdminClean] = useState(false);
@@ -513,15 +511,6 @@ export default function ProfileScreen() {
           <View style={goalStyles.goalSection}>
             <View style={goalStyles.goalHeader}>
               <Text style={goalStyles.goalTitle}>Mes objectifs</Text>
-              <View style={goalStyles.autoRow}>
-                <Text style={goalStyles.autoLabel}>Choix automatique</Text>
-                <Switch
-                  value={player.autoGoal}
-                  onValueChange={player.setAutoGoal}
-                  trackColor={{ false: Colors.ui.border, true: Colors.forest.medium }}
-                  thumbColor="#fff"
-                />
-              </View>
             </View>
 
             <View style={goalStyles.goalList}>
@@ -536,22 +525,18 @@ export default function ProfileScreen() {
                       key={badgeId}
                       progress={progress ?? { badgeId, currentValue: 1, targetValue: 1, percentage: 1 }}
                       obtained={isObtained}
-                      onChooseNewGoal={isObtained ? () => setShowGoalPicker(true) : undefined}
                     />
                   );
                 }
                 // Slot vide
                 return (
-                  <TouchableOpacity
+                  <View
                     key={`empty-${slotIdx}`}
                     style={goalStyles.emptySlot}
-                    onPress={() => setShowGoalPicker(true)}
-                    activeOpacity={0.8}
                   >
                     <Text style={goalStyles.emptySlotEmoji}>🎯</Text>
-                    <Text style={goalStyles.emptySlotText}>Sélectionner un objectif</Text>
-                    <Text style={goalStyles.emptySlotArrow}>+</Text>
-                  </TouchableOpacity>
+                    <Text style={goalStyles.emptySlotText}>Prochain objectif en attente</Text>
+                  </View>
                 );
               })}
             </View>
@@ -574,31 +559,7 @@ export default function ProfileScreen() {
           )}
         </ScrollView>
 
-        {/* Modal sélection objectifs */}
-        <BadgeGoalPickerModal
-          visible={showGoalPicker}
-          earnedBadges={player.earnedBadges}
-          currentGoals={player.activeBadgeGoals}
-          onConfirm={(ids) => {
-            player.setActiveBadgeGoals(ids);
-            // Persister immédiatement dans Firestore (goalCounters remis à 0 dans setActiveBadgeGoals)
-            const uid = auth.currentUser?.uid;
-            const isAnon = auth.currentUser?.isAnonymous ?? true;
-            if (uid && !isAnon) {
-              const stateAfter = usePlayerStore.getState();
-              getPlayer(uid).then(profile => {
-                if (profile) {
-                  upsertPlayer({
-                    ...profile,
-                    activeBadgeGoals: stateAfter.activeBadgeGoals,
-                    goalCounters:     stateAfter.goalCounters,
-                  }).catch(() => {});
-                }
-              }).catch(() => {});
-            }
-          }}
-          onClose={() => setShowGoalPicker(false)}
-        />
+
       </View>
     );
   }
@@ -661,7 +622,7 @@ export default function ProfileScreen() {
             />
           </View>
 
-          {/* Nettoyer la base — Ramoni uniquement */}
+          {/* Nettoyer la base + Séquence badges — Ramoni uniquement */}
           {player.username === 'Ramoni' && (
             <>
               <TouchableOpacity
@@ -675,6 +636,13 @@ export default function ProfileScreen() {
                 visible={showAdminClean}
                 onClose={() => setShowAdminClean(false)}
               />
+              <TouchableOpacity
+                style={[devStyles.adminCleanBtn, { marginTop: 8 }]}
+                onPress={() => router.push('/admin/badge-sequence')}
+                activeOpacity={0.8}
+              >
+                <Text style={devStyles.adminCleanBtnText}>Sequence des badges</Text>
+              </TouchableOpacity>
             </>
           )}
 

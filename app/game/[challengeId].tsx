@@ -47,7 +47,7 @@ import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { LEVEL_META } from '../../src/data/levelMeta';
 import { calculateSeedReward } from '../../src/core/engine/hintEngine';
 import { evaluateBadges, getClosestBadges, getBadgeProgress, GameContext } from '../../src/core/engine/badgeEngine';
-import { BadgeGoalPickerModal } from '../../src/components/Badges/BadgeGoalPickerModal';
+
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 
@@ -141,9 +141,10 @@ export default function GameScreen() {
   // après toutes les additions. Utilisé par VictoryModal pour afficher le bon gain animé.
   const [totalSeedsGained, setTotalSeedsGained] = useState(0);
   // true si un objectif actif vient d'être atteint → bannière dans VictoryModal
-  const [goalJustCompleted, setGoalJustCompleted] = useState(false);
-  // true pour ouvrir le picker d'objectifs (depuis VictoryModal ou profil)
-  const [showGoalPicker, setShowGoalPicker] = useState(false);
+
+
+  // ── Run parfait (PERFECT x2) ─────────────────────────────────────────────────
+  const [isPerfectRun, setIsPerfectRun] = useState(false);
 
   // ── Changement de rang ───────────────────────────────────────────────────────
   const [rankUpVisible, setRankUpVisible]       = useState(false);
@@ -203,6 +204,7 @@ export default function GameScreen() {
       player.markChallengeStarted(found.id);
       badgesEvaluatedRef.current = false;
       failCountForGameRef.current = 0;
+      setIsPerfectRun(false);
       setIsNewWorldRecord(false);
       setPreviousRecordHolder(null);
       if (found.challengeNumber !== 1) {
@@ -282,8 +284,17 @@ export default function GameScreen() {
     // 2. Mise à jour locale immédiate (store Zustand)
     // seedsBeforeGain a été capturé dans handleValidate (state React) — déjà disponible
     // dans VictoryModal dès son premier rendu.
-    player.markChallengeCompleted(challenge.id, game.elapsedTime, failsDuringGame);
+    player.markChallengeCompleted(challenge.id, game.elapsedTime, failsDuringGame, game.elementChangeCount, game.bonusUsed.length);
     player.addSeeds(seedsEarned);
+
+    // Détection du run parfait : aucun déplacement, aucun échec, aucun abandon, aucun bonus
+    const abandonCountForChallenge = stateBeforeUpdate.stats.abandonCount?.[challenge.id] ?? 0;
+    const isPerfect =
+      game.elementChangeCount === 0 &&
+      failsDuringGame === 0 &&
+      abandonCountForChallenge === 0 &&
+      game.bonusUsed.length === 0;
+    if (isPerfect && seedsEarned > 0) setIsPerfectRun(true);
 
     // 3. Évaluation des badges — storeState post-update pour noErrorStreak/dailyStreak,
     //    mais bestTimes/sameChallengePlays/completedChallenges pris AVANT la mise à jour.
@@ -315,6 +326,8 @@ export default function GameScreen() {
       activeBadgeGoals:  activeGoalsBeforeUpdate,             // objectifs actifs : contrôle quels badges sont décernables
       goalCounters:      storeState.goalCounters,            // post-update : compteurs dédiés par badge objectif
       speedBadgeHits:    storeState.stats.speedBadgeHits,   // conservé pour compatibilité
+      elementChangeCount: game.elementChangeCount,           // pour badge precision_parfaite
+      abandonCountForChallenge: storeState.stats.abandonCount?.[challenge.id] ?? 0,
       isWorldRecord: false,
       isFirstRecord: false,
     };
@@ -373,34 +386,28 @@ export default function GameScreen() {
     const completedGoalIds = activeGoalsBeforeUpdate.filter(id => allEarnedNow.includes(id));
 
     if (completedGoalIds.length > 0) {
-      const { autoGoal } = usePlayerStore.getState();
-      if (autoGoal) {
-        // Auto-avance : remplacer chaque slot libéré par le prochain badge éligible
-        player.advanceGoalAuto(completedGoalIds, allEarnedNow);
-        // Détecter les nouveaux objectifs injectés (= ceux dans l'état post-avance
-        // qui n'étaient pas dans activeGoalsBeforeUpdate)
-        const goalsAfterAdvance = usePlayerStore.getState().activeBadgeGoals;
-        const injected = goalsAfterAdvance.filter(id => !activeGoalsBeforeUpdate.includes(id));
-        if (injected.length > 0) setNewGoalBadgeIds(injected);
-        // Persister activeBadgeGoals + goalCounters dans Firestore pour que restoreFromCloud
-        // ne réécrase pas le résultat de l'auto-avance au prochain chargement
-        const uidAdv = auth.currentUser?.uid;
-        const isAnonAdv = auth.currentUser?.isAnonymous ?? true;
-        if (uidAdv && !isAnonAdv) {
-          const stateAfterAdvance = usePlayerStore.getState();
-          getPlayer(uidAdv).then(currentProfile => {
-            if (currentProfile) {
-              upsertPlayer({
-                ...currentProfile,
-                activeBadgeGoals: stateAfterAdvance.activeBadgeGoals,
-                goalCounters:     stateAfterAdvance.goalCounters,
-              }).catch(() => {});
-            }
-          }).catch(() => {});
-        }
-      } else {
-        // Mode manuel : signaler qu'un slot est libre pour que la VictoryModal propose le picker
-        setGoalJustCompleted(true);
+      // Auto-avance : remplacer chaque slot libéré par le prochain badge éligible
+      player.advanceGoalAuto(completedGoalIds, allEarnedNow);
+      // Détecter les nouveaux objectifs injectés (= ceux dans l'état post-avance
+      // qui n'étaient pas dans activeGoalsBeforeUpdate)
+      const goalsAfterAdvance = usePlayerStore.getState().activeBadgeGoals;
+      const injected = goalsAfterAdvance.filter(id => !activeGoalsBeforeUpdate.includes(id));
+      if (injected.length > 0) setNewGoalBadgeIds(injected);
+      // Persister activeBadgeGoals + goalCounters dans Firestore pour que restoreFromCloud
+      // ne réécrase pas le résultat de l'auto-avance au prochain chargement
+      const uidAdv = auth.currentUser?.uid;
+      const isAnonAdv = auth.currentUser?.isAnonymous ?? true;
+      if (uidAdv && !isAnonAdv) {
+        const stateAfterAdvance = usePlayerStore.getState();
+        getPlayer(uidAdv).then(currentProfile => {
+          if (currentProfile) {
+            upsertPlayer({
+              ...currentProfile,
+              activeBadgeGoals: stateAfterAdvance.activeBadgeGoals,
+              goalCounters:     stateAfterAdvance.goalCounters,
+            }).catch(() => {});
+          }
+        }).catch(() => {});
       }
     }
 
@@ -641,8 +648,15 @@ export default function GameScreen() {
           worldRecord={isNewWorldRecord ? null : worldRecord}
           isNewWorldRecord={isNewWorldRecord}
           previousRecordHolder={previousRecordHolder}
-          goalJustCompleted={goalJustCompleted}
-          onChooseGoal={() => setShowGoalPicker(true)}
+          isPerfectRun={isPerfectRun}
+          perfectSeedsBonus={seedsEarned}
+          onPerfectBonusCollected={() => {
+            // Ajouter les graines du bonus PERFECT au store (le x2 effectif)
+            player.addSeeds(seedsEarned);
+            // NE PAS modifier totalSeedsGained ici — seedsEarned passé à VictoryModal
+            // ne doit pas changer pour éviter de re-déclencher la 1re animation
+          }}
+
           onNextChallenge={() => {
             const nextNum = String(challenge.challengeNumber + 1).padStart(3, '0');
             const nextId = `${challenge.level}_${nextNum}`;
@@ -659,19 +673,6 @@ export default function GameScreen() {
             game.resetGame();
             router.replace('/(tabs)/');
           }}
-        />
-
-        {/* ── Picker objectifs badge (ouvert depuis VictoryModal ou bannière) ── */}
-        <BadgeGoalPickerModal
-          visible={showGoalPicker}
-          earnedBadges={player.earnedBadges}
-          currentGoals={player.activeBadgeGoals}
-          onConfirm={(ids) => {
-            player.setActiveBadgeGoals(ids);
-            setShowGoalPicker(false);
-            setGoalJustCompleted(false);
-          }}
-          onClose={() => setShowGoalPicker(false)}
         />
 
         {/* ── Modal échec ── */}

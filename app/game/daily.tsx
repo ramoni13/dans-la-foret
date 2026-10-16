@@ -55,6 +55,7 @@ import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { DailyBriefingModal } from '../../src/components/LevelBriefing/DailyBriefingModal';
 import { DailyStreakRecordModal } from '../../src/components/Game/DailyStreakRecordModal';
+import { DailyRouletteModal } from '../../src/components/Game/DailyRouletteModal';
 import { Challenge, FixedPlacement, TokenCount } from '../../src/core/models/Challenge';
 import { notificationError } from '../../src/utils/haptics';
 import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
@@ -231,6 +232,7 @@ export default function DailyGameScreen() {
   const [isNewDailyRecord, setIsNewDailyRecord] = useState(false);
   const [prevDailyRecordHolder, setPrevDailyRecordHolder] = useState<string | null>(null);
 
+  const [rouletteVisible, setRouletteVisible]      = useState(false);
   const [streakRecordModal, setStreakRecordModal] = useState<{ newRecord: number; seeds: number } | null>(null);
   const [rankUpVisible, setRankUpVisible]         = useState(false);
   const [rankUpNewRank, setRankUpNewRank]          = useState(RANK_DEFINITIONS[0]);
@@ -451,12 +453,21 @@ export default function DailyGameScreen() {
     }
 
     // 3. Evaluer les badges journaliers
+    // Capturer activeBadgeGoals AVANT recordDailyVictory (qui ne les modifie pas, mais par sécurité)
+    const activeGoalsBeforeDaily = storeState.activeBadgeGoals;
+    // Incrémenter les compteurs daily (parfait par définition : 1 seule validation)
+    player.recordDailyVictory(game.elapsedTime);
+    const stateAfterDailyRecord = usePlayerStore.getState();
+
     const dailyCtx: DailyGameContext = {
       dailyChallengeStreak: storeState.dailyChallengeStreak,
       rank,
       earnedBadges: storeState.earnedBadges,
+      dailyPerfectCount: stateAfterDailyRecord.stats.dailyPerfectCount,
+      dailySpeedCount:   stateAfterDailyRecord.stats.dailySpeedCount,
+      activeBadgeGoals:  storeState.activeBadgeGoals,
+      goalCounters:      storeState.goalCounters,
     };
-    const activeGoalsBeforeDaily = storeState.activeBadgeGoals;
 
     // Capture du score AVANT attribution des badges
     // storeState est post-submitDailyResult : dailyWon inclut déjà ce défi
@@ -498,15 +509,11 @@ export default function DailyGameScreen() {
       setTimeout(() => setRankUpVisible(true), 1800);
     }
 
-    // Auto-avance des objectifs si activée
-    // Détecter les objectifs actifs désormais obtenus (quelle que soit la source)
+    // Auto-avance des objectifs (toujours automatique désormais)
     const allEarnedNowDaily = usePlayerStore.getState().earnedBadges;
     const completedGoalIdsDaily = activeGoalsBeforeDaily.filter(id => allEarnedNowDaily.includes(id));
     if (completedGoalIdsDaily.length > 0) {
-      const { autoGoal } = usePlayerStore.getState();
-      if (autoGoal) {
-        player.advanceGoalAuto(completedGoalIdsDaily, allEarnedNowDaily);
-      }
+      player.advanceGoalAuto(completedGoalIdsDaily, allEarnedNowDaily);
     }
 
     // 4. Soumission Firestore en arriere-plan
@@ -678,9 +685,9 @@ export default function DailyGameScreen() {
           onBadgeQueueEmpty={() => setBadgeQueue([])}
           isNewWorldRecord={isNewDailyRecord}
           previousRecordHolder={isNewDailyRecord ? prevDailyRecordHolder : null}
+          nextChallengeLabel="Suite →"
           onNextChallenge={() => {
-            game.resetGame();
-            router.replace('/(tabs)');
+            setRouletteVisible(true);
           }}
           onBackToMenu={() => {
             game.resetGame();
@@ -720,6 +727,18 @@ export default function DailyGameScreen() {
           seedsAwarded={rankUpSeeds}
           seedsBeforeGain={rankUpSeedsBefore}
           onClose={() => setRankUpVisible(false)}
+        />
+
+        {/* Roulette journalière */}
+        <DailyRouletteModal
+          visible={rouletteVisible}
+          uid={auth.currentUser?.uid ?? ''}
+          date={dailyDate}
+          onClose={() => {
+            setRouletteVisible(false);
+            game.resetGame();
+            router.replace('/(tabs)');
+          }}
         />
       </View>
 

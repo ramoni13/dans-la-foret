@@ -14,6 +14,7 @@ import { onAuthChange } from '../../src/services/authService';
 import { getPlayer } from '../../src/services/playerService';
 import { updateDailyStreak } from '../../src/services/badgeService';
 import { getDailyDateString, sealDailyRecord } from '../../src/services/dailyChallengeService';
+import { incrementJackpotIfNeeded } from '../../src/services/jackpotService';
 import { db } from '../../src/services/firebase';
 import {
   collection,
@@ -80,6 +81,10 @@ export default function TabsLayout() {
           const yesterday = new Date();
           yesterday.setUTCDate(yesterday.getUTCDate() - 1);
           sealDailyRecord(getDailyDateString(yesterday)).catch(() => {});
+
+          // Incrémenter le jackpot journalier (si pas encore fait aujourd'hui)
+          const todayDate = getDailyDateString(new Date());
+          incrementJackpotIfNeeded(todayDate).catch(() => {});
         }
       }
     });

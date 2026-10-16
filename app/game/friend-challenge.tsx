@@ -521,11 +521,9 @@ export default function FriendChallengeScreen() {
       if (isNewFriend && playerState.activeBadgeGoals.includes('social_poignee')) {
         if (!playerState.earnedBadges.includes('social_poignee')) {
           player.awardBadges(['social_poignee']);
-          // Auto-avance si activée — passer earnedBadges post-awardBadges pour éviter stale state
-          const { autoGoal, earnedBadges: earnedAfterSocial } = usePlayerStore.getState();
-          if (autoGoal) {
-            player.advanceGoalAuto(['social_poignee'], earnedAfterSocial);
-          }
+          // Auto-avance — passer earnedBadges post-awardBadges pour éviter stale state
+          const { earnedBadges: earnedAfterSocial } = usePlayerStore.getState();
+          player.advanceGoalAuto(['social_poignee'], earnedAfterSocial);
         }
       }
     } catch {

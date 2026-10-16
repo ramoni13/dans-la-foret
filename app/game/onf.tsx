@@ -41,6 +41,8 @@ import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
 import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
+import { evaluateOnfBadges, OnfGameContext } from '../../src/core/engine/badgeEngine';
+import { awardBadgesFirestore } from '../../src/services/badgeService';
 
 import {
   pickOnfChallenge,
@@ -93,6 +95,8 @@ export default function ONFGameScreen() {
   const dailyLimitReached = !player.isPremium && player.onfDailyCount >= ONF_DAILY_LIMIT;
 
   const badgesEvaluatedRef = useRef(false);
+  /** Nombre de validations incorrectes pendant cette partie ONF */
+  const onfFailCountRef = useRef(0);
   const [rankUpVisible, setRankUpVisible]         = useState(false);
   const [rankUpNewRank, setRankUpNewRank]          = useState(RANK_DEFINITIONS[0]);
   const [rankUpPrevLabel, setRankUpPrevLabel]      = useState('');
@@ -112,6 +116,7 @@ export default function ONFGameScreen() {
     setAllCompleted(false);
     setRowColViolationCells([]);
     badgesEvaluatedRef.current = false;
+    onfFailCountRef.current = 0;
 
     const run = () => {
       const state = usePlayerStore.getState();
@@ -225,6 +230,7 @@ export default function ONFGameScreen() {
       // Afficher les violations
       setRowColViolationCells(rowColCells);
       game.validateChallenge(); // met à jour game.validationResult pour les violations standard
+      onfFailCountRef.current += 1;
       return;
     }
 
@@ -244,7 +250,7 @@ export default function ONFGameScreen() {
     // dans VictoryModal dès son premier rendu.
     setSeedsEarned(earned);
 
-    // Capture du score AVANT markOnfChallengeCompleted (qui incrémente onfSolvedCount)
+    // Capture du score AVANT recordOnfVictory (qui incrémente onfSolvedCount)
     const stateBeforeOnf = usePlayerStore.getState();
     const activityStatsBefore: PlayerActivityStats = {
       soloCompleted:   stateBeforeOnf.completedChallenges.length,
@@ -257,10 +263,33 @@ export default function ONFGameScreen() {
 
     player.addSeeds(earned);
 
-    // Marquer le défi comme complété (local store — incrémente aussi onfSolvedCount)
-    player.markOnfChallengeCompleted(challenge.id);
+    // Marquer le défi comme complété + incrémenter les compteurs badges ONF
+    player.recordOnfVictory(challenge.id, onfFailCountRef.current, game.elapsedTime);
     // Incrémenter le compteur quotidien (limite free = 3/jour)
     player.incrementOnfDaily();
+
+    // Évaluer les badges ONF
+    const stateAfterOnfRecord = usePlayerStore.getState();
+    const activeGoalsBeforeOnf = stateBeforeOnf.activeBadgeGoals;
+    const onfCtx: OnfGameContext = {
+      onfSolvedCount:  stateAfterOnfRecord.onfSolvedCount,
+      onfPerfectCount: stateAfterOnfRecord.stats.onfPerfectCount,
+      onfSpeedCount:   stateAfterOnfRecord.stats.onfSpeedCount,
+      earnedBadges:    stateBeforeOnf.earnedBadges,
+      activeBadgeGoals: stateBeforeOnf.activeBadgeGoals,
+      goalCounters:    stateBeforeOnf.goalCounters,
+    };
+    const newOnfBadges = evaluateOnfBadges(onfCtx);
+    if (newOnfBadges.length > 0) {
+      player.awardBadges(newOnfBadges);
+      setBadgeQueue(newOnfBadges);
+    }
+    // Auto-avance des objectifs
+    const allEarnedNowOnf = usePlayerStore.getState().earnedBadges;
+    const completedGoalIdsOnf = activeGoalsBeforeOnf.filter(id => allEarnedNowOnf.includes(id));
+    if (completedGoalIdsOnf.length > 0) {
+      player.advanceGoalAuto(completedGoalIdsOnf, allEarnedNowOnf);
+    }
 
     // ── Détection changement de rang ─────────────────────────
     const stateAfterOnf = usePlayerStore.getState();
@@ -293,7 +322,11 @@ export default function ONFGameScreen() {
       updateSeeds(uid, updatedState.seeds).catch(() => {});
       // 2. Marquer le défi complété + compteur ONF dans Firestore
       markOnfChallengeCompleted(uid, challenge.id, updatedState.onfSolvedCount).catch(() => {});
-      // 3. Sync profil complet (seeds, earnedBadges, etc.)
+      // 3. Sync badges ONF
+      if (newOnfBadges.length > 0) {
+        awardBadgesFirestore(uid, newOnfBadges).catch(() => {});
+      }
+      // 4. Sync profil complet (seeds, earnedBadges, etc.)
       upsertPlayer({
         userId: uid,
         username: updatedState.username,
