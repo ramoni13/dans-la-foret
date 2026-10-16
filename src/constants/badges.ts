@@ -1,6 +1,6 @@
 ﻿// ============================================================
 // CATALOGUE DES BADGES — Dans la Forêt
-// 41 badges au total : 36 standard + 5 secrets
+// 60 badges au total : 53 standard + 5 secrets + 2 records
 // ============================================================
 
 export type BadgeRarity = 'bois' | 'pierre' | 'or' | 'cristal';
@@ -39,7 +39,7 @@ export const BADGE_SEED_REWARDS: Record<BadgeRarity, number> = {
   cristal: 75,
 };
 
-// ── Catalogue complet (41 badges) ─────────────────────────────────────────────
+// ── Catalogue complet (60 badges) ─────────────────────────────────────────────
 export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
   // ══════════════════════════════════════════════════════════
@@ -54,7 +54,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     translations: { en: { label: 'Turtle\'s Patience', description: 'Finish a puzzle in under 30 s (level 1) — threshold increases by 10 s per level' } },
   },
   {
-    id: 'vitesse_Loup',
+    id: 'vitesse_loup',
     emoji: '🦊',
     label: 'Ruse du Loup',
     description: 'Termine un défi en moins de 20 s (niveau 1) — le seuil augmente de 7 s par niveau',
@@ -85,6 +85,15 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     rarity: 'cristal', category: 'vitesse', isSecret: false, isSeasonal: false,
     translations: { en: { label: 'Forest Tornado', description: 'Finish a puzzle in under 4 s (level 1) — threshold increases by 2 s per level — nearly impossible!' } },
   },
+  // ── Badge vitesse endurance (refonte badges) ──────────────────────────────────
+  {
+    id: 'vitesse_marathon',
+    emoji: '🏅',
+    label: 'Coureur de fond',
+    description: 'Accumule 20 victoires en dessous du seuil vitesse tortue',
+    rarity: 'or', category: 'vitesse', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Long-distance Runner', description: 'Accumulate 20 wins under the turtle speed threshold' } },
+  },
 
   // ══════════════════════════════════════════════════════════
   // PRÉCISION (5 badges)
@@ -101,9 +110,9 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     id: 'precision_oeil',
     emoji: '🎯',
     label: 'Œil de lynx',
-    description: '3 défis consécutifs terminés du premier coup sans erreur',
+    description: '5 défis consécutifs terminés du premier coup sans erreur',
     rarity: 'pierre', category: 'precision', isSecret: false, isSeasonal: false,
-    translations: { en: { label: 'Lynx Eye', description: '3 puzzles in a row completed on the first try without any mistake' } },
+    translations: { en: { label: 'Lynx Eye', description: '5 puzzles in a row completed on the first try without any mistake' } },
   },
   {
     id: 'precision_hibou',
@@ -128,6 +137,16 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: '50 défis consécutifs terminés du premier coup sans erreur',
     rarity: 'cristal', category: 'precision', isSecret: false, isSeasonal: false,
     translations: { en: { label: 'Undisputed Master', description: '50 puzzles in a row completed on the first try without any mistake' } },
+  },
+
+  // ── Badge Pose Parfaite (refonte badges) ─────────────────
+  {
+    id: 'precision_parfaite',
+    emoji: '🎯',
+    label: 'Pose Parfaite',
+    description: 'Gagne 3 défis consécutifs sans déplacer de jeton posé, sans erreur, sans bonus, et sans avoir abandonné ce défi',
+    rarity: 'or', category: 'precision', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Perfect Placement', description: 'Win 3 consecutive puzzles without moving placed tokens, no mistakes, no bonus, and without having abandoned that puzzle' } },
   },
 
   // ══════════════════════════════════════════════════════════
@@ -227,7 +246,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   },
   {
     id: 'social_trophee',
-    emoji: '🏆',
+    emoji: '🥉',
     label: 'Champion du défi du jour',
     description: 'Entre dans le top 3 du défi du jour 5 fois',
     rarity: 'cristal', category: 'social', isSecret: false, isSeasonal: false,
@@ -260,6 +279,15 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: 'Améliore ton temps sur 10 défis différents',
     rarity: 'pierre', category: 'amelioration', isSecret: false, isSeasonal: false,
     translations: { en: { label: 'In Orbit', description: 'Improve your time on 10 different puzzles' } },
+  },
+  // ── Badge amélioration intermédiaire (refonte badges) ─────────────────────────
+  {
+    id: 'amelioration_discipline',
+    emoji: '📊',
+    label: 'Disciple du progrès',
+    description: 'Améliore ton temps sur 5 défis différents',
+    rarity: 'pierre', category: 'amelioration', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Progress Disciple', description: 'Improve your time on 5 different puzzles' } },
   },
   {
     id: 'amelioration_etoile',
@@ -461,6 +489,85 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     rarity: 'cristal', category: 'regularite', isSecret: false, isSeasonal: false,
     translations: { en: { label: 'Daily Champion', description: 'Finish #1 worldwide on a daily challenge' } },
   },
+  // ── Badges daily complémentaires (refonte badges) ─────────
+  {
+    id: 'daily_perfect',
+    emoji: '🏅',
+    label: 'Quotidien sans faute',
+    description: 'Réussis 10 défis journaliers sans aucune erreur de validation',
+    rarity: 'or', category: 'regularite', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Flawless Daily', description: 'Complete 10 daily challenges without any validation mistake' } },
+  },
+  {
+    id: 'daily_speed',
+    emoji: '⚡',
+    label: 'Forestier matinal',
+    description: 'Réussis 3 défis journaliers en moins de 3 minutes',
+    rarity: 'pierre', category: 'regularite', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Morning Forester', description: 'Complete 3 daily challenges in under 3 minutes' } },
+  },
+  // ══════════════════════════════════════════════════════════
+  // MODE ONF — GRILLE FORESTIÈRE (5 badges)
+  // ══════════════════════════════════════════════════════════
+  {
+    id: 'onf_premier',
+    emoji: '🌲',
+    label: 'Forestier en herbe',
+    description: 'Résous ta première grille ONF',
+    rarity: 'bois', category: 'exploration', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Budding Forester', description: 'Solve your first ONF grid' } },
+  },
+  {
+    id: 'onf_forestier',
+    emoji: '🌳',
+    label: 'Forestier confirmé',
+    description: 'Résous 10 grilles ONF',
+    rarity: 'pierre', category: 'exploration', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Confirmed Forester', description: 'Solve 10 ONF grids' } },
+  },
+  {
+    id: 'onf_maitre',
+    emoji: '🏆',
+    label: 'Maître de la forêt',
+    description: 'Résous 50 grilles ONF',
+    rarity: 'or', category: 'exploration', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Forest Master', description: 'Solve 50 ONF grids' } },
+  },
+  {
+    id: 'onf_precision',
+    emoji: '🎯',
+    label: 'Grille sans faute',
+    description: 'Valide 3 grilles ONF sans aucune erreur',
+    rarity: 'pierre', category: 'exploration', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Flawless Grid', description: 'Validate 3 ONF grids without any mistake' } },
+  },
+  {
+    id: 'onf_speed',
+    emoji: '⚡',
+    label: 'Sudoku express',
+    description: 'Résous 3 grilles ONF en moins de 2 minutes',
+    rarity: 'pierre', category: 'exploration', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Express Sudoku', description: 'Solve 3 ONF grids in under 2 minutes' } },
+  },
+
+  // ── Badges défis amis (refonte badges) ───────────────────────────────────────
+  {
+    id: 'ami_challenger',
+    emoji: '🤝',
+    label: 'Premier défi',
+    description: 'Lance ton premier défi à un ami',
+    rarity: 'bois', category: 'social', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'First Challenge', description: 'Send your first challenge to a friend' } },
+  },
+  {
+    id: 'ami_serial',
+    emoji: '🏆',
+    label: 'Prédateur de la Forêt',
+    description: 'Gagne 100 défis contre des amis',
+    rarity: 'cristal', category: 'social', isSecret: false, isSeasonal: false,
+    translations: { en: { label: 'Forest Predator', description: 'Win 100 friend challenges' } },
+  },
+
   // ── Badge premium exclusif ────────────────────────────────────────────────────
   {
     id: 'ami_de_la_foret',

@@ -44,6 +44,12 @@ export interface PlayerProfile {
     totalResolutionCount: number;
     // ── Badges vitesse ──────────────────────────────────
     speedBadgeHits?: Record<string, number>;
+    // ── Compteurs ONF et daily (refonte badges) ─────────
+    abandonCount?: Record<string, number>;
+    onfPerfectCount?: number;
+    onfSpeedCount?: number;
+    dailyPerfectCount?: number;
+    dailySpeedCount?: number;
   };
   isPremium: boolean;
   createdAt?: any;
@@ -83,6 +89,25 @@ export interface PlayerSearchResult {
 
 // ── Migration silencieuse : garantit que tous les champs existent ─────────────
 function migrateProfile(raw: any): PlayerProfile {
+  // ── Migration vitesse_Loup → vitesse_loup ──────────────────────────────────
+  let earnedBadges: string[] = raw.earnedBadges ?? [];
+  let activeBadgeGoals: string[] = raw.activeBadgeGoals ?? [];
+  let goalCounters: Record<string, number> = raw.goalCounters ?? {};
+  let speedBadgeHits: Record<string, number> = raw.stats?.speedBadgeHits ?? {};
+
+  if (earnedBadges.includes('vitesse_Loup')) {
+    earnedBadges = earnedBadges.map((id: string) => id === 'vitesse_Loup' ? 'vitesse_loup' : id);
+  }
+  activeBadgeGoals = activeBadgeGoals.map((id: string) => id === 'vitesse_Loup' ? 'vitesse_loup' : id);
+  if (goalCounters['vitesse_Loup'] !== undefined) {
+    goalCounters = { ...goalCounters, vitesse_loup: goalCounters['vitesse_Loup'] };
+    delete goalCounters['vitesse_Loup'];
+  }
+  if (speedBadgeHits['vitesse_Loup'] !== undefined) {
+    speedBadgeHits = { ...speedBadgeHits, vitesse_loup: speedBadgeHits['vitesse_Loup'] };
+    delete speedBadgeHits['vitesse_Loup'];
+  }
+
   return {
     userId:             raw.userId ?? '',
     username:           raw.username ?? 'Joueur',
@@ -104,21 +129,27 @@ function migrateProfile(raw: any): PlayerProfile {
       failCount:                raw.stats?.failCount ?? {},
       improvedChallengesCount:  raw.stats?.improvedChallengesCount ?? 0,
       seasonalChallengesPlayed: raw.stats?.seasonalChallengesPlayed ?? 0,
+      abandonCount:             raw.stats?.abandonCount ?? {},
       dailyPlayed:              raw.stats?.dailyPlayed ?? 0,
       dailyWon:                 raw.stats?.dailyWon ?? 0,
       friendPlayed:             raw.stats?.friendPlayed ?? 0,
       avgResolutionMs:          raw.stats?.avgResolutionMs ?? 0,
       totalResolutionCount:     raw.stats?.totalResolutionCount ?? 0,
-      speedBadgeHits:           raw.stats?.speedBadgeHits ?? {},
+      speedBadgeHits,
+      // Nouveaux compteurs ONF et daily (refonte badges)
+      onfPerfectCount:          raw.stats?.onfPerfectCount   ?? 0,
+      onfSpeedCount:            raw.stats?.onfSpeedCount     ?? 0,
+      dailyPerfectCount:        raw.stats?.dailyPerfectCount ?? 0,
+      dailySpeedCount:          raw.stats?.dailySpeedCount   ?? 0,
     },
-    earnedBadges:    raw.earnedBadges ?? [],
+    earnedBadges,
     badgeShowcase:   raw.badgeShowcase ?? [],
     dailyStreak:       raw.dailyStreak ?? 0,
     lastPlayedDate:    raw.lastPlayedDate ?? '',
     onfSolvedCount: raw.onfSolvedCount ?? raw.onf4x4SolvedCount ?? 0,
     completedOnfChallengeIds: raw.completedOnfChallengeIds ?? [],
-    activeBadgeGoals: raw.activeBadgeGoals ?? [],
-    goalCounters:     raw.goalCounters     ?? {},
+    activeBadgeGoals,
+    goalCounters,
   };
 }
 

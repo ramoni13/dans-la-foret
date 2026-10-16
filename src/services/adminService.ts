@@ -88,7 +88,6 @@ export async function resetPlayer(userId: string, username: string): Promise<voi
     dailyChallengeStreak: 0,
     longestDailyChallengeStreak: 0,
     friendNotifBadgeEnabled: true,
-    autoGoal: true,
     language: 'fr',
     updatedAt: serverTimestamp(),
     // createdAt est volontairement absent → setDoc merge le conservera

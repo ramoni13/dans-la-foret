@@ -55,11 +55,16 @@ interface PlayerStats {
   totalResolutionCount: number; // nb de parties solo comptées dans la moyenne
   /**
    * Nb de victoires sous le seuil vitesse par badge.
-   * Clés : 'vitesse_tortue' | 'vitesse_Loup' | 'vitesse_oiseau' | 'vitesse_eclair' | 'vitesse_tornade'
+   * Clés : 'vitesse_tortue' | 'vitesse_loup' | 'vitesse_oiseau' | 'vitesse_eclair' | 'vitesse_tornade'
    * Le seuil est celui du niveau courant au moment de la partie.
    * Un badge est décerné quand le compteur atteint SPEED_BADGE_TARGET (5).
    */
   speedBadgeHits: Record<string, number>;
+  // ── Compteurs ONF et daily (refonte badges) ──────────────────
+  onfPerfectCount: number;    // grilles ONF validées sans erreur
+  onfSpeedCount: number;      // grilles ONF résolues en < 120s
+  dailyPerfectCount: number;  // défis daily gagnés sans erreur
+  dailySpeedCount: number;    // défis daily gagnés en < 180s
 }
 
 interface PlayerState {
@@ -129,12 +134,7 @@ interface PlayerState {
    * Clé = badgeId (uniquement précision_* et vitesse_* — les badges à condition par défi).
    */
   goalCounters: Record<string, number>;
-  /**
-   * Quand true (défaut), un slot libéré après l'obtention d'un badge est
-   * automatiquement rempli par le prochain badge éligible de la même catégorie.
-   * Quand false, le joueur choisit manuellement.
-   */
-  autoGoal: boolean;
+
 
   // ── Défis amis : amis uniques défiés (pour badge social_poignee / social_cirque) ──
   /** UIDs des amis à qui le joueur a envoyé au moins un défi. Jamais de doublons. */
@@ -156,7 +156,9 @@ interface PlayerState {
   markChallengeCompleted: (
     challengeId: string,
     timeMs: number,
-    errorCount: number
+    errorCount: number,
+    elementChangeCount?: number,
+    bonusUsedCount?: number
   ) => void;
   recordChallengeFailure: (challengeId: string) => void;
   setLastPlayed: (challengeId: string) => void;
@@ -173,9 +175,8 @@ interface PlayerState {
    * @param ids   IDs des badges à mettre en objectif
    */
   setActiveBadgeGoals: (ids: string[]) => void;
-  setAutoGoal: (enabled: boolean) => void;
   /**
-   * Appelé après awardBadges() quand autoGoal=true.
+   * Appelé après awardBadges().
    * Pour chaque badge complété dans les objectifs actifs, tente de le remplacer
    * par le prochain badge éligible de la même catégorie.
    * Remet à 0 le goalCounter du nouveau badge injecté.
@@ -220,6 +221,8 @@ interface PlayerState {
   setLastOnfCompoKey: (key: string) => void;
   /** Marque un défi ONF comme terminé (ajoute son ID, incrémente le compteur). */
   markOnfChallengeCompleted: (challengeId: string) => void;
+  /** Enregistre une victoire ONF avec tous les compteurs badges. */
+  recordOnfVictory: (challengeId: string, failCount: number, elapsedMs: number) => void;
   /** Marque le briefing ONF comme vu (ne s'affiche plus après). */
   markOnfBriefingSeen: () => void;
   /** Incrémente le compteur de grilles ONF jouées aujourd'hui (limite free = 3). */
@@ -227,6 +230,10 @@ interface PlayerState {
 
   // ── Actions statistiques génériques (chantier 5) ──────────────────────────
   incrementStat: (key: keyof PlayerStats, amount?: number) => void;
+
+  // ── Action victoire daily (refonte badges) ─────────────────
+  /** Enregistre les compteurs de victoire daily (elapsedMs pour dailySpeedCount). */
+  recordDailyVictory: (elapsedMs: number) => void;
 
 }
 
@@ -280,6 +287,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     avgResolutionMs: 0,
     totalResolutionCount: 0,
     speedBadgeHits: {},
+    onfPerfectCount: 0,
+    onfSpeedCount: 0,
+    dailyPerfectCount: 0,
+    dailySpeedCount: 0,
   },
 
   earnedBadges: [],
@@ -310,7 +321,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
   goalCounters: {},
-  autoGoal: true,
 
   challengedFriendIds: [],
 
@@ -417,6 +427,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           }
           return merged;
         })(),
+        // Compteurs ONF et daily : prendre le max local/cloud
+        onfPerfectCount:   Math.max(get().stats.onfPerfectCount ?? 0,   (profile.stats as any).onfPerfectCount   ?? 0),
+        onfSpeedCount:     Math.max(get().stats.onfSpeedCount   ?? 0,   (profile.stats as any).onfSpeedCount     ?? 0),
+        dailyPerfectCount: Math.max(get().stats.dailyPerfectCount ?? 0, (profile.stats as any).dailyPerfectCount ?? 0),
+        dailySpeedCount:   Math.max(get().stats.dailySpeedCount  ?? 0,  (profile.stats as any).dailySpeedCount   ?? 0),
       },
       earnedBadges:    mergedEarned,
       badgeShowcase:   (profile.badgeShowcase as [string?, string?, string?]) ?? [undefined, undefined, undefined],
@@ -477,7 +492,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   // failCountForThisGame = nb de fois où le joueur a tapé "Valider" et échoué
   // pendant CETTE partie (avant la victoire finale).
   // noErrorStreak s'incrémente seulement si failCountForThisGame === 0.
-  markChallengeCompleted: (challengeId, timeMs, errorCount) => {
+  markChallengeCompleted: (challengeId, timeMs, errorCount, elementChangeCount = 0, bonusUsedCount = 0) => {
     // Nombre de victoires sous seuil requis pour obtenir un badge vitesse
     const SPEED_BADGE_TARGET = 5;
     set(state => {
@@ -532,7 +547,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       const elapsedSec = timeMs / 1000;
       const speedThresholds: Array<[string, number]> = [
         ['vitesse_tortue',  30 + (lvl - 1) * 5],
-        ['vitesse_Loup',    20 + (lvl - 1) * 3],
+        ['vitesse_loup',    20 + (lvl - 1) * 3],
         ['vitesse_oiseau',  12 + (lvl - 1) * 2],
         ['vitesse_eclair',   7 + (lvl - 1) * 1],
         ['vitesse_tornade',  4 + (lvl - 1) * 0.5],
@@ -560,6 +575,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         if (speedEntry) {
           if (elapsedSec < speedEntry[1]) {
             newGoalCounters[badgeId] = (newGoalCounters[badgeId] ?? 0) + 1;
+          }
+          continue;
+        }
+        // precision_parfaite : streak de poses parfaites (sans déplacement, sans erreur, sans abandon, sans bonus)
+        if (badgeId === 'precision_parfaite') {
+          const abandonedBefore = (state.stats.abandonCount[challengeId] ?? 0);
+          const isPerfect = elementChangeCount === 0
+            && errorCount === 0
+            && abandonedBefore === 0
+            && bonusUsedCount === 0;
+          if (isPerfect) {
+            newGoalCounters['precision_parfaite'] = (newGoalCounters['precision_parfaite'] ?? 0) + 1;
+          } else {
+            newGoalCounters['precision_parfaite'] = 0;
           }
           continue;
         }
@@ -660,6 +689,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       avgResolutionMs: 0,
       totalResolutionCount: 0,
       speedBadgeHits: {},
+      onfPerfectCount: 0,
+      onfSpeedCount: 0,
+      dailyPerfectCount: 0,
+      dailySpeedCount: 0,
     },
     earnedBadges: [],
     badgeShowcase: [undefined, undefined, undefined],
@@ -679,7 +712,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     lastOnfDailyDate: '',
     activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
     goalCounters: {},
-    autoGoal: true,
     dailyBonusUses: { highlight_valid_cells: 3, instinct: 3 },
     lastBonusResetDate: null,
   }),
@@ -880,6 +912,42 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     };
   }),
 
+  // ── Victoire ONF avec compteurs badges ─────────────────────
+  recordOnfVictory: (challengeId, failCount, elapsedMs) => set(state => {
+    const alreadyCompleted = state.completedOnfChallengeIds.includes(challengeId);
+    const newPerfectCount = (!alreadyCompleted && failCount === 0)
+      ? state.stats.onfPerfectCount + 1
+      : state.stats.onfPerfectCount;
+    const newSpeedCount = (!alreadyCompleted && elapsedMs < 120_000)
+      ? state.stats.onfSpeedCount + 1
+      : state.stats.onfSpeedCount;
+    return {
+      completedOnfChallengeIds: alreadyCompleted
+        ? state.completedOnfChallengeIds
+        : [...state.completedOnfChallengeIds, challengeId],
+      onfSolvedCount: alreadyCompleted ? state.onfSolvedCount : state.onfSolvedCount + 1,
+      stats: {
+        ...state.stats,
+        onfPerfectCount: newPerfectCount,
+        onfSpeedCount:   newSpeedCount,
+      },
+    };
+  }),
+
+  // ── Victoire daily (refonte badges) ──────────────────────
+  recordDailyVictory: (elapsedMs) => set(state => {
+    const DAILY_SPEED_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes
+    return {
+      stats: {
+        ...state.stats,
+        dailyPerfectCount: state.stats.dailyPerfectCount + 1, // toujours parfait (1 seule validation)
+        dailySpeedCount: elapsedMs < DAILY_SPEED_THRESHOLD_MS
+          ? state.stats.dailySpeedCount + 1
+          : state.stats.dailySpeedCount,
+      },
+    };
+  }),
+
   // ── Briefing ONF ──────────────────────────────────────────
   markOnfBriefingSeen: () => set({ hasSeenOnfBriefing: true }),
 
@@ -911,9 +979,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       goalCounters: newCounters,
     };
   }),
-
-  // ── Toggle choix automatique des objectifs ────────────────
-  setAutoGoal: (enabled) => set({ autoGoal: enabled }),
 
   // ── Auto-avance des objectifs après badge obtenu ──────────
   advanceGoalAuto: (completedGoalIds, updatedEarnedBadges) => {

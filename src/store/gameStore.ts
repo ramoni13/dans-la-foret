@@ -44,6 +44,10 @@ interface GameState {
   // ── Mode sans bonus (ONF) ─────────────────────────────────────
   bonusDisabled: boolean;           // true = aucun bonus activable (mode ONF)
 
+  // ── Compteur modifications (badge precision_parfaite) ─────────
+  /** Nb de fois qu'un élément DÉJÀ POSÉ a été déplacé, retiré ou remplacé pendant cette partie */
+  elementChangeCount: number;
+
   // Actions
   loadChallenge: (challenge: Challenge) => void;
   loadDailyChallenge: (challenge: Challenge) => void;
@@ -83,6 +87,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   isDailyChallenge: false,
   dailyValidationUsed: false,
   bonusDisabled: false,
+  elementChangeCount: 0,
 
   setBonusDisabled: (disabled) => set({ bonusDisabled: disabled }),
 
@@ -105,6 +110,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       highlightActive: false,
       isDailyChallenge: false,
       dailyValidationUsed: false,
+      elementChangeCount: 0,
     });
   },
 
@@ -127,19 +133,25 @@ export const useGameStore = create<GameState>((set, get) => ({
       highlightActive: false,
       isDailyChallenge: true,
       dailyValidationUsed: false,
+      elementChangeCount: 0,
     });
   },
 
   placeElement: (cellIndex, elementId) => {
-    const { currentChallenge, playerBoard } = get();
+    const { currentChallenge, playerBoard, elementChangeCount } = get();
     if (!currentChallenge) return;
 
     const isFixed = currentChallenge.fixedPlacements.some(fp => fp.cellIndex === cellIndex);
     if (isFixed) return;
 
+    // Remplacement d'un élément déjà posé → incrémenter le compteur
+    const isReplacement = playerBoard[cellIndex] !== null;
     const newBoard = [...playerBoard];
     newBoard[cellIndex] = elementId;
-    set({ playerBoard: newBoard });
+    set({
+      playerBoard: newBoard,
+      elementChangeCount: isReplacement ? elementChangeCount + 1 : elementChangeCount,
+    });
   },
 
   // Place un élément ET désélectionne en un seul set() atomique.
@@ -147,29 +159,40 @@ export const useGameStore = create<GameState>((set, get) => ({
   // laissaient contentScale à 0 entre les deux flushes, rendant le
   // token visuellement invisible sur la grille.
   placeAndDeselect: (cellIndex, elementId) => {
-    const { currentChallenge, playerBoard } = get();
+    const { currentChallenge, playerBoard, elementChangeCount } = get();
     if (!currentChallenge) return;
 
     const isFixed = currentChallenge.fixedPlacements.some(fp => fp.cellIndex === cellIndex);
     if (isFixed) return;
 
+    // Remplacement d'un élément déjà posé → incrémenter le compteur
+    const isReplacement = playerBoard[cellIndex] !== null;
     const newBoard = [...playerBoard];
     newBoard[cellIndex] = elementId;
-    set({ playerBoard: newBoard, selectedElement: null });
+    set({
+      playerBoard: newBoard,
+      selectedElement: null,
+      elementChangeCount: isReplacement ? elementChangeCount + 1 : elementChangeCount,
+    });
   },
 
   removeElement: (cellIndex) => {
-    const { currentChallenge, playerBoard, errorHintCells } = get();
+    const { currentChallenge, playerBoard, errorHintCells, elementChangeCount } = get();
     if (!currentChallenge) return;
 
     const isFixed = currentChallenge.fixedPlacements.some(fp => fp.cellIndex === cellIndex);
     if (isFixed) return;
 
+    // Retrait d'un élément posé → incrémenter le compteur
+    const hadElement = playerBoard[cellIndex] !== null;
     const newBoard = [...playerBoard];
     newBoard[cellIndex] = null;
 
     // Bug fix : retirer le halo rouge de la case vidée (case vide ≠ erreur)
-    const updates: Partial<GameState> = { playerBoard: newBoard };
+    const updates: Partial<GameState> = {
+      playerBoard: newBoard,
+      elementChangeCount: hadElement ? elementChangeCount + 1 : elementChangeCount,
+    };
     if (errorHintCells.includes(cellIndex)) {
       updates.errorHintCells = errorHintCells.filter(i => i !== cellIndex);
     }
@@ -178,7 +201,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   moveElement: (fromCell, toCell) => {
-    const { currentChallenge, playerBoard } = get();
+    const { currentChallenge, playerBoard, elementChangeCount } = get();
     if (!currentChallenge) return;
     if (fromCell === toCell) return;
 
@@ -197,7 +220,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     const temp = newBoard[toCell];
     newBoard[toCell] = newBoard[fromCell];
     newBoard[fromCell] = temp ?? null;
-    set({ playerBoard: newBoard });
+    // Déplacement d'un élément posé → toujours +1
+    set({ playerBoard: newBoard, elementChangeCount: elementChangeCount + 1 });
   },
 
   selectElement: (elementId) => set({ selectedElement: elementId }),
@@ -288,5 +312,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     isDailyChallenge: false,
     dailyValidationUsed: false,
     bonusDisabled: false,
+    elementChangeCount: 0,
   }),
 }));

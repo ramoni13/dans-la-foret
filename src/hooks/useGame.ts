@@ -231,5 +231,6 @@ export function useGame() {
     validateChallenge: game.validateChallenge,
     dismissValidation: game.dismissValidation,
     resetGame: game.resetGame,
+    elementChangeCount: game.elementChangeCount,
   };
 }

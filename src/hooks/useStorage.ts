@@ -76,10 +76,9 @@ interface PersistedPlayerState {
   onfSolvedCount: number;
   // Amis défiés (pour badge social_poignee / social_cirque)
   challengedFriendIds: string[];
-  // Objectifs actifs + préférences
+  // Objectifs actifs
   activeBadgeGoals: string[];
   goalCounters: Record<string, number>;
-  autoGoal: boolean;
 }
 
 /** Extrait le sous-ensemble persistable depuis l'état Zustand courant */
@@ -107,7 +106,6 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     challengedFriendIds:       state.challengedFriendIds,
     activeBadgeGoals:          state.activeBadgeGoals,
     goalCounters:              state.goalCounters,
-    autoGoal:                  state.autoGoal,
   };
 }
 
@@ -155,6 +153,11 @@ export function useStorage() {
               friendPlayed:             (saved.stats as any)?.friendPlayed             ?? 0,
               avgResolutionMs:          (saved.stats as any)?.avgResolutionMs          ?? 0,
               totalResolutionCount:     (saved.stats as any)?.totalResolutionCount     ?? 0,
+              // Compteurs ONF et daily (refonte badges)
+              onfPerfectCount:          (saved.stats as any)?.onfPerfectCount          ?? 0,
+              onfSpeedCount:            (saved.stats as any)?.onfSpeedCount            ?? 0,
+              dailyPerfectCount:        (saved.stats as any)?.dailyPerfectCount        ?? 0,
+              dailySpeedCount:          (saved.stats as any)?.dailySpeedCount          ?? 0,
             },
             earnedBadges:    saved.earnedBadges    ?? [],
             badgeShowcase:   (saved.badgeShowcase  ?? []) as [string?, string?, string?],
@@ -172,7 +175,6 @@ export function useStorage() {
             challengedFriendIds:    (saved as any).challengedFriendIds ?? [],
             activeBadgeGoals:       (saved as any).activeBadgeGoals ?? [...DEFAULT_BADGE_GOALS],
             goalCounters:           (saved as any).goalCounters ?? {},
-            autoGoal:               (saved as any).autoGoal ?? true,
           });
           return saved.earnedBadges ?? [];
         } catch {
@@ -274,7 +276,6 @@ export function useStorage() {
         newState.challengedFriendIds.length     !== prevState.challengedFriendIds.length ||
         newState.earnedBadges.length            !== prevState.earnedBadges.length        ||
         newState.activeBadgeGoals.join(',')     !== prevState.activeBadgeGoals.join(',') ||
-        newState.autoGoal                       !== prevState.autoGoal                   ||
         JSON.stringify(newState.goalCounters)   !== JSON.stringify(prevState.goalCounters);
 
       if (!changed) return;
