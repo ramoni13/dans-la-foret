@@ -27,6 +27,7 @@ export interface MusicTrack {
 }
 
 export const MUSIC_CATALOG: MusicTrack[] = [
+  // ── Ambiance Forêt (menu) — gratuits ──────────────────────────────────────
   {
     id: 'manor_cocktail',
     title: 'Manor Cocktail',
@@ -34,6 +35,34 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     file: require('../../assets/musics/manor_cocktail.mp3'),
     description: 'Ambiance feutrée pour explorer les menus',
   },
+
+  // ── Ambiance Forêt (menu) — débloquables ────────────────────────────────
+  {
+    id: 'jardin_japonais',
+    title: 'Jardin Japonais',
+    type: 'menu',
+    file: require('../../assets/musics/Jardin Japonais_F.mp3'),
+    unlockBadgeId: 'exploration_graine', // 🌱 Premiers pas — niveaux 1 à 3 complétés
+    description: 'Sérénité zen pour accompagner vos explorations',
+  },
+  {
+    id: 'swaying_groove',
+    title: 'Swaying Groove',
+    type: 'menu',
+    file: require('../../assets/musics/Swaying Groove_F.mp3'),
+    unlockBadgeId: 'regularite_aube',    // 🌅 L'Aube du Joueur — 3 jours de suite
+    description: 'Un groove doux pour les habitués de la forêt',
+  },
+  {
+    id: 'woodland_pulse',
+    title: 'Woodland Pulse',
+    type: 'menu',
+    file: require('../../assets/musics/Woodland Pulse_F.mp3'),
+    unlockBadgeId: 'daily_first',        // 🌅 Premier Pas Quotidien — 1er défi du jour réussi
+    description: 'Les pulsations naturelles de la forêt',
+  },
+
+  // ── Ambiance Défi (ingame) — gratuits ─────────────────────────────────────
   {
     id: 'foret_mystique',
     title: 'Forêt Mystique',
@@ -41,12 +70,38 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     file: require('../../assets/musics/wtf2.mp3'),
     description: 'Musique immersive pour les défis',
   },
+
+  // ── Ambiance Défi (ingame) — débloquables ────────────────────────────────
+  {
+    id: 'forest_breath',
+    title: 'Forest Breath',
+    type: 'ingame',
+    file: require('../../assets/musics/Forest Breath_D.mp3'),
+    unlockBadgeId: 'precision_pousse',   // 🌱 Première pousse — 1er défi sans erreur
+    description: 'Le souffle apaisant de la forêt pour rester concentré',
+  },
+  {
+    id: 'pulsation_douce',
+    title: 'Pulsation Douce',
+    type: 'ingame',
+    file: require('../../assets/musics/Pulsation Douce_D.mp3'),
+    unlockBadgeId: 'vitesse_tortue',     // 🐢 Patience de la tortue — défi en < 30 s
+    description: 'Un rythme doux pour les esprits méthodiques',
+  },
+  {
+    id: 'deep_sub_pulse',
+    title: 'Deep Sub Pulse',
+    type: 'ingame',
+    file: require('../../assets/musics/Deep Sub Pulse_D.mp3'),
+    unlockBadgeId: 'exploration_herbe',  // 🌿 Explorateur confirmé — niveaux 1 à 5 complétés
+    description: 'Basses profondes pour les explorateurs aguerris',
+  },
   {
     id: 'elek',
     title: 'Elek',
     type: 'ingame',
     file: require('../../assets/musics/elek.mp3'),
-    unlockBadgeId: 'vitesse_Loup',   // 🦊 Ruse du Loup — terminer un défi en < 20 s
+    unlockBadgeId: 'vitesse_loup',       // 🦊 Ruse du Loup — défi en < 20 s
     description: 'Rythme électro pour les défis intenses',
   },
 ];
