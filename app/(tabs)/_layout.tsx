@@ -9,6 +9,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import ForestFrame from '../../src/components/Navigation/ForestFrame';
 import { User } from 'firebase/auth';
 import { usePlayerStore } from '../../src/store/playerStore';
+import { useAudioStore } from '../../src/store/audioStore';
 import { useNavStore } from '../../src/store/navStore';
 import { onAuthChange } from '../../src/services/authService';
 import { getPlayer } from '../../src/services/playerService';
@@ -54,7 +55,17 @@ export default function TabsLayout() {
       if (authenticated) {
         // Restaurer le profil Firestore AVANT de vérifier la connexion quotidienne
         const profile = await getPlayer(firebaseUser!.uid);
-        if (profile) player.restoreFromCloud(profile);
+        if (profile) {
+          player.restoreFromCloud(profile);
+          // Restaurer la sélection musicale depuis le cloud
+          const cloudIngame = (profile as any).selectedIngameTrackId as string | undefined;
+          const cloudMenu   = (profile as any).selectedMenuTrackId   as string | undefined;
+          if (cloudIngame || cloudMenu) {
+            const audio = useAudioStore.getState();
+            if (cloudIngame) audio.setSelectedTrack('ingame', cloudIngame);
+            if (cloudMenu)   audio.setSelectedTrack('menu',   cloudMenu);
+          }
+        }
       }
 
       // Vérifier la connexion quotidienne après que le profil soit restauré,
