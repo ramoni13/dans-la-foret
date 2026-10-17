@@ -133,11 +133,12 @@ class AudioService {
   }
 
   /** Arrête et libère un player de preview */
-  stopPreviewSound(player: AudioPlayer): void {
+  stopPreviewSound(player: AudioPlayer): Promise<void> {
     try {
       player.pause();
       player.release();
     } catch (_) {}
+    return Promise.resolve();
   }
 
   dispose() {
