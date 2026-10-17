@@ -60,6 +60,10 @@ import {
   upsertPlayer,
   markOnfChallengeCompleted,
 } from '../../src/services/playerService';
+import { getJustUnlockedCard } from '../../src/utils/onfCards';
+import { TreeCard } from '../../src/data/treesData';
+import { ONFCardUnlockBanner } from '../../src/components/ONF/ONFCardUnlockBanner';
+import { TreeCardGallery } from '../../src/components/ONF/TreeCardGallery';
 
 const native = Platform.OS !== 'web';
 
@@ -97,6 +101,9 @@ export default function ONFGameScreen() {
   const badgesEvaluatedRef = useRef(false);
   /** Nombre de validations incorrectes pendant cette partie ONF */
   const onfFailCountRef = useRef(0);
+  /** Carte nouvellement débloquée — déclenche ONFCardUnlockBanner */
+  const [justUnlockedCard, setJustUnlockedCard] = useState<TreeCard | null>(null);
+  const [galleryVisible, setGalleryVisible] = useState(false);
   const [rankUpVisible, setRankUpVisible]         = useState(false);
   const [rankUpNewRank, setRankUpNewRank]          = useState(RANK_DEFINITIONS[0]);
   const [rankUpPrevLabel, setRankUpPrevLabel]      = useState('');
@@ -268,6 +275,16 @@ export default function ONFGameScreen() {
     // Incrémenter le compteur quotidien (limite free = 3/jour)
     player.incrementOnfDaily();
 
+    // ── Cartes à collectionner (Herbier de la Forêt) ─────────────
+    const countBefore = stateBeforeOnf.onfSolvedCount;
+    const stateAfterCards = usePlayerStore.getState();
+    const countAfter = stateAfterCards.onfSolvedCount;
+    const justUnlocked = getJustUnlockedCard(countBefore, countAfter);
+    if (justUnlocked) {
+      player.collectTreeCard(justUnlocked.id);
+      setJustUnlockedCard(justUnlocked);
+    }
+
     // Évaluer les badges ONF
     const stateAfterOnfRecord = usePlayerStore.getState();
     const activeGoalsBeforeOnf = stateBeforeOnf.activeBadgeGoals;
@@ -317,11 +334,11 @@ export default function ONFGameScreen() {
     // Sync Firestore en arrière-plan
     const uid = player.userId;
     if (uid) {
-      const updatedState = usePlayerStore.getState();
+      const finalState = usePlayerStore.getState();
       // 1. Sync des graines
-      updateSeeds(uid, updatedState.seeds).catch(() => {});
+      updateSeeds(uid, finalState.seeds).catch(() => {});
       // 2. Marquer le défi complété + compteur ONF dans Firestore
-      markOnfChallengeCompleted(uid, challenge.id, updatedState.onfSolvedCount).catch(() => {});
+      markOnfChallengeCompleted(uid, challenge.id, finalState.onfSolvedCount).catch(() => {});
       // 3. Sync badges ONF
       if (newOnfBadges.length > 0) {
         awardBadgesFirestore(uid, newOnfBadges).catch(() => {});
@@ -329,17 +346,18 @@ export default function ONFGameScreen() {
       // 4. Sync profil complet (seeds, earnedBadges, etc.)
       upsertPlayer({
         userId: uid,
-        username: updatedState.username,
-        seeds: updatedState.seeds,
-        completedChallenges: updatedState.completedChallenges,
-        stats: updatedState.stats,
-        isPremium: updatedState.isPremium,
-        earnedBadges: updatedState.earnedBadges,
-        badgeShowcase: updatedState.badgeShowcase.filter((b): b is string => !!b),
-        dailyStreak: updatedState.dailyStreak,
-        lastPlayedDate: updatedState.lastPlayedDate,
-        onfSolvedCount: updatedState.onfSolvedCount,
-        completedOnfChallengeIds: updatedState.completedOnfChallengeIds,
+        username: finalState.username,
+        seeds: finalState.seeds,
+        completedChallenges: finalState.completedChallenges,
+        stats: finalState.stats,
+        isPremium: finalState.isPremium,
+        earnedBadges: finalState.earnedBadges,
+        badgeShowcase: finalState.badgeShowcase.filter((b): b is string => !!b),
+        dailyStreak: finalState.dailyStreak,
+        lastPlayedDate: finalState.lastPlayedDate,
+        onfSolvedCount: finalState.onfSolvedCount,
+        completedOnfChallengeIds: finalState.completedOnfChallengeIds,
+        collectedTreeCardIds: finalState.collectedTreeCardIds,
       }).catch(() => {});
     }
   }, [game.isVictory]);
@@ -546,10 +564,12 @@ export default function ONFGameScreen() {
           isNewWorldRecord={false}
           previousRecordHolder={null}
           onNextChallenge={() => {
+            setJustUnlockedCard(null);
             game.resetGame();
             pickAndLoad();
           }}
           onBackToMenu={() => {
+            setJustUnlockedCard(null);
             game.resetGame();
             router.replace('/(tabs)');
           }}
@@ -572,6 +592,25 @@ export default function ONFGameScreen() {
         seedsAwarded={rankUpSeeds}
         seedsBeforeGain={rankUpSeedsBefore}
         onClose={() => setRankUpVisible(false)}
+      />
+
+      {/* ── Banner carte débloquée (Herbier de la Forêt) ── */}
+      {justUnlockedCard && game.isVictory && (
+        <ONFCardUnlockBanner
+          card={justUnlockedCard}
+          onDiscover={() => {
+            setGalleryVisible(true);
+          }}
+          onClose={() => setJustUnlockedCard(null)}
+        />
+      )}
+
+      {/* ── Galerie herbier ── */}
+      <TreeCardGallery
+        visible={galleryVisible}
+        onClose={() => setGalleryVisible(false)}
+        onfSolvedCount={player.onfSolvedCount}
+        initialCardId={justUnlockedCard?.id}
       />
 
     </GestureHandlerRootView>
