@@ -36,6 +36,13 @@ interface AudioState {
   // pour autoriser la lecture audio automatique)
   userHasInteracted: boolean;
 
+  /**
+   * ID de la piste dont le déblocage doit être affiché en modal (feu d'artifice).
+   * Positionné par syncOwnedFromBadges() quand une nouvelle piste est débloquée.
+   * Remis à null par dismissMusicUnlock() après affichage.
+   */
+  pendingMusicUnlockTrackId: string | null;
+
   // ── Actions ──────────────────────────────────────────────────
   setIngameEnabled: (v: boolean) => void;
   setMenuEnabled: (v: boolean) => void;
@@ -43,6 +50,8 @@ interface AudioState {
   setSelectedTrack: (type: MusicType, trackId: string) => void;
   setPreviewTrack: (trackId: string | null) => void;
   signalUserInteraction: () => void;
+  /** Efface le modal de déblocage musique en attente */
+  dismissMusicUnlock: () => void;
 
   isTrackOwned: (trackId: string) => boolean;
 
@@ -87,6 +96,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   ownedTrackIds: [...FREE_TRACK_IDS],
   previewTrackId: null,
   userHasInteracted: false,
+  pendingMusicUnlockTrackId: null,
 
   setIngameEnabled: (v) => set({ ingameEnabled: v }),
   setMenuEnabled: (v) => set({ menuEnabled: v }),
@@ -108,6 +118,8 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     set({ userHasInteracted: true });
   },
 
+  dismissMusicUnlock: () => set({ pendingMusicUnlockTrackId: null }),
+
   isTrackOwned: (trackId) => {
     return get().ownedTrackIds.includes(trackId);
   },
@@ -120,7 +132,19 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       newOwned.length === current.length &&
       newOwned.every(id => current.includes(id))
     ) return;
-    set({ ownedTrackIds: newOwned });
+
+    // Détecter les pistes nouvellement débloquées pour déclencher la popup
+    const newlyUnlocked = newOwned.filter(id => !current.includes(id));
+    set({
+      ownedTrackIds: newOwned,
+      // On n'affiche que la première piste débloquée (les suivantes seront
+      // visibles dans le profil). Si une popup est déjà en attente, on ne
+      // l'écrase pas — elle sera affichée puis l'utilisateur verra la suivante
+      // au prochain déblocage.
+      pendingMusicUnlockTrackId: newlyUnlocked.length > 0
+        ? (get().pendingMusicUnlockTrackId ?? newlyUnlocked[0])
+        : get().pendingMusicUnlockTrackId,
+    });
   },
 
   hydrate: (data) => {
