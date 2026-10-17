@@ -68,6 +68,9 @@ export interface PlayerProfile {
   goalCounters?: Record<string, number>;
   // ── Herbier de la Forêt ──────────────────────────────
   collectedTreeCardIds?: number[];
+  // ── Sélection musicale personnalisée ────────────────
+  selectedIngameTrackId?: string;
+  selectedMenuTrackId?: string;
 }
 
 // ── Calcul du niveau courant d'un joueur ──────────────────────────────────────
@@ -153,6 +156,8 @@ function migrateProfile(raw: any): PlayerProfile {
     activeBadgeGoals,
     goalCounters,
     collectedTreeCardIds: raw.collectedTreeCardIds ?? [],
+    selectedIngameTrackId: raw.selectedIngameTrackId,
+    selectedMenuTrackId:   raw.selectedMenuTrackId,
   };
 }
 
@@ -334,6 +339,19 @@ export async function searchPlayers(
 export async function updateCollectedCards(userId: string, cardIds: number[]): Promise<void> {
   await updateDoc(doc(db, 'players', userId), {
     collectedTreeCardIds: cardIds,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ── Sauvegarder la sélection musicale ────────────────────────────────────────
+export async function updateMusicSelection(
+  userId: string,
+  selectedIngameTrackId: string,
+  selectedMenuTrackId: string,
+): Promise<void> {
+  await updateDoc(doc(db, 'players', userId), {
+    selectedIngameTrackId,
+    selectedMenuTrackId,
     updatedAt: serverTimestamp(),
   });
 }
