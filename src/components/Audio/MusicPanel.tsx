@@ -15,7 +15,6 @@ import {
   StyleSheet,
   Switch,
   TouchableOpacity,
-  ScrollView,
   Platform,
   Alert,
 } from 'react-native';
@@ -27,8 +26,9 @@ import { usePlayerStore, VisualEffect } from '../../store/playerStore';
 import { MUSIC_CATALOG, MusicTrack } from '../../constants/music';
 import { BADGE_MAP } from '../../constants/badges';
 import { audioService } from '../../services/audioService';
-import { MusicUnlockModal } from './MusicUnlockModal';
 import { useT } from '../../i18n';
+import { auth } from '../../services/firebase';
+import { updateMusicSelection } from '../../services/playerService';
 
 // Slider natif ou fallback web
 let Slider: any = null;
@@ -209,21 +209,8 @@ export function MusicPanel() {
   const previewTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [previewTrackId, setPreviewTrackId] = useState<string | null>(null);
 
-  // Modal déblocage (déclenché automatiquement quand un badge débloque une musique)
-  const [unlockModalTrackId, setUnlockModalTrackId] = useState<string | null>(null);
-  const prevOwnedRef = useRef<string[]>(audioStore.ownedTrackIds);
-
-  // Détecter l'ajout d'une nouvelle piste via badge (syncOwnedFromBadges)
-  useEffect(() => {
-    const prev = prevOwnedRef.current;
-    const current = audioStore.ownedTrackIds;
-    const newlyUnlocked = current.filter(id => !prev.includes(id));
-    if (newlyUnlocked.length > 0) {
-      // Afficher le modal pour la première piste nouvellement débloquée
-      setUnlockModalTrackId(newlyUnlocked[0]);
-    }
-    prevOwnedRef.current = current;
-  }, [audioStore.ownedTrackIds]);
+  // Note : le modal de déblocage musique est géré globalement dans app/_layout.tsx
+  // via audioStore.pendingMusicUnlockTrackId — plus besoin de détection locale ici.
 
   // Séparer les morceaux par type, uniquement les possédés
   const ownedIngame = MUSIC_CATALOG.filter(
@@ -305,6 +292,20 @@ export function MusicPanel() {
     };
   }, []);
 
+  // ── Sélection de piste avec persistance Firestore ─────────
+  const handleSelectTrack = (type: 'ingame' | 'menu', trackId: string) => {
+    audioStore.setSelectedTrack(type, trackId);
+    // Persistance Firestore en arrière-plan (si connecté, non anonyme)
+    const uid    = auth.currentUser?.uid;
+    const isAnon = auth.currentUser?.isAnonymous ?? true;
+    if (uid && !isAnon) {
+      const a = useAudioStore.getState();
+      const ingame = type === 'ingame' ? trackId : a.selectedIngameTrackId;
+      const menu   = type === 'menu'   ? trackId : a.selectedMenuTrackId;
+      updateMusicSelection(uid, ingame, menu).catch(() => {});
+    }
+  };
+
   // ── Info de déblocage par badge spécifique ───────────────
   /** Retourne la définition du badge requis pour débloquer un titre */
   const getUnlockBadgeDef = (unlockBadgeId: string) => BADGE_MAP[unlockBadgeId] ?? null;
@@ -327,7 +328,7 @@ export function MusicPanel() {
         onToggle={audioStore.setMenuEnabled}
         tracks={ownedMenu}
         selectedId={audioStore.selectedMenuTrackId}
-        onSelect={id => audioStore.setSelectedTrack('menu', id)}
+        onSelect={id => handleSelectTrack('menu', id)}
         previewTrackId={previewTrackId}
         onTogglePreview={togglePreview}
       />
@@ -342,7 +343,7 @@ export function MusicPanel() {
         onToggle={audioStore.setIngameEnabled}
         tracks={ownedIngame}
         selectedId={audioStore.selectedIngameTrackId}
-        onSelect={id => audioStore.setSelectedTrack('ingame', id)}
+        onSelect={id => handleSelectTrack('ingame', id)}
         previewTrackId={previewTrackId}
         onTogglePreview={togglePreview}
       />
@@ -464,12 +465,6 @@ export function MusicPanel() {
         </>
       )}
 
-      {/* Modal déblocage musique */}
-      <MusicUnlockModal
-        visible={!!unlockModalTrackId}
-        trackId={unlockModalTrackId}
-        onClose={() => setUnlockModalTrackId(null)}
-      />
     </View>
   );
 }
