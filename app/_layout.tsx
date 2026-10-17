@@ -11,6 +11,7 @@ import { StyleSheet, Platform } from 'react-native';
 import React, { useEffect } from 'react';
 import { useStorage } from '../src/hooks/useStorage';
 import { AudioController } from '../src/components/Audio/AudioController';
+import { MusicUnlockModal } from '../src/components/Audio/MusicUnlockModal';
 import { useAudioStore } from '../src/store/audioStore';
 import { NavigationBar } from 'expo-navigation-bar';
 
@@ -48,10 +49,12 @@ function StorageBridge() {
 // Détecte si l'écran de jeu est actif (route game/[challengeId])
 // et écoute la première interaction utilisateur pour autoriser l'audio web
 function AudioBridge() {
-  const segments            = useSegments();
-  const isInGame            = segments.length > 0 && segments[0] === 'game';
-  const signalInteraction   = useAudioStore(s => s.signalUserInteraction);
-  const userHasInteracted   = useAudioStore(s => s.userHasInteracted);
+  const segments               = useSegments();
+  const isInGame               = segments.length > 0 && segments[0] === 'game';
+  const signalInteraction      = useAudioStore(s => s.signalUserInteraction);
+  const userHasInteracted      = useAudioStore(s => s.userHasInteracted);
+  const pendingMusicUnlockId   = useAudioStore(s => s.pendingMusicUnlockTrackId);
+  const dismissMusicUnlock     = useAudioStore(s => s.dismissMusicUnlock);
 
   // Sur web : écouter le premier clic/toucher au niveau du document
   // (phase de capture, avant tout handler React) pour débloquer l'audio
@@ -83,7 +86,16 @@ function AudioBridge() {
     }
   }, []);
 
-  return <AudioController isInGame={isInGame} />;
+  return (
+    <>
+      <AudioController isInGame={isInGame} />
+      <MusicUnlockModal
+        visible={!!pendingMusicUnlockId}
+        trackId={pendingMusicUnlockId}
+        onClose={dismissMusicUnlock}
+      />
+    </>
+  );
 }
 
 export default function RootLayout() {
