@@ -124,6 +124,10 @@ interface PlayerState {
   onfDailyCount: number;              // grilles ONF jouées aujourd'hui (reset quotidien, free = max 3)
   lastOnfDailyDate: string;           // "YYYY-MM-DD" du dernier reset onfDailyCount
 
+  // ── Herbier de la Forêt — cartes à collectionner ─────────────────────────
+  /** IDs (1-indexés) des cartes arbre débloquées. 1 carte tous les ONF_CARD_UNLOCK_EVERY défis. */
+  collectedTreeCardIds: number[];
+
   // ── Badges : objectifs actifs (chantier 3) ───────────────────────────────────
   activeBadgeGoals: string[];  // max 3 badgeIds choisis par le joueur
   /**
@@ -215,6 +219,10 @@ interface PlayerState {
 
   // ── Actions notifications amis ───────────────────────────────────────────
   setFriendNotifBadgeEnabled: (enabled: boolean) => void;
+
+  // ── Actions Herbier de la Forêt ──────────────────────────────────────────
+  /** Ajoute une carte à la collection (idempotent — pas de doublon). */
+  collectTreeCard: (cardId: number) => void;
 
   // ── Actions mode ONF ─────────────────────────────────────────────────────
   incrementOnfSolved: () => void;
@@ -318,6 +326,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   hasSeenOnfBriefing: false,
   onfDailyCount: 0,
   lastOnfDailyDate: '',
+  collectedTreeCardIds: [],
 
   activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
   goalCounters: {},
@@ -447,6 +456,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       ),
       onfSolvedCount: (profile as any).onfSolvedCount ?? (profile as any).onf4x4SolvedCount ?? 0,
       completedOnfChallengeIds: (profile as any).completedOnfChallengeIds ?? [],
+      // Herbier : union sans doublon, triée — jamais perdre les cartes offline
+      collectedTreeCardIds: Array.from(new Set([
+        ...(get().collectedTreeCardIds ?? []),
+        ...((profile as any).collectedTreeCardIds ?? []),
+      ])).sort((a, b) => a - b),
       // Objectifs actifs : merger local vs cloud.
       // Priorité au local si la version locale est plus propre (ne contient pas de badges déjà obtenus).
       // Priorité au cloud si le local est vide ou si le cloud est plus récent (ex: autre appareil).
@@ -710,6 +724,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     completedOnfChallengeIds: [],
     onfDailyCount: 0,
     lastOnfDailyDate: '',
+    collectedTreeCardIds: [],
     activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
     goalCounters: {},
     dailyBonusUses: { highlight_valid_cells: 3, instinct: 3 },
@@ -896,6 +911,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   // ── Notifications amis ────────────────────────────────────
   setFriendNotifBadgeEnabled: (enabled) => set({ friendNotifBadgeEnabled: enabled }),
+
+  // ── Herbier de la Forêt ───────────────────────────────────
+  collectTreeCard: (cardId) => set(state => ({
+    collectedTreeCardIds: state.collectedTreeCardIds.includes(cardId)
+      ? state.collectedTreeCardIds
+      : [...state.collectedTreeCardIds, cardId],
+  })),
 
   // ── Mode ONF ──────────────────────────────────────────────
   incrementOnfSolved: () => set(state => ({

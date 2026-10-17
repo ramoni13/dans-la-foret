@@ -66,6 +66,8 @@ export interface PlayerProfile {
   // ── Badges : objectifs actifs + compteurs dédiés ────
   activeBadgeGoals?: string[];
   goalCounters?: Record<string, number>;
+  // ── Herbier de la Forêt ──────────────────────────────
+  collectedTreeCardIds?: number[];
 }
 
 // ── Calcul du niveau courant d'un joueur ──────────────────────────────────────
@@ -150,6 +152,7 @@ function migrateProfile(raw: any): PlayerProfile {
     completedOnfChallengeIds: raw.completedOnfChallengeIds ?? [],
     activeBadgeGoals,
     goalCounters,
+    collectedTreeCardIds: raw.collectedTreeCardIds ?? [],
   };
 }
 
@@ -220,6 +223,7 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
     lastPlayedDate: '',
     onfSolvedCount: 0,
     completedOnfChallengeIds: [],
+    collectedTreeCardIds: [],
   };
   // usernameLower permet la recherche d'unicité insensible à la casse
   await setDoc(doc(db, 'players', userId), {
@@ -324,6 +328,14 @@ export async function searchPlayers(
   }
 
   return results;
+}
+
+// ── Mettre à jour les cartes collectées (Herbier) ────────────────────────────
+export async function updateCollectedCards(userId: string, cardIds: number[]): Promise<void> {
+  await updateDoc(doc(db, 'players', userId), {
+    collectedTreeCardIds: cardIds,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 // ── Marquer un défi comme complété ────────────────────────────────────────────
