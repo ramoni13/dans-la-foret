@@ -20,6 +20,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { ONF_4X4_LEVEL_UNLOCK } from '../../src/constants/onf';
+import { getUnlockedCardCount } from '../../src/utils/onfCards';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { useNavStore } from '../../src/store/navStore';
 import { auth } from '../../src/services/firebase';
@@ -837,8 +838,17 @@ export default function HomeScreen() {
         {(() => {
           // Débloqué par niveau OU par palier badge bois×9 (chantier 3)
           const isOnfUnlocked = player.currentLevel >= ONF_4X4_LEVEL_UNLOCK;
-          const solved = player.completedOnfChallengeIds.length;
-          const total = 100;
+          const onfSolved = player.onfSolvedCount;
+          const cards     = getUnlockedCardCount(onfSolved);
+
+          // Sous-titre herbier
+          const sublabelOnf = onfSolved === 0
+            ? 'Gagnez votre 1er défi !'
+            : cards === 1
+              ? `${onfSolved} défis résolus · 1 carte 🍃`
+              : cards > 1
+                ? `${onfSolved} défis résolus · ${cards} cartes 🍃`
+                : `${onfSolved} défi${onfSolved > 1 ? 's' : ''} résolus`;
 
           if (!isOnfUnlocked) {
             return (
@@ -853,25 +863,13 @@ export default function HomeScreen() {
             );
           }
 
-          if (solved >= total) {
-            return (
-              <WoodButton
-                variant="green"
-                label="Défi ONF"
-                sublabel={`Tous les défis réussis (${total}/${total}) 🏆`}
-                height={76}
-                onPress={() => router.push('/game/onf')}
-              />
-            );
-          }
-
           return (
             <WoodButton
               variant="green"
               label="Défi ONF"
-              sublabel={`${solved} / ${total} défis résolus`}
+              sublabel={sublabelOnf}
               height={76}
-              onPress={() => router.push('/game/onf')}
+              onPress={() => router.push('/game/onf-lobby')}
             />
           );
         })()}
