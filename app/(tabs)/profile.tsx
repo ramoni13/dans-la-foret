@@ -48,6 +48,7 @@ import { ActiveGoalCard } from '../../src/components/Badges/ActiveGoalCard';
 import { LeaderboardScreen } from '../../src/components/Leaderboard/LeaderboardScreen';
 import { MusicPanel } from '../../src/components/Audio/MusicPanel';
 import { getBadgeProgress, ELIGIBLE_GOAL_BADGE_IDS, DEFAULT_BADGE_GOALS } from '../../src/core/engine/badgeEngine';
+import { getRank, getPlayerScore, getNextRank } from '../../src/constants/badges';
 import { AdminCleanModal } from '../../src/components/Admin/AdminCleanModal';
 
 // ── Types ───────────────────────────────────────────────────────────────────────
@@ -439,6 +440,18 @@ export default function ProfileScreen() {
   // ──────────────────────────────────────────────────────────────────────────────
   const displayName = firebaseUser.displayName ?? firebaseUser.email ?? 'Joueur';
 
+  // ── Rang forestier ────────────────────────────────────────────────────────────
+  const rankActivityStats = {
+    soloCompleted:   player.stats.totalSolved,
+    friendCompleted: player.stats.friendWins,
+    onfCompleted:    player.onfSolvedCount,
+    dailyCompleted:  player.stats.dailyWon,
+  };
+  const playerScore    = getPlayerScore(player.earnedBadges, rankActivityStats);
+  const currentRank    = getRank(playerScore);
+  const nextRank       = getNextRank(playerScore);
+  const rankLabel      = player.language === 'en' ? (currentRank.labelEn ?? currentRank.label) : currentRank.label;
+
   // ── Section STATS ─────────────────────────────────────────────────────────────
   if (activeSection === 'stats') {
     return (
@@ -666,9 +679,15 @@ export default function ProfileScreen() {
         {/* Avatar + nom */}
         <View style={styles.avatarSection}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarEmoji}>🌲</Text>
+            <Text style={styles.avatarEmoji}>{currentRank.emoji}</Text>
           </View>
           <Text style={styles.usernameText}>{displayName}</Text>
+          <View style={styles.rankBadge}>
+            <Text style={styles.rankBadgeText}>{rankLabel}</Text>
+            {nextRank && (
+              <Text style={styles.rankScoreText}>{playerScore} / {nextRank.minScore} pts</Text>
+            )}
+          </View>
           <View style={styles.seedsBadge}>
             <Text style={styles.seedsBadgeText}>🌱 {player.seeds} graines</Text>
           </View>
@@ -686,6 +705,21 @@ export default function ProfileScreen() {
             <Text style={styles.tileEmoji}>📊</Text>
             <Text style={styles.tileLabel}>Stats</Text>
             <Text style={styles.tileSub}>{player.stats.totalSolved} défis</Text>
+          </TouchableOpacity>
+
+          {/* Rang forestier */}
+          <TouchableOpacity
+            style={styles.tile}
+            onPress={() => setActiveSection('classement')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.tileEmoji}>{currentRank.emoji}</Text>
+            <Text style={styles.tileLabel}>{rankLabel}</Text>
+            <Text style={styles.tileSub}>
+              {nextRank
+                ? `${playerScore} / ${nextRank.minScore} pts`
+                : `${playerScore} pts · Max`}
+            </Text>
           </TouchableOpacity>
 
           {/* Badges */}
@@ -708,17 +742,6 @@ export default function ProfileScreen() {
                   ? `${player.earnedBadges.length} obtenus`
                   : 'Aucun encore'}
             </Text>
-          </TouchableOpacity>
-
-          {/* Classement */}
-          <TouchableOpacity
-            style={styles.tile}
-            onPress={() => setActiveSection('classement')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.tileEmoji}>🌍</Text>
-            <Text style={styles.tileLabel}>Classement</Text>
-            <Text style={styles.tileSub}>Mondial</Text>
           </TouchableOpacity>
 
           {/* Réglages */}
@@ -924,6 +947,23 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+
+  rankBadge: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  rankBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFE082',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  rankScoreText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.65)',
   },
 
   seedsBadge: {
