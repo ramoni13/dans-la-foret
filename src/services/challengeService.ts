@@ -21,6 +21,7 @@ import {
   addDoc,
   getDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   getDocs,
@@ -139,6 +140,24 @@ export async function refuseFriendChallenge(
   });
 }
 
+// ── Suppression physique des défis expirés ─────────────────
+/**
+ * Supprime de Firestore tous les documents expirés présents dans `docs`.
+ * Appelé silencieusement après chaque lecture — pas de bloc sur l'UI.
+ */
+async function purgeExpiredDocs(
+  docs: FriendChallengeDoc[],
+  now: number,
+): Promise<void> {
+  const expired = docs.filter(d => {
+    const exp = (d.expiresAt as Timestamp)?.toMillis() ?? Infinity;
+    return exp <= now;
+  });
+  await Promise.all(
+    expired.map(d => d.id ? deleteDoc(doc(db, 'friendChallenges', d.id)) : Promise.resolve()),
+  );
+}
+
 // ── Défis reçus (statut pending uniquement — à répondre) ──
 export async function getReceivedChallenges(
   myUid: string,
@@ -151,9 +170,10 @@ export async function getReceivedChallenges(
   );
   const snap = await getDocs(q);
   const now = Date.now();
-  return snap.docs
-    .map(d => ({ id: d.id, ...d.data() } as FriendChallengeDoc))
-    // Filtrer côté client les défis expirés (Firestore ne purge pas automatiquement)
+  const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as FriendChallengeDoc));
+  // Purger physiquement les docs expirés (sans bloquer le retour)
+  purgeExpiredDocs(all, now).catch(() => {});
+  return all
     .filter(d => {
       const exp = (d.expiresAt as Timestamp)?.toMillis() ?? Infinity;
       return exp > now;
@@ -175,8 +195,15 @@ export async function getSentChallenges(
     where('challengerUid', '==', challengerUid),
   );
   const snap = await getDocs(q);
-  return snap.docs
-    .map(d => ({ id: d.id, ...d.data() } as FriendChallengeDoc))
+  const now = Date.now();
+  const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as FriendChallengeDoc));
+  // Purger physiquement les docs expirés
+  purgeExpiredDocs(all, now).catch(() => {});
+  return all
+    .filter(d => {
+      const exp = (d.expiresAt as Timestamp)?.toMillis() ?? Infinity;
+      return exp > now;
+    })
     .sort((a, b) => {
       const ta = (a.createdAt as Timestamp)?.toMillis() ?? 0;
       const tb = (b.createdAt as Timestamp)?.toMillis() ?? 0;
@@ -208,6 +235,5 @@ export async function getCompletedChallenges(
   });
 }
 
-// Note : la purge des défis expirés (status → 'expired') sera gérée
-// par une Cloud Function Firestore. Côté client, les défis expirés sont
-// filtrés dans getReceivedChallenges() via leur champ expiresAt.
+// Les défis expirés sont supprimés physiquement de Firestore par purgeExpiredDocs(),
+// appelée dans getSentChallenges() et getReceivedChallenges() à chaque lecture.
