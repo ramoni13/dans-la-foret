@@ -73,7 +73,11 @@ export function computeFrameLayout(screenW: number, screenH: number, insetsBotto
   const menuH70 = Math.round(menuW70 * MENU_RATIO);
 
   // ── Zones de contenu ──────────────────────────────────────────────────────
-  /** Y du bas du coin haut = haut de la zone de contenu */
+  /**
+   * Padding top de la zone de contenu (scrollviews).
+   * Reste fixé à coinH pour conserver le même décalage visuel qu'avant —
+   * les coins dépassent légèrement dans la zone de contenu par le haut, c'est voulu.
+   */
   const innerTop  = coinH;
   /**
    * Nouveau layout bas :
@@ -105,16 +109,27 @@ export function computeFrameLayout(screenW: number, screenH: number, insetsBotto
 
   // ── Barre haute (zone coins) ───────────────────────────────────────────────
   const topBarH = coinH;
-  /** Y du centre visuel de la barre haute (pour compteur graines) */
-  const topBarCenterY = coinH / 2;
+  /**
+   * Y du centre visuel de la barre haute (centre géométrique des coins hauts).
+   * Les coins hauts sont positionnés top: topBarCenterY, donc leur centre vertical
+   * est à topBarCenterY + coinH/2.
+   * Le compteur de graines est centré sur la bordure haute (top: topBarCenterY,
+   * height: borderW) → centré en Y = topBarCenterY + borderW/2.
+   * Pour que le compteur descende avec les coins (et ne soit plus caché par
+   * l'objectif avant), on ajoute coinH/2 au décalage d'origine (coinH/2),
+   * ce qui amène les coins à commencer à coinH dp du bord supérieur.
+   */
+  const topBarCenterY = Math.round(coinH);
 
   /**
-   * Y du bord supérieur d'une icône de taille SIZE_ICON = 36 dp
-   * alignée avec le bas du coin haut (plan chantier 2).
-   * Calcul : top = coinH - SIZE_ICON → le bas de l'icône affleure le bas du coin.
+   * Y du bord supérieur du haut-parleur et du bouton retour.
+   * Centré dans la zone haute libre (entre 0 et borderVTop = topBarCenterY + coinH/2).
+   * Indépendant de topBarCenterY pour que ces éléments restent en haut.
    */
   const SIZE_ICON = 36;
-  const iconTopY  = Math.max(0, coinH - SIZE_ICON);
+  // Centre la zone libre haut = topBarCenterY + coinH/2 = coinH + coinH/2 = 3*coinH/2
+  // Centre l'icône dans cette zone : (3*coinH/2 - SIZE_ICON) / 2
+  const iconTopY  = Math.max(0, Math.round((topBarCenterY + coinH / 2 - SIZE_ICON) / 2));
 
   // ── Padding bas pour ScrollView (ne pas être caché par menu + bordure bas) ─
   const frameBottom = menuH70 + borderW;
