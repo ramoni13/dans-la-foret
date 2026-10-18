@@ -1,162 +1,327 @@
 // ============================================================
-// frameLayout.ts — Dimensions du cadre modulaire (ForestFrame)
+// HOOK DE PERSISTANCE — useStorage.ts
+// Charge et sauvegarde le playerStore dans AsyncStorage.
+// À appeler UNE SEULE FOIS dans le layout racine (_layout.tsx).
 //
-// Cadre assemblé à partir de 3 assets :
-//   coin.png      558×549  — coin bois (original = coin haut-droit)
-//   bordure.svg   21.76×278.4  — bande verticale extensible
-//   menu_bas.png  1352×318  — barre navigation basse
+// Clé de stockage : 'dlf_player_v1'
 //
-// Principe d'assemblage :
-//   ┌─[coin TG]──────────────[coin TD]─┐
-//   [bord G]     contenu          [bord D]
-//   └──────────[menu_bas]──────────────┘
-//
-// Les 4 coins sont symétriques (scaleX / scaleY).
-// Les bordures SVG s'étirent en hauteur (preserveAspectRatio="none").
-// Le menu_bas est centré en bas, hauteur calculée depuis son ratio natif.
+// ARCHITECTURE :
+//   - Le CHARGEMENT se fait via useEffect au premier mount (une seule fois).
+//   - La SAUVEGARDE utilise usePlayerStore.subscribe() (API Zustand vanilla)
+//     pour ne jamais créer de dépendances React instables qui bouclent.
+//     Elle est déclenchée uniquement quand les données persistables changent.
 // ============================================================
 
-import { useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePlayerStore } from '../store/playerStore';
+import { useAudioStore } from '../store/audioStore';
+import { Lang, getSystemLocale } from '../i18n/locale';
+import { DEFAULT_BADGE_GOALS } from '../core/engine/badgeEngine';
 
-// ── Ratios natifs ────────────────────────────────────────────────────────────
-/** coin.png : 558×549 — quasi carré */
-export const COIN_NATIVE_W = 558;
-export const COIN_NATIVE_H = 549;
-export const COIN_RATIO    = COIN_NATIVE_H / COIN_NATIVE_W; // ≈ 0.9839
+const STORAGE_KEY = 'dlf_player_v1';
+const AUDIO_STORAGE_KEY = 'dlf_audio_v1';
 
-/** menu_bas.png : 1352×318 */
-export const MENU_NATIVE_W = 1352;
-export const MENU_NATIVE_H = 318;
-export const MENU_RATIO    = MENU_NATIVE_H / MENU_NATIVE_W; // ≈ 0.2352
+// Sous-ensemble de l'audioStore à persister
+interface PersistedAudioState {
+  ingameEnabled: boolean;
+  menuEnabled: boolean;
+  volume: number;
+  selectedIngameTrackId: string;
+  selectedMenuTrackId: string;
+  /** IDs des musiques déjà possédées au dernier démarrage (évite de re-déclencher la modale) */
+  ownedTrackIds?: string[];
+}
 
-/**
- * Largeur rendue des coins : ~11% de la largeur d'écran, min 60 dp.
- * Les coins sont quasi-carrés → coinH ≈ coinW × COIN_RATIO.
- */
-export const COIN_W_FRACTION = 0.11; // fraction de screenW
+// Sous-ensemble du store à persister (on exclut les fonctions)
+interface PersistedPlayerState {
+  seeds: number;
+  completedChallenges: string[];
+  isPremium: boolean;
+  username: string;
+  language: string;
+  stats: {
+    totalSolved: number;
+    bestTimes: Record<string, number>;
+    currentStreak: number;
+    longestStreak: number;
+    noErrorStreak: number;
+    friendWins: number;
+    totalFriendsInvited: number;
+    topDEJCount: number;
+    sameChallengePlays: Record<string, number>;
+    failCount: Record<string, number>;
+    improvedChallengesCount: number;
+    seasonalChallengesPlayed: number;
+    speedBadgeHits: Record<string, number>;
+  };
+  // Badges
+  earnedBadges: string[];
+  badgeShowcase: string[];
+  // Streak quotidien
+  dailyStreak: number;
+  lastPlayedDate: string;
+  // Tutoriels bonus masqués
+  bonusTutorialDismissed: string[];
+  // Effet visuel en jeu
+  visualEffect: string;
+  // Défi journalier
+  dailyChallengeStreak: number;
+  longestDailyChallengeStreak: number;
+  lastDailyChallengeDate: string;
+  dailyChallengeStatus: string | null;
+  // Anti-triche
+  challengeStartedAt: Record<string, number>;
+  // Notifications amis
+  friendNotifBadgeEnabled: boolean;
+  // Mode ONF
+  onfSolvedCount: number;
+  // Amis défiés (pour badge social_poignee / social_cirque)
+  challengedFriendIds: string[];
+  // Objectifs actifs
+  activeBadgeGoals: string[];
+  goalCounters: Record<string, number>;
+}
 
-/**
- * Largeur rendue des bordures SVG : ~5% de la largeur d'écran, min 16 dp.
- * La bordure SVG fait 21.76 dp natifs sur un viewBox de 21.76 px de large.
- */
-export const BORDER_W_FRACTION = 0.05;
-
-/**
- * Fractions X des centres des 4 boutons nav dans menu_bas.png
- * (mesurées sur le PNG 1352px natif, ordre : accueil, règles, défi, profil)
- */
-export const BTN_X_CENTERS = [0.165, 0.397, 0.603, 0.835];
-
-/**
- * Fraction Y du centre des boutons dans menu_bas.png (≈ 50%)
- */
-export const BTN_Y_IN_MENU = 0.50;
-
-/**
- * Calcule toutes les dimensions du cadre modulaire pour un écran donné.
- *
- * @param screenW  Largeur d'écran en dp
- * @param screenH  Hauteur d'écran en dp (totale, avant insets)
- * @param insetsBottom  Insets bas (Android nav bar) en dp
- */
-export function computeFrameLayout(screenW: number, screenH: number, insetsBottom: number) {
-  // ── Dimensions des composants ─────────────────────────────────────────────
-  const coinW   = Math.max(60, Math.round(screenW * COIN_W_FRACTION));
-  const coinH   = Math.round(coinW * COIN_RATIO);
-
-  const menuH   = Math.round(screenW * MENU_RATIO);
-  const borderW = Math.max(16, Math.round(screenW * BORDER_W_FRACTION));
-  // Le menu est rendu à 70% de la largeur pleine
-  const menuW70 = Math.round(screenW * 0.7);
-  // menuH70 = hauteur du menu rendu à menuW70 (ratio natif conservé)
-  const menuH70 = Math.round(menuW70 * MENU_RATIO);
-
-  // ── Zones de contenu ──────────────────────────────────────────────────────
-  /**
-   * Padding top de la zone de contenu (scrollviews).
-   * Reste fixé à coinH pour conserver le même décalage visuel qu'avant —
-   * les coins dépassent légèrement dans la zone de contenu par le haut, c'est voulu.
-   */
-  const innerTop  = coinH;
-  /**
-   * Nouveau layout bas :
-   *   bordure basse : bottom: 0, hauteur: borderW
-   *   menu bas      : bottom: borderW, hauteur: menuH70
-   * Y du haut du menu = bas de la zone de contenu
-   */
-  const innerBottom = screenH - borderW - menuH70;
-  /** Padding horizontal interne (largeur bordure) */
-  const innerPadH = borderW;
-
-  // ── Positions des boutons nav ──────────────────────────────────────────────
-  /**
-   * Y du centre des boutons nav.
-   * Le menu est à bottom: borderW, donc son bord haut = screenH - borderW - menuH70.
-   * Le centre Y des icônes = bord haut du menu + BTN_Y_IN_MENU * menuH70.
-   */
-  const btnY = screenH - borderW - menuH70 + Math.round(menuH70 * BTN_Y_IN_MENU);
-  /**
-   * X de l'origine gauche du menu (centré dans screenW).
-   * Les btnX sont calculés depuis cette origine dans ForestFrame.
-   */
-  const menuLeft = Math.round((screenW - menuW70) / 2);
-  /**
-   * Rayon de la zone de tap : ~7.5% de menuW70.
-   * Proportionnel au menu, donc stable quelle que soit la résolution.
-   */
-  const tapHalf = Math.round(menuW70 * 0.075);
-
-  // ── Barre haute (zone coins) ───────────────────────────────────────────────
-  const topBarH = coinH;
-  /**
-   * Y du centre visuel de la barre haute (centre géométrique des coins hauts).
-   * Les coins hauts sont positionnés top: topBarCenterY, donc leur centre vertical
-   * est à topBarCenterY + coinH/2.
-   * Le compteur de graines est centré sur la bordure haute (top: topBarCenterY,
-   * height: borderW) → centré en Y = topBarCenterY + borderW/2.
-   * Pour que le compteur descende avec les coins (et ne soit plus caché par
-   * l'objectif avant), on ajoute coinH/2 au décalage d'origine (coinH/2),
-   * ce qui amène les coins à commencer à coinH dp du bord supérieur.
-   */
-  const topBarCenterY = Math.round(coinH);
-
-  /**
-   * Y du bord supérieur du haut-parleur et du bouton retour.
-   * Centré dans la zone haute libre (entre 0 et borderVTop = topBarCenterY + coinH/2).
-   * Indépendant de topBarCenterY pour que ces éléments restent en haut.
-   */
-  const SIZE_ICON = 36;
-  // Centre la zone libre haut = topBarCenterY + coinH/2 = coinH + coinH/2 = 3*coinH/2
-  // Centre l'icône dans cette zone : (3*coinH/2 - SIZE_ICON) / 2
-  const iconTopY  = Math.max(0, Math.round((topBarCenterY + coinH / 2 - SIZE_ICON) / 2));
-
-  // ── Padding bas pour ScrollView (ne pas être caché par menu + bordure bas) ─
-  const frameBottom = menuH70 + borderW;
-
+/** Extrait le sous-ensemble persistable depuis l'état Zustand courant */
+function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): PersistedPlayerState {
   return {
-    coinW, coinH,
-    menuH, menuW70, menuH70, menuLeft,
-    borderW,
-    innerTop,
-    innerBottom,
-    innerPadH,
-    btnY, tapHalf,
-    topBarH,
-    topBarCenterY,
-    iconTopY,
-    frameBottom,
+    seeds:               state.seeds,
+    completedChallenges: state.completedChallenges,
+    isPremium:           state.isPremium,
+    username:            state.username,
+    language:            state.language,
+    stats:               state.stats,
+    earnedBadges:        state.earnedBadges,
+    badgeShowcase:       state.badgeShowcase.filter(Boolean) as string[],
+    dailyStreak:         state.dailyStreak,
+    lastPlayedDate:      state.lastPlayedDate,
+    bonusTutorialDismissed: state.bonusTutorialDismissed as string[],
+    visualEffect:          state.visualEffect,
+    dailyChallengeStreak:           state.dailyChallengeStreak,
+    longestDailyChallengeStreak:    state.longestDailyChallengeStreak,
+    lastDailyChallengeDate:         state.lastDailyChallengeDate,
+    dailyChallengeStatus:      state.dailyChallengeStatus,
+    challengeStartedAt:        state.challengeStartedAt,
+    friendNotifBadgeEnabled:   state.friendNotifBadgeEnabled,
+    onfSolvedCount:            state.onfSolvedCount,
+    challengedFriendIds:       state.challengedFriendIds,
+    activeBadgeGoals:          state.activeBadgeGoals,
+    goalCounters:              state.goalCounters,
   };
 }
 
-/**
- * Hook — retourne toutes les dimensions du cadre pour l'écran courant.
- */
-export function useFrameLayout() {
-  const { width: screenW, height: screenH } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+export function useStorage() {
+  // saveTimeout est partagé entre les subscribers et le cleanup
+  const saveTimeoutRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Flag : true une fois le chargement initial terminé.
+  // Tant qu'il est false, syncOwnedFromBadges est appelé en mode silencieux
+  // pour éviter que la restauration des badges au démarrage déclenche la modale.
+  const bootDoneRef = useRef(false);
 
-  const layout = computeFrameLayout(screenW, screenH, insets.bottom);
+  // ── Chargement au démarrage ──────────────────────────────────────────────────
+  // S'exécute UNE SEULE FOIS au montage — pas de dépendances variables.
+  useEffect(() => {
+    // ── Chargement séquencé : player d'abord, puis audio, puis sync badges ──
+    // Les deux lectures sont lancées en parallèle mais syncOwnedFromBadges
+    // est appelé APRÈS hydrate() pour garantir que ownedTrackIds reflète
+    // bien les badges du joueur, quelle que soit l'ordre de résolution.
+    const playerPromise = AsyncStorage.getItem(STORAGE_KEY)
+      .then(raw => {
+        if (!raw) return null;
+        try {
+          const saved: PersistedPlayerState = JSON.parse(raw);
+          usePlayerStore.setState({
+            seeds:                saved.seeds               ?? 3,
+            completedChallenges:  saved.completedChallenges ?? [],
+            isPremium:            saved.isPremium           ?? false,
+            username:             saved.username            ?? 'Joueur',
+            language:            (saved.language as Lang)  ?? getSystemLocale(),
+            stats: {
+              totalSolved:              saved.stats?.totalSolved              ?? 0,
+              bestTimes:                saved.stats?.bestTimes                ?? {},
+              currentStreak:            saved.stats?.currentStreak            ?? 0,
+              longestStreak:            saved.stats?.longestStreak            ?? 0,
+              noErrorStreak:            saved.stats?.noErrorStreak            ?? 0,
+              friendWins:               saved.stats?.friendWins               ?? 0,
+              totalFriendsInvited:      saved.stats?.totalFriendsInvited      ?? 0,
+              topDEJCount:              saved.stats?.topDEJCount              ?? 0,
+              sameChallengePlays:       saved.stats?.sameChallengePlays       ?? {},
+              failCount:                saved.stats?.failCount                ?? {},
+              improvedChallengesCount:  saved.stats?.improvedChallengesCount  ?? 0,
+              seasonalChallengesPlayed: saved.stats?.seasonalChallengesPlayed ?? 0,
+              speedBadgeHits:           (saved.stats as any)?.speedBadgeHits  ?? {},
+              abandonCount:             (saved.stats as any)?.abandonCount    ?? {},
+              // Nouveaux champs (chantier 5)
+              dailyPlayed:              (saved.stats as any)?.dailyPlayed              ?? 0,
+              dailyWon:                 (saved.stats as any)?.dailyWon                 ?? 0,
+              friendPlayed:             (saved.stats as any)?.friendPlayed             ?? 0,
+              avgResolutionMs:          (saved.stats as any)?.avgResolutionMs          ?? 0,
+              totalResolutionCount:     (saved.stats as any)?.totalResolutionCount     ?? 0,
+              // Compteurs ONF et daily (refonte badges)
+              onfPerfectCount:          (saved.stats as any)?.onfPerfectCount          ?? 0,
+              onfSpeedCount:            (saved.stats as any)?.onfSpeedCount            ?? 0,
+              dailyPerfectCount:        (saved.stats as any)?.dailyPerfectCount        ?? 0,
+              dailySpeedCount:          (saved.stats as any)?.dailySpeedCount          ?? 0,
+            },
+            earnedBadges:    saved.earnedBadges    ?? [],
+            badgeShowcase:   (saved.badgeShowcase  ?? []) as [string?, string?, string?],
+            dailyStreak:     saved.dailyStreak     ?? 0,
+            lastPlayedDate:  saved.lastPlayedDate  ?? '',
+            bonusTutorialDismissed: (saved.bonusTutorialDismissed ?? []) as import('../constants/bonus').BonusId[],
+            visualEffect: (saved.visualEffect ?? 'leaves') as import('../store/playerStore').VisualEffect,
+            dailyChallengeStreak:        saved.dailyChallengeStreak        ?? 0,
+            longestDailyChallengeStreak: (saved as any).longestDailyChallengeStreak ?? 0,
+            lastDailyChallengeDate:      saved.lastDailyChallengeDate      ?? '',
+            dailyChallengeStatus:   (saved.dailyChallengeStatus  ?? null) as 'pending' | 'in_progress' | 'success' | 'failed' | null,
+            challengeStartedAt:     saved.challengeStartedAt     ?? {},
+            friendNotifBadgeEnabled: saved.friendNotifBadgeEnabled ?? true,
+            onfSolvedCount:         (saved as any).onfSolvedCount ?? 0,
+            challengedFriendIds:    (saved as any).challengedFriendIds ?? [],
+            activeBadgeGoals:       (saved as any).activeBadgeGoals ?? [...DEFAULT_BADGE_GOALS],
+            goalCounters:           (saved as any).goalCounters ?? {},
+          });
+          return saved.earnedBadges ?? [];
+        } catch {
+          console.warn('[useStorage] Données corrompues, réinitialisation.');
+          return null;
+        }
+      })
+      .catch(err => { console.warn('[useStorage] Erreur lecture:', err); return null; });
 
-  return { screenW, screenH, ...layout };
+    const audioPromise = AsyncStorage.getItem(AUDIO_STORAGE_KEY)
+      .then(rawAudio => {
+        if (!rawAudio) return;
+        try {
+          const savedAudio: PersistedAudioState = JSON.parse(rawAudio);
+          // Pré-remplir ownedTrackIds avec les pistes déjà connues au dernier démarrage.
+          // Cela évite que syncOwnedFromBadges() détecte à tort des "nouveaux déblocages"
+          // et affiche la modale MusicUnlockModal à chaque lancement.
+          if (savedAudio.ownedTrackIds && savedAudio.ownedTrackIds.length > 0) {
+            useAudioStore.setState({ ownedTrackIds: savedAudio.ownedTrackIds });
+          }
+          useAudioStore.getState().hydrate({
+            ingameEnabled:         savedAudio.ingameEnabled,
+            menuEnabled:           savedAudio.menuEnabled,
+            volume:                savedAudio.volume,
+            selectedIngameTrackId: savedAudio.selectedIngameTrackId,
+            selectedMenuTrackId:   savedAudio.selectedMenuTrackId,
+          });
+        } catch {
+          console.warn('[useStorage] Données audio corrompues, réinitialisation.');
+        }
+      })
+      .catch(err => console.warn('[useStorage] Erreur lecture audio:', err));
+
+    // Synchroniser les musiques débloquées APRÈS les deux chargements :
+    // silent=true → pas de modale au démarrage (pistes déjà connues du joueur)
+    Promise.all([playerPromise, audioPromise]).then(([earnedBadges]) => {
+      if (earnedBadges) {
+        useAudioStore.getState().syncOwnedFromBadges(earnedBadges, true);
+      }
+      // Marquer le boot comme terminé : les appels suivants du subscriber
+      // peuvent déclencher la modale (vrais nouveaux déblocages en jeu)
+      bootDoneRef.current = true;
+    });
+
+    // ── Sauvegarde audio via subscribe ──────────────────────────────────────
+    const unsubscribeAudio = useAudioStore.subscribe((newA, prevA) => {
+      const changed =
+        newA.ingameEnabled          !== prevA.ingameEnabled          ||
+        newA.menuEnabled            !== prevA.menuEnabled            ||
+        newA.volume                 !== prevA.volume                 ||
+        newA.selectedIngameTrackId  !== prevA.selectedIngameTrackId  ||
+        newA.selectedMenuTrackId    !== prevA.selectedMenuTrackId    ||
+        newA.ownedTrackIds.length   !== prevA.ownedTrackIds.length;
+
+      if (!changed) return;
+
+      if (audioSaveTimeoutRef.current) clearTimeout(audioSaveTimeoutRef.current);
+      audioSaveTimeoutRef.current = setTimeout(() => {
+        const a = useAudioStore.getState();
+        const toSave: PersistedAudioState = {
+          ingameEnabled:         a.ingameEnabled,
+          menuEnabled:           a.menuEnabled,
+          volume:                a.volume,
+          selectedIngameTrackId: a.selectedIngameTrackId,
+          selectedMenuTrackId:   a.selectedMenuTrackId,
+          // Persister les pistes possédées pour éviter de re-déclencher la modale au prochain démarrage
+          ownedTrackIds:         a.ownedTrackIds,
+        };
+        AsyncStorage.setItem(AUDIO_STORAGE_KEY, JSON.stringify(toSave))
+          .catch(err => console.warn('[useStorage] Erreur sauvegarde audio:', err));
+      }, 500);
+    });
+
+    // ── Sauvegarde via subscribe Zustand (hors cycle React) ─────────────────
+    // subscribe() reçoit (newState, prevState). On compare les clés primitives
+    // et les longueurs de tableaux pour décider si une sauvegarde est nécessaire.
+    // Cela évite complètement les problèmes de référence d'objet des useEffect deps.
+    const unsubscribe = usePlayerStore.subscribe((newState, prevState) => {
+      // Comparaison légère : on ne sauvegarde que si quelque chose a vraiment changé
+      const changed =
+        newState.seeds               !== prevState.seeds               ||
+        newState.isPremium           !== prevState.isPremium           ||
+        newState.username            !== prevState.username            ||
+        newState.language            !== prevState.language            ||
+        newState.dailyStreak         !== prevState.dailyStreak         ||
+        newState.lastPlayedDate      !== prevState.lastPlayedDate      ||
+        newState.earnedBadges.length !== prevState.earnedBadges.length ||
+        newState.completedChallenges.length !== prevState.completedChallenges.length ||
+        newState.badgeShowcase.join(',')    !== prevState.badgeShowcase.join(',')    ||
+        // Stats : comparer les valeurs numériques directes
+        newState.stats.totalSolved              !== prevState.stats.totalSolved              ||
+        newState.stats.currentStreak            !== prevState.stats.currentStreak            ||
+        newState.stats.longestStreak            !== prevState.stats.longestStreak            ||
+        newState.stats.noErrorStreak            !== prevState.stats.noErrorStreak            ||
+        newState.stats.friendWins               !== prevState.stats.friendWins               ||
+        newState.stats.totalFriendsInvited      !== prevState.stats.totalFriendsInvited      ||
+        newState.stats.topDEJCount              !== prevState.stats.topDEJCount              ||
+        newState.stats.improvedChallengesCount  !== prevState.stats.improvedChallengesCount  ||
+        JSON.stringify(newState.stats.speedBadgeHits) !== JSON.stringify(prevState.stats.speedBadgeHits) ||
+        newState.stats.seasonalChallengesPlayed !== prevState.stats.seasonalChallengesPlayed ||
+        newState.bonusTutorialDismissed.length  !== prevState.bonusTutorialDismissed.length ||
+        newState.visualEffect                   !== prevState.visualEffect ||
+        newState.dailyChallengeStreak           !== prevState.dailyChallengeStreak ||
+        newState.longestDailyChallengeStreak    !== prevState.longestDailyChallengeStreak ||
+        newState.lastDailyChallengeDate         !== prevState.lastDailyChallengeDate ||
+        newState.dailyChallengeStatus           !== prevState.dailyChallengeStatus ||
+        // Anti-triche : détecter changements dans le Record via référence
+        newState.challengeStartedAt             !== prevState.challengeStartedAt ||
+        newState.friendNotifBadgeEnabled        !== prevState.friendNotifBadgeEnabled ||
+        newState.onfSolvedCount                 !== prevState.onfSolvedCount ||
+        newState.challengedFriendIds.length     !== prevState.challengedFriendIds.length ||
+        newState.earnedBadges.length            !== prevState.earnedBadges.length        ||
+        newState.activeBadgeGoals.join(',')     !== prevState.activeBadgeGoals.join(',') ||
+        JSON.stringify(newState.goalCounters)   !== JSON.stringify(prevState.goalCounters);
+
+      if (!changed) return;
+
+      // Synchroniser les musiques débloquées quand de nouveaux badges sont obtenus.
+      // silent si le boot n'est pas encore terminé (chargement initial depuis AsyncStorage).
+      if (newState.earnedBadges.length !== prevState.earnedBadges.length) {
+        useAudioStore.getState().syncOwnedFromBadges(
+          newState.earnedBadges,
+          !bootDoneRef.current,
+        );
+      }
+
+      // Debounce 500 ms pour regrouper les écritures rapprochées (ex: awardBadges + addSeeds)
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        const toSave = extractPersistable(usePlayerStore.getState());
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave))
+          .catch(err => console.warn('[useStorage] Erreur sauvegarde:', err));
+      }, 500);
+    });
+
+    // Cleanup : annuler les subscribers et les timeouts en suspens
+    return () => {
+      unsubscribe();
+      unsubscribeAudio();
+      if (saveTimeoutRef.current)      clearTimeout(saveTimeoutRef.current);
+      if (audioSaveTimeoutRef.current) clearTimeout(audioSaveTimeoutRef.current);
+    };
+  }, []); // [] = s'exécute une seule fois, jamais rebranché
 }
