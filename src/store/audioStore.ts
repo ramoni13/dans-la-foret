@@ -59,8 +59,9 @@ interface AudioState {
    * Met à jour ownedTrackIds depuis les badges obtenus du joueur.
    * À appeler dès que playerStore.earnedBadges change (subscribe dans useStorage).
    * Logique : FREE_TRACK_IDS + pistes dont unlockBadgeId est dans earnedBadges.
+   * @param silent  Si true, ne déclenche pas la modale (utilisé au chargement initial)
    */
-  syncOwnedFromBadges: (earnedBadges: string[]) => void;
+  syncOwnedFromBadges: (earnedBadges: string[], silent?: boolean) => void;
 
   /**
    * Charge l'état audio persisté depuis AsyncStorage.
@@ -124,7 +125,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     return get().ownedTrackIds.includes(trackId);
   },
 
-  syncOwnedFromBadges: (earnedBadges) => {
+  syncOwnedFromBadges: (earnedBadges, silent = false) => {
     const newOwned = computeOwnedFromBadges(earnedBadges);
     const current = get().ownedTrackIds;
     // Éviter un set() inutile si le contenu est identique
@@ -132,6 +133,12 @@ export const useAudioStore = create<AudioState>((set, get) => ({
       newOwned.length === current.length &&
       newOwned.every(id => current.includes(id))
     ) return;
+
+    if (silent) {
+      // Chargement initial : mettre à jour la liste sans déclencher la modale
+      set({ ownedTrackIds: newOwned });
+      return;
+    }
 
     // Détecter les pistes nouvellement débloquées pour déclencher la popup
     const newlyUnlocked = newOwned.filter(id => !current.includes(id));
