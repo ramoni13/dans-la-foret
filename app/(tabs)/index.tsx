@@ -33,6 +33,7 @@ import { WoodButton } from '../../src/components/UI/WoodButton';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { ForetCommuneWidget } from '../../src/components/ForetCommune/ForetCommuneWidget';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
+import { useT } from '../../src/i18n';
 
 
 // ── Tous les défis (21 niveaux) ────────────────────────────────────────────────
@@ -132,6 +133,7 @@ function LevelsScreen({
   worldRecords: Map<string, WorldRecord>;
   initialLevelIndex: number;
 }) {
+  const t = useT();
   const insets  = useSafeAreaInsets();
   const { frameBottom, innerTop } = useFrameLayout();
   const player  = usePlayerStore();
@@ -170,7 +172,7 @@ function LevelsScreen({
 
       {/* Header titre */}
       <View style={[styles.levelsHeader, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
-        <Text style={styles.levelsHeaderTitle}>Tous les défis solo</Text>
+        <Text style={styles.levelsHeaderTitle}>{t('index_all_challenges')}</Text>
       </View>
 
       <ScrollView
@@ -203,7 +205,7 @@ function LevelsScreen({
               styles.levelCardLabel,
               { color: currentUnlocked ? selectedLevelDef.color : 'rgba(255,255,255,0.4)' },
             ]}>
-              {selectedLevelDef.label}
+              {t('level_prefix') + ' ' + selectedLevelDef.id.replace('niveau_', '')}
             </Text>
             <Text style={styles.levelCardDesc}>{selectedLevelDef.description}</Text>
 
@@ -249,11 +251,13 @@ function LevelsScreen({
         {!currentUnlocked ? (
           <View style={styles.lockedContainer}>
             <Text style={styles.lockedEmoji}>🔒</Text>
-            <Text style={styles.lockedTitle}>Niveau verrouillé</Text>
+            <Text style={styles.lockedTitle}>{t('index_level_locked_title')}</Text>
             <Text style={styles.lockedSubtitle}>
-              Terminez tous les défis du{' '}
-              {LEVELS[levelIndex - 1]?.label ?? 'niveau précédent'}{' '}
-              pour débloquer ce niveau.
+              {t('index_level_locked_sub', {
+                level: LEVELS[levelIndex - 1]
+                  ? t('level_prefix') + ' ' + LEVELS[levelIndex - 1].id.replace('niveau_', '')
+                  : t('index_prev_level'),
+              })}
             </Text>
           </View>
         ) : (
@@ -283,13 +287,13 @@ function LevelsScreen({
                   </View>
                   <View style={styles.challengeCenter}>
                     <Text style={[styles.challengeTitle, !unlocked && styles.challengeTitleLocked]}>
-                      {unlocked ? `Défi ${challenge.challengeNumber}` : '🔒 Verrouillé'}
+                      {unlocked ? t('index_challenge_label', { number: String(challenge.challengeNumber) }) : t('index_challenge_locked')}
                     </Text>
                     {unlocked && (
                       <View style={styles.challengeTimes}>
                         {bestTime
                           ? <Text style={styles.challengeBestTime}>⏱ {formatTime(bestTime)}</Text>
-                          : <Text style={styles.challengeNew}>Nouveau</Text>
+                          : <Text style={styles.challengeNew}>{t('index_challenge_new')}</Text>
                         }
                         {wr && (
                           <Text style={styles.challengeWr} numberOfLines={1}>
@@ -337,20 +341,22 @@ function SoloModal({
   totalChallenges: number;
   allCompleted: boolean;
 }) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const progress = totalChallenges > 0 ? totalCompleted / totalChallenges : 0;
 
   // Libellé du bouton "Jouer"
-  let playLabel = 'Commencer l\'aventure';
+  let playLabel = t('index_solo_start');
   let playSublabel = '';
   if (allCompleted) {
-    playLabel   = 'Rejouer depuis le début';
-    playSublabel = `${totalCompleted} / ${totalChallenges} · Tous terminés 🏆`;
+    playLabel   = t('index_solo_replay');
+    playSublabel = t('index_solo_all_done', { completed: String(totalCompleted), total: String(totalChallenges) });
   } else if (nextChallenge) {
     const levelChallenges = ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? [];
     const defIdx = levelChallenges.findIndex((c: any) => c.id === nextChallenge.challenge.id) + 1;
-    playLabel    = `▶  Jouer`;
-    playSublabel = `${nextChallenge.level.emoji} ${nextChallenge.level.label} · Défi ${defIdx} / ${levelChallenges.length}`;
+    const levelNum = nextChallenge.level.id.replace('niveau_', '');
+    playLabel    = t('index_solo_play_label');
+    playSublabel = t('index_solo_play_sublabel', { emoji: nextChallenge.level.emoji, level: t('level_prefix') + ' ' + levelNum, current: String(defIdx), total: String(levelChallenges.length) });
   }
 
   return (
@@ -386,11 +392,11 @@ function SoloModal({
           </TouchableOpacity>
 
           {/* Titre */}
-          <Text style={soloStyles.title}>🌲  Défi Solo</Text>
+          <Text style={soloStyles.title}>{t('index_solo_title')}</Text>
 
           {/* Progression */}
           <Text style={soloStyles.progressText}>
-            {totalCompleted} / {totalChallenges} complétés
+            {t('index_solo_progress', { completed: String(totalCompleted), total: String(totalChallenges) })}
           </Text>
           <View style={soloStyles.barBg}>
             <View style={[soloStyles.barFill, { width: `${Math.round(progress * 100)}%` }]} />
@@ -417,7 +423,7 @@ function SoloModal({
             onPress={onSeeAll}
             activeOpacity={0.8}
           >
-            <Text style={soloStyles.btnSeeAllText}>📋  Voir tous les niveaux</Text>
+            <Text style={soloStyles.btnSeeAllText}>{t('index_solo_see_all')}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
       </TouchableOpacity>
@@ -537,6 +543,7 @@ const soloStyles = StyleSheet.create({
 // Écran principal
 // ══════════════════════════════════════════════════════════════════════════════
 export default function HomeScreen() {
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { frameBottom, innerTop } = useFrameLayout();
@@ -665,16 +672,16 @@ export default function HomeScreen() {
       <View style={[styles.guardRoot, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
         <View style={styles.centered}>
           <Text style={styles.lockEmoji}>🔒</Text>
-          <Text style={styles.lockTitle}>Connexion requise</Text>
+          <Text style={styles.lockTitle}>{t('index_login_required')}</Text>
           <Text style={styles.lockDesc}>
-            Connecte-toi pour accéder à l'accueil et voir ta progression.
+            {t('index_login_required_desc')}
           </Text>
           <TouchableOpacity
             style={styles.btnLogin}
             onPress={() => router.push('/(tabs)/profile')}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnLoginText}>Se connecter</Text>
+            <Text style={styles.btnLoginText}>{t('index_btn_login')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -710,16 +717,18 @@ export default function HomeScreen() {
         <Animated.View style={{ transform: [{ translateY: fallSolo }] }}>
           <WoodButton
             variant="green"
-            label="Défi Solo"
+            label={t('index_solo_btn')}
             sublabel={
               allCompleted
-                ? `${totalCompleted} / ${totalChallenges} · Tous terminés 🏆`
+                ? t('index_solo_all_done', { completed: String(totalCompleted), total: String(totalChallenges) })
                 : nextChallenge
-                  ? `${nextChallenge.level.emoji} ${nextChallenge.level.label} · Défi ${
-                      (ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? [])
-                        .indexOf(nextChallenge.challenge) + 1
-                    } / ${(ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? []).length}`
-                  : `${totalCompleted} / ${totalChallenges} complétés`
+                  ? t('index_solo_play_sublabel', {
+                      emoji: nextChallenge.level.emoji,
+                      level: t('level_prefix') + ' ' + nextChallenge.level.id.replace('niveau_', ''),
+                      current: String((ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? []).indexOf(nextChallenge.challenge) + 1),
+                      total: String((ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? []).length),
+                    })
+                  : t('index_solo_progress', { completed: String(totalCompleted), total: String(totalChallenges) })
             }
             height={76}
             onPress={() => setShowSoloModal(true)}
@@ -737,8 +746,8 @@ export default function HomeScreen() {
             return (
               <WoodButton
                 variant="locked"
-                label="Défi du Jour"
-                sublabel={`Disponible au niveau ${DAILY_UNLOCK_LEVEL}`}
+                label={t('index_daily_btn')}
+                sublabel={t('daily_locked', { level: String(DAILY_UNLOCK_LEVEL) })}
                 height={76}
                 onPress={() => {}}
                 disabled
@@ -749,12 +758,12 @@ export default function HomeScreen() {
           if (!isDailyToday || !dailyStatus) {
             const dailySublabel = dailyLeader
               ? '🏆 ' + formatTime(dailyLeader.timeMs) + ' · ' + dailyLeader.username
-              : 'Soyez le 1er à le découvrir !';
+              : t('index_daily_discover');
             return (
               <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
                 <WoodButton
                   variant="yellow"
-                  label="Défi du Jour"
+                  label={t('index_daily_btn')}
                   sublabel={dailySublabel}
                   height={76}
                   onPress={() => router.push('/game/daily')}
@@ -773,20 +782,20 @@ export default function HomeScreen() {
             // Sublabel court : "Réussi · 2:34 · 🏆 1:58" ou si même joueur "Réussi · 🏆 2:34"
             let sublabelSuccess: string;
             if (isMyRecord && myTimeStr) {
-              sublabelSuccess = 'Réussi · 🏆 ' + myTimeStr;
+              sublabelSuccess = t('index_daily_done_record', { time: myTimeStr });
             } else if (myTimeStr && wrHolder) {
-              sublabelSuccess = 'Réussi · ' + myTimeStr + ' · 🏆 ' + formatTime(wrHolder.timeMs);
+              sublabelSuccess = t('index_daily_done_time_wr', { time: myTimeStr, wr: formatTime(wrHolder.timeMs) });
             } else if (myTimeStr) {
-              sublabelSuccess = 'Réussi · ' + myTimeStr;
+              sublabelSuccess = t('index_daily_done_time', { time: myTimeStr });
             } else {
-              sublabelSuccess = 'Réussi aujourd\'hui';
+              sublabelSuccess = t('index_daily_done');
             }
             return (
               <View style={styles.dailyDoneRow}>
                 <WoodButton
                   variant="locked"
                   lockIcon="✅"
-                  label="Défi du Jour"
+                  label={t('index_daily_btn')}
                   sublabel={sublabelSuccess}
                   showArrow={false}
                   height={76}
@@ -812,8 +821,8 @@ export default function HomeScreen() {
               <WoodButton
                 variant="locked"
                 lockIcon="❌"
-                label="Défi du Jour"
-                sublabel="Défi raté · Rendez-vous demain"
+                label={t('index_daily_btn')}
+                sublabel={t('index_daily_failed')}
                 showArrow={false}
                 height={76}
                 onPress={() => {}}
@@ -843,19 +852,19 @@ export default function HomeScreen() {
 
           // Sous-titre herbier
           const sublabelOnf = onfSolved === 0
-            ? 'Gagnez votre 1er défi !'
+            ? t('onf_btn_first_win')
             : cards === 1
-              ? `${onfSolved} défis résolus · 1 carte 🍃`
+              ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
               : cards > 1
-                ? `${onfSolved} défis résolus · ${cards} cartes 🍃`
-                : `${onfSolved} défi${onfSolved > 1 ? 's' : ''} résolus`;
+                ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
+                : t('onf_btn_stats_no_card', { count: String(onfSolved) });
 
           if (!isOnfUnlocked) {
             return (
               <WoodButton
                 variant="locked"
-                label="Défi ONF"
-                sublabel={`Disponible au niveau ${ONF_4X4_LEVEL_UNLOCK}`}
+                label={t('index_onf_btn')}
+                sublabel={t('daily_locked', { level: String(ONF_4X4_LEVEL_UNLOCK) })}
                 height={76}
                 onPress={() => {}}
                 disabled
@@ -866,7 +875,7 @@ export default function HomeScreen() {
           return (
             <WoodButton
               variant="green"
-              label="Défi ONF"
+              label={t('index_onf_btn')}
               sublabel={sublabelOnf}
               height={76}
               onPress={() => router.push('/game/onf-lobby')}

@@ -50,6 +50,7 @@ import { evaluateBadges, getClosestBadges, getBadgeProgress, GameContext } from 
 
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
+import { useT } from '../../src/i18n';
 
 // Donnees de defis embarquees (offline) — 10 niveaux
 import niveau1  from '../../src/data/challenges/niveau_1.json';
@@ -97,6 +98,7 @@ function computeCompletedLevels(completed: string[]): string[] {
 }
 
 export default function GameScreen() {
+  const t = useT();
   const { challengeId } = useLocalSearchParams<{ challengeId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -525,7 +527,7 @@ export default function GameScreen() {
   if (!challenge || !boardDef) {
     return (
       <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Chargement du défi…</Text>
+        <Text style={styles.loadingText}>{t('game_loading')}</Text>
       </View>
     );
   }
@@ -540,7 +542,7 @@ export default function GameScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={handleAbandon} style={styles.backBtn}>
-              <Text style={styles.backText}>{'\u2190'} Abandonner</Text>
+              <Text style={styles.backText}>{'← '}{t('abandon_confirm')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setBriefingForcedOpen(true)}
@@ -552,9 +554,9 @@ export default function GameScreen() {
 
           <View style={styles.headerCenter}>
             <Text style={styles.levelLabel}>
-              {challenge.level.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+              {t('level_prefix')} {levelNumber}
             </Text>
-            <Text style={styles.challengeLabel}>Défi {challenge.challengeNumber}</Text>
+            <Text style={styles.challengeLabel}>{t('victory_challenge_label', { number: String(challenge.challengeNumber) })}</Text>
           </View>
 
           <View style={styles.headerRight}>
@@ -601,7 +603,7 @@ export default function GameScreen() {
               activeOpacity={0.8}
               disabled={!allFilled}
             >
-              <Text style={styles.validateBtnText}>Valider ✓</Text>
+              <Text style={styles.validateBtnText}>{t('onf_validate')}</Text>
             </TouchableOpacity>
           }
         />

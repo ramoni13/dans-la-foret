@@ -53,6 +53,7 @@ import {
 } from '../../src/services/challengeService';
 import { updateSeeds } from '../../src/services/playerService';
 import { auth } from '../../src/services/firebase';
+import { useT } from '../../src/i18n';
 
 // ── Modal résultat Joueur A (après sa partie, avant envoi) ────────────────────
 function ChallengerResultModal({
@@ -65,6 +66,7 @@ function ChallengerResultModal({
   sent,
   onSend,
   onQuit,
+  t,
 }: {
   visible: boolean;
   myTime: number;
@@ -75,33 +77,36 @@ function ChallengerResultModal({
   sent: boolean;
   onSend: () => void;
   onQuit: () => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={rs.overlay}>
         <View style={rs.card}>
           <Text style={rs.emoji}>⏱️</Text>
-          <Text style={rs.title}>Défi résolu !</Text>
+          <Text style={rs.title}>{t('fc_result_solved_title')}</Text>
 
           <View style={rs.timeBlock}>
-            <Text style={rs.timeLabel}>Ton temps</Text>
+            <Text style={rs.timeLabel}>{t('fc_result_my_time')}</Text>
             <Text style={rs.timeValue}>{formatTime(myTime)}</Text>
           </View>
 
           <View style={rs.infoBox}>
             <Text style={rs.infoText}>
-              Niveau du défi : <Text style={rs.infoStrong}>Niv. {challengeLevel}</Text>
+              {t('fc_result_level')}{' '}
+              <Text style={rs.infoStrong}>{t('fc_result_level_value', { level: String(challengeLevel) })}</Text>
             </Text>
             <Text style={rs.infoText}>
-              Ami ciblé : <Text style={rs.infoStrong}>{friendName}</Text>{' '}
-              <Text style={rs.infoLight}>(Niveau {friendLevel})</Text>
+              {t('fc_result_friend')}{' '}
+              <Text style={rs.infoStrong}>{friendName}</Text>{' '}
+              <Text style={rs.infoLight}>{t('fc_result_friend_level', { level: String(friendLevel) })}</Text>
             </Text>
           </View>
 
           {sent ? (
             <View style={rs.sentBox}>
-              <Text style={rs.sentText}>✅ Défi envoyé à {friendName} !</Text>
-              <Text style={rs.sentSub}>Il a 1 semaine pour relever le défi.</Text>
+              <Text style={rs.sentText}>{t('fc_result_sent', { friend: friendName })}</Text>
+              <Text style={rs.sentSub}>{t('fc_result_sent_sub')}</Text>
             </View>
           ) : (
             <View style={rs.btnGroup}>
@@ -113,7 +118,7 @@ function ChallengerResultModal({
               >
                 {sending
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={rs.btnSendText}>📤 Envoyer le défi</Text>
+                  : <Text style={rs.btnSendText}>{t('fc_result_send_btn')}</Text>
                 }
               </TouchableOpacity>
               <TouchableOpacity
@@ -122,14 +127,14 @@ function ChallengerResultModal({
                 activeOpacity={0.8}
                 disabled={sending}
               >
-                <Text style={rs.btnQuitText}>Quitter sans envoyer</Text>
+                <Text style={rs.btnQuitText}>{t('fc_result_quit_btn')}</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {sent && (
             <TouchableOpacity style={rs.btnClose} onPress={onQuit} activeOpacity={0.8}>
-              <Text style={rs.btnCloseText}>Retour aux défis</Text>
+              <Text style={rs.btnCloseText}>{t('fc_result_back_btn')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -147,6 +152,7 @@ function OpponentResultModal({
   seedsBeforeGain,
   onClose,
   confettiPieces: _confetti,
+  t,
 }: {
   visible: boolean;
   myTime: number;
@@ -155,6 +161,7 @@ function OpponentResultModal({
   seedsBeforeGain?: number;
   onClose: () => void;
   confettiPieces: any[];
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const diff = Math.abs(myTime - challengerTime);
 
@@ -258,23 +265,23 @@ function OpponentResultModal({
           )}
 
           <Text style={rs.emoji}>{iWon ? '🏆' : '😤'}</Text>
-          <Text style={rs.title}>{iWon ? 'Victoire !' : 'Défaite…'}</Text>
+          <Text style={rs.title}>{iWon ? t('fc_opponent_won') : t('fc_opponent_lost')}</Text>
 
           {iWon && (
             <View style={rs.rewardBox} onLayout={onRewardLayout}>
-              <Text style={rs.rewardText}>+{CHALLENGE_WINNER_SEEDS} 🌱 graines gagnées !</Text>
+              <Text style={rs.rewardText}>{t('fc_opponent_seeds', { count: String(CHALLENGE_WINNER_SEEDS) })}</Text>
             </View>
           )}
 
           <View style={rs.timesRow}>
             <View style={rs.timeBlock}>
-              <Text style={rs.timeLabel}>Ton temps</Text>
+              <Text style={rs.timeLabel}>{t('fc_opponent_my_time')}</Text>
               <Text style={[rs.timeValue, iWon && { color: Colors.forest.medium }]}>
                 {formatTime(myTime)}
               </Text>
             </View>
             <View style={rs.timeBlock}>
-              <Text style={rs.timeLabel}>Son temps</Text>
+              <Text style={rs.timeLabel}>{t('fc_opponent_their_time')}</Text>
               <Text style={[rs.timeValue, !iWon && { color: Colors.forest.medium }]}>
                 {formatTime(challengerTime)}
               </Text>
@@ -283,12 +290,12 @@ function OpponentResultModal({
 
           <Text style={rs.diff}>
             {iWon
-              ? `Gagné de ${formatTime(diff)} 🎉`
-              : `Perdu de ${formatTime(diff)} — revanche ?`}
+              ? t('fc_opponent_won_diff', { time: formatTime(diff) })
+              : t('fc_opponent_lost_diff', { time: formatTime(diff) })}
           </Text>
 
           <TouchableOpacity style={rs.btnClose} onPress={onClose} activeOpacity={0.8}>
-            <Text style={rs.btnCloseText}>Retour aux défis</Text>
+            <Text style={rs.btnCloseText}>{t('fc_result_back_btn')}</Text>
           </TouchableOpacity>
 
           {/* Graines volantes — absoluteFill dans la carte */}
@@ -312,6 +319,7 @@ function OpponentResultModal({
 
 // ── Écran principal ────────────────────────────────────────────────────────────
 export default function FriendChallengeScreen() {
+  const t = useT();
   const router = useRouter();
   const player = usePlayerStore();
   const params = useLocalSearchParams<{
@@ -527,7 +535,7 @@ export default function FriendChallengeScreen() {
         }
       }
     } catch {
-      if (Platform.OS === 'web') window.alert("Erreur lors de l'envoi. Réessaie.");
+      if (Platform.OS === 'web') window.alert(t('fc_send_error'));
     } finally {
       setSending(false);
     }
@@ -553,14 +561,14 @@ export default function FriendChallengeScreen() {
     return (
       <View style={[styles.loading, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={Colors.forest.medium} />
-        <Text style={styles.loadingText}>Préparation du défi…</Text>
+        <Text style={styles.loadingText}>{t('fc_loading')}</Text>
       </View>
     );
   }
 
   const headerSub = isChallenger
-    ? `Défi Niv. ${challengeLevel} · Résous puis envoie à ${friendData?.username ?? '?'}`
-    : `Défi Niv. ${challengeLevel} · Battre ${formatTime(challengerTime)}`;
+    ? t('fc_header_sub_challenger', { level: String(challengeLevel), friend: friendData?.username ?? '?' })
+    : t('fc_header_sub_opponent', { level: String(challengeLevel), time: formatTime(challengerTime) });
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -571,10 +579,10 @@ export default function FriendChallengeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} style={styles.backBtn}>
-            <Text style={styles.backText}>← Quitter</Text>
+            <Text style={styles.backText}>{t('fc_quit')}</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>⚔️ Défi ami</Text>
+            <Text style={styles.headerTitle}>{t('fc_header_title')}</Text>
             <Text style={styles.headerSub}>{headerSub}</Text>
           </View>
           <View style={styles.timer}>
@@ -585,7 +593,7 @@ export default function FriendChallengeScreen() {
         {/* Bandeau sans bonus */}
         <View style={styles.noBonusBanner}>
           <Text style={styles.noBonusText}>
-            🚫 Bonus désactivés — conditions identiques pour les deux joueurs
+            {t('fc_no_bonus_banner')}
           </Text>
         </View>
 
@@ -597,7 +605,7 @@ export default function FriendChallengeScreen() {
             disabled={!allFilled}
             activeOpacity={0.8}
           >
-            <Text style={styles.validateBtnText}>Valider ✓</Text>
+            <Text style={styles.validateBtnText}>{t('fc_validate')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -638,6 +646,7 @@ export default function FriendChallengeScreen() {
             sent={sent}
             onSend={handleSendChallenge}
             onQuit={handleClose}
+            t={t}
           />
         )}
 
@@ -654,6 +663,7 @@ export default function FriendChallengeScreen() {
             seedsBeforeGain={seedsBeforeGain}
             onClose={handleClose}
             confettiPieces={confettiPieces}
+            t={t}
           />
         )}
 
@@ -663,7 +673,7 @@ export default function FriendChallengeScreen() {
             <View style={rs.overlay}>
               <View style={rs.card}>
                 <ActivityIndicator size="large" color={Colors.forest.medium} />
-                <Text style={{ color: Colors.ui.textLight, marginTop: 12 }}>Enregistrement…</Text>
+                <Text style={{ color: Colors.ui.textLight, marginTop: 12 }}>{t('fc_result_recording')}</Text>
               </View>
             </View>
           </Modal>
@@ -683,14 +693,14 @@ export default function FriendChallengeScreen() {
           iconBg={'#FFF3E0'}
           iconBorder={'#FFE0B2'}
           borderColor={'#FF9800'}
-          title={'Abandonner le d\u00e9fi ?'}
+          title={t('friend_challenge_abandon_title')}
           message={
             isChallenger
-              ? 'Si tu quittes maintenant, ton jeton d\u00e9fi ami sera perdu d\u00e9finitivement.'
-              : 'Si tu quittes maintenant, tu perds ce d\u00e9fi et ton ami sera d\u00e9clar\u00e9 vainqueur.'
+              ? t('friend_challenge_abandon_msg_challenger')
+              : t('friend_challenge_abandon_msg_opponent')
           }
-          confirmLabel={'Continuer \u00e0 jouer'}
-          cancelLabel={'Abandonner'}
+          confirmLabel={t('friend_challenge_abandon_continue')}
+          cancelLabel={t('friend_challenge_abandon_confirm')}
           onConfirm={() => setShowAbandonModal(false)}
           onCancel={handleConfirmAbandon}
         />

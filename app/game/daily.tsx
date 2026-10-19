@@ -60,6 +60,7 @@ import { Challenge, FixedPlacement, TokenCount } from '../../src/core/models/Cha
 import { notificationError } from '../../src/utils/haptics';
 import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
 import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
+import { useT } from '../../src/i18n';
 
 const native = Platform.OS !== 'web';
 
@@ -71,6 +72,7 @@ interface DailyFailModalProps {
 }
 
 const DailyFailModal: React.FC<DailyFailModalProps> = ({ visible, onBackToMenu }) => {
+  const t = useT();
   const scaleAnim   = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim   = useRef(new Animated.Value(0)).current;
@@ -124,9 +126,9 @@ const DailyFailModal: React.FC<DailyFailModalProps> = ({ visible, onBackToMenu }
           </Animated.View>
 
           <Text style={failStyles.emoji}>{'\u274C'}</Text>
-          <Text style={failStyles.title}>Dommage !</Text>
+          <Text style={failStyles.title}>{t('daily_fail_title')}</Text>
           <Text style={failStyles.message}>
-            Rendez-vous demain pour un nouveau defi
+            {t('daily_fail_message')}
           </Text>
 
           <TouchableOpacity
@@ -134,7 +136,7 @@ const DailyFailModal: React.FC<DailyFailModalProps> = ({ visible, onBackToMenu }
             onPress={onBackToMenu}
             activeOpacity={0.8}
           >
-            <Text style={failStyles.btnBackText}>Retour</Text>
+            <Text style={failStyles.btnBackText}>{t('daily_fail_back')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
@@ -210,6 +212,7 @@ const failStyles = StyleSheet.create({
 // ── Ecran principal ──────────────────────────────────────────────────────────
 
 export default function DailyGameScreen() {
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -556,7 +559,7 @@ export default function DailyGameScreen() {
   if (loading) {
     return (
       <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Generation du defi du jour...</Text>
+        <Text style={styles.loadingText}>{t('daily_loading')}</Text>
       </View>
     );
   }
@@ -564,13 +567,13 @@ export default function DailyGameScreen() {
   if (generationError) {
     return (
       <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Impossible de generer le defi du jour</Text>
+        <Text style={styles.loadingText}>{t('daily_error')}</Text>
         <TouchableOpacity
           style={styles.errorBtn}
           onPress={() => router.replace('/(tabs)')}
           activeOpacity={0.8}
         >
-          <Text style={styles.errorBtnText}>Retour</Text>
+          <Text style={styles.errorBtnText}>{t('daily_error_back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -579,7 +582,7 @@ export default function DailyGameScreen() {
   if (!challenge || !boardDef) {
     return (
       <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Chargement du defi...</Text>
+        <Text style={styles.loadingText}>{t('game_loading')}</Text>
       </View>
     );
   }
@@ -594,13 +597,13 @@ export default function DailyGameScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={handleDailyBack} style={styles.backBtn}>
-              <Text style={styles.backText}>{'\u2190'} Abandonner</Text>
+              <Text style={styles.backText}>{t('daily_abandon_btn')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.levelLabel}>Defi du Jour</Text>
-            <Text style={styles.challengeLabel}>Clairiere Secrete</Text>
+            <Text style={styles.levelLabel}>{t('daily_title')}</Text>
+            <Text style={styles.challengeLabel}>{t('daily_location')}</Text>
           </View>
 
           <View style={styles.headerRight}>
@@ -629,10 +632,10 @@ export default function DailyGameScreen() {
           <View style={styles.dailyBannerInfo}>
             <Text style={styles.dailyBannerText}>
               {game.dailyValidationUsed
-                ? '\u26A0\uFE0F Validation utilisee'
-                : '\u26A1 Une seule validation !'}
+                ? t('daily_validation_used')
+                : t('daily_validation_single')}
             </Text>
-            <Text style={styles.dailyBannerSub}>Aucun bonus disponible</Text>
+            <Text style={styles.dailyBannerSub}>{t('daily_no_bonus')}</Text>
           </View>
           <TouchableOpacity
             style={[
@@ -644,7 +647,7 @@ export default function DailyGameScreen() {
             disabled={!allFilled || game.dailyValidationUsed}
           >
             <Text style={styles.validateBtnText}>
-              {game.dailyValidationUsed ? 'Utilis\u00e9e' : 'Valider \u2713'}
+              {game.dailyValidationUsed ? t('daily_validate_used_btn') : t('daily_validate_btn')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -685,7 +688,7 @@ export default function DailyGameScreen() {
           onBadgeQueueEmpty={() => setBadgeQueue([])}
           isNewWorldRecord={isNewDailyRecord}
           previousRecordHolder={isNewDailyRecord ? prevDailyRecordHolder : null}
-          nextChallengeLabel="Suite →"
+          nextChallengeLabel={t('daily_next')}
           onNextChallenge={() => {
             setRouletteVisible(true);
           }}

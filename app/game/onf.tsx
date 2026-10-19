@@ -30,6 +30,7 @@ import { useAudioStore } from '../../src/store/audioStore';
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { VictoryModal } from '../../src/components/Game/VictoryModal';
+import { FailModal } from '../../src/components/Game/FailModal';
 import { OnfBriefingModal } from '../../src/components/LevelBriefing/OnfBriefingModal';
 import { useGame } from '../../src/hooks/useGame';
 import { usePlayerStore } from '../../src/store/playerStore';
@@ -64,17 +65,20 @@ import { getJustUnlockedCard } from '../../src/utils/onfCards';
 import { TreeCard } from '../../src/data/treesData';
 import { ONFCardUnlockBanner } from '../../src/components/ONF/ONFCardUnlockBanner';
 import { TreeCardGallery } from '../../src/components/ONF/TreeCardGallery';
+import { useT } from '../../src/i18n';
 
 const native = Platform.OS !== 'web';
 
 // ── Constantes visuelles ─────────────────────────────────────────────────────
 
-/** Couleur pour les violations ligne/colonne */
-const ROW_COL_VIOLATION_COLOR = Colors.cell.wrong;
+// AIDE DÉSACTIVÉE : couleur rouge pour les violations ligne/colonne.
+// Réactiver si les joueurs demandent ce retour visuel.
+// const ROW_COL_VIOLATION_COLOR = Colors.cell.wrong;
 
 // ── Composant principal ──────────────────────────────────────────────────────
 
 export default function ONFGameScreen() {
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -89,8 +93,9 @@ export default function ONFGameScreen() {
   const [seedsEarned, setSeedsEarned] = useState(0);
   const [seedsBeforeGain, setSeedsBeforeGain] = useState(0);
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
-  /** Violations ligne/colonne calculées après la validation */
-  const [rowColViolationCells, setRowColViolationCells] = useState<number[]>([]);
+  // AIDE DÉSACTIVÉE : violations ligne/colonne calculées après la validation.
+  // Réactiver si les joueurs demandent ce retour visuel.
+  // const [rowColViolationCells, setRowColViolationCells] = useState<number[]>([]);
   /** Briefing affiché avant la première partie ONF */
   const [briefingDone, setBriefingDone] = useState(player.hasSeenOnfBriefing);
   const [showPremium, setShowPremium] = useState(false);
@@ -98,6 +103,7 @@ export default function ONFGameScreen() {
   const ONF_DAILY_LIMIT = 3;
   const dailyLimitReached = !player.isPremium && player.onfDailyCount >= ONF_DAILY_LIMIT;
 
+  const [showFailModal, setShowFailModal] = useState(false);
   const badgesEvaluatedRef = useRef(false);
   /** Nombre de validations incorrectes pendant cette partie ONF */
   const onfFailCountRef = useRef(0);
@@ -121,7 +127,8 @@ export default function ONFGameScreen() {
   //   sur le thread natif Android avec useNativeDriver:true).
   const pickAndLoad = useCallback((initialLoad = false) => {
     setAllCompleted(false);
-    setRowColViolationCells([]);
+    // setRowColViolationCells([]); // AIDE DÉSACTIVÉE
+    setShowFailModal(false);
     badgesEvaluatedRef.current = false;
     onfFailCountRef.current = 0;
 
@@ -189,17 +196,19 @@ export default function ONFGameScreen() {
 
   // ── Couleur des cases ─────────────────────────────────────
   const getCellColorOnf = useCallback((cellIndex: number): string => {
-    // 1. Violations après validation (rouge) — priorité maximale
-    if (rowColViolationCells.includes(cellIndex)) {
-      return ROW_COL_VIOLATION_COLOR;
-    }
-    // 2. Case fixe
+    // AIDE DÉSACTIVÉE : coloration rouge des cases en erreur après validation.
+    // Réactiver si les joueurs demandent ce retour visuel.
+    // if (rowColViolationCells.includes(cellIndex)) {
+    //   return ROW_COL_VIOLATION_COLOR;
+    // }
+
+    // Case fixe
     if (fixedCells.has(cellIndex)) {
       return Colors.cell.fixed;
     }
-    // 3. Vide
+    // Vide
     return Colors.cell.empty;
-  }, [rowColViolationCells, fixedCells]);
+  }, [fixedCells]);
 
   // ── Tap sur une case ──────────────────────────────────────
   const handleCellPress = useCallback((cellIndex: number) => {
@@ -234,15 +243,17 @@ export default function ONFGameScreen() {
     const rowColCells = rowColViolations.map(v => v.cellIndex);
 
     if (allViolations.length > 0) {
-      // Afficher les violations
-      setRowColViolationCells(rowColCells);
-      game.validateChallenge(); // met à jour game.validationResult pour les violations standard
+      // AIDE DÉSACTIVÉE : affichage des cases en erreur (rouge) après validation échouée.
+      // Réactiver si les joueurs demandent ce retour visuel.
+      // setRowColViolationCells(rowColCells);
+      // game.validateChallenge(); // met à jour game.validationResult pour les violations standard
       onfFailCountRef.current += 1;
+      setShowFailModal(true);
       return;
     }
 
     // 4. Victoire (solution correcte)
-    setRowColViolationCells([]);
+    // setRowColViolationCells([]); // AIDE DÉSACTIVÉE
     game.validateChallenge();
   }, [challenge, boardDef, game]);
 
@@ -372,12 +383,13 @@ export default function ONFGameScreen() {
     return () => sub.remove();
   }, []);
 
-  // ── Effacement des violations au prochain placement ───────
-  useEffect(() => {
-    if (rowColViolationCells.length > 0) {
-      setRowColViolationCells([]);
-    }
-  }, [game.playerBoard]);
+  // AIDE DÉSACTIVÉE : effacement des violations rouge au prochain placement.
+  // Réactiver si les joueurs demandent ce retour visuel.
+  // useEffect(() => {
+  //   if (rowColViolationCells.length > 0) {
+  //     setRowColViolationCells([]);
+  //   }
+  // }, [game.playerBoard]);
 
   // ── Limite quotidienne atteinte (free) ───────────────────
   if (dailyLimitReached) {
@@ -385,25 +397,24 @@ export default function ONFGameScreen() {
       <View style={[styles.loading, { paddingTop: insets.top }]}>
         <Text style={styles.allCompletedEmoji}>🌲</Text>
         <Text style={styles.allCompletedTitle}>
-          Limite journalière atteinte
+          {t('onf_daily_limit_title')}
         </Text>
         <Text style={styles.allCompletedText}>
-          Tu as joué {ONF_DAILY_LIMIT} grilles aujourd'hui.{'\n'}
-          Reviens demain ou passe en premium pour jouer sans limite.
+          {t('onf_daily_limit_msg', { count: String(ONF_DAILY_LIMIT) })}
         </Text>
         <TouchableOpacity
           style={styles.errorBtn}
           onPress={() => router.replace('/(tabs)')}
           activeOpacity={0.8}
         >
-          <Text style={styles.errorBtnText}>Retour à l'accueil</Text>
+          <Text style={styles.errorBtnText}>{t('onf_daily_limit_back')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.premiumBtn}
           onPress={() => setShowPremium(true)}
-          activeOpacity={0.85}
+          activeOpacity={0.8}
         >
-          <Text style={styles.premiumBtnText}>🌲 Passer en premium</Text>
+          <Text style={styles.premiumBtnText}>{t('onf_daily_limit_premium')}</Text>
         </TouchableOpacity>
         <PremiumCard
           visible={showPremium}
@@ -435,17 +446,17 @@ export default function ONFGameScreen() {
       <View style={[styles.loading, { paddingTop: insets.top }]}>
         <Text style={styles.allCompletedEmoji}>🏆</Text>
         <Text style={styles.allCompletedTitle}>
-          Félicitations !
+          {t('onf_all_completed_title')}
         </Text>
         <Text style={styles.allCompletedText}>
-          Vous avez réussi tous les défis ONF ({total}/{total}).
+          {t('onf_all_completed_msg', { count: String(total), total: String(total) })}
         </Text>
         <TouchableOpacity
           style={styles.errorBtn}
           onPress={() => router.replace('/(tabs)')}
           activeOpacity={0.8}
         >
-          <Text style={styles.errorBtnText}>Retour à l'accueil</Text>
+          <Text style={styles.errorBtnText}>{t('onf_back_home')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -454,7 +465,7 @@ export default function ONFGameScreen() {
   if (!challenge || !boardDef) {
     return (
       <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <Text style={styles.loadingText}>{t('onf_loading')}</Text>
       </View>
     );
   }
@@ -462,7 +473,7 @@ export default function ONFGameScreen() {
   // Progression : combien de défis restants
   const completedCount = player.completedOnfChallengeIds.length;
   const totalCount = getTotalOnfChallenges();
-  const gridLabel = `Défi ${completedCount + 1} / ${totalCount}`;
+  const gridLabel = t('onf_header_progress', { current: String(completedCount + 1), total: String(totalCount) });
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -485,12 +496,12 @@ export default function ONFGameScreen() {
               onPress={() => { game.resetGame(); router.replace('/(tabs)'); }}
               style={styles.backBtn}
             >
-              <Text style={styles.backText}>← Quitter</Text>
+              <Text style={styles.backText}>{t('onf_quit')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.levelLabel}>Défi ONF</Text>
+            <Text style={styles.levelLabel}>{t('onf_header_mode')}</Text>
             <Text style={styles.challengeLabel}>{gridLabel}</Text>
           </View>
 
@@ -513,7 +524,7 @@ export default function ONFGameScreen() {
         {/* ── Bannière contrainte sudoku ── */}
         <View style={styles.onfBanner}>
           <Text style={styles.onfBannerText}>
-            📊 1 élément max par ligne et par colonne
+            {t('onf_sudoku_banner')}
           </Text>
           <TouchableOpacity
             style={[
@@ -524,7 +535,7 @@ export default function ONFGameScreen() {
             activeOpacity={0.8}
             disabled={!allFilled}
           >
-            <Text style={styles.validateBtnText}>Valider ✓</Text>
+            <Text style={styles.validateBtnText}>{t('onf_validate')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -549,6 +560,18 @@ export default function ONFGameScreen() {
           fixedCells={fixedCells}
           selectedElement={game.selectedElement}
           onSelectElement={game.selectElement}
+          onClearAll={game.clearPlayerBoard}
+        />
+
+        {/* ── Modal échec ── */}
+        <FailModal
+          visible={showFailModal}
+          onRetry={() => setShowFailModal(false)}
+          onGiveUp={() => {
+            setShowFailModal(false);
+            game.resetGame();
+            router.replace('/(tabs)');
+          }}
         />
 
         {/* ── Modal victoire ── */}

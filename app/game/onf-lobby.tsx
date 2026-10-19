@@ -31,9 +31,11 @@ import { getUnlockedCardCount, getNextCard, getCardProgress } from '../../src/ut
 import { TREES_DATA } from '../../src/data/treesData';
 import { TreeCardView } from '../../src/components/ONF/TreeCardView';
 import { TreeCardGallery } from '../../src/components/ONF/TreeCardGallery';
+import { useT } from '../../src/i18n';
 
 // ── Composant ─────────────────────────────────────────────────────────────────
 export default function ONFLobbyScreen() {
+  const t       = useT();
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const player  = usePlayerStore();
@@ -82,11 +84,11 @@ export default function ONFLobbyScreen() {
             style={styles.backBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Text style={styles.backText}>← Retour</Text>
+            <Text style={styles.backText}>{t('onf_lobby_back')}</Text>
           </TouchableOpacity>
           <View style={styles.headerTitles}>
-            <Text style={styles.title}>🌲 Grille Forestière</Text>
-            <Text style={styles.subtitle}>Mode ONF</Text>
+            <Text style={styles.title}>🌲 {t('onf_lobby_title')}</Text>
+            <Text style={styles.subtitle}>{t('onf_lobby_mode')}</Text>
           </View>
           <View style={styles.backBtn} />
         </View>
@@ -96,16 +98,16 @@ export default function ONFLobbyScreen() {
           {/* Compteur de défis */}
           <Text style={styles.statsCount}>
             {onfSolvedCount === 0
-              ? 'Aucun défi réussi'
+              ? t('onf_lobby_solved_zero')
               : onfSolvedCount === 1
-                ? '1 défi réussi'
-                : `${onfSolvedCount} défis réussis`}
+                ? t('onf_lobby_solved_one')
+                : t('onf_lobby_solved_plural', { count: String(onfSolvedCount) })}
           </Text>
 
           <View style={styles.separator} />
 
           {/* Herbier progression */}
-          <Text style={styles.herbierTitle}>Herbier de la Forêt</Text>
+          <Text style={styles.herbierTitle}>{t('gallery_title')}</Text>
 
           {/* Barre de progression */}
           <View style={styles.progressBarBg}>
@@ -117,10 +119,12 @@ export default function ONFLobbyScreen() {
 
           {/* Texte sous la barre */}
           {collectionFull ? (
-            <Text style={styles.progressHelp}>Collection complète ! 🏆</Text>
+            <Text style={styles.progressHelp}>{t('onf_lobby_complete')}</Text>
           ) : (
             <Text style={styles.progressHelp}>
-              Encore {defisRestants} défi{defisRestants > 1 ? 's' : ''} pour débloquer une carte 🍃
+              {defisRestants === 1
+                ? t('onf_lobby_remaining', { n: String(defisRestants) })
+                : t('onf_lobby_remaining_plural', { n: String(defisRestants) })}
             </Text>
           )}
         </View>
@@ -128,7 +132,7 @@ export default function ONFLobbyScreen() {
         {/* ── Prochaine carte (verrouillée) ── */}
         {!collectionFull && nextCard && (
           <View style={styles.nextCardSection}>
-            <Text style={styles.nextCardLabel}>Prochaine carte</Text>
+            <Text style={styles.nextCardLabel}>{t('onf_lobby_next_card')}</Text>
             <View style={styles.nextCardWrapper}>
               <TreeCardView tree={nextCard} size="mini" locked />
             </View>
@@ -141,8 +145,7 @@ export default function ONFLobbyScreen() {
           onPress={handlePlay}
           activeOpacity={0.85}
         >
-          <Text style={styles.playBtnText}>Jouer</Text>
-          <Text style={styles.playBtnSub}>Grille {gridSize}×{gridSize}</Text>
+          <Text style={styles.playBtnText}>{t('onf_lobby_play')}</Text>
         </TouchableOpacity>
 
         {/* ── Bouton galerie ── */}
@@ -153,7 +156,7 @@ export default function ONFLobbyScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.galleryBtnText}>
-              Voir toutes mes cartes ({unlockedCount})
+              {t('onf_lobby_see_cards', { count: String(unlockedCount) })}
             </Text>
           </TouchableOpacity>
         )}

@@ -55,6 +55,7 @@ import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { formatTime } from '../../src/utils/boardUtils';
 import { ConfirmModal } from '../../src/components/Game/ConfirmModal';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
+import { useT } from '../../src/i18n';
 
 // Jetons : 3 par jour (reset quotidien), illimités en premium
 
@@ -71,26 +72,28 @@ function getLevelKey(level: number): string {
 type Tab = 'reçus' | 'envoyés' | 'terminés';
 
 // ── Helpers ────────────────────────────────────────────────
-function timeAgo(ts?: Timestamp): string {
+type TFn = (key: string, vars?: Record<string, string>) => string;
+
+function timeAgo(ts: Timestamp | undefined, t: TFn): string {
   if (!ts) return '';
   const diffMs  = Date.now() - ts.toMillis();
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1)  return 'à l\'instant';
-  if (diffMin < 60) return `il y a ${diffMin} min`;
+  if (diffMin < 1)  return t('challenge_time_just_now');
+  if (diffMin < 60) return t('challenge_time_minutes', { n: String(diffMin) });
   const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24)   return `il y a ${diffH}h`;
-  return `il y a ${Math.floor(diffH / 24)}j`;
+  if (diffH < 24)   return t('challenge_time_hours', { n: String(diffH) });
+  return t('challenge_time_days', { n: String(Math.floor(diffH / 24)) });
 }
 
-function expiresIn(ts?: Timestamp): string {
+function expiresIn(ts: Timestamp | undefined, t: TFn): string {
   if (!ts) return '';
   const diffMs = ts.toMillis() - Date.now();
-  if (diffMs <= 0) return 'expiré';
+  if (diffMs <= 0) return t('challenge_expires_past');
   const diffH = Math.floor(diffMs / 3600000);
   const diffD = Math.floor(diffH / 24);
-  if (diffH < 1)  return 'expire dans < 1h';
-  if (diffD < 1)  return `expire dans ${diffH}h`;
-  return `expire dans ${diffD}j`;
+  if (diffH < 1)  return t('challenge_expires_soon');
+  if (diffD < 1)  return t('challenge_expires_hours', { n: String(diffH) });
+  return t('challenge_expires_days', { n: String(diffD) });
 }
 
 function showAlert(title: string, message: string) {
@@ -115,6 +118,7 @@ function FriendSearchModal({
   onSelectFriend: (friend: PlayerSearchResult) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [query, setQuery]         = useState('');
   const [results, setResults]     = useState<PlayerSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -146,17 +150,17 @@ function FriendSearchModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={ms.card}>
-          <Text style={ms.title}>⚔️ Défier un ami</Text>
+          <Text style={ms.title}>{t('challenge_search_title')}</Text>
           <Text style={ms.subtitle}>
-            Ton niveau : <Text style={ms.levelBadge}>Niv. {myLevel}</Text>
+            {t('challenge_search_level')}<Text style={ms.levelBadge}>{t('challenge_search_level_badge', { level: String(myLevel) })}</Text>
           </Text>
           <Text style={ms.hint}>
-            Le défi sera au niveau le plus bas entre vous deux (minimum niveau 3, les niveaux 1-2 ne sont pas disponibles en mode défi).
+            {t('challenge_search_hint')}
           </Text>
 
           <TextInput
             style={ms.input}
-            placeholder="Chercher par pseudo…"
+            placeholder={t('challenge_search_placeholder')}
             placeholderTextColor={Colors.ui.textLight}
             value={query}
             onChangeText={setQuery}
@@ -182,11 +186,11 @@ function FriendSearchModal({
                   >
                     <View style={ms.rowLeft}>
                       <Text style={ms.username}>{p.username}</Text>
-                      <Text style={ms.levelText}>(Niveau {p.level})</Text>
+                      <Text style={ms.levelText}>{t('challenge_search_level_row', { level: String(p.level) })}</Text>
                     </View>
                     <View style={ms.rowRight}>
-                      <Text style={ms.challengeLevelLabel}>Défi</Text>
-                      <Text style={ms.challengeLevel}>Niv. {challengeLevel}</Text>
+                      <Text style={ms.challengeLevelLabel}>{t('challenge_search_defi_label')}</Text>
+                      <Text style={ms.challengeLevel}>{t('challenge_search_defi_level', { level: String(challengeLevel) })}</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -195,11 +199,11 @@ function FriendSearchModal({
           )}
 
           {query.length >= 2 && !searching && results.length === 0 && (
-            <Text style={ms.noResult}>Aucun joueur trouvé pour « {query} »</Text>
+            <Text style={ms.noResult}>{t('challenge_search_no_result', { query })}</Text>
           )}
 
           <TouchableOpacity style={ms.btnCancel} onPress={onClose} activeOpacity={0.8}>
-            <Text style={ms.btnCancelText}>Annuler</Text>
+            <Text style={ms.btnCancelText}>{t('challenge_search_cancel')}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -217,25 +221,26 @@ function ReceivedCard({
   onAccept: (item: FriendChallengeDoc) => void;
   onRefuse: (item: FriendChallengeDoc) => void;
 }) {
+  const t = useT();
   const level = item.challengeData?.level ?? '?';
   return (
     <View style={cardStyles.card}>
       <View style={cardStyles.header}>
-        <Text style={cardStyles.from}>⚔️ {item.challengerName} te défie !</Text>
-        <Text style={cardStyles.time}>{timeAgo(item.createdAt)}</Text>
+        <Text style={cardStyles.from}>{t('challenge_received_from', { name: item.challengerName })}</Text>
+        <Text style={cardStyles.time}>{timeAgo(item.createdAt, t)}</Text>
       </View>
       <View style={cardStyles.row}>
         <View style={cardStyles.stat}>
-          <Text style={cardStyles.statLabel}>Son temps</Text>
+          <Text style={cardStyles.statLabel}>{t('challenge_stat_their_time')}</Text>
           <Text style={cardStyles.statValue}>{formatTime(item.challengerTime)}</Text>
         </View>
         <View style={cardStyles.stat}>
-          <Text style={cardStyles.statLabel}>Niveau du défi</Text>
-          <Text style={cardStyles.statValue}>Niv. {level}</Text>
+          <Text style={cardStyles.statLabel}>{t('challenge_stat_level')}</Text>
+          <Text style={cardStyles.statValue}>{t('challenge_stat_level_value', { level: String(level) })}</Text>
         </View>
         <View style={cardStyles.stat}>
-          <Text style={cardStyles.statLabel}>Expire</Text>
-          <Text style={cardStyles.statExpire}>{expiresIn(item.expiresAt)}</Text>
+          <Text style={cardStyles.statLabel}>{t('challenge_stat_expires')}</Text>
+          <Text style={cardStyles.statExpire}>{expiresIn(item.expiresAt, t)}</Text>
         </View>
       </View>
       <View style={cardStyles.btnRow}>
@@ -244,14 +249,14 @@ function ReceivedCard({
           onPress={() => onRefuse(item)}
           activeOpacity={0.8}
         >
-          <Text style={cardStyles.btnRefuseText}>Refuser</Text>
+          <Text style={cardStyles.btnRefuseText}>{t('challenge_btn_refuse')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={cardStyles.btnAccept}
           onPress={() => onAccept(item)}
           activeOpacity={0.8}
         >
-          <Text style={cardStyles.btnAcceptText}>Relever le défi →</Text>
+          <Text style={cardStyles.btnAcceptText}>{t('challenge_btn_accept')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -260,6 +265,7 @@ function ReceivedCard({
 
 // ── Composant carte défi envoyé ─────────────────────────────
 function SentCard({ item }: { item: FriendChallengeDoc }) {
+  const t = useT();
   const isPending = item.status === 'pending';
   const isExpired = item.status === 'expired';
   const isRefused = item.status === 'refused';
@@ -268,25 +274,25 @@ function SentCard({ item }: { item: FriendChallengeDoc }) {
   return (
     <View style={cardStyles.card}>
       <View style={cardStyles.header}>
-        <Text style={cardStyles.from}>📤 Défi envoyé à {item.opponentName}</Text>
-        <Text style={cardStyles.time}>{timeAgo(item.createdAt)}</Text>
+        <Text style={cardStyles.from}>{t('challenge_sent_to', { name: item.opponentName })}</Text>
+        <Text style={cardStyles.time}>{timeAgo(item.createdAt, t)}</Text>
       </View>
       <View style={cardStyles.row}>
         <View style={cardStyles.stat}>
-          <Text style={cardStyles.statLabel}>Ton temps</Text>
+          <Text style={cardStyles.statLabel}>{t('challenge_stat_my_time')}</Text>
           <Text style={cardStyles.statValue}>{formatTime(item.challengerTime)}</Text>
         </View>
         <View style={cardStyles.stat}>
-          <Text style={cardStyles.statLabel}>Niveau</Text>
-          <Text style={cardStyles.statValue}>Niv. {level}</Text>
+          <Text style={cardStyles.statLabel}>{t('challenge_stat_level_short')}</Text>
+          <Text style={cardStyles.statValue}>{t('challenge_stat_level_value', { level: String(level) })}</Text>
         </View>
         <View style={cardStyles.stat}>
-          <Text style={cardStyles.statLabel}>Statut</Text>
+          <Text style={cardStyles.statLabel}>{t('challenge_stat_status')}</Text>
           <Text style={[
             cardStyles.statValue,
             (isExpired || isRefused) && { color: '#F44336', fontSize: 13 },
           ]}>
-            {isPending ? '⏳ En attente' : isExpired ? '💨 Expiré' : isRefused ? '❌ Refusé' : '✅ Répondu'}
+            {isPending ? t('challenge_status_pending') : isExpired ? t('challenge_status_expired') : isRefused ? t('challenge_status_refused') : t('challenge_status_answered')}
           </Text>
         </View>
       </View>
@@ -296,6 +302,7 @@ function SentCard({ item }: { item: FriendChallengeDoc }) {
 
 // ── Composant carte défi terminé ────────────────────────────
 function CompletedCard({ item, myUid }: { item: FriendChallengeDoc; myUid: string }) {
+  const t = useT();
   const iWon        = item.winnerId === myUid;
   const iChallenger = item.challengerUid === myUid;
   const myTime      = iChallenger ? item.challengerTime : (item.opponentTime ?? 0);
@@ -307,13 +314,13 @@ function CompletedCard({ item, myUid }: { item: FriendChallengeDoc; myUid: strin
     <View style={[cardStyles.card, iWon ? cardStyles.cardWon : cardStyles.cardLost]}>
       <View style={cardStyles.header}>
         <Text style={cardStyles.from}>
-          {iWon ? `🏆 Victoire ! (+${CHALLENGE_WINNER_SEEDS} 🌱)` : '😤 Défaite'}
+          {iWon ? t('challenge_won_label', { seeds: String(CHALLENGE_WINNER_SEEDS) }) : t('challenge_lost_label')}
         </Text>
-        <Text style={cardStyles.time}>{timeAgo(item.updatedAt)}</Text>
+        <Text style={cardStyles.time}>{timeAgo(item.updatedAt, t)}</Text>
       </View>
       <View style={cardStyles.row}>
         <View style={cardStyles.stat}>
-          <Text style={cardStyles.statLabel}>Ton temps</Text>
+          <Text style={cardStyles.statLabel}>{t('challenge_stat_my_time')}</Text>
           <Text style={[cardStyles.statValue, iWon && { color: Colors.forest.medium }]}>
             {formatTime(myTime)}
           </Text>
@@ -325,8 +332,8 @@ function CompletedCard({ item, myUid }: { item: FriendChallengeDoc; myUid: strin
           </Text>
         </View>
         <View style={cardStyles.stat}>
-          <Text style={cardStyles.statLabel}>Niveau</Text>
-          <Text style={cardStyles.statValue}>Niv. {level}</Text>
+          <Text style={cardStyles.statLabel}>{t('challenge_stat_level_short')}</Text>
+          <Text style={cardStyles.statValue}>{t('challenge_stat_level_value', { level: String(level) })}</Text>
         </View>
       </View>
     </View>
@@ -335,6 +342,7 @@ function CompletedCard({ item, myUid }: { item: FriendChallengeDoc; myUid: strin
 
 // ── Écran principal ─────────────────────────────────────────
 export default function ChallengeScreen() {
+  const t       = useT();
   const router  = useRouter();
   const player  = usePlayerStore();
   const insets  = useSafeAreaInsets();
@@ -385,7 +393,7 @@ export default function ChallengeScreen() {
   // Si pas de jeton → informer le joueur (pas d'alternative graines).
   const handleOpenSearch = () => {
     if (!uid || isAnon) {
-      showAlert('Connexion requise', 'Connecte-toi pour défier un ami.');
+      showAlert(t('challenge_alert_login_title'), t('challenge_alert_login_required'));
       return;
     }
 
@@ -393,8 +401,8 @@ export default function ChallengeScreen() {
 
     if (!hasToken) {
       showAlert(
-        'Plus de jeton aujourd\'hui',
-        'Tes 3 jetons quotidiens sont épuisés. Reviens demain ou passe en premium pour des jetons illimités.',
+        t('challenge_alert_no_tokens_title'),
+        t('challenge_alert_no_tokens_msg'),
       );
       return;
     }
@@ -478,7 +486,7 @@ export default function ChallengeScreen() {
 
       if (!challenge) {
         console.error('[Défi] Impossible de générer un défi — tous les niveaux ont échoué');
-        showAlert('Erreur', 'Impossible de générer un défi. Réessaie.');
+        showAlert(t('challenge_alert_error'), t('challenge_alert_gen_failed'));
         player.addFriendChallengeToken();
         return;
       }
@@ -505,7 +513,7 @@ export default function ChallengeScreen() {
       );
     } catch (err) {
       console.error('[Défi] Exception inattendue:', err);
-      showAlert('Erreur', `Erreur inattendue : ${err instanceof Error ? err.message : String(err)}`);
+      showAlert(t('challenge_alert_error'), err instanceof Error ? err.message : String(err));
       player.addFriendChallengeToken();
     } finally {
       setGenerating(false);
@@ -528,19 +536,19 @@ export default function ChallengeScreen() {
         await refuseFriendChallenge(item.id!);
         setReceived(prev => prev.filter(d => d.id !== item.id));
       } catch {
-        showAlert('Erreur', 'Impossible de refuser le défi. Réessaie.');
+        showAlert(t('challenge_alert_error'), t('challenge_alert_refuse_failed'));
       }
     };
 
     if (Platform.OS === 'web') {
-      if (window.confirm(`Refuser le défi de ${item.challengerName} ?`)) doRefuse();
+      if (window.confirm(t('challenge_confirm_refuse_msg', { name: item.challengerName }))) doRefuse();
     } else {
       Alert.alert(
-        'Refuser le défi',
-        `Refuser le défi de ${item.challengerName} ?`,
+        t('challenge_confirm_refuse_title'),
+        t('challenge_confirm_refuse_msg', { name: item.challengerName }),
         [
-          { text: 'Annuler', style: 'cancel' },
-          { text: 'Refuser', style: 'destructive', onPress: doRefuse },
+          { text: t('challenge_alert_cancel'), style: 'cancel' },
+          { text: t('challenge_alert_refuse'), style: 'destructive', onPress: doRefuse },
         ],
       );
     }
@@ -553,16 +561,16 @@ export default function ChallengeScreen() {
         <BgImage overlay={0.52} />
         <View style={[styles.centered, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
           <Text style={styles.emptyEmoji}>🔒</Text>
-          <Text style={[styles.emptyTitle, { color: '#fff' }]}>Connexion requise</Text>
+          <Text style={[styles.emptyTitle, { color: '#fff' }]}>{t('challenge_not_connected_title')}</Text>
           <Text style={[styles.emptyDesc, { color: 'rgba(255,255,255,0.75)' }]}>
-            Connecte-toi pour défier tes amis et comparer vos temps.
+            {t('challenge_not_connected_desc')}
           </Text>
           <TouchableOpacity
             style={styles.btnPrimary}
             onPress={() => router.push('/(tabs)/profile')}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnPrimaryText}>Se connecter</Text>
+            <Text style={styles.btnPrimaryText}>{t('challenge_not_connected_btn')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -576,9 +584,9 @@ export default function ChallengeScreen() {
         <BgImage overlay={0.52} />
         <View style={[styles.centered, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
           <Text style={styles.emptyEmoji}>🔒</Text>
-          <Text style={[styles.emptyTitle, { color: '#fff' }]}>Disponible au niveau {FRIENDS_UNLOCK_LEVEL}</Text>
+          <Text style={[styles.emptyTitle, { color: '#fff' }]}>{t('challenge_locked_title', { level: String(FRIENDS_UNLOCK_LEVEL) })}</Text>
           <Text style={[styles.emptyDesc, { color: 'rgba(255,255,255,0.75)' }]}>
-            Complète les premiers niveaux solo pour débloquer les défis entre amis.
+            {t('challenge_locked_desc')}
           </Text>
         </View>
       </View>
@@ -587,9 +595,9 @@ export default function ChallengeScreen() {
 
   // ── Rendu principal ───────────────────────────────────────
   const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'reçus',    label: 'Reçus',    count: received.length  },
-    { key: 'envoyés',  label: 'Envoyés',  count: sent.length      },
-    { key: 'terminés', label: 'Terminés', count: completed.length },
+    { key: 'reçus',    label: t('challenge_tab_received'), count: received.length  },
+    { key: 'envoyés',  label: t('challenge_tab_sent'),     count: sent.length      },
+    { key: 'terminés', label: t('challenge_tab_completed'), count: completed.length },
   ];
 
   return (
@@ -600,8 +608,8 @@ export default function ChallengeScreen() {
         <View style={styles.headerLeft}>
           <Image source={IMG_HACHES} style={styles.headerIcon} resizeMode="contain" />
           <View>
-            <Text style={styles.headerTitle}>Défis entre amis</Text>
-            <Text style={styles.headerLevel}>Ton niveau : {player.currentLevel}</Text>
+            <Text style={styles.headerTitle}>{t('challenge_header_title')}</Text>
+            <Text style={styles.headerLevel}>{t('challenge_header_level', { level: String(player.currentLevel) })}</Text>
           </View>
         </View>
       </View>
@@ -632,15 +640,15 @@ export default function ChallengeScreen() {
         >
           {generating
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.btnLaunchText}>🔍 Défier un ami</Text>
+            : <Text style={styles.btnLaunchText}>{t('challenge_btn_challenge')}</Text>
           }
         </TouchableOpacity>
         <Text style={styles.launchHint}>
           {player.isPremium
-            ? `Jetons illimités · Vainqueur : +${CHALLENGE_WINNER_SEEDS} 🌱`
+            ? t('challenge_tokens_unlimited', { seeds: String(CHALLENGE_WINNER_SEEDS) })
             : player.friendChallengeTokens > 0
-              ? `${player.friendChallengeTokens} jeton${player.friendChallengeTokens > 1 ? 's' : ''} aujourd'hui · Vainqueur : +${CHALLENGE_WINNER_SEEDS} 🌱`
-              : 'Plus de jeton aujourd\'hui · Reviens demain'
+              ? t(player.friendChallengeTokens > 1 ? 'challenge_tokens_available_other' : 'challenge_tokens_available_one', { count: String(player.friendChallengeTokens), seeds: String(CHALLENGE_WINNER_SEEDS) })
+              : t('challenge_tokens_none')
           }
         </Text>
         {!player.isPremium && player.friendChallengeTokens === 0 && (
@@ -649,7 +657,7 @@ export default function ChallengeScreen() {
             onPress={() => setShowPremium(true)}
             activeOpacity={0.85}
           >
-            <Text style={styles.btnPremiumText}>🌲 Passer en premium</Text>
+            <Text style={styles.btnPremiumText}>{t('challenge_btn_premium')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -693,8 +701,8 @@ export default function ChallengeScreen() {
               received.length === 0
                 ? <EmptyState
                     emoji="📭"
-                    title="Aucun défi reçu"
-                    desc="Quand un ami te défie, son défi apparaît ici."
+                    title={t('challenge_empty_received_title')}
+                    desc={t('challenge_empty_received_desc')}
                   />
                 : received.map(item => (
                     <ReceivedCard
@@ -711,8 +719,8 @@ export default function ChallengeScreen() {
               sent.length === 0
                 ? <EmptyState
                     emoji="📤"
-                    title="Aucun défi envoyé"
-                    desc="Défie un ami pour que ton défi apparaisse ici."
+                    title={t('challenge_empty_sent_title')}
+                    desc={t('challenge_empty_sent_desc')}
                   />
                 : sent.map(item => (
                     <SentCard key={item.id} item={item} />
@@ -724,8 +732,8 @@ export default function ChallengeScreen() {
               completed.length === 0
                 ? <EmptyState
                     emoji="🏁"
-                    title="Aucun défi terminé"
-                    desc="Tes résultats contre tes amis apparaîtront ici."
+                    title={t('challenge_empty_completed_title')}
+                    desc={t('challenge_empty_completed_desc')}
                   />
                 : completed.map(item => (
                     <CompletedCard key={item.id} item={item} myUid={uid} />

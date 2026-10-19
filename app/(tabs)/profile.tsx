@@ -42,8 +42,9 @@ import {
   sendPasswordReset,
 } from '../../src/services/authService';
 import { getPlayer, upsertPlayer } from '../../src/services/playerService';
-import { BadgeCollection } from '../../src/components/Badges/BadgeCollection';
+import { BadgeCollection, RankPanel } from '../../src/components/Badges/BadgeCollection';
 import { ActiveGoalCard } from '../../src/components/Badges/ActiveGoalCard';
+import { useT } from '../../src/i18n';
 
 import { LeaderboardScreen } from '../../src/components/Leaderboard/LeaderboardScreen';
 import { MusicPanel } from '../../src/components/Audio/MusicPanel';
@@ -62,6 +63,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { frameBottom, innerTop, innerPadH } = useFrameLayout();
   const { showBack, hideBack } = useNavStore();
+  const t = useT();
 
   // ── État Firebase Auth ────────────────────────────────────────────────────────
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
@@ -185,16 +187,16 @@ export default function ProfileScreen() {
   // ── Compat web/mobile ────────────────────────────────────────────────────────
   const showAlert = (message: string) => {
     if (Platform.OS === 'web') window.alert(message);
-    else Alert.alert('Information', message);
+    else Alert.alert(t('profile_alert_info'), message);
   };
 
   const showConfirm = (message: string, onConfirm: () => void) => {
     if (Platform.OS === 'web') {
       if (window.confirm(message)) onConfirm();
     } else {
-      Alert.alert('Confirmation', message, [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Confirmer', style: 'destructive', onPress: onConfirm },
+      Alert.alert(t('profile_alert_confirm_title'), message, [
+        { text: t('profile_alert_cancel'), style: 'cancel' },
+        { text: t('profile_alert_confirm'), style: 'destructive', onPress: onConfirm },
       ]);
     }
   };
@@ -202,11 +204,11 @@ export default function ProfileScreen() {
   // ── Handlers auth ─────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!email.trim() || !password.trim()) {
-      showAlert("Remplis l'email et le mot de passe.");
+      showAlert(t('profile_alert_fill_credentials'));
       return;
     }
     if (!isLogin && !username.trim()) {
-      showAlert('Choisis un nom de joueur.');
+      showAlert(t('profile_alert_choose_username'));
       return;
     }
     setSubmitting(true);
@@ -214,7 +216,7 @@ export default function ProfileScreen() {
       if (isLogin) await loginWithEmail(email.trim(), password);
       else         await registerWithEmail(email.trim(), password, username.trim());
     } catch (e: any) {
-      showAlert(e.message ?? 'Une erreur est survenue.');
+      showAlert(e.message ?? t('profile_alert_error'));
     } finally {
       setSubmitting(false);
     }
@@ -223,7 +225,7 @@ export default function ProfileScreen() {
   const handleGoogle = async () => {
     setSubmitting(true);
     try { await loginWithGoogle(); }
-    catch (e: any) { showAlert(e.message ?? 'Connexion Google échouée.'); }
+    catch (e: any) { showAlert(e.message ?? t('profile_alert_google_failed')); }
     finally { setSubmitting(false); }
   };
 
@@ -233,21 +235,21 @@ export default function ProfileScreen() {
       await sendPasswordReset(resetEmail || email);
       setResetSent(true);
     } catch (e: any) {
-      showAlert(e.message ?? 'Impossible d\'envoyer le lien de réinitialisation.');
+      showAlert(e.message ?? t('profile_alert_reset_failed'));
     } finally {
       setResetLoading(false);
     }
   };
 
   const handleLogout = () => {
-    showConfirm('Te déconnecter ? Ta progression locale est conservée.', async () => {
+    showConfirm(t('profile_confirm_logout'), async () => {
       await logout();
       player.logout();
     });
   };
 
   const handleReset = () => {
-    showConfirm('Réinitialiser toute ta progression ? Cette action est irréversible.', async () => {
+    showConfirm(t('profile_confirm_reset'), async () => {
       player.logout();
       await AsyncStorage.removeItem('dlf_player_v1');
     });
@@ -256,7 +258,7 @@ export default function ProfileScreen() {
   // ── Réinitialisation badges (Ramoni uniquement) ───────────────────────────────
   const handleResetBadges = () => {
     showConfirm(
-      'Réinitialiser tous tes badges ? (local + Firestore)\nLes objectifs actifs seront remis aux défauts.',
+      t('profile_confirm_reset_badges'),
       async () => {
         // 1. Zustand — réinitialisation locale immédiate (setState direct, un seul re-render)
         usePlayerStore.setState({
@@ -290,7 +292,7 @@ export default function ProfileScreen() {
         <BgImage overlay={0.52} />
         <View style={[styles.centered, { paddingTop: Math.max(insets.top, innerTop) }]}>
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={[styles.loadingText, { color: 'rgba(255,255,255,0.75)' }]}>Connexion en cours…</Text>
+          <Text style={[styles.loadingText, { color: 'rgba(255,255,255,0.75)' }]}>{t('profile_loading')}</Text>
         </View>
       </View>
     );
@@ -308,9 +310,9 @@ export default function ProfileScreen() {
             <View style={styles.avatar}>
               <Text style={styles.avatarEmoji}>🌲</Text>
             </View>
-            <Text style={styles.usernameText}>Dans la Forêt</Text>
+            <Text style={styles.usernameText}>{t('profile_app_title')}</Text>
             <Text style={styles.authSubtitle}>
-              Connecte-toi pour sauvegarder ta progression et défier tes amis
+              {t('profile_auth_subtitle')}
             </Text>
           </View>
 
@@ -319,13 +321,13 @@ export default function ProfileScreen() {
               style={[styles.toggleBtn, isLogin && styles.toggleBtnActive]}
               onPress={() => { setIsLogin(true); setShowForgotPassword(false); setResetSent(false); }}
             >
-              <Text style={[styles.toggleBtnText, isLogin && styles.toggleBtnTextActive]}>Connexion</Text>
+              <Text style={[styles.toggleBtnText, isLogin && styles.toggleBtnTextActive]}>{t('profile_login')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toggleBtn, !isLogin && styles.toggleBtnActive]}
               onPress={() => { setIsLogin(false); setShowForgotPassword(false); setResetSent(false); }}
             >
-              <Text style={[styles.toggleBtnText, !isLogin && styles.toggleBtnTextActive]}>Inscription</Text>
+              <Text style={[styles.toggleBtnText, !isLogin && styles.toggleBtnTextActive]}>{t('profile_register')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -333,7 +335,7 @@ export default function ProfileScreen() {
             {!isLogin && (
               <TextInput
                 style={styles.input}
-                placeholder="Nom de joueur"
+                placeholder={t('profile_placeholder_username')}
                 placeholderTextColor={Colors.ui.textLight}
                 value={username}
                 onChangeText={setUsername}
@@ -342,16 +344,16 @@ export default function ProfileScreen() {
             )}
             <TextInput
               style={styles.input}
-              placeholder="Adresse e-mail"
-              placeholderTextColor={Colors.ui.textLight}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+                placeholder={t('profile_placeholder_email')}
+                placeholderTextColor={Colors.ui.textLight}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
             <TextInput
-              style={styles.input}
-              placeholder="Mot de passe"
+                style={styles.input}
+                placeholder={t('profile_placeholder_password')}
               placeholderTextColor={Colors.ui.textLight}
               value={password}
               onChangeText={setPassword}
@@ -366,7 +368,7 @@ export default function ProfileScreen() {
               {submitting
                 ? <ActivityIndicator color="#fff" />
                 : <Text style={styles.btnPrimaryText}>
-                    {isLogin ? 'Se connecter' : 'Créer un compte'}
+                    {isLogin ? t('profile_btn_login') : t('profile_btn_register')}
                   </Text>
               }
             </TouchableOpacity>
@@ -377,7 +379,7 @@ export default function ProfileScreen() {
                 style={styles.forgotBtn}
                 activeOpacity={0.7}
               >
-                <Text style={styles.forgotBtnText}>Mot de passe oublié ?</Text>
+                <Text style={styles.forgotBtnText}>{t('profile_forgot_password')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -386,24 +388,23 @@ export default function ProfileScreen() {
             <View style={styles.forgotBox}>
               {resetSent ? (
                 <>
-                  <Text style={styles.forgotTitle}>✉️ E-mail envoyé !</Text>
+                  <Text style={styles.forgotTitle}>{t('profile_reset_sent_title')}</Text>
                   <Text style={styles.forgotDesc}>
-                    Un lien de réinitialisation a été envoyé à {resetEmail || email}.{'\n'}
-                    Vérifie tes spams si tu ne le reçois pas.
+                    {t('profile_reset_sent_desc', { email: resetEmail || email })}
                   </Text>
                   <TouchableOpacity style={styles.forgotBack} onPress={() => { setShowForgotPassword(false); setResetSent(false); }}>
-                    <Text style={styles.forgotBackText}>← Retour à la connexion</Text>
+                    <Text style={styles.forgotBackText}>{t('profile_forgot_back_login')}</Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <Text style={styles.forgotTitle}>Réinitialiser le mot de passe</Text>
+                  <Text style={styles.forgotTitle}>{t('profile_forgot_title')}</Text>
                   <Text style={styles.forgotDesc}>
-                    Saisis ton adresse e-mail et nous t'enverrons un lien.
+                    {t('profile_forgot_desc')}
                   </Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Adresse e-mail"
+                    placeholder={t('profile_placeholder_email')}
                     placeholderTextColor={Colors.ui.textLight}
                     value={resetEmail}
                     onChangeText={setResetEmail}
@@ -419,11 +420,11 @@ export default function ProfileScreen() {
                   >
                     {resetLoading
                       ? <ActivityIndicator color="#fff" />
-                      : <Text style={styles.btnPrimaryText}>Envoyer le lien</Text>
+                      : <Text style={styles.btnPrimaryText}>{t('profile_forgot_send')}</Text>
                     }
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.forgotBack} onPress={() => setShowForgotPassword(false)}>
-                    <Text style={styles.forgotBackText}>← Retour</Text>
+                    <Text style={styles.forgotBackText}>{t('profile_forgot_back')}</Text>
                   </TouchableOpacity>
                 </>
               )}
@@ -458,53 +459,49 @@ export default function ProfileScreen() {
       <View style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
-          <Text style={styles.sectionHeading}>📊 Statistiques</Text>
+          <Text style={styles.sectionHeading}>{t('profile_section_stats')}</Text>
           <View style={styles.statsGrid}>
             <StatCard
-              label="Défis résolus"
+              label={t('profile_stat_challenges')}
               value={String(totalAllModes)}
               emoji="🏆"
-              hint={"Total de tous tes défis gagnés : défis solo, défi du jour, défis entre amis et mode ONF."}
+              hint={t('profile_stat_challenges_hint')}
             />
             <StatCard
-              label="Série journalière"
+              label={t('profile_stat_streak')}
               value={
                 player.longestDailyChallengeStreak > 0
-                  ? `${player.dailyChallengeStreak} (record : ${player.longestDailyChallengeStreak})`
+                  ? t('profile_stat_streak_value', { current: String(player.dailyChallengeStreak), record: String(player.longestDailyChallengeStreak) })
                   : String(player.dailyChallengeStreak)
               }
               emoji="🔥"
-              hint={
-                `Série actuelle : ${player.dailyChallengeStreak} jour(s) consécutif(s).\n\n` +
-                `Ton record : ${player.longestDailyChallengeStreak} jour(s).\n\n` +
-                `Si tu rates un jour, la série repart à zéro mais ton record est conservé.`
-              }
+              hint={t('profile_stat_streak_hint', { current: String(player.dailyChallengeStreak), record: String(player.longestDailyChallengeStreak) })}
             />
             <StatCard
-              label="Précision journalière"
+              label={t('profile_stat_daily_accuracy')}
               value={
                 dailyPct !== null
                   ? `${dailyPct}%`
                   : '—'
               }
               emoji="📅"
-              hint={`Ton taux de réussite sur le défi du jour : ${player.stats.dailyWon} réussi(s) sur ${player.stats.dailyPlayed} tenté(s).`}
+              hint={t('profile_stat_daily_accuracy_hint', { won: String(player.stats.dailyWon), played: String(player.stats.dailyPlayed) })}
             />
             <StatCard
-              label="Défis entre amis"
+              label={t('profile_stat_friend_accuracy')}
               value={
                 friendPct !== null
                   ? `${friendPct}%`
                   : '—'
               }
               emoji="🤝"
-              hint={`Ton taux de victoire contre tes amis : ${player.stats.friendWins} victoire(s) sur ${player.stats.friendPlayed} partie(s) jouée(s).`}
+              hint={t('profile_stat_friend_accuracy_hint', { won: String(player.stats.friendWins), played: String(player.stats.friendPlayed) })}
             />
             <StatCard
-              label="Temps moyen"
+              label={t('profile_stat_avg_time')}
               value={avgBestTime !== null ? formatTime(avgBestTime) : '—'}
               emoji="⏱"
-              hint={"Temps moyen de résolution de tes défis solo. Calculé sur l'ensemble de tes meilleurs temps."}
+              hint={t('profile_stat_avg_time_hint')}
             />
           </View>
         </ScrollView>
@@ -518,12 +515,12 @@ export default function ProfileScreen() {
       <View style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
-          <Text style={styles.sectionHeading}>🏅 Badges</Text>
+          <Text style={styles.sectionHeading}>{t('profile_section_badges')}</Text>
 
           {/* ── Objectifs actifs ──────────────────────────────────────────── */}
           <View style={goalStyles.goalSection}>
             <View style={goalStyles.goalHeader}>
-              <Text style={goalStyles.goalTitle}>Mes objectifs</Text>
+              <Text style={goalStyles.goalTitle}>{t('profile_goals_title')}</Text>
             </View>
 
             <View style={goalStyles.goalList}>
@@ -548,16 +545,24 @@ export default function ProfileScreen() {
                     style={goalStyles.emptySlot}
                   >
                     <Text style={goalStyles.emptySlotEmoji}>🎯</Text>
-                    <Text style={goalStyles.emptySlotText}>Prochain objectif en attente</Text>
+                    <Text style={goalStyles.emptySlotText}>{t('profile_goal_empty_slot')}</Text>
                   </View>
                 );
               })}
             </View>
           </View>
 
+          {/* ── Rang forestier (complet avec paliers) ────────────────────── */}
+          <RankPanel
+            earnedBadges={player.earnedBadges}
+            language={player.language}
+            t={t}
+          />
+
           <BadgeCollection
             earnedBadges={player.earnedBadges}
             onBadgePress={() => {}}
+            hideRankPanel
           />
 
           {/* ── Bouton dev Ramoni uniquement ── */}
@@ -595,11 +600,11 @@ export default function ProfileScreen() {
       <View style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
-            <Text style={styles.sectionHeading}>⚙️ Réglages</Text>
+            <Text style={styles.sectionHeading}>{t('profile_section_settings')}</Text>
 
           {/* Langue */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Langue / Language</Text>
+            <Text style={styles.sectionTitle}>{t('profile_setting_language')}</Text>
             <View style={styles.langRow}>
               {(['fr', 'en'] as Lang[]).map(lang => (
                 <TouchableOpacity
@@ -622,9 +627,9 @@ export default function ProfileScreen() {
           {/* Toggle notification badge amis */}
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <Text style={styles.settingLabel}>⚔️ Badge défis amis</Text>
+              <Text style={styles.settingLabel}>{t('profile_setting_friend_badge')}</Text>
               <Text style={styles.settingDesc}>
-                Affiche un badge rouge sur l'onglet Amis quand un défi est en attente
+                {t('profile_setting_friend_badge_desc')}
               </Text>
             </View>
             <Switch
@@ -661,7 +666,7 @@ export default function ProfileScreen() {
 
           {/* Déconnexion */}
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
-            <Text style={styles.logoutBtnText}>🚪 Se déconnecter</Text>
+            <Text style={styles.logoutBtnText}>{t('profile_btn_logout')}</Text>
           </TouchableOpacity>
 
 
@@ -689,7 +694,7 @@ export default function ProfileScreen() {
             )}
           </View>
           <View style={styles.seedsBadge}>
-            <Text style={styles.seedsBadgeText}>🌱 {player.seeds} graines</Text>
+            <Text style={styles.seedsBadgeText}>{t('profile_seeds', { count: String(player.seeds) })}</Text>
           </View>
         </View>
 
@@ -703,23 +708,8 @@ export default function ProfileScreen() {
             activeOpacity={0.8}
           >
             <Text style={styles.tileEmoji}>📊</Text>
-            <Text style={styles.tileLabel}>Stats</Text>
-            <Text style={styles.tileSub}>{player.stats.totalSolved} défis</Text>
-          </TouchableOpacity>
-
-          {/* Rang forestier */}
-          <TouchableOpacity
-            style={styles.tile}
-            onPress={() => setActiveSection('classement')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.tileEmoji}>{currentRank.emoji}</Text>
-            <Text style={styles.tileLabel}>{rankLabel}</Text>
-            <Text style={styles.tileSub}>
-              {nextRank
-                ? `${playerScore} / ${nextRank.minScore} pts`
-                : `${playerScore} pts · Max`}
-            </Text>
+            <Text style={styles.tileLabel}>{t('profile_tile_stats')}</Text>
+            <Text style={styles.tileSub}>{t('profile_tile_stats_sub', { count: String(player.stats.totalSolved) })}</Text>
           </TouchableOpacity>
 
           {/* Badges */}
@@ -734,14 +724,25 @@ export default function ProfileScreen() {
               </View>
             )}
             <Text style={styles.tileEmoji}>🏅</Text>
-            <Text style={styles.tileLabel}>Badges</Text>
+            <Text style={styles.tileLabel}>{t('profile_tile_badges')}</Text>
             <Text style={styles.tileSub}>
               {hasGoalSlotFree
-                ? `${3 - goalSlotsToFill}/3 objectifs`
+                ? t('profile_tile_badges_sub_goals', { active: String(3 - goalSlotsToFill) })
                 : player.earnedBadges.length > 0
-                  ? `${player.earnedBadges.length} obtenus`
-                  : 'Aucun encore'}
+                  ? t('profile_tile_badges_sub_earned', { count: String(player.earnedBadges.length) })
+                  : t('profile_tile_badges_sub_none')}
             </Text>
+          </TouchableOpacity>
+
+          {/* Classement */}
+          <TouchableOpacity
+            style={styles.tile}
+            onPress={() => setActiveSection('classement')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.tileEmoji}>🌍</Text>
+            <Text style={styles.tileLabel}>{t('profile_tile_leaderboard')}</Text>
+            <Text style={styles.tileSub}>{t('profile_tile_leaderboard_sub')}</Text>
           </TouchableOpacity>
 
           {/* Réglages */}
@@ -750,9 +751,9 @@ export default function ProfileScreen() {
             onPress={() => setActiveSection('reglages')}
             activeOpacity={0.8}
           >
-            <Text style={styles.tileEmoji}>⚙️</Text>
-            <Text style={styles.tileLabel}>Réglages</Text>
-            <Text style={styles.tileSub}>Langue, musique…</Text>
+            <Text style={styles.tileEmoji}>{'⚙️'}</Text>
+            <Text style={styles.tileLabel}>{t('profile_tile_settings')}</Text>
+            <Text style={styles.tileSub}>{t('profile_tile_settings_sub')}</Text>
           </TouchableOpacity>
 
         </View>
@@ -772,6 +773,7 @@ function StatHintModal({ visible, label, emoji, hint, onClose }: {
   hint: string;
   onClose: () => void;
 }) {
+  const t = useT();
   const scaleAnim   = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -797,7 +799,7 @@ function StatHintModal({ visible, label, emoji, hint, onClose }: {
           <Text style={statStyles.modalTitle}>{label}</Text>
           <Text style={statStyles.modalBody}>{hint}</Text>
           <TouchableOpacity style={statStyles.modalBtn} onPress={onClose} activeOpacity={0.8}>
-            <Text style={statStyles.modalBtnText}>Compris</Text>
+            <Text style={statStyles.modalBtnText}>{t('profile_understood')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
