@@ -222,6 +222,7 @@ export function useGame() {
     setBonusDisabled: game.setBonusDisabled,
     selectElement: game.selectElement,
     removeElement: game.removeElement,
+    clearPlayerBoard: game.clearPlayerBoard,
     moveElement: game.moveElement,
     loadChallenge: game.loadChallenge,
     loadDailyChallenge: game.loadDailyChallenge,

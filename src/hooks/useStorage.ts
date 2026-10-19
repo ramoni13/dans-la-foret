@@ -29,6 +29,8 @@ interface PersistedAudioState {
   volume: number;
   selectedIngameTrackId: string;
   selectedMenuTrackId: string;
+  /** IDs des musiques déjà possédées au dernier démarrage (évite de re-déclencher la modale) */
+  ownedTrackIds?: string[];
 }
 
 // Sous-ensemble du store à persister (on exclut les fonctions)
@@ -113,6 +115,10 @@ export function useStorage() {
   // saveTimeout est partagé entre les subscribers et le cleanup
   const saveTimeoutRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Flag : true une fois le chargement initial terminé.
+  // Tant qu'il est false, syncOwnedFromBadges est appelé en mode silencieux
+  // pour éviter que la restauration des badges au démarrage déclenche la modale.
+  const bootDoneRef = useRef(false);
 
   // ── Chargement au démarrage ──────────────────────────────────────────────────
   // S'exécute UNE SEULE FOIS au montage — pas de dépendances variables.
@@ -189,6 +195,12 @@ export function useStorage() {
         if (!rawAudio) return;
         try {
           const savedAudio: PersistedAudioState = JSON.parse(rawAudio);
+          // Pré-remplir ownedTrackIds avec les pistes déjà connues au dernier démarrage.
+          // Cela évite que syncOwnedFromBadges() détecte à tort des "nouveaux déblocages"
+          // et affiche la modale MusicUnlockModal à chaque lancement.
+          if (savedAudio.ownedTrackIds && savedAudio.ownedTrackIds.length > 0) {
+            useAudioStore.setState({ ownedTrackIds: savedAudio.ownedTrackIds });
+          }
           useAudioStore.getState().hydrate({
             ingameEnabled:         savedAudio.ingameEnabled,
             menuEnabled:           savedAudio.menuEnabled,
@@ -203,11 +215,14 @@ export function useStorage() {
       .catch(err => console.warn('[useStorage] Erreur lecture audio:', err));
 
     // Synchroniser les musiques débloquées APRÈS les deux chargements :
-    // garantit que hydrate() ne peut plus écraser le résultat.
+    // silent=true → pas de modale au démarrage (pistes déjà connues du joueur)
     Promise.all([playerPromise, audioPromise]).then(([earnedBadges]) => {
       if (earnedBadges) {
-        useAudioStore.getState().syncOwnedFromBadges(earnedBadges);
+        useAudioStore.getState().syncOwnedFromBadges(earnedBadges, true);
       }
+      // Marquer le boot comme terminé : les appels suivants du subscriber
+      // peuvent déclencher la modale (vrais nouveaux déblocages en jeu)
+      bootDoneRef.current = true;
     });
 
     // ── Sauvegarde audio via subscribe ──────────────────────────────────────
@@ -217,7 +232,8 @@ export function useStorage() {
         newA.menuEnabled            !== prevA.menuEnabled            ||
         newA.volume                 !== prevA.volume                 ||
         newA.selectedIngameTrackId  !== prevA.selectedIngameTrackId  ||
-        newA.selectedMenuTrackId    !== prevA.selectedMenuTrackId;
+        newA.selectedMenuTrackId    !== prevA.selectedMenuTrackId    ||
+        newA.ownedTrackIds.length   !== prevA.ownedTrackIds.length;
 
       if (!changed) return;
 
@@ -230,6 +246,8 @@ export function useStorage() {
           volume:                a.volume,
           selectedIngameTrackId: a.selectedIngameTrackId,
           selectedMenuTrackId:   a.selectedMenuTrackId,
+          // Persister les pistes possédées pour éviter de re-déclencher la modale au prochain démarrage
+          ownedTrackIds:         a.ownedTrackIds,
         };
         AsyncStorage.setItem(AUDIO_STORAGE_KEY, JSON.stringify(toSave))
           .catch(err => console.warn('[useStorage] Erreur sauvegarde audio:', err));
@@ -280,9 +298,13 @@ export function useStorage() {
 
       if (!changed) return;
 
-      // Synchroniser les musiques débloquées quand de nouveaux badges sont obtenus
+      // Synchroniser les musiques débloquées quand de nouveaux badges sont obtenus.
+      // silent si le boot n'est pas encore terminé (chargement initial depuis AsyncStorage).
       if (newState.earnedBadges.length !== prevState.earnedBadges.length) {
-        useAudioStore.getState().syncOwnedFromBadges(newState.earnedBadges);
+        useAudioStore.getState().syncOwnedFromBadges(
+          newState.earnedBadges,
+          !bootDoneRef.current,
+        );
       }
 
       // Debounce 500 ms pour regrouper les écritures rapprochées (ex: awardBadges + addSeeds)

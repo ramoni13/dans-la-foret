@@ -55,6 +55,7 @@ interface GameState {
   placeElement: (cellIndex: number, elementId: string) => void;
   placeAndDeselect: (cellIndex: number, elementId: string) => void;
   removeElement: (cellIndex: number) => void;
+  clearPlayerBoard: () => void;
   moveElement: (fromCell: number, toCell: number) => void;
   selectElement: (elementId: string | null) => void;
   useBonus: (bonusId: BonusId) => void;
@@ -198,6 +199,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     set(updates);
+  },
+
+  clearPlayerBoard: () => {
+    const { currentChallenge, playerBoard } = get();
+    if (!currentChallenge) return;
+    const fixedSet = new Set(currentChallenge.fixedPlacements.map(fp => fp.cellIndex));
+    const newBoard = playerBoard.map((el, i) => (fixedSet.has(i) ? el : null));
+    set({ playerBoard: newBoard, selectedElement: null });
   },
 
   moveElement: (fromCell, toCell) => {

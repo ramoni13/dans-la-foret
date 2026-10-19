@@ -490,6 +490,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         return merged;
       })(),
     });
+
   },
 
   // ── Graines ───────────────────────────────────────────────
