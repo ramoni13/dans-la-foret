@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
+import { useT } from '../../i18n';
 
 export interface PremiumCardProps {
   visible: boolean;
@@ -26,15 +27,13 @@ export interface PremiumCardProps {
   onPurchase: () => void;
 }
 
-const AVANTAGES: { emoji: string; text: string }[] = [
-  { emoji: '🤝', text: 'Défi entre amis : 3/jour -> illimité' },
-  { emoji: '🌲', text: 'Mode ONF : 3/jour -> illimité' },
-  { emoji: '💡', text: 'Bonus Cases Valides : 3/jour -> illimité' },
-  { emoji: '🔴', text: 'Bonus Instinct : 3/jour -> illimité' },
-  { emoji: '🏅', text: 'Badge exclusif "Ami de la Forêt"' },
-];
+const AVANTAGE_EMOJIS = ['🤝', '🌲', '💡', '🔴', '🏅'] as const;
+const AVANTAGE_TKEYS = [
+  'premium_perk1', 'premium_perk2', 'premium_perk3', 'premium_perk4', 'premium_perk5',
+] as const;
 
 export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) {
+  const t = useT();
   const insets = useSafeAreaInsets();
 
   return (
@@ -65,29 +64,23 @@ export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) 
           <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
             {/* Titre */}
             <Text style={styles.mainEmoji}>🌲</Text>
-            <Text style={styles.title}>Soutenir la forêt</Text>
+            <Text style={styles.title}>{t('premium_title')}</Text>
 
             {/* Bloc ONF */}
             <View style={styles.onfBlock}>
-              <Text style={styles.onfText}>
-                1 € de ton achat est reversé à l'ONF
-              </Text>
-              <Text style={styles.onfText}>
-                pour planter de vrais arbres en France 🇫🇷
-              </Text>
+              <Text style={styles.onfText}>{t('premium_onf_line1')}</Text>
+              <Text style={styles.onfText}>{t('premium_onf_line2')}</Text>
             </View>
 
             {/* Séparateur */}
             <View style={styles.separator} />
 
             {/* Avantages */}
-            <Text style={styles.avantagesTitle}>
-              En passant en premium, tu débloques :
-            </Text>
-            {AVANTAGES.map((a, i) => (
+            <Text style={styles.avantagesTitle}>{t('premium_intro')}</Text>
+            {AVANTAGE_TKEYS.map((tKey, i) => (
               <View key={i} style={styles.avantageRow}>
-                <Text style={styles.avantageEmoji}>{a.emoji}</Text>
-                <Text style={styles.avantageText}>{a.text}</Text>
+                <Text style={styles.avantageEmoji}>{AVANTAGE_EMOJIS[i]}</Text>
+                <Text style={styles.avantageText}>{t(tKey)}</Text>
               </View>
             ))}
 
@@ -98,13 +91,11 @@ export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) 
               onPress={onPurchase}
               activeOpacity={0.85}
             >
-              <Text style={styles.purchaseBtnText}>Débloquer — 2,99 €</Text>
+              <Text style={styles.purchaseBtnText}>{t('premium_buy')}</Text>
             </TouchableOpacity>
 
             {/* Mention légale */}
-            <Text style={styles.legalText}>
-              Paiement unique · Sans abonnement
-            </Text>
+            <Text style={styles.legalText}>{t('premium_mention')}</Text>
           </ScrollView>
         </TouchableOpacity>
       </TouchableOpacity>

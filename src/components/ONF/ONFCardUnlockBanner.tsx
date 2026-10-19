@@ -21,6 +21,7 @@ import Animated, {
 import { Confetti, useConfetti } from '../Game/Confetti';
 import { TreeCard } from '../../data/treesData';
 import { TreeCardView } from './TreeCardView';
+import { useT } from '../../i18n';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface ONFCardUnlockBannerProps {
@@ -31,6 +32,7 @@ interface ONFCardUnlockBannerProps {
 
 // ── Composant ─────────────────────────────────────────────────────────────────
 export function ONFCardUnlockBanner({ card, onDiscover, onClose }: ONFCardUnlockBannerProps) {
+  const t = useT();
   const scale = useSharedValue(0);
   const confettiPieces = useConfetti(true);
 
@@ -62,7 +64,7 @@ export function ONFCardUnlockBanner({ card, onDiscover, onClose }: ONFCardUnlock
       <View style={styles.overlay}>
         <Animated.View style={[styles.banner, animatedStyle]}>
           {/* Titre */}
-          <Text style={styles.title}>🎊 1 carte débloquée !</Text>
+          <Text style={styles.title}>{t('onf_card_unlocked')}</Text>
 
           {/* Carte mini centrée */}
           <View style={styles.cardWrapper}>
@@ -75,7 +77,7 @@ export function ONFCardUnlockBanner({ card, onDiscover, onClose }: ONFCardUnlock
             onPress={onDiscover}
             activeOpacity={0.85}
           >
-            <Text style={styles.discoverBtnText}>Découvrir 🍃</Text>
+            <Text style={styles.discoverBtnText}>{t('onf_card_discover')}</Text>
           </TouchableOpacity>
 
           {/* Bouton continuer (ferme le banner sans ouvrir la galerie) */}
@@ -84,7 +86,7 @@ export function ONFCardUnlockBanner({ card, onDiscover, onClose }: ONFCardUnlock
             onPress={onClose}
             activeOpacity={0.7}
           >
-            <Text style={styles.continueBtnText}>Continuer</Text>
+            <Text style={styles.continueBtnText}>{t('onf_card_continue')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>

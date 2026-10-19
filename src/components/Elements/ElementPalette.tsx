@@ -22,6 +22,7 @@ import { ElementRegistry } from '../../elements/ElementRegistry';
 import { TokenCount } from '../../core/models/Challenge';
 import { Colors } from '../../constants/colors';
 import { impactLight } from '../../utils/haptics';
+import { useT } from '../../i18n';
 
 const ARROW_RIGHT = require('../../../assets/elements/design_app/fleche.png');
 const ARROW_LEFT  = require('../../../assets/elements/design_app/fleche_gauche.png');
@@ -209,6 +210,8 @@ interface ElementPaletteProps {
   fixedCells: Set<number>;
   selectedElement: string | null;
   onSelectElement: (elementId: string | null) => void;
+  /** Si fourni, affiche un bouton "Vider tout" à côté des flèches */
+  onClearAll?: () => void;
 }
 
 // Largeur du scroll à déplacer par tap de flèche
@@ -222,7 +225,9 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
   fixedCells,
   selectedElement,
   onSelectElement,
+  onClearAll,
 }) => {
+  const t = useT();
   const { width: screenWidth } = useWindowDimensions();
   const scrollRef   = useRef<ScrollView>(null);
   const scrollX     = useRef(0);
@@ -268,39 +273,64 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
 
   const showArrows = canScrollLeft || canScrollRight;
 
+  // Bouton "Vider tout" : actif seulement si au moins un jeton joueur est posé
+  const hasPlacedTokens = Object.values(placedCounts).some(c => c > 0);
+
   return (
     <View style={styles.container}>
-      {/* Titre + flèches à droite (uniquement si le contenu déborde) */}
+      {/* Titre centré + flèches à gauche + bouton Vider tout à droite */}
       <View style={styles.titleRow}>
-        <Text style={styles.title}>Jetons disponibles</Text>
-        {showArrows && (
-          <View style={styles.arrowsInline}>
+        {/* Flèches — toujours à gauche (visibles si contenu débordant) */}
+        <View style={styles.arrowsInline}>
+          {showArrows && (
+            <>
+              <TouchableOpacity
+                onPress={scrollLeft}
+                activeOpacity={canScrollLeft ? 0.7 : 0.3}
+                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                disabled={!canScrollLeft}
+              >
+                <Image
+                  source={ARROW_LEFT}
+                  style={[styles.arrowImg, !canScrollLeft && styles.arrowDisabled]}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={scrollRight}
+                activeOpacity={canScrollRight ? 0.7 : 0.3}
+                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                disabled={!canScrollRight}
+              >
+                <Image
+                  source={ARROW_RIGHT}
+                  style={[styles.arrowImg, !canScrollRight && styles.arrowDisabled]}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {/* Titre centré en absolu */}
+        <Text style={styles.title} pointerEvents="none">{t('palette_tokens_title')}</Text>
+
+        {/* Bouton Vider tout — toujours à droite (visible seulement si onClearAll fourni) */}
+        <View style={styles.clearBtnSlot}>
+          {onClearAll && (
             <TouchableOpacity
-              onPress={scrollLeft}
-              activeOpacity={canScrollLeft ? 0.7 : 0.3}
-              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-              disabled={!canScrollLeft}
+              onPress={onClearAll}
+              activeOpacity={hasPlacedTokens ? 0.7 : 0.9}
+              disabled={!hasPlacedTokens}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[styles.clearBtn, hasPlacedTokens && styles.clearBtnActive]}
             >
-              <Image
-                source={ARROW_LEFT}
-                style={[styles.arrowImg, !canScrollLeft && styles.arrowDisabled]}
-                resizeMode="contain"
-              />
+              <Text style={[styles.clearBtnText, hasPlacedTokens && styles.clearBtnTextActive]}>
+                {t('palette_clear_all')}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={scrollRight}
-              activeOpacity={canScrollRight ? 0.7 : 0.3}
-              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-              disabled={!canScrollRight}
-            >
-              <Image
-                source={ARROW_RIGHT}
-                style={[styles.arrowImg, !canScrollRight && styles.arrowDisabled]}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          </View>
-        )}
+          )}
+        </View>
       </View>
 
       {/* ScrollView sans flèches latérales — layout intact */}
@@ -342,7 +372,7 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
               remaining={remaining}
               tokenSize={tokenSize}
               onSelect={() => onSelectElement(isSelected ? null : elementId)}
-              label={elementDef.label}
+              label={t(`rules_element_${elementId}`)}
               elementDef={elementDef}
             />
           );
@@ -366,24 +396,51 @@ const styles = StyleSheet.create({
     elevation: 2,
     zIndex: 2,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+    marginLeft: 4,
+    marginRight: 4,
+  },
   title: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
     fontSize: 11,
     fontWeight: '600',
     color: Colors.ui.textLight,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-    marginLeft: 4,
-  },
   arrowsInline: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginLeft: 8,
+    minWidth: ARROW_SIZE * 2 + 4, // réserve l'espace même quand les flèches sont cachées
+  },
+  clearBtnSlot: {
+    minWidth: ARROW_SIZE * 2 + 4, // symétrique aux flèches pour équilibrer
+    alignItems: 'flex-end',
+  },
+  clearBtn: {
+    backgroundColor: Colors.ui.border,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  clearBtnActive: {
+    backgroundColor: '#F5E6C8',
+  },
+  clearBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  clearBtnTextActive: {
+    color: '#6D4C41',
   },
   arrowImg: {
     width: ARROW_SIZE,

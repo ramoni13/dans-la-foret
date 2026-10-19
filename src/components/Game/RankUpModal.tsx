@@ -84,6 +84,7 @@ export const RankUpModal: React.FC<RankUpModalProps> = ({
   seedsBeforeGain,
   onClose,
 }) => {
+  const t = useT();
   const language = usePlayerStore(s => s.language);
   const totalSeeds = usePlayerStore(s => s.seeds);
 
@@ -250,19 +251,19 @@ export const RankUpModal: React.FC<RankUpModalProps> = ({
           </View>
 
           {/* Titres */}
-          <Text style={styles.titleLabel}>Rang débloqué !</Text>
+          <Text style={styles.titleLabel}>{t('rank_up_unlocked')}</Text>
           <Text style={styles.rankName}>{rankLabel}</Text>
           <Text style={styles.promotion}>{previousRankLabel} → {rankLabel}</Text>
 
           {/* Récompense — SOURCE des graines */}
           <View style={styles.rewardRow} onLayout={onRewardLayout}>
-            <Text style={styles.rewardLabel}>Récompense</Text>
+            <Text style={styles.rewardLabel}>{t('rank_up_reward')}</Text>
             <Text style={styles.rewardValue}>+{seedsAwarded} 🌱</Text>
           </View>
 
           {/* Bouton */}
           <TouchableOpacity style={styles.btn} onPress={onClose} activeOpacity={0.85}>
-            <Text style={styles.btnText}>Super !</Text>
+            <Text style={styles.btnText}>{t('rank_up_ok')}</Text>
           </TouchableOpacity>
 
           {/* Animation aspiration graines */}

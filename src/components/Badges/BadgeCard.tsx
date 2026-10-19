@@ -13,8 +13,10 @@ import {
   Platform,
 } from 'react-native';
 
-import { BadgeDefinition, BadgeRarity } from '../../constants/badges';
+import { BadgeDefinition, BadgeRarity, getBadgeTexts } from '../../constants/badges';
 import { Colors } from '../../constants/colors';
+import { useT } from '../../i18n';
+import { usePlayerStore } from '../../store/playerStore';
 
 const native = Platform.OS !== 'web';
 
@@ -46,13 +48,6 @@ const RARITY_BG: Record<BadgeRarity, string> = {
   cristal: Colors.badges.cristalBg,
 };
 
-const RARITY_LABELS: Record<BadgeRarity, string> = {
-  bois:    '🟤 Bois',
-  pierre:  '⚪ Pierre',
-  or:      '🟡 Or',
-  cristal: '💎 Cristal',
-};
-
 export const BadgeCard: React.FC<BadgeCardProps> = ({
   badge,
   earned,
@@ -65,7 +60,10 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
   size = 'normal',
   musicUnlockTrackTitle,
 }) => {
-  const displayLabel = label ?? badge.label;
+  const t = useT();
+  const language = usePlayerStore(s => s.language);
+  const texts = getBadgeTexts(badge, language);
+  const displayLabel = label ?? texts.label;
   const scaleAnim = useRef(new Animated.Value(animateOnMount ? 0 : 1)).current;
   const glowAnim  = useRef(new Animated.Value(0)).current;
 
@@ -147,9 +145,7 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
         {/* Rareté */}
         <Text style={[styles.rarity, { color: rarityColor }]}>
           {isSecret ? '???'
-            : size === 'small'
-              ? badge.rarity
-              : RARITY_LABELS[badge.rarity]}
+            : t('rarity_' + badge.rarity)}
         </Text>
 
         {/* Libellé de progression */}
@@ -160,7 +156,7 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
         {/* Date d'obtention */}
         {earned && earnedAt && size !== 'small' && (
           <Text style={styles.earnedAt}>
-            {new Date(earnedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+            {new Date(earnedAt).toLocaleDateString(language === 'en' ? 'en-GB' : 'fr-FR', { day: '2-digit', month: 'short' })}
           </Text>
         )}
       </Animated.View>

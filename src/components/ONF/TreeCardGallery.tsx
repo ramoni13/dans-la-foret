@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TREES_DATA } from '../../data/treesData';
 import { getUnlockedCardCount, getCardProgress } from '../../utils/onfCards';
 import { TreeCardView } from './TreeCardView';
+import { useT } from '../../i18n';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 interface TreeCardGalleryProps {
@@ -35,6 +36,7 @@ export function TreeCardGallery({
   onfSolvedCount,
   initialCardId,
 }: TreeCardGalleryProps) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
 
@@ -112,9 +114,9 @@ export function TreeCardGallery({
         <View style={styles.header}>
           <View style={styles.headerLeft} />
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>🌲 Herbier de la Forêt</Text>
+            <Text style={styles.headerTitle}>🌲 {t('gallery_title')}</Text>
             <Text style={styles.headerSubtitle}>
-              {unlockedCount} / {TREES_DATA.length} cartes débloquées
+              {t('gallery_subtitle_unlocked', { owned: String(unlockedCount), total: String(TREES_DATA.length) })}
             </Text>
           </View>
           <TouchableOpacity
@@ -138,7 +140,7 @@ export function TreeCardGallery({
               />
             </View>
             <Text style={styles.progressText}>
-              {progress.current}/{progress.total} défis avant la prochaine carte
+              {t('gallery_progress_text', { current: String(progress.current), total: String(progress.total) })}
             </Text>
           </View>
         )}
@@ -147,10 +149,8 @@ export function TreeCardGallery({
         {total === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>🌱</Text>
-            <Text style={styles.emptyTitle}>Votre herbier est vide</Text>
-            <Text style={styles.emptyDesc}>
-              Remportez votre 1er défi ONF pour débloquer votre première carte !
-            </Text>
+            <Text style={styles.emptyTitle}>{t('gallery_empty_title')}</Text>
+            <Text style={styles.emptyDesc}>{t('gallery_empty_desc')}</Text>
           </View>
         ) : (
           <>
@@ -208,7 +208,7 @@ export function TreeCardGallery({
             </View>
 
             {/* Hint flip */}
-            <Text style={styles.flipHint}>Toucher la carte pour la retourner</Text>
+            <Text style={styles.flipHint}>{t('gallery_flip_hint')}</Text>
 
             {/* Indicateurs de points (dots) */}
             {total <= 20 && (

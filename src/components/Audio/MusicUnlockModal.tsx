@@ -16,6 +16,7 @@ import {
 import { Colors } from '../../constants/colors';
 import { useConfetti, Confetti } from '../Game/Confetti';
 import { MUSIC_CATALOG } from '../../constants/music';
+import { useT } from '../../i18n';
 
 const native = Platform.OS !== 'web';
 
@@ -30,11 +31,12 @@ export const MusicUnlockModal: React.FC<MusicUnlockModalProps> = ({
   trackId,
   onClose,
 }) => {
+  const t = useT();
   const scaleAnim   = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const confettiPieces = useConfetti(visible);
 
-  const track = trackId ? MUSIC_CATALOG.find(t => t.id === trackId) : null;
+  const track = trackId ? MUSIC_CATALOG.find(tr => tr.id === trackId) : null;
 
   useEffect(() => {
     if (visible) {
@@ -71,25 +73,23 @@ export const MusicUnlockModal: React.FC<MusicUnlockModalProps> = ({
           style={[styles.card, { transform: [{ scale: scaleAnim }] }]}
         >
           <Text style={styles.emoji}>🎵</Text>
-          <Text style={styles.title}>Nouveau titre débloqué !</Text>
+          <Text style={styles.title}>{t('music_unlock_title')}</Text>
           <View style={styles.trackBadge}>
             <Text style={styles.trackTypeLabel}>
-              {track.type === 'ingame' ? '🎮 Ambiance Défi' : '🌲 Ambiance Forêt'}
+              {track.type === 'ingame' ? `🎮 ${t('music_type_ingame')}` : `🌲 ${t('music_type_menu')}`}
             </Text>
             <Text style={styles.trackTitle}>"{track.title}"</Text>
           </View>
           {track.description && (
             <Text style={styles.trackDesc}>{track.description}</Text>
           )}
-          <Text style={styles.hint}>
-            Tu peux le sélectionner dans ton profil → Musique
-          </Text>
+          <Text style={styles.hint}>{t('music_unlock_hint')}</Text>
           <TouchableOpacity
             style={styles.btn}
             onPress={onClose}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnText}>Super ! 🎶</Text>
+            <Text style={styles.btnText}>{t('music_unlock_ok')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>

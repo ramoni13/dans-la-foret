@@ -19,10 +19,12 @@ import { usePlayerStore } from '../../store/playerStore';
 import { subscribeForetCommune, addForetCommunePoints } from '../../services/foretCommuneService';
 import { FORET_COMMUNE_POINTS_PER_VIDEO, FORET_COMMUNE_POINTS_PER_TREE } from '../../constants/foretCommune';
 import { PremiumCard } from '../Premium/PremiumCard';
+import { useT } from '../../i18n';
 
 const LOGO_ONF = require('../../../assets/elements/design_app/logo-onf.png');
 
 export function ForetCommuneWidget() {
+  const t = useT();
   const isPremium     = usePlayerStore(s => s.isPremium);
   const unlockPremium = usePlayerStore(s => s.unlockPremium);
 
@@ -53,10 +55,10 @@ export function ForetCommuneWidget() {
   };
 
   const treesLabel = totalTrees === 0
-    ? '0 arbre'
+    ? t('foret_commune_zero')
     : totalTrees === 1
-      ? '1 arbre planté'
-      : `${totalTrees} arbres plantés`;
+      ? t('foret_commune_one')
+      : t('foret_commune_other', { count: String(totalTrees) });
 
   return (
     <View style={styles.wrapper}>
@@ -69,13 +71,16 @@ export function ForetCommuneWidget() {
       <View style={styles.card}>
         {/* Compteur arbres — une seule ligne */}
         <Text style={styles.treesCount} numberOfLines={1}>
-          🌳 {treesLabel} grâce à vous
+          {t('foret_commune_counter', { label: treesLabel })}
         </Text>
 
         {/* Progression — une seule ligne */}
         <View style={styles.progressBox}>
           <Text style={styles.progressPts} numberOfLines={1}>
-            {cagnottePoints.toLocaleString('fr-FR')} / {FORET_COMMUNE_POINTS_PER_TREE.toLocaleString('fr-FR')} pts = prochain arbre 🌱
+            {t('foret_commune_progress', {
+              current: cagnottePoints.toLocaleString(),
+              total: FORET_COMMUNE_POINTS_PER_TREE.toLocaleString(),
+            })}
           </Text>
         </View>
 
@@ -88,7 +93,7 @@ export function ForetCommuneWidget() {
               onPress={() => setShowPremium(true)}
               activeOpacity={0.85}
             >
-              <Text style={styles.btnAcheterText}>🌲 Soutenir l'ONF</Text>
+              <Text style={styles.btnAcheterText}>{t('foret_commune_support')}</Text>
               <Text style={styles.btnAcheterSub}>2,99 €</Text>
             </TouchableOpacity>
           )}
@@ -100,8 +105,8 @@ export function ForetCommuneWidget() {
             activeOpacity={0.8}
             disabled={contributing}
           >
-            <Text style={styles.btnPubText}>🎬 Contribuer</Text>
-            <Text style={styles.btnPubSub}>{contributing ? '...' : '+100 pts · Regarder pub'}</Text>
+            <Text style={styles.btnPubText}>{t('foret_commune_contribute')}</Text>
+            <Text style={styles.btnPubSub}>{contributing ? '...' : t('foret_commune_watch_ad')}</Text>
           </TouchableOpacity>
         </View>
       </View>

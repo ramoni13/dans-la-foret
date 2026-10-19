@@ -27,6 +27,7 @@ import { BadgeProgress } from '../../core/engine/badgeEngine';
 import { WorldRecord } from '../../services/worldRecordService';
 import { usePlayerStore } from '../../store/playerStore';
 import { SeedFlyAnimation, useCounterPulse } from './SeedFlyAnimation';
+import { useT } from '../../i18n';
 
 interface VictoryModalProps {
   visible: boolean;
@@ -53,12 +54,12 @@ interface VictoryModalProps {
   onPerfectBonusCollected?: () => void;
 }
 
-const DIFFICULTY_LABELS: Partial<Record<DifficultyLevel, string>> = {
-  niveau_1: '🌱 Niveau 1', niveau_2: '🌿 Niveau 2', niveau_3: '🌳 Niveau 3',
-  niveau_4: '🦊 Niveau 4', niveau_5: '🏕️ Niveau 5', niveau_6: '🌲 Niveau 6',
-  niveau_7: '🐺 Niveau 7', niveau_8: '🏔️ Niveau 8', niveau_9: '🏹 Niveau 9',
-  niveau_10: '🐽 Niveau 10', niveau_11: '🏔️ Niveau 11',
-  niveau_12: '⚡ Niveau 12', niveau_13: '💀 Niveau 13',
+const DIFFICULTY_EMOJIS: Partial<Record<DifficultyLevel, string>> = {
+  niveau_1: '🌱', niveau_2: '🌿', niveau_3: '🌳',
+  niveau_4: '🦊', niveau_5: '🏕️', niveau_6: '🌲',
+  niveau_7: '🐺', niveau_8: '🏔️', niveau_9: '🏹',
+  niveau_10: '🐽', niveau_11: '🏔️',
+  niveau_12: '⚡', niveau_13: '💀',
 };
 
 export const VictoryModal: React.FC<VictoryModalProps> = ({
@@ -68,6 +69,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   worldRecord = null, isNewWorldRecord = false, previousRecordHolder = null,
   isPerfectRun = false, perfectSeedsBonus = 0, onPerfectBonusCollected,
 }) => {
+  const t = useT();
 
   // ── Compteur affiché ─────────────────────────────────────────────────────
   // totalSeeds = vrai total incluant le gain (addSeeds déjà appelé)
@@ -260,10 +262,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
           {/* ── Titre ────────────────────────────────────────────────────── */}
           <Text style={styles.emoji}>🎉</Text>
-          <Text style={styles.title}>Bravo !</Text>
+          <Text style={styles.title}>{t('victory_title')}</Text>
           {challengeNumber > 0 && (
             <Text style={styles.subtitle}>
-              {DIFFICULTY_LABELS[difficulty] ?? difficulty} — Défi {challengeNumber}
+              {DIFFICULTY_EMOJIS[difficulty] ?? ''} {t('level_prefix')} {difficulty.replace('niveau_', '')} — {t('victory_challenge_label', { number: String(challengeNumber) })}
             </Text>
           )}
 
@@ -271,12 +273,12 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           <View style={styles.statsRow} onLayout={onStatsLayout}>
             <View style={styles.stat}>
               <Text style={styles.statValue}>{formatTime(elapsedTime)}</Text>
-              <Text style={styles.statLabel}>Temps</Text>
+              <Text style={styles.statLabel}>{t('victory_stat_time')}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
               <Text style={styles.statValue}>+{displayedGain} 🌱</Text>
-              <Text style={styles.statLabel}>Graines</Text>
+              <Text style={styles.statLabel}>{t('victory_stat_seeds')}</Text>
             </View>
           </View>
 
@@ -285,18 +287,18 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             <View style={styles.wrBanner}>
               <Text style={styles.wrBannerEmoji}>🌍🏆</Text>
               <View style={styles.wrBannerText}>
-                <Text style={styles.wrBannerTitle}>Nouveau record mondial !</Text>
+                <Text style={styles.wrBannerTitle}>{t('wr_new_record')}</Text>
                 <Text style={styles.wrBannerTime}>{formatTime(elapsedTime)}</Text>
                 {previousRecordHolder && (
-                  <Text style={styles.wrPreviousHolder}>Record battu de {previousRecordHolder}</Text>
+                  <Text style={styles.wrPreviousHolder}>{t('wr_beaten_from', { username: previousRecordHolder })}</Text>
                 )}
               </View>
             </View>
           ) : worldRecord ? (
             <View style={styles.wrInfo}>
-              <Text style={styles.wrInfoLabel}>🌍 Record mondial</Text>
+              <Text style={styles.wrInfoLabel}>{t('wr_record_label')}</Text>
               <Text style={styles.wrInfoTime}>{formatTime(worldRecord.timeMs)}</Text>
-              <Text style={styles.wrInfoHolder}>par {worldRecord.username}</Text>
+              <Text style={styles.wrInfoHolder}>{t('wr_held_by', { username: worldRecord.username })}</Text>
             </View>
           ) : null}
 
@@ -307,10 +309,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           )}
 
           <TouchableOpacity style={styles.btnPrimary} onPress={onNextChallenge} activeOpacity={0.8}>
-            <Text style={styles.btnPrimaryText}>{nextChallengeLabel ?? 'Défi suivant →'}</Text>
+            <Text style={styles.btnPrimaryText}>{nextChallengeLabel ?? t('victory_next_challenge')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnSecondary} onPress={onBackToMenu} activeOpacity={0.8}>
-            <Text style={styles.btnSecondaryText}>Retour au menu</Text>
+            <Text style={styles.btnSecondaryText}>{t('victory_back_menu')}</Text>
           </TouchableOpacity>
 
           {/*
@@ -340,8 +342,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               ]}
               pointerEvents="none"
             >
-              <Text style={styles.perfectLabel}>PERFECT x2 !</Text>
-              <Text style={styles.perfectSub}>+{perfectSeedsBonus} graines bonus</Text>
+              <Text style={styles.perfectLabel}>{t('perfect_run_label')}</Text>
+              <Text style={styles.perfectSub}>{t('victory_perfect_bonus', { count: String(perfectSeedsBonus) })}</Text>
             </Animated.View>
           )}
 

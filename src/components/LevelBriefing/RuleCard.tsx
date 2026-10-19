@@ -58,7 +58,20 @@ function RuleAnimation({ rule, a11yLabel }: { rule: RuleCardData; a11yLabel: str
 export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width, animHeight }) => {
   const t = useT();
 
-  const a11yLabel = t(rule.i18nKey, rule.i18nVars);
+  // Résoudre les noms d'éléments dans les i18nVars avant interpolation :
+  // si une valeur est un ID d'élément connu (ex: 'bucheron'), on la remplace
+  // par le nom traduit via la clé rules_element_<id>.
+  const resolvedVars = rule.i18nVars
+    ? Object.fromEntries(
+        Object.entries(rule.i18nVars).map(([k, v]) => {
+          const translated = t(`rules_element_${v}`);
+          // t() retourne la clé elle-même si elle n'existe pas → on garde v brut
+          return [k, translated !== `rules_element_${v}` ? translated : v];
+        })
+      )
+    : undefined;
+
+  const a11yLabel = t(rule.i18nKey, resolvedVars);
 
   return (
     <View style={[styles.card, { width }]}>

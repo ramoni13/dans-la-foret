@@ -17,6 +17,7 @@ import {
 
 import { Colors } from '../../constants/colors';
 import { useConfetti, Confetti } from './Confetti';
+import { useT } from '../../i18n';
 
 const native = Platform.OS !== 'web';
 
@@ -33,6 +34,7 @@ export const DailyStreakRecordModal: React.FC<DailyStreakRecordModalProps> = ({
   seedsAwarded,
   onClose,
 }) => {
+  const t = useT();
   const scaleAnim   = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim  = useRef(new Animated.Value(1)).current;
@@ -92,31 +94,29 @@ export const DailyStreakRecordModal: React.FC<DailyStreakRecordModalProps> = ({
             <Text style={styles.iconText}>{'\uD83D\uDD25'}</Text>
           </View>
 
-          <Text style={styles.title}>Nouveau record !</Text>
+          <Text style={styles.title}>{t('streak_record_title')}</Text>
 
           {/* Série */}
           <View style={styles.recordBadge}>
             <Text style={styles.recordNumber}>{newRecord}</Text>
             <Text style={styles.recordLabel}>
-              {newRecord > 1 ? 'jours de serie' : 'jour de serie'}
+              {newRecord > 1 ? t('streak_record_days_other') : t('streak_record_days_one')}
             </Text>
           </View>
 
           {/* Graines offertes */}
           <View style={styles.seedsRow}>
-            <Text style={styles.seedsLabel}>Graines offertes</Text>
+            <Text style={styles.seedsLabel}>{t('streak_record_seeds')}</Text>
             <Animated.View style={[styles.seedsBadge, { transform: [{ scale: bounceAnim }] }]}>
               <Text style={styles.seedsIcon}>{'\uD83C\uDF31'}</Text>
               <Text style={styles.seedsValue}>+{seedsAwarded}</Text>
             </Animated.View>
           </View>
 
-          <Text style={styles.message}>
-            Continue ta serie pour battre ton propre record !
-          </Text>
+          <Text style={styles.message}>{t('streak_record_hint')}</Text>
 
           <TouchableOpacity style={styles.btn} onPress={onClose} activeOpacity={0.8}>
-            <Text style={styles.btnText}>Super !</Text>
+            <Text style={styles.btnText}>{t('streak_record_ok')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>

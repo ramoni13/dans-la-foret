@@ -23,6 +23,7 @@ import { usePlayerStore } from '../../store/playerStore';
 import { SeedFlyAnimation, useCounterPulse } from './SeedFlyAnimation';
 import { useConfetti, Confetti } from './Confetti';
 import { auth } from '../../services/firebase';
+import { useT } from '../../i18n';
 import {
   subscribeJackpot,
   claimJackpot,
@@ -297,6 +298,7 @@ type Phase = 'idle' | 'spinning' | 'result';
 export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
   visible, onClose, uid, date,
 }) => {
+  const t = useT();
   const player = usePlayerStore();
   const totalSeeds = usePlayerStore(s => s.seeds);
 
@@ -502,10 +504,10 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
   // ── Affichage du résultat ──────────────────────────────────────────────────
   const resultText = useMemo(() => {
     if (!result) return '';
-    if (result.type === 'nothing') return 'Pas de chance...';
-    if (result.type === 'jackpot') return `JACKPOT ! +${result.gain} graines !`;
-    return `+${result.gain} graines !`;
-  }, [result]);
+    if (result.type === 'nothing') return t('roulette_nothing');
+    if (result.type === 'jackpot') return t('roulette_jackpot_win', { count: String(result.gain) });
+    return t('roulette_win_seeds', { count: String(result.gain) });
+  }, [result, t]);
 
   const resultColor = useMemo(() => {
     if (!result) return Colors.forest.dark;
@@ -542,14 +544,14 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
           </View>
 
           {/* ── Titre ──────────────────────────────────────────────────── */}
-          <Text style={styles.title}>Tente ta chance !</Text>
+          <Text style={styles.title}>{t('roulette_title')}</Text>
 
           {/* ── Jackpot ─────────────────────────────────────────────────── */}
           <View style={styles.jackpotBanner}>
             <Text style={styles.jackpotTree}>{'🌳'}</Text>
             <View>
-              <Text style={styles.jackpotLabel}>Jackpot</Text>
-              <Text style={styles.jackpotAmount}>{jackpot?.amount ?? '…'} graines</Text>
+              <Text style={styles.jackpotLabel}>{t('roulette_jackpot')}</Text>
+              <Text style={styles.jackpotAmount}>{t('roulette_jackpot_amount', { amount: String(jackpot?.amount ?? '…') })}</Text>
             </View>
             <TouchableOpacity
               style={styles.tableBtn}
@@ -568,43 +570,41 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
               onPress={() => setShowTable(false)}
             >
               <TouchableOpacity activeOpacity={1} style={styles.tableCard}>
-                <Text style={styles.tableTitle}>TABLE DES GAINS</Text>
+                <Text style={styles.tableTitle}>{t('roulette_table_title')}</Text>
 
                 {/* Jackpot */}
                 <View style={styles.tableSection}>
                   <View style={[styles.tableRow, styles.tableRowJackpot]}>
                     <View style={styles.tableRowLeft}>
                       <Text style={styles.tableRowEmoji}>🌳🌳🌳</Text>
-                      <Text style={styles.tableRowLabelJackpot}>3 Arbres = JACKPOT</Text>
+                      <Text style={styles.tableRowLabelJackpot}>{t('roulette_triple_arbre')}</Text>
                     </View>
-                    <Text style={styles.tableRowValueJackpot}>+{jackpotAmount} graines</Text>
+                    <Text style={styles.tableRowValueJackpot}>{t('roulette_jackpot_seeds', { count: String(jackpotAmount) })}</Text>
                   </View>
-                  <Text style={styles.tableNote}>
-                    Le jackpot grandit de 50 graines chaque jour et repart à 200 quand il est remporté.
-                  </Text>
+                  <Text style={styles.tableNote}>{t('roulette_jackpot_grow')}</Text>
                 </View>
 
                 {/* Triple */}
                 <View style={styles.tableSection}>
                   <View style={styles.tableSectionHeader}>
                     <Text style={styles.tableSectionEmoji}>🎯🎯🎯</Text>
-                    <Text style={styles.tableSectionTitle}>3 symboles identiques</Text>
+                    <Text style={styles.tableSectionTitle}>{t('roulette_three_same')}</Text>
                   </View>
                   <View style={styles.tableRow}>
-                    <Text style={styles.tableRowLabel}>Légendaire (ruche)</Text>
-                    <Text style={styles.tableRowValue}>+150 graines</Text>
+                    <Text style={styles.tableRowLabel}>{t('roulette_legendary')}</Text>
+                    <Text style={styles.tableRowValue}>{t('roulette_legendary_gain')}</Text>
                   </View>
                   <View style={styles.tableRow}>
-                    <Text style={styles.tableRowLabel}>Épique (cerf, chalet, bûches)</Text>
-                    <Text style={styles.tableRowValue}>+100-125 graines</Text>
+                    <Text style={styles.tableRowLabel}>{t('roulette_epic')}</Text>
+                    <Text style={styles.tableRowValue}>{t('roulette_epic_gain')}</Text>
                   </View>
                   <View style={styles.tableRow}>
-                    <Text style={styles.tableRowLabel}>Rare (ours, loup, biche…)</Text>
-                    <Text style={styles.tableRowValue}>+75 graines</Text>
+                    <Text style={styles.tableRowLabel}>{t('roulette_rare')}</Text>
+                    <Text style={styles.tableRowValue}>{t('roulette_rare_gain')}</Text>
                   </View>
                   <View style={styles.tableRow}>
-                    <Text style={styles.tableRowLabel}>Commun (bûcheron, mouton…)</Text>
-                    <Text style={styles.tableRowValue}>+50 graines</Text>
+                    <Text style={styles.tableRowLabel}>{t('roulette_common')}</Text>
+                    <Text style={styles.tableRowValue}>{t('roulette_common_gain')}</Text>
                   </View>
                 </View>
 
@@ -612,18 +612,18 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
                 <View style={styles.tableSection}>
                   <View style={styles.tableSectionHeader}>
                     <Text style={styles.tableSectionEmoji}>🎯🎯</Text>
-                    <Text style={styles.tableSectionTitle}>2 symboles identiques</Text>
+                    <Text style={styles.tableSectionTitle}>{t('roulette_two_same')}</Text>
                   </View>
                   <View style={styles.tableRow}>
-                    <Text style={styles.tableRowLabel}>Selon la rareté</Text>
-                    <Text style={styles.tableRowValue}>+10 à +30 graines</Text>
+                    <Text style={styles.tableRowLabel}>{t('roulette_pair_gain')}</Text>
+                    <Text style={styles.tableRowValue}>{t('roulette_pair_amount')}</Text>
                   </View>
                 </View>
 
                 {/* Rien */}
                 <View style={[styles.tableRow, { marginTop: 4, marginBottom: 12 }]}>
-                  <Text style={[styles.tableRowLabel, { color: Colors.ui.textLight }]}>Pas de doublon</Text>
-                  <Text style={[styles.tableRowValue, { color: Colors.ui.textLight }]}>0 graine</Text>
+                  <Text style={[styles.tableRowLabel, { color: Colors.ui.textLight }]}>{t('roulette_no_pair')}</Text>
+                  <Text style={[styles.tableRowValue, { color: Colors.ui.textLight }]}>{t('roulette_no_pair_gain')}</Text>
                 </View>
 
                 <TouchableOpacity style={styles.tableOkBtn} onPress={() => setShowTable(false)} activeOpacity={0.8}>
@@ -654,8 +654,8 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
                 transform: [{ scale: resultAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
               }]}>
                 <Text style={styles.jackpotEmoji}>🏆</Text>
-                <Text style={styles.jackpotTitle}>JACKPOT !</Text>
-                <Text style={styles.jackpotGain}>+{result.gain} graines</Text>
+                <Text style={styles.jackpotTitle}>{t('roulette_jackpot_banner')}</Text>
+                <Text style={styles.jackpotGain}>{t('roulette_jackpot_seeds', { count: String(result.gain) })}</Text>
               </Animated.View>
             ) : (
               <Animated.View
@@ -693,10 +693,10 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
             >
               <Text style={styles.spinBtnText}>
                 {alreadyPlayed
-                  ? 'Déjà joué aujourd\'hui'
+                  ? t('roulette_already_played')
                   : phase === 'result' && isDevAccount
-                    ? 'Rejouer (dev)'
-                    : 'Lancer la roulette'}
+                    ? t('roulette_replay_dev')
+                    : t('roulette_spin')}
               </Text>
             </TouchableOpacity>
           )}
@@ -704,12 +704,12 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
           {/* ── Bouton Fermer ────────────────────────────────────────────── */}
           {(phase === 'result' || alreadyPlayed) && (
             <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.8}>
-              <Text style={styles.closeBtnText}>Continuer</Text>
+              <Text style={styles.closeBtnText}>{t('roulette_close')}</Text>
             </TouchableOpacity>
           )}
           {phase === 'idle' && !alreadyPlayed && (
             <TouchableOpacity style={styles.skipBtn} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.skipBtnText}>Passer</Text>
+              <Text style={styles.skipBtnText}>{t('roulette_skip')}</Text>
             </TouchableOpacity>
           )}
 

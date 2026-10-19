@@ -26,6 +26,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { TreeCard, TREE_IMAGES } from '../../data/treesData';
+import { useT } from '../../i18n';
+import { usePlayerStore } from '../../store/playerStore';
 
 const ONF_LOGO = require('../../../assets/elements/design_app/logo-onf.png');
 
@@ -161,6 +163,12 @@ export function TreeCardView({
   startFlipped = false,
   locked = false,
 }: TreeCardViewProps) {
+  const t        = useT();
+  const language = usePlayerStore(s => s.language);
+  const isEn     = language === 'en';
+  const treeName = isEn ? tree.name_en : tree.name_fr;
+  const treeGeo  = isEn ? tree.geo_location_en : tree.geo_location;
+  const treeAnec = isEn ? tree.anecdote_en : tree.anecdote;
   const preset = size === 'mini' ? { width: 150, height: 240 } : { width: REF_W, height: REF_H };
   const w      = cardWidth  ?? preset.width;
   const h      = cardHeight ?? preset.height;
@@ -193,46 +201,81 @@ export function TreeCardView({
   const recto = (
     <Animated.View style={[styles.card, cardSz, { borderRadius: r, borderWidth: Math.round(3 * s), borderColor: C.frameBorder }, frontAnim]}>
 
-      {/* Image plein format ou fallback vert foncé */}
+      {/* Fond vert foncé (toujours visible derrière l'image) */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: C.frontBg }]} />
+
+      {/* Image plein format — cover centré sur toute la carte */}
       {image ? (
         <Image source={image} style={StyleSheet.absoluteFill} resizeMode="cover" />
       ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: C.frontBg, alignItems: 'center', justifyContent: 'center' }]}>
+        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
           <Text style={{ fontSize: Math.round(64 * s) }}>🌳</Text>
         </View>
       )}
 
-      {/* Voile vert foncé uniquement derrière la zone texte bas */}
-      <View style={[styles.frontOverlay, { borderBottomLeftRadius: r - 2, borderBottomRightRadius: r - 2 }]} />
+      {/* Dégradé bas — une seule couche dense en bas */}
+      <View style={[StyleSheet.absoluteFill, {
+        bottom: 0, top: '80%',
+        backgroundColor: 'rgba(8,24,8,0.78)',
+        borderBottomLeftRadius: r - 2, borderBottomRightRadius: r - 2,
+      }]} />
 
-      {/* Logo ONF centré en haut */}
-      <View style={[styles.onfLogoWrapper, { top: Math.round(10 * s), height: Math.round((isMini ? 22 : 36) * s) }]}>
-        <Image
-          source={ONF_LOGO}
-          style={{ width: Math.round((isMini ? 44 : 72) * s), height: Math.round((isMini ? 22 : 36) * s) }}
-          resizeMode="contain"
-        />
-      </View>
+      {/* Voile haut — fine bande pour lisibilité des badges */}
+      <View style={{
+        position: 'absolute', top: 0, left: 0, right: 0,
+        height: Math.round(48 * s),
+        backgroundColor: 'rgba(0,0,0,0.28)',
+        borderTopLeftRadius: r - 2, borderTopRightRadius: r - 2,
+      }} />
 
-      {/* Badge numéro (haut gauche) */}
-      <View style={[styles.numBadge, { top: Math.round(10 * s), left: Math.round(10 * s), borderRadius: Math.round(6 * s), paddingHorizontal: Math.round(7 * s), paddingVertical: Math.round(3 * s) }]}>
-        <Text style={[styles.numBadgeText, { fontSize: Math.round((isMini ? 8 : 11) * s) }]}>
+      {/* Badge numéro — haut gauche, pastille dorée */}
+      <View style={[styles.numBadge, {
+        top: Math.round(10 * s),
+        left: Math.round(10 * s),
+        borderRadius: Math.round(5 * s),
+        paddingHorizontal: Math.round(7 * s),
+        paddingVertical: Math.round(3 * s),
+      }]}>
+        <Text style={[styles.numBadgeText, { fontSize: Math.round((isMini ? 8 : 10) * s) }]}>
           #{String(tree.id).padStart(3, '0')}
         </Text>
       </View>
 
-      {/* Nom en bas */}
-      <View style={[styles.frontBottom, { padding: Math.round(12 * s), paddingTop: Math.round(20 * s) }]}>
+      {/* Logo ONF — haut droite */}
+      <View style={[styles.onfLogoWrapper, {
+        top: Math.round(8 * s),
+        right: Math.round(10 * s),
+        left: undefined,
+        alignItems: 'flex-end',
+      }]}>
+        <Image
+          source={ONF_LOGO}
+          style={{ width: Math.round((isMini ? 40 : 64) * s), height: Math.round((isMini ? 20 : 32) * s) }}
+          resizeMode="contain"
+        />
+      </View>
+
+      {/* Zone texte bas — sur le dégradé, pas de fond opaque supplémentaire */}
+      <View style={[styles.frontBottom, { paddingHorizontal: Math.round(14 * s), paddingBottom: Math.round(14 * s), paddingTop: Math.round(8 * s) }]}>
+        {/* Pill type image */}
         {!isMini && (
-          <Text style={[styles.frontSubtitle, { fontSize: Math.round(10 * s), marginBottom: Math.round(2 * s) }]}>
-            {tree.image_type === 'fruit' ? '🌰 Fruit / graine' : tree.image_type === 'feuille' ? '🍃 Feuille' : '📸 Photo'}
-          </Text>
+          <View style={[styles.typePill, {
+            borderRadius: Math.round(4 * s),
+            paddingHorizontal: Math.round(7 * s),
+            paddingVertical: Math.round(2 * s),
+            marginBottom: Math.round(6 * s),
+            alignSelf: 'flex-start',
+          }]}>
+            <Text style={[styles.typePillText, { fontSize: Math.round(9 * s), letterSpacing: Math.round(0.8 * s) }]}>
+              {tree.image_type === 'fruit' ? t('card_image_fruit') : tree.image_type === 'feuille' ? t('card_image_leaf') : t('card_image_photo')}
+            </Text>
+          </View>
         )}
-        <Text style={[styles.frontName, { fontSize: Math.round((isMini ? 11 : 20) * s) }]} numberOfLines={2}>
-          {tree.name_fr}
+        <Text style={[styles.frontName, { fontSize: Math.round((isMini ? 11 : 19) * s), lineHeight: Math.round((isMini ? 14 : 24) * s) }]} numberOfLines={2}>
+          {treeName}
         </Text>
         {!isMini && (
-          <Text style={[styles.frontLatin, { fontSize: Math.round(12 * s), marginTop: Math.round(3 * s) }]} numberOfLines={1}>
+          <Text style={[styles.frontLatin, { fontSize: Math.round(11 * s), marginTop: Math.round(4 * s) }]} numberOfLines={1}>
             {tree.name_latin}
           </Text>
         )}
@@ -240,7 +283,13 @@ export function TreeCardView({
 
       {/* Cadre intérieur doré décoratif */}
       {!isMini && (
-        <View style={[StyleSheet.absoluteFill, { margin: Math.round(6 * s), borderRadius: r - 3, borderWidth: 1, borderColor: 'rgba(201,168,76,0.35)', pointerEvents: 'none' }]} />
+        <View style={[StyleSheet.absoluteFill, {
+          margin: Math.round(5 * s),
+          borderRadius: r - 2,
+          borderWidth: 1,
+          borderColor: 'rgba(201,168,76,0.30)',
+          pointerEvents: 'none',
+        }]} />
       )}
 
       {/* Effet foil */}
@@ -264,7 +313,7 @@ export function TreeCardView({
       <View style={[styles.backHeader, { marginBottom: Math.round(10 * s) }]}>
         <View style={{ flex: 1, paddingRight: Math.round(8 * s) }}>
           <Text style={[styles.backNameFr, { fontSize: Math.round((isMini ? 13 : 22) * s) }]} numberOfLines={2}>
-            {tree.name_fr}
+            {treeName}
           </Text>
           <Text style={[styles.backNameLatin, { fontSize: Math.round((isMini ? 9 : 14) * s), marginTop: Math.round(3 * s) }]} numberOfLines={1}>
             {tree.name_latin}
@@ -284,10 +333,10 @@ export function TreeCardView({
       {/* Géolocalisation */}
       <View style={[styles.geoBlock, { borderRadius: Math.round(8 * s), padding: Math.round(10 * s), marginBottom: Math.round(10 * s) }]}>
         <Text style={[styles.geoLabel, { fontSize: Math.round((isMini ? 7 : 10) * s), marginBottom: Math.round(3 * s) }]}>
-          AIRE DE RÉPARTITION
+          {t('card_geo_label')}
         </Text>
         <Text style={[styles.geoText, { fontSize: Math.round((isMini ? 9 : 13) * s), lineHeight: Math.round(18 * s) }]} numberOfLines={isMini ? 2 : 4}>
-          {'📍 '}{tree.geo_location}
+          {'📍 '}{treeGeo}
         </Text>
       </View>
 
@@ -295,10 +344,10 @@ export function TreeCardView({
       {!isMini && (
         <View style={[styles.anecBlock, { borderRadius: Math.round(8 * s), padding: Math.round(12 * s), marginBottom: Math.round(10 * s) }]}>
           <Text style={[styles.anecLabel, { fontSize: Math.round(10 * s), marginBottom: Math.round(6 * s) }]}>
-            LE SAVAIS-TU ?
+            {t('card_anec_label')}
           </Text>
           <Text style={[styles.anecText, { fontSize: Math.round(14 * s), lineHeight: Math.round(21 * s) }]}>
-            {tree.anecdote}
+            {treeAnec}
           </Text>
         </View>
       )}
@@ -306,11 +355,11 @@ export function TreeCardView({
       {/* Footer ONF */}
       <View style={styles.backFooter}>
         <Text style={[styles.onfLabel, { fontSize: Math.round((isMini ? 7 : 10) * s) }]}>
-          🌲 ONF – Agir pour la forêt
+          {t('card_onf_credit')}
         </Text>
         <View style={[styles.imageTypePill, { borderRadius: Math.round(10 * s), paddingHorizontal: Math.round(7 * s), paddingVertical: Math.round(2 * s) }]}>
           <Text style={[styles.imageTypeText, { fontSize: Math.round((isMini ? 7 : 9) * s) }]}>
-            {tree.image_type === 'fruit' ? '🌰 graine' : tree.image_type === 'feuille' ? '🍃 feuille' : '📸 photo'}
+            {tree.image_type === 'fruit' ? t('card_image_fruit_short') : tree.image_type === 'feuille' ? t('card_image_leaf_short') : t('card_image_photo_short')}
           </Text>
         </View>
       </View>
@@ -337,22 +386,14 @@ const styles = StyleSheet.create({
   },
 
   // ── Recto ──
-  frontOverlay: {
-    position:        'absolute',
-    left: 0, right: 0, bottom: 0,
-    height:          '30%',
-    backgroundColor: 'rgba(26,58,26,0.88)',  // vert foncé briefing
-  },
   onfLogoWrapper: {
     position:       'absolute',
-    left:           0,
-    right:          0,
-    alignItems:     'center',
+    alignItems:     'flex-end',
     justifyContent: 'center',
   },
   numBadge: {
     position:        'absolute',
-    backgroundColor: C.numBg,
+    backgroundColor: 'rgba(10,20,5,0.70)',
     borderColor:     C.frameBorder,
     borderWidth:     1,
   },
@@ -366,26 +407,32 @@ const styles = StyleSheet.create({
     left:     0,
     right:    0,
     bottom:   0,
-    backgroundColor: 'rgba(0,0,0,0.68)',
   },
-  frontSubtitle: {
-    color:         'rgba(200,200,200,0.85)',
+  typePill: {
+    backgroundColor: 'rgba(201,168,76,0.22)',
+    borderWidth:     1,
+    borderColor:     'rgba(201,168,76,0.55)',
+  },
+  typePillText: {
+    color:         C.frameBorder,
+    fontWeight:    '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    fontWeight:    '600',
   },
   frontName: {
-    color:      C.nameText,
+    color:      '#FFFFFF',
     fontWeight: '800',
-    letterSpacing: 0.3,
-    textShadowColor:  'rgba(0,0,0,0.6)',
+    letterSpacing: 0.2,
+    textShadowColor:  'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowRadius: 6,
   },
   frontLatin: {
-    color:     'rgba(220,200,150,0.85)',
+    color:     'rgba(210,190,130,0.90)',
     fontStyle: 'italic',
     fontWeight: '400',
+    textShadowColor:  'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   lockedOverlay: {
     backgroundColor: 'rgba(0,0,0,0.65)',

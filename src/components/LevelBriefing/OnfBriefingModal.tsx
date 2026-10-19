@@ -644,7 +644,7 @@ export const OnfBriefingModal: React.FC<OnfBriefingModalProps> = ({
                 style={styles.elementBadgeIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.elementBadgeName}>{def.label}</Text>
+              <Text style={styles.elementBadgeName}>{t(`rules_element_${item.elementId}`)}</Text>
             </View>
           )}
           <RuleCard

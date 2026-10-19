@@ -30,6 +30,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAudioStore } from '../../store/audioStore';
 import { useNavStore } from '../../store/navStore';
+import { useT } from '../../i18n';
 import {
   BTN_X_CENTERS,
   computeFrameLayout,
@@ -78,6 +79,7 @@ function SeedsOverlay({ seeds, screenW, topBarCenterY }: {
   screenW: number;
   topBarCenterY: number;
 }) {
+  const t = useT();
   const w = Math.min(200, Math.round(screenW * 0.45));
   const h = Math.round(w / SEEDS_RATIO);
   const textOffsetLeft = Math.round(w * 0.28);
@@ -109,7 +111,7 @@ function SeedsOverlay({ seeds, screenW, topBarCenterY }: {
           alignItems:     'center',
         }}
       >
-        <Text style={styles.seedsText}>{seeds} graines</Text>
+        <Text style={styles.seedsText}>{t('forest_frame_seeds', { count: String(seeds) })}</Text>
       </View>
     </View>
   );
@@ -118,6 +120,7 @@ function SeedsOverlay({ seeds, screenW, topBarCenterY }: {
 // ── Bouton son ─────────────────────────────────────────────────────────────────
 // iconTopY : position Y du bord supérieur de l'icône (chantier 2 — aligné avec le bas du coin)
 function SoundButton({ iconTopY }: { iconTopY: number }) {
+  const t = useT();
   const menuEnabled = useAudioStore(s => s.menuEnabled);
   const setMenu     = useAudioStore(s => s.setMenuEnabled);
   const SIZE = 36;
@@ -127,7 +130,7 @@ function SoundButton({ iconTopY }: { iconTopY: number }) {
       style={[styles.soundBtn, { top: iconTopY, width: SIZE, height: SIZE }]}
       onPress={() => setMenu(!menuEnabled)}
       activeOpacity={0.8}
-      accessibilityLabel={menuEnabled ? 'Couper le son' : 'Activer le son'}
+      accessibilityLabel={menuEnabled ? t('forest_frame_mute') : t('forest_frame_unmute')}
     >
       <Text style={styles.soundIcon}>{menuEnabled ? '🔊' : '🔇'}</Text>
     </TouchableOpacity>
@@ -136,6 +139,7 @@ function SoundButton({ iconTopY }: { iconTopY: number }) {
 
 // ── Composant principal ────────────────────────────────────────────────────────
 export default function ForestFrame() {
+  const t = useT();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const insets    = useSafeAreaInsets();
   const router    = useRouter();
@@ -321,9 +325,9 @@ export default function ForestFrame() {
           onPress={onBack}
           activeOpacity={0.8}
           style={[styles.backTextBtn, { top: iconTopY }]}
-          accessibilityLabel="Retour"
+          accessibilityLabel={t('forest_frame_back_label')}
         >
-          <Text style={styles.backTextBtnLabel}>← Retour</Text>
+          <Text style={styles.backTextBtnLabel}>{t('forest_frame_back')}</Text>
         </TouchableOpacity>
       )}
 
@@ -371,8 +375,13 @@ export default function ForestFrame() {
             <TouchableOpacity
               style={[StyleSheet.absoluteFill, { borderRadius: tapHalf }]}
               onPress={() => {
-                if (btn.key !== 'profile') hideBack();
-                router.push(btn.route as any);
+                if (isActive && onBack != null) {
+                  // Re-tap sur l'onglet actif → équivalent au bouton Retour
+                  onBack();
+                } else {
+                  if (btn.key !== 'profile') hideBack();
+                  router.push(btn.route as any);
+                }
               }}
               activeOpacity={0.75}
               accessibilityRole="tab"

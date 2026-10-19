@@ -11,9 +11,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 
-import { BADGE_MAP, BadgeRarity } from '../../constants/badges';
+import { BADGE_MAP, BadgeRarity, getBadgeTexts } from '../../constants/badges';
 import { BadgeProgress } from '../../core/engine/badgeEngine';
 import { Colors } from '../../constants/colors';
+import { useT } from '../../i18n';
+import { usePlayerStore } from '../../store/playerStore';
 
 interface BadgeProgressInlineProps {
   /** Les badges objectifs actifs avec leur progression */
@@ -38,6 +40,8 @@ export const BadgeProgressInline: React.FC<BadgeProgressInlineProps> = ({
   newGoalBadgeIds = [],
   onPress,
 }) => {
+  const t = useT();
+  const language = usePlayerStore(s => s.language);
   if (closestBadges.length === 0) return null;
 
   const obtainedSet  = new Set(obtainedBadgeIds);
@@ -52,6 +56,7 @@ export const BadgeProgressInline: React.FC<BadgeProgressInlineProps> = ({
       {closestBadges.map((item, index) => {
         const badge = BADGE_MAP[item.badgeId];
         if (!badge) return null;
+        const badgeTexts  = getBadgeTexts(badge, language);
         const isObtained  = obtainedSet.has(item.badgeId);
         const isNew       = newGoalSet.has(item.badgeId);
         const rarityColor = RARITY_COLORS[badge.rarity] ?? Colors.ui.textLight;
@@ -66,14 +71,14 @@ export const BadgeProgressInline: React.FC<BadgeProgressInlineProps> = ({
               <Text style={styles.emoji}>{badge.emoji}</Text>
               <View style={styles.labelBlock}>
                 <View style={styles.titleRow}>
-                  <Text style={styles.title} numberOfLines={1}>{badge.label}</Text>
+                  <Text style={styles.title} numberOfLines={1}>{badgeTexts.label}</Text>
                   {isNew && (
                     <View style={styles.newBadge}>
-                      <Text style={styles.newBadgeText}>Nouveau</Text>
+                      <Text style={styles.newBadgeText}>{t('label_new')}</Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.desc} numberOfLines={1}>{badge.description}</Text>
+                <Text style={styles.desc} numberOfLines={1}>{badgeTexts.description}</Text>
               </View>
               {isObtained
                 ? <Text style={styles.obtained}>✓</Text>

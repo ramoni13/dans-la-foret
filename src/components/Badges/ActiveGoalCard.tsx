@@ -7,9 +7,11 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { BADGE_MAP } from '../../constants/badges';
+import { BADGE_MAP, getBadgeTexts } from '../../constants/badges';
 import { BadgeProgress } from '../../core/engine/badgeEngine';
 import { Colors } from '../../constants/colors';
+import { useT } from '../../i18n';
+import { usePlayerStore } from '../../store/playerStore';
 
 const RARITY_COLOR: Record<string, string> = {
   bois:    Colors.badges.bois,
@@ -24,9 +26,12 @@ interface ActiveGoalCardProps {
 }
 
 export const ActiveGoalCard: React.FC<ActiveGoalCardProps> = ({ progress, obtained }) => {
+  const t = useT();
+  const language = usePlayerStore(s => s.language);
   const badge = BADGE_MAP[progress.badgeId];
   if (!badge) return null;
 
+  const texts = getBadgeTexts(badge, language);
   const rarityColor = RARITY_COLOR[badge.rarity] ?? Colors.forest.medium;
 
   // Progression directe depuis goalCounters (toujours depuis 0)
@@ -39,8 +44,8 @@ export const ActiveGoalCard: React.FC<ActiveGoalCardProps> = ({ progress, obtain
       <View style={styles.header}>
         <Text style={styles.emoji}>{badge.emoji}</Text>
         <View style={styles.textBlock}>
-          <Text style={styles.label} numberOfLines={1}>{badge.label}</Text>
-          <Text style={styles.description} numberOfLines={2}>{badge.description}</Text>
+          <Text style={styles.label} numberOfLines={1}>{texts.label}</Text>
+          <Text style={styles.description} numberOfLines={2}>{texts.description}</Text>
         </View>
         {obtained && (
           <Text style={styles.obtained}>✓</Text>
@@ -56,7 +61,7 @@ export const ActiveGoalCard: React.FC<ActiveGoalCardProps> = ({ progress, obtain
 
       <Text style={styles.progressText}>
         {obtained
-          ? 'Badge obtenu !'
+          ? t('badge_goal_obtained')
           : `${relCurrent} / ${progress.targetValue}`}
       </Text>
     </View>

@@ -27,17 +27,11 @@ import { DailyResult, subscribeDailyLeaderboard, getDailyDateString } from '../.
 import { computePlayerLevel } from '../../services/playerService';
 import { formatTime } from '../../utils/boardUtils';
 import { auth } from '../../services/firebase';
+import { useT } from '../../i18n';
 
 // ── Onglets ──────────────────────────────────────────────────────────────────
 
 type Tab = 'daily' | 'badges' | 'seeds' | 'records';
-
-const TABS: { key: Tab; label: string; emoji: string }[] = [
-  { key: 'daily',   label: 'Daily', emoji: '🌅' },
-  { key: 'badges',  label: 'Badges',        emoji: '🏅' },
-  { key: 'seeds',   label: 'Graines',       emoji: '🌱' },
-  { key: 'records', label: 'Records',       emoji: '🏆' },
-];
 
 // ── Médailles podium ─────────────────────────────────────────────────────────
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
@@ -52,6 +46,7 @@ interface RowProps {
 }
 
 const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
+  const t = useT();
   const medal = MEDAL[rank];
   const language = usePlayerStore(state => state.language);
 
@@ -78,7 +73,7 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
       {/* Info joueur */}
       <View style={styles.playerCol}>
         <Text style={[styles.username, isMe && styles.usernameMe]} numberOfLines={1}>
-          {entry.username}{isMe ? ' (toi)' : ''}
+          {entry.username}{isMe ? t('leaderboard_me') : ''}
         </Text>
         {showForestRank && tab !== 'records' && tab !== 'daily' && (
           <Text style={styles.forestRank} numberOfLines={1}>
@@ -87,10 +82,12 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
         )}
         <Text style={styles.subinfo}>
           {tab === 'records'
-            ? `🏆 ${(entry as any).recordCount ?? 0} records mondiaux`
+            ? t('leaderboard_records_world', { count: String((entry as any).recordCount ?? 0) })
             : tab === 'daily'
-            ? `🌅 ${(entry as any).dailyWins ?? 0} victoire${((entry as any).dailyWins ?? 0) > 1 ? 's' : ''} du jour`
-            : `Niv. ${entry.level} · ${entry.completedCount} défis`}
+            ? ((entry as any).dailyWins ?? 0) > 1
+              ? t('leaderboard_daily_wins_other', { count: String((entry as any).dailyWins ?? 0) })
+              : t('leaderboard_daily_wins_one', { count: String((entry as any).dailyWins ?? 0) })
+            : t('leaderboard_subinfo_row', { level: String(entry.level), count: String(entry.completedCount) })}
         </Text>
       </View>
 
@@ -118,8 +115,16 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
 // ── Composant principal ──────────────────────────────────────────────────────
 
 export const LeaderboardScreen: React.FC = () => {
+  const t = useT();
   const { frameBottom, innerPadH } = useFrameLayout();
   const [tab, setTab]               = useState<Tab>('daily');
+
+  const TABS: { key: Tab; label: string; emoji: string }[] = [
+    { key: 'daily',   label: t('leaderboard_daily_tab'), emoji: '🌅' },
+    { key: 'badges',  label: t('leaderboard_tab_badges'), emoji: '🏅' },
+    { key: 'seeds',   label: t('leaderboard_tab_seeds'),  emoji: '🌱' },
+    { key: 'records', label: t('leaderboard_tab_records'), emoji: '🏆' },
+  ];
   const [entries, setEntries]       = useState<LeaderboardEntry[]>([]);
   const [recordHolders, setRecordHolders]   = useState<RecordHolderEntry[]>([]);
   const [dailyWinners, setDailyWinners]     = useState<DailyWinsEntry[]>([]);
@@ -234,16 +239,16 @@ export const LeaderboardScreen: React.FC = () => {
       {/* Bandeau record du jour courant — visible uniquement sur l'onglet daily */}
       {tab === 'daily' && (
         <View style={styles.todayBanner}>
-          <Text style={styles.todayBannerLabel}>Record du jour en cours</Text>
+          <Text style={styles.todayBannerLabel}>{t('leaderboard_today_record')}</Text>
           {todayLeader ? (
             <Text style={styles.todayBannerValue}>
               {'\uD83C\uDFC6'} {todayLeader.username}
               {'  ·  '}
               {formatTime(todayLeader.timeMs)}
-              {todayLeader.userId === myUid ? '  (toi !)' : ''}
+              {todayLeader.userId === myUid ? t('leaderboard_me_today') : ''}
             </Text>
           ) : (
-            <Text style={styles.todayBannerEmpty}>Aucun résultat pour l'instant — sois le premier !</Text>
+            <Text style={styles.todayBannerEmpty}>{t('leaderboard_today_empty')}</Text>
           )}
         </View>
       )}
@@ -256,12 +261,14 @@ export const LeaderboardScreen: React.FC = () => {
       ) && (
         <View style={styles.myRankBar}>
           <Text style={styles.myRankText}>
-            Ta position : <Text style={styles.myRankValue}>#{myRank}</Text>
+            {t('leaderboard_my_position', { rank: String(myRank) })}
             {'  '}·{'  '}
             {tab === 'records' ? (
-              `🏆 ${myRecordEntry?.recordCount ?? 0} records mondiaux`
+              t('leaderboard_records_world', { count: String(myRecordEntry?.recordCount ?? 0) })
             ) : tab === 'daily' ? (
-              `🌅 ${myDailyWins?.dailyWins ?? 0} victoire${(myDailyWins?.dailyWins ?? 0) > 1 ? 's' : ''} du jour`
+              (myDailyWins?.dailyWins ?? 0) > 1
+                ? t('leaderboard_daily_wins_other', { count: String(myDailyWins?.dailyWins ?? 0) })
+                : t('leaderboard_daily_wins_one', { count: String(myDailyWins?.dailyWins ?? 0) })
             ) : (
               `🏅 ${myEntry!.badgeCount}  🌱 ${myEntry!.seeds}`
             )}
@@ -273,16 +280,16 @@ export const LeaderboardScreen: React.FC = () => {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.forest.medium} />
-          <Text style={styles.loadingText}>Chargement du classement…</Text>
+          <Text style={styles.loadingText}>{t('leaderboard_loading')}</Text>
         </View>
       ) : displayData.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyEmoji}>{tab === 'daily' ? '🌅' : '🌲'}</Text>
-          <Text style={styles.emptyText}>Aucun joueur pour l'instant.</Text>
+          <Text style={styles.emptyText}>{t('leaderboard_empty')}</Text>
           <Text style={styles.emptySubtext}>
             {tab === 'daily'
-              ? "Sois le premier à compléter le défi du jour !"
-              : "Complète un défi pour apparaître ici !"}
+              ? t('leaderboard_daily_empty')
+              : t('leaderboard_empty_sub')}
           </Text>
         </View>
       ) : (

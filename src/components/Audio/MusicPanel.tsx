@@ -318,11 +318,11 @@ export function MusicPanel() {
 
   return (
     <View style={styles.panel}>
-      <Text style={styles.panelTitle}>🎵 Musique</Text>
+      <Text style={styles.panelTitle}>{t('music_panel_title')}</Text>
 
       {/* Ligne Ambiance Forêt (menu) */}
       <RowPicker
-        typeLabel="Ambiance Forêt"
+        typeLabel={t('music_type_menu')}
         typeEmoji="🌲"
         enabled={audioStore.menuEnabled}
         onToggle={audioStore.setMenuEnabled}
@@ -337,7 +337,7 @@ export function MusicPanel() {
 
       {/* Ligne Ambiance Défi (ingame) */}
       <RowPicker
-        typeLabel="Ambiance Défi"
+        typeLabel={t('music_type_ingame')}
         typeEmoji="🎮"
         enabled={audioStore.ingameEnabled}
         onToggle={audioStore.setIngameEnabled}
@@ -352,7 +352,7 @@ export function MusicPanel() {
 
       {/* Volume */}
       <View style={styles.volumeRow}>
-        <Text style={styles.volumeLabel}>🔉 Volume</Text>
+        <Text style={styles.volumeLabel}>{t('music_volume')}</Text>
         <View style={styles.volumeBtns}>
           {VOLUMES.map(v => (
             <TouchableOpacity
@@ -420,7 +420,7 @@ export function MusicPanel() {
       {lockedTracks.length > 0 && (
         <>
           <View style={styles.divider} />
-          <Text style={styles.unlockTitle}>🔒 Titres à débloquer</Text>
+          <Text style={styles.unlockTitle}>{t('music_locked_section')}</Text>
           {lockedTracks.map(track => {
             const badgeDef = track.unlockBadgeId ? getUnlockBadgeDef(track.unlockBadgeId) : null;
             const alreadyHas = track.unlockBadgeId ? hasBadge(track.unlockBadgeId) : false;
@@ -430,7 +430,7 @@ export function MusicPanel() {
                 <View style={styles.lockedTrackInfo}>
                   <Text style={styles.lockedTrackTitle}>🔒 {track.title}</Text>
                   <Text style={styles.lockedTrackType}>
-                    {track.type === 'ingame' ? '🎮 Ambiance Défi' : '🌲 Ambiance Forêt'}
+                    {track.type === 'ingame' ? `🎮 ${t('music_type_ingame')}` : `🌲 ${t('music_type_menu')}`}
                   </Text>
                   {track.description && (
                     <Text style={styles.lockedTrackDesc}>{track.description}</Text>
@@ -449,7 +449,7 @@ export function MusicPanel() {
                         styles.badgeRequirementLabel,
                         alreadyHas && styles.badgeRequirementLabelDone,
                       ]}>
-                        {alreadyHas ? 'Badge obtenu !' : `Badge requis : ${badgeDef.label}`}
+                        {alreadyHas ? t('music_badge_earned') : t('music_badge_required', { badge: badgeDef.label })}
                       </Text>
                       {!alreadyHas && (
                         <Text style={styles.badgeRequirementDesc} numberOfLines={2}>

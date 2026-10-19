@@ -189,7 +189,7 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
                   styles.musicBoxTitle,
                   earned && styles.musicBoxTitleEarned,
                 ]}>
-                  {earned ? 'Titre débloqué' : 'Débloque le titre'}
+                  {earned ? t('badge_detail_music_unlocked') : t('badge_detail_music_unlock')}
                 </Text>
                 <Text style={[
                   styles.musicBoxTrack,
@@ -197,7 +197,7 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
                 ]}>
                   {musicUnlockTrack.title}
                   <Text style={styles.musicBoxType}>
-                    {' '}— {musicUnlockTrack.type === 'ingame' ? 'Ambiance Défi' : 'Ambiance Forêt'}
+                    {' '}— {musicUnlockTrack.type === 'ingame' ? t('music_type_ingame') : t('music_type_menu')}
                   </Text>
                 </Text>
                 {musicUnlockTrack.description && (
@@ -215,10 +215,11 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
                 <Text style={[styles.statusTitle, { color: rarityColor }]}>{t('badge_earned')}</Text>
                 {earnedAt && (
                   <Text style={styles.statusDate}>
-                    Le {new Date(earnedAt).toLocaleDateString('fr-FR', {
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric',
+                    {t('badge_detail_earned_on', {
+                      date: new Date(earnedAt).toLocaleDateString(
+                        undefined,
+                        { day: '2-digit', month: 'long', year: 'numeric' }
+                      )
                     })}
                   </Text>
                 )}

@@ -15,6 +15,7 @@ import {
 
 const native = Platform.OS !== 'web';
 import { Colors } from '../../constants/colors';
+import { useT } from '../../i18n';
 
 interface DailyAbandonConfirmModalProps {
   visible: boolean;
@@ -27,6 +28,7 @@ export const DailyAbandonConfirmModal: React.FC<DailyAbandonConfirmModalProps> =
   onContinue,
   onAbandon,
 }) => {
+  const t = useT();
   const scaleAnim   = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim   = useRef(new Animated.Value(0)).current;
@@ -83,10 +85,8 @@ export const DailyAbandonConfirmModal: React.FC<DailyAbandonConfirmModalProps> =
             <Text style={styles.iconText}>{'\u26D4'}</Text>
           </Animated.View>
 
-          <Text style={styles.title}>Quitter le Defi du Jour ?</Text>
-          <Text style={styles.message}>
-            Tu ne pourras plus retenter ce defi. Il sera compte comme un echec.
-          </Text>
+          <Text style={styles.title}>{t('daily_abandon_title')}</Text>
+          <Text style={styles.message}>{t('daily_abandon_message')}</Text>
 
           {/* Actions */}
           <TouchableOpacity
@@ -94,7 +94,7 @@ export const DailyAbandonConfirmModal: React.FC<DailyAbandonConfirmModalProps> =
             onPress={onContinue}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnContinueText}>Continuer a jouer</Text>
+            <Text style={styles.btnContinueText}>{t('daily_abandon_continue')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -102,7 +102,7 @@ export const DailyAbandonConfirmModal: React.FC<DailyAbandonConfirmModalProps> =
             onPress={onAbandon}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnAbandonText}>Abandonner</Text>
+            <Text style={styles.btnAbandonText}>{t('daily_abandon_confirm')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>

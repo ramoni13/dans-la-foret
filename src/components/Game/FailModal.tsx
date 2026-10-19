@@ -17,6 +17,7 @@ import {
 const native = Platform.OS !== 'web';
 import { Colors } from '../../constants/colors';
 import { notificationError } from '../../utils/haptics';
+import { useT } from '../../i18n';
 
 interface FailModalProps {
   visible: boolean;
@@ -29,6 +30,7 @@ export const FailModal: React.FC<FailModalProps> = ({
   onRetry,
   onGiveUp,
 }) => {
+  const t = useT();
   const scaleAnim   = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim   = useRef(new Animated.Value(0)).current;
@@ -97,8 +99,8 @@ export const FailModal: React.FC<FailModalProps> = ({
           </Animated.View>
 
           <Text style={styles.emoji}>❌</Text>
-          <Text style={styles.title}>Pas encore…</Text>
-          <Text style={styles.message}>Ce n'est pas tout à fait ça…</Text>
+          <Text style={styles.title}>{t('fail_title')}</Text>
+          <Text style={styles.message}>{t('fail_message')}</Text>
 
           {/* Actions */}
           <TouchableOpacity
@@ -106,7 +108,7 @@ export const FailModal: React.FC<FailModalProps> = ({
             onPress={onRetry}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnRetryText}>Continuer à jouer</Text>
+            <Text style={styles.btnRetryText}>{t('fail_retry')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -114,7 +116,7 @@ export const FailModal: React.FC<FailModalProps> = ({
             onPress={onGiveUp}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnGiveUpText}>Abandonner</Text>
+            <Text style={styles.btnGiveUpText}>{t('fail_give_up')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>

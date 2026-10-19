@@ -15,6 +15,7 @@ import {
 
 const native = Platform.OS !== 'web';
 import { Colors } from '../../constants/colors';
+import { useT } from '../../i18n';
 
 interface AbandonConfirmModalProps {
   visible: boolean;
@@ -27,6 +28,7 @@ export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
   onContinue,
   onAbandon,
 }) => {
+  const t = useT();
   const scaleAnim   = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -70,13 +72,9 @@ export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
             <Text style={styles.iconText}>{'\u26A0\uFE0F'}</Text>
           </Animated.View>
 
-          <Text style={styles.title}>Abandonner ce defi ?</Text>
-          <Text style={styles.message}>
-            Tu pourras reprendre ce defi quand tu veux.
-          </Text>
-          <Text style={styles.warning}>
-            {'\u26D4'} Abandon = Record mondial inaccessible sur ce defi.
-          </Text>
+          <Text style={styles.title}>{t('abandon_title')}</Text>
+          <Text style={styles.message}>{t('abandon_message')}</Text>
+          <Text style={styles.warning}>{t('abandon_warning')}</Text>
 
           {/* Actions */}
           <TouchableOpacity
@@ -84,7 +82,7 @@ export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
             onPress={onContinue}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnContinueText}>Continuer a jouer</Text>
+            <Text style={styles.btnContinueText}>{t('abandon_continue')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -92,7 +90,7 @@ export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
             onPress={onAbandon}
             activeOpacity={0.8}
           >
-            <Text style={styles.btnAbandonText}>Abandonner</Text>
+            <Text style={styles.btnAbandonText}>{t('abandon_confirm')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>

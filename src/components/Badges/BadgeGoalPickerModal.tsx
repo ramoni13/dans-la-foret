@@ -13,9 +13,11 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { BADGE_MAP, BADGE_DEFINITIONS, BadgeRarity } from '../../constants/badges';
+import { BADGE_MAP, BADGE_DEFINITIONS, BadgeRarity, getBadgeTexts } from '../../constants/badges';
+import { usePlayerStore } from '../../store/playerStore';
 import { ELIGIBLE_GOAL_BADGE_IDS } from '../../core/engine/badgeEngine';
 import { Colors } from '../../constants/colors';
+import { useT } from '../../i18n';
 
 interface BadgeGoalPickerModalProps {
   visible: boolean;
@@ -26,16 +28,16 @@ interface BadgeGoalPickerModalProps {
   onClose: () => void;
 }
 
-// Ordre et libellés des catégories dans le picker
-const CATEGORY_ORDER = [
-  { key: 'vitesse',      label: '⚡ Vitesse' },
-  { key: 'precision',    label: '🎯 Précision' },
-  { key: 'regularite',   label: '📅 Régularité' },
-  { key: 'amelioration', label: '📈 Amélioration' },
-  { key: 'exploration',  label: '🌲 Exploration' },
-  { key: 'social',       label: '🤝 Social' },
-  { key: 'regularite_daily', label: '🌅 Défi du Jour' },
-];
+// Ordre des catégories dans le picker (labels traduits dans le composant via useT)
+const CATEGORY_KEYS = [
+  { key: 'vitesse',          tKey: 'cat_vitesse' },
+  { key: 'precision',        tKey: 'cat_precision' },
+  { key: 'regularite',       tKey: 'cat_regularite' },
+  { key: 'amelioration',     tKey: 'cat_amelioration' },
+  { key: 'exploration',      tKey: 'cat_exploration' },
+  { key: 'social',           tKey: 'cat_social' },
+  { key: 'regularite_daily', tKey: 'cat_regularite_daily' },
+] as const;
 
 // Couleur du bord selon la rareté
 const RARITY_COLORS: Record<BadgeRarity, string> = {
@@ -52,6 +54,8 @@ export const BadgeGoalPickerModal: React.FC<BadgeGoalPickerModalProps> = ({
   onConfirm,
   onClose,
 }) => {
+  const t = useT();
+  const language = usePlayerStore(s => s.language);
   const earnedSet = new Set(earnedBadges);
 
   // Objectifs en cours = ceux qui NE SONT PAS encore obtenus
@@ -130,13 +134,14 @@ export const BadgeGoalPickerModal: React.FC<BadgeGoalPickerModalProps> = ({
     >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
-          <Text style={styles.title}>Choisir un objectif</Text>
+          <Text style={styles.title}>{t('goal_picker_title')}</Text>
           <Text style={styles.subtitle}>
-            {totalSelected}/3 sélectionnés · {availableCount} badges disponibles
+            {t('goal_picker_subtitle', { selected: String(totalSelected), available: String(availableCount) })}
           </Text>
 
           <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
-            {CATEGORY_ORDER.map(({ key, label }) => {
+            {CATEGORY_KEYS.map(({ key, tKey }) => {
+              const label = t(tKey);
               const ids = grouped[key];
               if (!ids || ids.length === 0) return null;
 
@@ -155,6 +160,7 @@ export const BadgeGoalPickerModal: React.FC<BadgeGoalPickerModalProps> = ({
                   {ids.map(badgeId => {
                     const badge    = BADGE_MAP[badgeId];
                     if (!badge) return null;
+                    const badgeTexts   = getBadgeTexts(badge, language);
                     const isEarned     = earnedSet.has(badgeId);
                     const isCurrentGoal = currentGoalSet.has(badgeId);
                     const isNext       = badgeId === nextAvailableId;
@@ -187,14 +193,14 @@ export const BadgeGoalPickerModal: React.FC<BadgeGoalPickerModalProps> = ({
                         </Text>
                         <View style={styles.rowText}>
                           <Text style={[styles.rowLabel, (isEarned || isCurrentGoal) && styles.dimmed]} numberOfLines={1}>
-                            {badge.label}
+                            {badgeTexts.label}
                           </Text>
                           <Text style={[styles.rowDesc, (isEarned || isCurrentGoal) && styles.dimmed]} numberOfLines={2}>
                             {isEarned
-                              ? 'Déjà obtenu ✓'
+                              ? t('goal_picker_earned')
                               : isCurrentGoal
-                                ? 'Objectif en cours...'
-                                : badge.description}
+                                ? t('goal_picker_in_progress')
+                                : badgeTexts.description}
                           </Text>
                         </View>
                         {isEarned ? (
@@ -215,14 +221,14 @@ export const BadgeGoalPickerModal: React.FC<BadgeGoalPickerModalProps> = ({
 
             {availableCount === 0 && (
               <Text style={styles.empty}>
-                Tous les badges éligibles ont été obtenus ! 🏆
+                {t('goal_picker_empty')}
               </Text>
             )}
           </ScrollView>
 
           <View style={styles.actions}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.8}>
-              <Text style={styles.cancelText}>Annuler</Text>
+              <Text style={styles.cancelText}>{t('goal_picker_cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.confirmBtn, selected.length === 0 && styles.confirmBtnDisabled]}
@@ -230,7 +236,7 @@ export const BadgeGoalPickerModal: React.FC<BadgeGoalPickerModalProps> = ({
               activeOpacity={0.8}
               disabled={selected.length === 0}
             >
-              <Text style={styles.confirmText}>Confirmer</Text>
+              <Text style={styles.confirmText}>{t('goal_picker_confirm')}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -48,6 +48,8 @@ interface BadgeCollectionProps {
   progressMap?: Record<string, number>;
   /** Labels de progression: badgeId → ex: "8/10" */
   progressLabelMap?: Record<string, string>;
+  /** Si true, masque le RankPanel en bas (utile quand il est déjà affiché au-dessus) */
+  hideRankPanel?: boolean;
 }
 
 // Clés i18n pour les filtres de rareté
@@ -87,13 +89,13 @@ const RARITY_ROWS: { key: BadgeRarity; color: string; labelKey: string }[] = [
   { key: 'cristal', color: '#00BCD4', labelKey: 'rank_points_cristal' },
 ];
 
-interface RankPanelProps {
+export interface RankPanelProps {
   earnedBadges: string[];
   language: string;
   t: (key: string, vars?: Record<string, string>) => string;
 }
 
-const RankPanel: React.FC<RankPanelProps> = ({ earnedBadges, language, t }) => {
+export const RankPanel: React.FC<RankPanelProps> = ({ earnedBadges, language, t }) => {
   const stats = usePlayerStore(s => s.stats);
   const onfSolvedCount = usePlayerStore(s => s.onfSolvedCount);
   const completedChallenges = usePlayerStore(s => s.completedChallenges);
@@ -208,7 +210,7 @@ const RankPanel: React.FC<RankPanelProps> = ({ earnedBadges, language, t }) => {
               </View>
               {isCurrentRank && (
                 <View style={rankStyles.currentBadge}>
-                  <Text style={rankStyles.currentBadgeText}>ton rang</Text>
+                  <Text style={rankStyles.currentBadgeText}>{t('badge_rank_label')}</Text>
                 </View>
               )}
             </View>
@@ -381,6 +383,7 @@ export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
   earnedAtMap = {},
   progressMap = {},
   progressLabelMap = {},
+  hideRankPanel = false,
 }) => {
   const t = useT();
   const language = usePlayerStore(state => state.language);
@@ -503,8 +506,8 @@ export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
           </View>
         )}
 
-        {/* Pavé système de rangs — toujours visible en bas */}
-        {activeFilter === 'all' && (
+        {/* Pavé système de rangs — visible en bas sauf si déjà affiché au-dessus */}
+        {activeFilter === 'all' && !hideRankPanel && (
           <RankPanel earnedBadges={earnedBadges} language={language} t={t} />
         )}
       </ScrollView>
