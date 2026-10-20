@@ -18,7 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { usePlayerStore } from '../../src/store/playerStore';
-import { getMetrics, GlobalMetrics, PlayerMetrics } from '../../src/services/adminService';
+import { getMetrics, GlobalMetrics, PlayerMetrics, TrackMetrics } from '../../src/services/adminService';
 import { Colors } from '../../src/constants/colors';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -115,6 +115,35 @@ function DetailItem({ label, value }: DetailItemProps) {
     <View style={styles.detailItem}>
       <Text style={styles.detailLabel}>{label}</Text>
       <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+}
+
+// ── Ligne de piste musicale ───────────────────────────────────────────────────
+
+interface TrackRowProps { track: TrackMetrics; rank: number; maxPlays: number }
+function TrackRow({ track, rank, maxPlays }: TrackRowProps) {
+  const barWidth = maxPlays > 0 ? (track.totalPlays / maxPlays) * 100 : 0;
+  const isIngame = track.type === 'ingame';
+  const typeColor = isIngame ? '#9C27B0' : '#2196F3';
+  const typeLabel = isIngame ? 'Défi' : 'Forêt';
+
+  return (
+    <View style={styles.trackRow}>
+      <View style={styles.trackHeader}>
+        <Text style={styles.trackRank}>#{rank}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.trackTitle}>{track.title}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 2 }}>
+            <Text style={[styles.trackType, { color: typeColor }]}>{typeLabel}</Text>
+            <Text style={styles.trackStat}>{track.totalPlays} écoute{track.totalPlays !== 1 ? 's' : ''}</Text>
+            <Text style={styles.trackStat}>{track.selectedByCount} sélection{track.selectedByCount !== 1 ? 's' : ''}</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.trackBarBg}>
+        <View style={[styles.trackBarFill, { width: `${barWidth}%` as any, backgroundColor: typeColor }]} />
+      </View>
     </View>
   );
 }
@@ -238,6 +267,33 @@ export default function MetricsScreen() {
             <StatCard label="Daily joués" value={metrics.totalDailyPlayed} color="#9C27B0" />
             <StatCard label="Daily gagnés" value={metrics.totalDailyWon} sub={`${dailySuccessRate}% de réussite`} color="#E91E63" />
             <StatCard label="Temps moy. de résolution" value={fmtMs(metrics.avgResolutionMs)} color="#FF5722" />
+          </View>
+
+          {/* ── Musique ───────────────────────────────────────────────── */}
+          <SectionHeader title="Musique" />
+          <View style={styles.cardGrid}>
+            <StatCard
+              label="Coupé son Défi"
+              value={`${metrics.music.pctIngameMuted}%`}
+              sub={`sur ${metrics.music.playersWithAudioData} joueurs`}
+              color="#9C27B0"
+            />
+            <StatCard
+              label="Coupé son Forêt"
+              value={`${metrics.music.pctMenuMuted}%`}
+              sub={`sur ${metrics.music.playersWithAudioData} joueurs`}
+              color="#2196F3"
+            />
+          </View>
+          <View style={{ paddingHorizontal: 12, marginTop: 8 }}>
+            {metrics.music.tracks.map((track, i) => (
+              <TrackRow
+                key={track.trackId}
+                track={track}
+                rank={i + 1}
+                maxPlays={metrics.music.tracks[0]?.totalPlays || 1}
+              />
+            ))}
           </View>
 
           {/* ── Tableau des joueurs ───────────────────────────────────── */}
@@ -433,6 +489,52 @@ const styles = StyleSheet.create({
   sortBtnTextActive: {
     color: '#E8F5E9',
     fontWeight: '700',
+  },
+
+  // ── Lignes pistes musicales ───────────────────────────────────
+  trackRow: {
+    backgroundColor: '#1C3820',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 6,
+  },
+  trackHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 6,
+  },
+  trackRank: {
+    color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: '700',
+    width: 24,
+    paddingTop: 1,
+  },
+  trackTitle: {
+    color: '#E8F5E9',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  trackType: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  trackStat: {
+    color: '#81C784',
+    fontSize: 11,
+  },
+  trackBarBg: {
+    height: 4,
+    backgroundColor: '#0F2211',
+    borderRadius: 2,
+    overflow: 'hidden' as const,
+  },
+  trackBarFill: {
+    height: 4,
+    borderRadius: 2,
   },
 
   // ── Lignes joueurs ────────────────────────────────────────────
