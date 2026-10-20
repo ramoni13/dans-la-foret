@@ -61,6 +61,22 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     unlockBadgeId: 'daily_first',        // 🌅 Premier Pas Quotidien — 1er défi du jour réussi
     description: 'Les pulsations naturelles de la forêt',
   },
+  {
+    id: 'lilting_swing',
+    title: 'Lilting Swing',
+    type: 'menu',
+    file: require('../../assets/musics/Lilting Swing_F.mp3'),
+    unlockBadgeId: 'social_lion',        // 🦁 Chasseur solitaire — 5 victoires contre des amis
+    description: 'Mélodie légère et balancée pour les esprits sociaux',
+  },
+  {
+    id: 'sun_warmed_groove',
+    title: 'Sun-Warmed Groove',
+    type: 'menu',
+    file: require('../../assets/musics/Sun-Warmed Groove_F.mp3'),
+    unlockBadgeId: 'saisonnier_hiver',   // ❄️ Flocon de neige — 5 défis en hiver
+    description: 'Chaleur dorée d\'un groove ensoleillé, baume contre le froid',
+  },
 
   // ── Ambiance Défi (ingame) — gratuits ─────────────────────────────────────
   {
@@ -103,6 +119,30 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     file: require('../../assets/musics/elek.mp3'),
     unlockBadgeId: 'vitesse_loup',       // 🦊 Ruse du Loup — défi en < 20 s
     description: 'Rythme électro pour les défis intenses',
+  },
+  {
+    id: 'boucle_hypnotique',
+    title: 'Boucle Hypnotique',
+    type: 'ingame',
+    file: require('../../assets/musics/Boucle Hypnotique_D.mp3'),
+    unlockBadgeId: 'social_poignee',     // 🤝 Première rencontre — 1er défi ami
+    description: 'Boucle hypnotique pour entrer dans la zone de concentration',
+  },
+  {
+    id: 'neo_classical_motivation',
+    title: 'Neo Classical Motivation',
+    type: 'ingame',
+    file: require('../../assets/musics/Neo Classical Motivation_D.mp3'),
+    unlockBadgeId: 'amelioration_cycle', // 🔄 Persévérant — rejoue le même défi 3 fois
+    description: 'Orchestrations néo-classiques pour booster la motivation',
+  },
+  {
+    id: 'moonlit_beach_shuffle',
+    title: 'Moonlit Beach Shuffle',
+    type: 'menu',
+    file: require('../../assets/musics/Moonlit Beach Shuffle_F.mp3'),
+    unlockBadgeId: 'amelioration_graphe', // 📈 En progression — améliore ton meilleur temps
+    description: 'Shuffle nocturne au clair de lune pour les esprits en quête de progression',
   },
 ];
 
