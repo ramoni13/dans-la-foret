@@ -661,6 +661,13 @@ export default function ProfileScreen() {
               >
                 <Text style={devStyles.adminCleanBtnText}>Sequence des badges</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[devStyles.adminCleanBtn, { marginTop: 8 }]}
+                onPress={() => router.push('/admin/metrics')}
+                activeOpacity={0.8}
+              >
+                <Text style={devStyles.adminCleanBtnText}>Métriques</Text>
+              </TouchableOpacity>
             </>
           )}
 

@@ -441,8 +441,12 @@ export default function FriendChallengeScreen() {
       const scoreBeforeFriend = getPlayerScore(stateBeforeFriend.earnedBadges, activityStatsBefore);
       const rankBeforeFriend  = getRank(scoreBeforeFriend);
 
-      // Incrémenter friendPlayed pour tous les participants
-      player.incrementStat('friendPlayed');
+      // Incrémenter friendPlayed + friendWins pour le Joueur A (Challenger)
+      // (Le Joueur B les incrémente dans son propre useEffect via answerFriendChallenge)
+      if (isChallenger) {
+        player.incrementStat('friendPlayed');
+        player.recordFriendWin();
+      }
 
       // ── Détection changement de rang ─────────────────────────────────────
       const stateAfterFriend = usePlayerStore.getState();
@@ -485,6 +489,10 @@ export default function FriendChallengeScreen() {
         );
         const iWon = winnerId === params.opponentUid;
         setOpponentWon(iWon);
+
+        // Statistiques Joueur B : partie jouée + victoire éventuelle
+        player.incrementStat('friendPlayed');
+        if (iWon) player.recordFriendWin();
 
         // Récompense : 15 graines au vainqueur
         if (iWon) {
