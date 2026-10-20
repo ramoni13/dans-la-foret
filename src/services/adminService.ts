@@ -107,3 +107,160 @@ export async function resetPlayer(userId: string, username: string): Promise<voi
 export async function deletePlayer(userId: string): Promise<void> {
   await deleteDoc(doc(db, 'players', userId));
 }
+
+// ── Métriques agrégées ────────────────────────────────────────────────────────
+
+export interface PlayerMetrics {
+  userId: string;
+  username: string;
+  createdAt?: any;
+  seeds: number;
+  isPremium: boolean;
+  completedChallenges: number;
+  earnedBadges: number;
+  onfSolvedCount: number;
+  dailyStreak: number;
+  dailyChallengeStreak: number;
+  longestDailyChallengeStreak: number;
+  dailyChallengeStatus: string;
+  stats: {
+    totalSolved: number;
+    currentStreak: number;
+    longestStreak: number;
+    noErrorStreak: number;
+    friendWins: number;
+    totalFriendsInvited: number;
+    topDEJCount: number;
+    improvedChallengesCount: number;
+    dailyPlayed: number;
+    dailyWon: number;
+    friendPlayed: number;
+    avgResolutionMs: number;
+    totalResolutionCount: number;
+    onfPerfectCount: number;
+    onfSpeedCount: number;
+    dailyPerfectCount: number;
+    dailySpeedCount: number;
+  };
+}
+
+export interface GlobalMetrics {
+  totalPlayers: number;
+  activeLast7Days: number;    // lastPlayedDate dans les 7 derniers jours
+  activeLast30Days: number;
+  totalCompletedChallenges: number;
+  totalBadgesEarned: number;
+  totalSeedsInCirculation: number;
+  totalOnfSolved: number;
+  totalDailyWon: number;
+  totalDailyPlayed: number;
+  avgBadgesPerPlayer: number;
+  avgChallengesPerPlayer: number;
+  avgResolutionMs: number;
+  players: PlayerMetrics[];
+}
+
+export async function getMetrics(): Promise<GlobalMetrics> {
+  const snap = await getDocs(collection(db, 'players'));
+
+  const now = new Date();
+  const day7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const day30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const toDate = (s: string): Date | null => {
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  let totalCompleted = 0;
+  let totalBadges = 0;
+  let totalSeeds = 0;
+  let totalOnf = 0;
+  let totalDailyWon = 0;
+  let totalDailyPlayed = 0;
+  let totalAvgResMs = 0;
+  let totalResCount = 0;
+  let active7 = 0;
+  let active30 = 0;
+
+  const players: PlayerMetrics[] = snap.docs.map((d) => {
+    const data = d.data();
+    const stats = data.stats ?? {};
+    const lastPlayed = toDate(data.lastPlayedDate ?? '');
+
+    const completed = (data.completedChallenges ?? []).length;
+    const badges = (data.earnedBadges ?? []).length;
+    const seeds = data.seeds ?? 0;
+    const onf = data.onfSolvedCount ?? 0;
+    const dWon = stats.dailyWon ?? 0;
+    const dPlayed = stats.dailyPlayed ?? 0;
+    const avgMs = stats.avgResolutionMs ?? 0;
+    const resCount = stats.totalResolutionCount ?? 0;
+
+    totalCompleted += completed;
+    totalBadges += badges;
+    totalSeeds += seeds;
+    totalOnf += onf;
+    totalDailyWon += dWon;
+    totalDailyPlayed += dPlayed;
+    if (avgMs > 0 && resCount > 0) {
+      totalAvgResMs += avgMs * resCount;
+      totalResCount += resCount;
+    }
+    if (lastPlayed) {
+      if (lastPlayed >= day7) active7++;
+      if (lastPlayed >= day30) active30++;
+    }
+
+    return {
+      userId: data.userId ?? d.id,
+      username: data.username ?? 'Joueur',
+      createdAt: data.createdAt ?? null,
+      seeds,
+      isPremium: data.isPremium ?? false,
+      completedChallenges: completed,
+      earnedBadges: badges,
+      onfSolvedCount: onf,
+      dailyStreak: data.dailyStreak ?? 0,
+      dailyChallengeStreak: data.dailyChallengeStreak ?? 0,
+      longestDailyChallengeStreak: data.longestDailyChallengeStreak ?? 0,
+      dailyChallengeStatus: data.dailyChallengeStatus ?? 'none',
+      stats: {
+        totalSolved: stats.totalSolved ?? 0,
+        currentStreak: stats.currentStreak ?? 0,
+        longestStreak: stats.longestStreak ?? 0,
+        noErrorStreak: stats.noErrorStreak ?? 0,
+        friendWins: stats.friendWins ?? 0,
+        totalFriendsInvited: stats.totalFriendsInvited ?? 0,
+        topDEJCount: stats.topDEJCount ?? 0,
+        improvedChallengesCount: stats.improvedChallengesCount ?? 0,
+        dailyPlayed: dPlayed,
+        dailyWon: dWon,
+        friendPlayed: stats.friendPlayed ?? 0,
+        avgResolutionMs: avgMs,
+        totalResolutionCount: resCount,
+        onfPerfectCount: stats.onfPerfectCount ?? 0,
+        onfSpeedCount: stats.onfSpeedCount ?? 0,
+        dailyPerfectCount: stats.dailyPerfectCount ?? 0,
+        dailySpeedCount: stats.dailySpeedCount ?? 0,
+      },
+    };
+  });
+
+  const n = players.length || 1;
+  return {
+    totalPlayers: players.length,
+    activeLast7Days: active7,
+    activeLast30Days: active30,
+    totalCompletedChallenges: totalCompleted,
+    totalBadgesEarned: totalBadges,
+    totalSeedsInCirculation: totalSeeds,
+    totalOnfSolved: totalOnf,
+    totalDailyWon,
+    totalDailyPlayed,
+    avgBadgesPerPlayer: Math.round((totalBadges / n) * 10) / 10,
+    avgChallengesPerPlayer: Math.round((totalCompleted / n) * 10) / 10,
+    avgResolutionMs: totalResCount > 0 ? Math.round(totalAvgResMs / totalResCount) : 0,
+    players: players.sort((a, b) => b.completedChallenges - a.completedChallenges),
+  };
+}
