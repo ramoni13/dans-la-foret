@@ -8,6 +8,8 @@ import { useEffect, useRef } from 'react';
 import { useAudioStore } from '../../store/audioStore';
 import { audioService } from '../../services/audioService';
 import { MUSIC_CATALOG } from '../../constants/music';
+import { usePlayerStore } from '../../store/playerStore';
+import { incrementTrackPlayCount, updateAudioEnabled } from '../../services/playerService';
 
 interface AudioControllerProps {
   isInGame: boolean;
@@ -25,6 +27,24 @@ export function AudioController({ isInGame }: AudioControllerProps) {
 
       // Catalogue statique (ne change jamais en runtime) — mémoïsé en ref
   const catalogRef = useRef(MUSIC_CATALOG.map(t => ({ id: t.id, type: t.type, file: t.file })));
+
+  const userId = usePlayerStore(s => s.userId);
+
+  // Brancher le callback de métriques d'écoute (fire-and-forget, Firestore)
+  useEffect(() => {
+    audioService.onTrackStarted = (trackId) => {
+      if (userId) {
+        incrementTrackPlayCount(userId, trackId).catch(() => {});
+      }
+    };
+    return () => { audioService.onTrackStarted = null; };
+  }, [userId]);
+
+  // Persister l'état audio activé/coupé en Firestore à chaque changement
+  useEffect(() => {
+    if (!userId) return;
+    updateAudioEnabled(userId, ingameEnabled, menuEnabled).catch(() => {});
+  }, [userId, ingameEnabled, menuEnabled]);
 
   // Synchroniser le service audio à chaque changement
   useEffect(() => {
