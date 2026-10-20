@@ -53,7 +53,7 @@ import { getRank, getPlayerScore, getNextRank } from '../../src/constants/badges
 import { AdminCleanModal } from '../../src/components/Admin/AdminCleanModal';
 
 // ── Types ───────────────────────────────────────────────────────────────────────
-type ActiveSection = 'hub' | 'stats' | 'badges' | 'classement' | 'reglages';
+type ActiveSection = 'hub' | 'stats' | 'badges' | 'classement' | 'reglages' | 'about';
 
 
 
@@ -675,6 +675,69 @@ export default function ProfileScreen() {
     );
   }
 
+  // ── Section À PROPOS ─────────────────────────────────────────────────────────
+  if (activeSection === 'about') {
+    return (
+      <View style={StyleSheet.absoluteFill}>
+        <BgImage overlay={0.52} />
+        <ScrollView
+          style={[styles.subSection, { top: innerTop }]}
+          contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.sectionHeading}>{t('about_title')}</Text>
+          <Text style={aboutStyles.subtitle}>{t('about_subtitle')}</Text>
+
+          {/* Histoire */}
+          <View style={aboutStyles.card}>
+            <Text style={aboutStyles.cardTitle}>{t('about_history_title')}</Text>
+            <Text style={aboutStyles.cardBody}>{t('about_history_body')}</Text>
+            <View style={aboutStyles.featureList}>
+              <Text style={aboutStyles.featureItem}>{t('about_feature_1')}</Text>
+              <Text style={aboutStyles.featureItem}>{t('about_feature_2')}</Text>
+              <Text style={aboutStyles.featureItem}>{t('about_feature_3')}</Text>
+              <Text style={aboutStyles.featureItem}>{t('about_feature_4')}</Text>
+              <Text style={aboutStyles.featureItem}>{t('about_feature_5')}</Text>
+            </View>
+          </View>
+
+          {/* Démarche */}
+          <View style={aboutStyles.card}>
+            <Text style={aboutStyles.cardTitle}>{t('about_approach_title')}</Text>
+            <Text style={aboutStyles.cardBody}>{t('about_approach_body')}</Text>
+          </View>
+
+          {/* Partenariat ONF */}
+          <View style={[aboutStyles.card, aboutStyles.cardOnf]}>
+            <View style={aboutStyles.onfHeader}>
+              <Text style={aboutStyles.onfEmoji}>🌲</Text>
+              <Text style={[aboutStyles.cardTitle, aboutStyles.onfTitle]}>{t('about_onf_title')}</Text>
+            </View>
+            <Text style={aboutStyles.cardBody}>{t('about_onf_body')}</Text>
+            <View style={aboutStyles.onfHighlight}>
+              <Text style={aboutStyles.onfHighlightText}>{t('about_onf_highlight')}</Text>
+            </View>
+            <Text style={[aboutStyles.cardBody, { marginTop: 8 }]}>{t('about_onf_ads')}</Text>
+          </View>
+
+          {/* Équipe */}
+          <View style={aboutStyles.card}>
+            <Text style={aboutStyles.cardTitle}>{t('about_team_title')}</Text>
+            <Text style={aboutStyles.cardBody}>{t('about_team_body')}</Text>
+            <View style={aboutStyles.creditsList}>
+              <AboutCreditRow label={t('about_credit_author')} value="Cédric Martinez" />
+              <AboutCreditRow label={t('about_credit_music')} value="Dantès" />
+              <AboutCreditRow label={t('about_credit_dev')} value="Ramoni & Marty Touch" />
+              <AboutCreditRow label={t('about_credit_illustrations')} value="Kikou" />
+            </View>
+          </View>
+
+          <Text style={aboutStyles.copyright}>{t('about_copyright')}</Text>
+        </ScrollView>
+      </View>
+    );
+  }
+
   // ── HUB (état initial) ────────────────────────────────────────────────────────
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -692,9 +755,6 @@ export default function ProfileScreen() {
             {nextRank && (
               <Text style={styles.rankScoreText}>{playerScore} / {nextRank.minScore} pts</Text>
             )}
-          </View>
-          <View style={styles.seedsBadge}>
-            <Text style={styles.seedsBadgeText}>{t('profile_seeds', { count: String(player.seeds) })}</Text>
           </View>
         </View>
 
@@ -757,6 +817,21 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
         </View>
+
+        {/* À propos */}
+        <TouchableOpacity
+          style={styles.aboutBtn}
+          onPress={() => setActiveSection('about')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.aboutBtnInner}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aboutBtnText}>{t('profile_btn_about')}</Text>
+              <Text style={styles.aboutBtnSub}>{t('profile_btn_about_sub')}</Text>
+            </View>
+            <Text style={styles.aboutBtnChevron}>›</Text>
+          </View>
+        </TouchableOpacity>
 
       </ScrollView>
     </View>
@@ -1021,6 +1096,9 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     color: '#fff',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 4,
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
@@ -1052,6 +1130,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.ui.textLight,
     lineHeight: 16,
+  },
+
+  // À propos
+  aboutBtn: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.ui.border,
+    backgroundColor: Colors.ui.card,
+    overflow: 'hidden',
+  },
+  aboutBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  aboutBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.ui.text,
+  },
+  aboutBtnSub: {
+    fontSize: 12,
+    color: Colors.ui.textLight,
+    marginTop: 2,
+  },
+  aboutBtnChevron: {
+    fontSize: 22,
+    color: Colors.ui.textLight,
+    lineHeight: 24,
   },
 
   // Déconnexion / réinitialisation
@@ -1247,6 +1356,122 @@ const goalDotStyles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFF',
     lineHeight: 13,
+  },
+});
+
+// ── Composant ligne de crédit (section About) ─────────────────────────────────
+function AboutCreditRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={aboutCreditStyles.row}>
+      <Text style={aboutCreditStyles.label}>{label}</Text>
+      <Text style={aboutCreditStyles.value}>{value}</Text>
+    </View>
+  );
+}
+
+const aboutCreditStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.ui.border,
+  },
+  label: {
+    width: 120,
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.ui.textLight,
+  },
+  value: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.ui.text,
+  },
+});
+
+// ── Styles section About ──────────────────────────────────────────────────────
+const aboutStyles = StyleSheet.create({
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.75)',
+    textAlign: 'center',
+    marginTop: -10,
+    marginBottom: 4,
+  },
+  card: {
+    backgroundColor: Colors.ui.card,
+    borderRadius: 18,
+    padding: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: Colors.ui.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+  },
+  cardBody: {
+    fontSize: 14,
+    color: Colors.ui.textLight,
+    lineHeight: 21,
+  },
+  featureList: {
+    gap: 6,
+    marginTop: 4,
+  },
+  featureItem: {
+    fontSize: 13,
+    color: Colors.ui.text,
+    lineHeight: 19,
+    paddingLeft: 4,
+  },
+  cardOnf: {
+    borderColor: Colors.forest.medium + '60',
+  },
+  onfHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  onfEmoji: {
+    fontSize: 22,
+  },
+  onfTitle: {
+    flex: 1,
+  },
+  onfHighlight: {
+    backgroundColor: Colors.forest.light + '20',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.forest.medium,
+  },
+  onfHighlightText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.forest.dark,
+    lineHeight: 20,
+  },
+  creditsList: {
+    gap: 4,
+    marginTop: 4,
+  },
+  copyright: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.45)',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 8,
   },
 });
 

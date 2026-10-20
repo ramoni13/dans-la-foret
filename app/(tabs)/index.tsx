@@ -171,7 +171,7 @@ function LevelsScreen({
       <BgImage />
 
       {/* Header titre */}
-      <View style={[styles.levelsHeader, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
+      <View style={[styles.levelsHeader, { paddingTop: Math.max(insets.top + 8, innerTop + 20) }]}>
         <Text style={styles.levelsHeaderTitle}>{t('index_all_challenges')}</Text>
       </View>
 

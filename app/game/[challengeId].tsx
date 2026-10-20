@@ -38,6 +38,7 @@ import {
 } from '../../src/services/worldRecordService';
 import { upsertLeaderboardEntry } from '../../src/services/leaderboardService';
 import { getBadgeScore, getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
+import { recordVictory } from '../../src/services/metricsService';
 import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
@@ -460,6 +461,26 @@ export default function GameScreen() {
           }
         }
       }).catch(() => {});
+
+      // ── Métriques de rétention ─────────────────────────────────────────────
+      const stateForMetrics = usePlayerStore.getState();
+      const rankForMetrics = getRank(getPlayerScore(stateForMetrics.earnedBadges, {
+        soloCompleted:   stateForMetrics.completedChallenges.length,
+        friendCompleted: stateForMetrics.stats.friendPlayed,
+        onfCompleted:    stateForMetrics.onfSolvedCount,
+        dailyCompleted:  stateForMetrics.stats.dailyWon,
+      }));
+      recordVictory(
+        uid,
+        'solo',
+        game.elapsedTime,
+        failsDuringGame,
+        seedsEarned,
+        stateForMetrics.currentLevel,
+        stateForMetrics.seeds,
+        stateForMetrics.earnedBadges.length,
+        rankForMetrics.label,
+      ).catch(() => {});
 
       // Capturer le total local final AVANT l'appel async (inclut jeu + badges + rang)
       const finalLocalSeeds = usePlayerStore.getState().seeds;

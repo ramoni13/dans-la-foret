@@ -604,7 +604,7 @@ export default function ChallengeScreen() {
     <View style={StyleSheet.absoluteFill}>
       <BgImage overlay={0.52} />
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 20), paddingLeft: innerPadH + 4, paddingRight: Math.max(72, innerPadH + 4) }]}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 28), paddingLeft: innerPadH + 4, paddingRight: Math.max(72, innerPadH + 4) }]}>
         <View style={styles.headerLeft}>
           <Image source={IMG_HACHES} style={styles.headerIcon} resizeMode="contain" />
           <View>
@@ -619,7 +619,7 @@ export default function ChallengeScreen() {
         pointerEvents="box-none"
         style={{
           position: 'absolute',
-          top:      Math.max(insets.top + 8, innerTop + 20),
+          top:      Math.max(insets.top + 8, innerTop + 28),
           right:    screenW * 0.12,
         }}
       >

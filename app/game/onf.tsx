@@ -41,6 +41,7 @@ import { Colors } from '../../src/constants/colors';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
+import { recordVictory } from '../../src/services/metricsService';
 import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 import { evaluateOnfBadges, OnfGameContext } from '../../src/core/engine/badgeEngine';
 import { awardBadgesFirestore } from '../../src/services/badgeService';
@@ -345,6 +346,25 @@ export default function ONFGameScreen() {
     // Sync Firestore en arrière-plan
     const uid = player.userId;
     if (uid) {
+      // ── Métriques de rétention ─────────────────────────────────────────────
+      const stateForMetrics = usePlayerStore.getState();
+      const rankForMetrics = getRank(getPlayerScore(stateForMetrics.earnedBadges, {
+        soloCompleted:   stateForMetrics.completedChallenges.length,
+        friendCompleted: stateForMetrics.stats.friendPlayed,
+        onfCompleted:    stateForMetrics.onfSolvedCount,
+        dailyCompleted:  stateForMetrics.stats.dailyWon,
+      }));
+      recordVictory(
+        uid,
+        'onf',
+        game.elapsedTime,
+        onfFailCountRef.current,
+        earned,
+        stateForMetrics.currentLevel,
+        stateForMetrics.seeds,
+        stateForMetrics.earnedBadges.length,
+        rankForMetrics.label,
+      ).catch(() => {});
       const finalState = usePlayerStore.getState();
       // 1. Sync des graines
       updateSeeds(uid, finalState.seeds).catch(() => {});
@@ -470,8 +490,11 @@ export default function ONFGameScreen() {
     );
   }
 
-  // Progression : combien de défis restants
-  const completedCount = player.completedOnfChallengeIds.length;
+  // Progression : numéro du défi en cours = défis réussis + 1
+  // On utilise onfSolvedCount (compteur unifié) plutôt que completedOnfChallengeIds.length
+  // car completedOnfChallengeIds ne contient que les IDs uniques (peut être < onfSolvedCount
+  // si des défis ont été rejoués après reset ou si les IDs ne correspondent pas 1-pour-1).
+  const completedCount = player.onfSolvedCount;
   const totalCount = getTotalOnfChallenges();
   const gridLabel = t('onf_header_progress', { current: String(completedCount + 1), total: String(totalCount) });
 

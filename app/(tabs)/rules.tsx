@@ -154,7 +154,7 @@ export default function RulesScreen() {
       <BgImage overlay={0.52} />
 
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH + 4 }]}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 20), paddingHorizontal: innerPadH + 4 }]}>
         <Text style={styles.title}>{t('rules_tab_title')}</Text>
 
         {/* ── Tab switcher ── */}
@@ -300,6 +300,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
     color: '#fff',
+    textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,

@@ -25,6 +25,9 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { ELIGIBLE_GOAL_BADGE_IDS } from '../../src/core/engine/badgeEngine';
+import { recordSession, initPlayerMetrics } from '../../src/services/metricsService';
+import { getRank, getPlayerScore } from '../../src/constants/badges';
+import { Platform } from 'react-native';
 
 export default function TabsLayout() {
   const player   = usePlayerStore();
@@ -65,6 +68,32 @@ export default function TabsLayout() {
             if (cloudIngame) audio.setSelectedTrack('ingame', cloudIngame);
             if (cloudMenu)   audio.setSelectedTrack('menu',   cloudMenu);
           }
+
+          // ── Métriques de rétention — session start ─────────────────────────
+          // Initialise le document si premier login, sinon met à jour.
+          const state = usePlayerStore.getState();
+          const platform = Platform.OS; // 'ios' | 'android' | 'web'
+          const playerScore = getPlayerScore(state.earnedBadges, {
+            soloCompleted: state.stats.totalSolved,
+            dailyCompleted: state.stats.dailyWon,
+            onfCompleted: state.onfSolvedCount,
+            friendCompleted: state.stats.friendWins,
+          });
+          const rankDef = getRank(playerScore);
+
+          // initPlayerMetrics ne fait rien si le document existe déjà (merge:true)
+          initPlayerMetrics(firebaseUser!.uid, platform).catch(() => {});
+          recordSession(
+            firebaseUser!.uid,
+            platform,
+            state.isPremium,
+            state.currentLevel,
+            state.seeds,
+            state.earnedBadges.length,
+            rankDef?.label ?? 'Promeneur',
+            state.dailyStreak,
+            state.longestDailyChallengeStreak,
+          ).catch(() => {});
         }
       }
 

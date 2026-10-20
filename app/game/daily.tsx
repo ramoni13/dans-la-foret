@@ -59,6 +59,7 @@ import { DailyRouletteModal } from '../../src/components/Game/DailyRouletteModal
 import { Challenge, FixedPlacement, TokenCount } from '../../src/core/models/Challenge';
 import { notificationError } from '../../src/utils/haptics';
 import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
+import { recordVictory } from '../../src/services/metricsService';
 import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 import { useT } from '../../src/i18n';
 
@@ -521,6 +522,26 @@ export default function DailyGameScreen() {
 
     // 4. Soumission Firestore en arriere-plan
     if (uid && !isAnonymous) {
+      // ── Métriques de rétention ─────────────────────────────────────────────
+      const stateForMetrics = usePlayerStore.getState();
+      const rankForMetrics = getRank(getPlayerScore(stateForMetrics.earnedBadges, {
+        soloCompleted:   stateForMetrics.completedChallenges.length,
+        friendCompleted: stateForMetrics.stats.friendPlayed,
+        onfCompleted:    stateForMetrics.onfSolvedCount,
+        dailyCompleted:  stateForMetrics.stats.dailyWon,
+      }));
+      recordVictory(
+        uid,
+        'daily',
+        game.elapsedTime,
+        0, // daily = 1 seule validation, pas d'erreurs comptées
+        reward.total,
+        stateForMetrics.currentLevel,
+        stateForMetrics.seeds,
+        stateForMetrics.earnedBadges.length,
+        rankForMetrics.label,
+      ).catch(() => {});
+
       submitDailyResultFirestore(
         dailyDate,
         uid,
