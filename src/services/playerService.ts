@@ -14,6 +14,7 @@ import {
   where,
   getDocs,
   limit,
+  increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -71,6 +72,13 @@ export interface PlayerProfile {
   // ── Sélection musicale personnalisée ────────────────
   selectedIngameTrackId?: string;
   selectedMenuTrackId?: string;
+  // ── Métriques audio ─────────────────────────────────
+  /** Nombre de fois que chaque piste a été lancée (trackId → count) */
+  trackPlayCounts?: Record<string, number>;
+  /** true si l'Ambiance Défi est activée (false = son coupé) */
+  ingameAudioEnabled?: boolean;
+  /** true si l'Ambiance Forêt est activée (false = son coupé) */
+  menuAudioEnabled?: boolean;
 }
 
 // ── Calcul du niveau courant d'un joueur ──────────────────────────────────────
@@ -158,6 +166,9 @@ function migrateProfile(raw: any): PlayerProfile {
     collectedTreeCardIds: raw.collectedTreeCardIds ?? [],
     selectedIngameTrackId: raw.selectedIngameTrackId,
     selectedMenuTrackId:   raw.selectedMenuTrackId,
+    trackPlayCounts:       raw.trackPlayCounts ?? {},
+    ingameAudioEnabled:    raw.ingameAudioEnabled ?? true,
+    menuAudioEnabled:      raw.menuAudioEnabled   ?? true,
   };
 }
 
@@ -352,6 +363,30 @@ export async function updateMusicSelection(
   await updateDoc(doc(db, 'players', userId), {
     selectedIngameTrackId,
     selectedMenuTrackId,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ── Incrémenter le compteur d'écoute d'une piste ─────────────────────────────
+export async function incrementTrackPlayCount(
+  userId: string,
+  trackId: string,
+): Promise<void> {
+  await updateDoc(doc(db, 'players', userId), {
+    [`trackPlayCounts.${trackId}`]: increment(1),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ── Persister l'état audio (son activé/coupé) ────────────────────────────────
+export async function updateAudioEnabled(
+  userId: string,
+  ingameAudioEnabled: boolean,
+  menuAudioEnabled: boolean,
+): Promise<void> {
+  await updateDoc(doc(db, 'players', userId), {
+    ingameAudioEnabled,
+    menuAudioEnabled,
     updatedAt: serverTimestamp(),
   });
 }

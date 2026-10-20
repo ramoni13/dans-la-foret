@@ -28,6 +28,12 @@ class AudioService {
   private currentState: PlayState | null = null;
   private audioModeInitialized = false;
 
+  /**
+   * Callback optionnel déclenché chaque fois qu'une nouvelle piste est lancée.
+   * Utilisé par AudioController pour enregistrer les métriques d'écoute en Firestore.
+   */
+  onTrackStarted: ((trackId: string) => void) | null = null;
+
   /** Appelé par AudioController à chaque changement d'état */
   async syncFromStore(state: PlayState) {
     this.currentState = state;
@@ -102,6 +108,9 @@ class AudioService {
 
       this.player = player;
       this.currentTrackId = trackId;
+
+      // Notifier le callback de métriques (fire-and-forget)
+      try { this.onTrackStarted?.(trackId); } catch (_) {}
     } catch (e) {
       console.warn('[AudioService] Erreur lecture:', e);
     }

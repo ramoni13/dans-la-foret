@@ -14,6 +14,7 @@ import {
   query,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { MUSIC_CATALOG } from '../constants/music';
 
 export interface AdminPlayerSummary {
   userId: string;
@@ -144,6 +145,26 @@ export interface PlayerMetrics {
   };
 }
 
+export interface TrackMetrics {
+  trackId: string;
+  title: string;
+  type: 'ingame' | 'menu';
+  totalPlays: number;
+  /** Nombre de joueurs ayant ce titre sélectionné (ingame ou menu selon type) */
+  selectedByCount: number;
+}
+
+export interface MusicMetrics {
+  /** Métriques par piste (triées par écoutes décroissantes) */
+  tracks: TrackMetrics[];
+  /** % de joueurs ayant coupé le son Ambiance Défi */
+  pctIngameMuted: number;
+  /** % de joueurs ayant coupé le son Ambiance Forêt */
+  pctMenuMuted: number;
+  /** Nombre de joueurs avec la donnée audio disponible (ingameAudioEnabled renseigné) */
+  playersWithAudioData: number;
+}
+
 export interface GlobalMetrics {
   totalPlayers: number;
   activeLast7Days: number;    // lastPlayedDate dans les 7 derniers jours
@@ -157,6 +178,7 @@ export interface GlobalMetrics {
   avgBadgesPerPlayer: number;
   avgChallengesPerPlayer: number;
   avgResolutionMs: number;
+  music: MusicMetrics;
   players: PlayerMetrics[];
 }
 
@@ -182,6 +204,22 @@ export async function getMetrics(): Promise<GlobalMetrics> {
   let totalResCount = 0;
   let active7 = 0;
   let active30 = 0;
+
+  // ── Métriques musicales ─────────────────────────────────────────────────────
+  // Compteurs cumulatifs par piste (play counts + sélections)
+  const totalPlayCounts: Record<string, number> = {};
+  const selectedIngameCounts: Record<string, number> = {};
+  const selectedMenuCounts: Record<string, number> = {};
+  let ingameMutedCount = 0;
+  let menuMutedCount = 0;
+  let playersWithAudioData = 0;
+
+  // Initialiser les compteurs pour toutes les pistes du catalogue
+  for (const track of MUSIC_CATALOG) {
+    totalPlayCounts[track.id] = 0;
+    if (track.type === 'ingame') selectedIngameCounts[track.id] = 0;
+    else selectedMenuCounts[track.id] = 0;
+  }
 
   const players: PlayerMetrics[] = snap.docs.map((d) => {
     const data = d.data();
@@ -210,6 +248,28 @@ export async function getMetrics(): Promise<GlobalMetrics> {
     if (lastPlayed) {
       if (lastPlayed >= day7) active7++;
       if (lastPlayed >= day30) active30++;
+    }
+
+    // Agrégation musicale
+    const playCounts: Record<string, number> = data.trackPlayCounts ?? {};
+    for (const [trackId, count] of Object.entries(playCounts)) {
+      if (trackId in totalPlayCounts) {
+        totalPlayCounts[trackId] += (count as number);
+      }
+    }
+    const selIngame = data.selectedIngameTrackId ?? '';
+    if (selIngame && selIngame in selectedIngameCounts) {
+      selectedIngameCounts[selIngame]++;
+    }
+    const selMenu = data.selectedMenuTrackId ?? '';
+    if (selMenu && selMenu in selectedMenuCounts) {
+      selectedMenuCounts[selMenu]++;
+    }
+    // ingameAudioEnabled est undefined pour les anciens profils → on ne compte que si renseigné
+    if (data.ingameAudioEnabled !== undefined || data.menuAudioEnabled !== undefined) {
+      playersWithAudioData++;
+      if (data.ingameAudioEnabled === false) ingameMutedCount++;
+      if (data.menuAudioEnabled   === false) menuMutedCount++;
     }
 
     return {
@@ -247,6 +307,25 @@ export async function getMetrics(): Promise<GlobalMetrics> {
     };
   });
 
+  // Construire les métriques par piste
+  const trackMetrics: TrackMetrics[] = MUSIC_CATALOG.map(track => ({
+    trackId: track.id,
+    title: track.title,
+    type: track.type,
+    totalPlays: totalPlayCounts[track.id] ?? 0,
+    selectedByCount: track.type === 'ingame'
+      ? (selectedIngameCounts[track.id] ?? 0)
+      : (selectedMenuCounts[track.id] ?? 0),
+  })).sort((a, b) => b.totalPlays - a.totalPlays);
+
+  const audioBase = playersWithAudioData || 1;
+  const musicMetrics: MusicMetrics = {
+    tracks: trackMetrics,
+    pctIngameMuted: Math.round((ingameMutedCount / audioBase) * 1000) / 10,
+    pctMenuMuted:   Math.round((menuMutedCount   / audioBase) * 1000) / 10,
+    playersWithAudioData,
+  };
+
   const n = players.length || 1;
   return {
     totalPlayers: players.length,
@@ -261,6 +340,7 @@ export async function getMetrics(): Promise<GlobalMetrics> {
     avgBadgesPerPlayer: Math.round((totalBadges / n) * 10) / 10,
     avgChallengesPerPlayer: Math.round((totalCompleted / n) * 10) / 10,
     avgResolutionMs: totalResCount > 0 ? Math.round(totalAvgResMs / totalResCount) : 0,
+    music: musicMetrics,
     players: players.sort((a, b) => b.completedChallenges - a.completedChallenges),
   };
 }
