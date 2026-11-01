@@ -6,7 +6,7 @@
 // dans le store. TODO : brancher RevenueCat IAP ici.
 // ============================================================
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   View,
@@ -15,10 +15,15 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
+import { subscribeForetCommune } from '../../services/foretCommuneService';
+import { usePlayerStore } from '../../store/playerStore';
+
+const IMG_1_1 = require('../../../assets/elements/design_app/1-1.jpg');
 
 export interface PremiumCardProps {
   visible: boolean;
@@ -27,14 +32,25 @@ export interface PremiumCardProps {
   onPurchase: () => void;
 }
 
-const AVANTAGE_EMOJIS = ['🤝', '🌲', '💡', '🔴', '🏅'] as const;
-const AVANTAGE_TKEYS = [
-  'premium_perk1', 'premium_perk2', 'premium_perk3', 'premium_perk4', 'premium_perk5',
+const PERKS = [
+  { emoji: '🤝', labelFr: 'Défi entre amis',      labelEn: 'Friend challenges',  free: '3/j', premium: '∞' },
+  { emoji: '🌲', labelFr: 'Défi de la forêt',     labelEn: 'Défi de la forêt',   free: '3/j', premium: '∞' },
+  { emoji: '🎁', labelFr: 'Bonus 1 case offerte', labelEn: 'Free Cell Bonus',     free: '3/j', premium: '∞' },
+  { emoji: '🔴', labelFr: 'Bonus Instinct',        labelEn: 'Instinct Bonus',      free: '3/j', premium: '∞' },
+  { emoji: '🏅', labelFr: 'Badge "Ami de la Forêt"', labelEn: '"Friend of the Forest" badge', free: '—', premium: '✓' },
 ] as const;
 
 export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) {
   const t = useT();
   const insets = useSafeAreaInsets();
+  const lang = usePlayerStore(s => s.language);
+  const [totalTrees, setTotalTrees] = useState(0);
+
+  useEffect(() => {
+    if (!visible) return;
+    const unsub = subscribeForetCommune(({ totalTrees: trees }) => setTotalTrees(trees));
+    return () => unsub();
+  }, [visible]);
 
   return (
     <Modal
@@ -66,23 +82,52 @@ export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) 
             <Text style={styles.mainEmoji}>🌲</Text>
             <Text style={styles.title}>{t('premium_title')}</Text>
 
+            {/* Image 1-1 */}
+            <Image source={IMG_1_1} style={styles.img11} resizeMode="cover" />
+
             {/* Bloc ONF */}
             <View style={styles.onfBlock}>
               <Text style={styles.onfText}>{t('premium_onf_line1')}</Text>
               <Text style={styles.onfText}>{t('premium_onf_line2')}</Text>
+              <View style={styles.treesCounterRow}>
+                <Text style={styles.treesCounterEmoji}>🌳</Text>
+                <Text style={styles.treesCounterNumber}>{totalTrees.toLocaleString()}</Text>
+                <Text style={styles.treesCounterLabel}>{t('premium_trees_planted')}</Text>
+              </View>
             </View>
 
             {/* Séparateur */}
             <View style={styles.separator} />
 
-            {/* Avantages */}
+            {/* Tableau comparatif Free / Premium */}
             <Text style={styles.avantagesTitle}>{t('premium_intro')}</Text>
-            {AVANTAGE_TKEYS.map((tKey, i) => (
-              <View key={i} style={styles.avantageRow}>
-                <Text style={styles.avantageEmoji}>{AVANTAGE_EMOJIS[i]}</Text>
-                <Text style={styles.avantageText}>{t(tKey)}</Text>
+            <View style={styles.table}>
+              {/* En-tête */}
+              <View style={[styles.tableRow, styles.tableHeader]}>
+                <View style={styles.colLabel} />
+                <View style={styles.colFree}>
+                  <Text style={styles.headerFree}>Gratuit</Text>
+                </View>
+                <View style={styles.colPremium}>
+                  <Text style={styles.headerPremium}>Premium</Text>
+                </View>
               </View>
-            ))}
+              {/* Lignes */}
+              {PERKS.map((perk, i) => (
+                <View key={i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
+                  <View style={styles.colLabel}>
+                    <Text style={styles.perkEmoji}>{perk.emoji}</Text>
+                    <Text style={styles.perkLabel}>{lang === 'en' ? perk.labelEn : perk.labelFr}</Text>
+                  </View>
+                  <View style={styles.colFree}>
+                    <Text style={styles.cellFree}>{perk.free}</Text>
+                  </View>
+                  <View style={styles.colPremium}>
+                    <Text style={styles.cellPremium}>{perk.premium}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
 
             {/* Bouton achat */}
             {/* TODO : remplacer onPurchase par l'appel RevenueCat IAP */}
@@ -156,11 +201,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  img11: {
+    width: 149,
+    height: 50,
+    borderRadius: 10,
+    marginTop: 16,
+    alignSelf: 'center',
+  },
   onfBlock: {
     backgroundColor: 'rgba(139,195,74,0.15)',
     borderRadius: 12,
     padding: 12,
-    marginTop: 16,
+    marginTop: 12,
   },
   onfText: {
     color: Colors.forest.accent,
@@ -168,6 +220,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  treesCounterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  treesCounterEmoji: {
+    fontSize: 18,
+  },
+  treesCounterNumber: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  treesCounterLabel: {
+    color: 'rgba(255,255,255,0.70)',
+    fontSize: 13,
+    fontWeight: '500',
   },
   separator: {
     borderBottomWidth: 1,
@@ -178,25 +250,74 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
     fontSize: 13,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  avantageRow: {
+
+  // Tableau comparatif
+  table: {
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-    paddingHorizontal: 4,
+    paddingVertical: 9,
+    paddingHorizontal: 8,
   },
-  avantageEmoji: {
-    fontSize: 20,
-    width: 28,
+  tableHeader: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 7,
+  },
+  tableRowAlt: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  colLabel: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  colFree: {
+    width: 46,
+    alignItems: 'center',
+  },
+  colPremium: {
+    width: 56,
+    alignItems: 'center',
+  },
+  headerFree: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  headerPremium: {
+    color: '#8BC34A',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  perkEmoji: {
+    fontSize: 16,
+    width: 22,
     textAlign: 'center',
   },
-  avantageText: {
+  perkLabel: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     flex: 1,
+  },
+  cellFree: {
+    color: 'rgba(255,255,255,0.40)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  cellPremium: {
+    color: '#8BC34A',
+    fontSize: 14,
+    fontWeight: '800',
   },
   purchaseBtn: {
     marginTop: 22,
