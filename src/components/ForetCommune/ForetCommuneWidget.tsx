@@ -16,12 +16,12 @@ import {
   Image,
 } from 'react-native';
 import { usePlayerStore } from '../../store/playerStore';
-import { subscribeForetCommune, addForetCommunePoints } from '../../services/foretCommuneService';
+import { subscribeForetCommune, addForetCommunePoints, addTreeDirect } from '../../services/foretCommuneService';
 import { FORET_COMMUNE_POINTS_PER_VIDEO, FORET_COMMUNE_POINTS_PER_TREE } from '../../constants/foretCommune';
 import { PremiumCard } from '../Premium/PremiumCard';
 import { useT } from '../../i18n';
 
-const LOGO_ONF = require('../../../assets/elements/design_app/logo-onf.png');
+const LOGO_ONF = require('../../../assets/elements/design_app/planete-urgence-blanc.png');
 
 export function ForetCommuneWidget() {
   const t = useT();
@@ -60,6 +60,8 @@ export function ForetCommuneWidget() {
       ? t('foret_commune_one')
       : t('foret_commune_other', { count: String(totalTrees) });
 
+  const progressPct = Math.min(cagnottePoints / FORET_COMMUNE_POINTS_PER_TREE, 1);
+
   return (
     <View style={styles.wrapper}>
       {/* Logo ONF — à cheval sur le bord supérieur de la card */}
@@ -74,19 +76,9 @@ export function ForetCommuneWidget() {
           {t('foret_commune_counter', { label: treesLabel })}
         </Text>
 
-        {/* Progression — une seule ligne */}
-        <View style={styles.progressBox}>
-          <Text style={styles.progressPts} numberOfLines={1}>
-            {t('foret_commune_progress', {
-              current: cagnottePoints.toLocaleString(),
-              total: FORET_COMMUNE_POINTS_PER_TREE.toLocaleString(),
-            })}
-          </Text>
-        </View>
-
         {/* Deux boutons côte à côte */}
         <View style={styles.btnRow}>
-          {/* Bouton 1 — Soutenir l'ONF (achat) — masqué si déjà premium */}
+          {/* Bouton 1 — Soutenir Planète Urgence (achat) — masqué si déjà premium */}
           {!isPremium && (
             <TouchableOpacity
               style={[styles.btn, styles.btnAcheter]}
@@ -94,11 +86,12 @@ export function ForetCommuneWidget() {
               activeOpacity={0.85}
             >
               <Text style={styles.btnAcheterText}>{t('foret_commune_support')}</Text>
-              <Text style={styles.btnAcheterSub}>2,99 €</Text>
+              <Text style={styles.btnAcheterSub}>1 € = 1 arbre</Text>
+              <Text style={styles.btnAcheterPrice}>Débloquer — 2,99 €</Text>
             </TouchableOpacity>
           )}
 
-          {/* Bouton 2 — Regarder une pub */}
+          {/* Bouton 2 — Regarder une pub + progression cagnotte */}
           <TouchableOpacity
             style={[styles.btn, styles.btnPub, contributing && styles.btnDisabled]}
             onPress={handlePub}
@@ -107,6 +100,17 @@ export function ForetCommuneWidget() {
           >
             <Text style={styles.btnPubText}>{t('foret_commune_contribute')}</Text>
             <Text style={styles.btnPubSub}>{contributing ? '...' : t('foret_commune_watch_ad')}</Text>
+
+            {/* Barre de progression intégrée */}
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${Math.round(progressPct * 100)}%` as any }]} />
+            </View>
+            <Text style={styles.progressLabel} numberOfLines={1}>
+              {t('foret_commune_progress', {
+                current: cagnottePoints.toLocaleString(),
+                total: FORET_COMMUNE_POINTS_PER_TREE.toLocaleString(),
+              })}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -160,23 +164,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  progressBox: {
-    backgroundColor: 'rgba(139,195,74,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(139,195,74,0.30)',
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    marginTop: 2,
-    gap: 1,
-  },
-  progressPts: {
-    color: '#8BC34A',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
   // Ligne des boutons
   btnRow: {
     flexDirection: 'row',
@@ -189,6 +176,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 1,
   },
 
@@ -204,16 +192,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   btnAcheterSub: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  btnAcheterPrice: {
     color: 'rgba(139,195,74,0.75)',
     fontSize: 11,
     fontWeight: '500',
+    marginTop: 2,
   },
 
-  // Bouton Pub
+  // Bouton Pub + progression
   btnPub: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.20)',
+    paddingHorizontal: 10,
+    paddingBottom: 10,
   },
   btnPubText: {
     color: 'rgba(255,255,255,0.85)',
@@ -223,6 +219,27 @@ const styles = StyleSheet.create({
   btnPubSub: {
     color: 'rgba(255,255,255,0.45)',
     fontSize: 11,
+  },
+
+  // Barre de progression dans le bouton Contribuer
+  progressBarBg: {
+    width: '100%',
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 2,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: 4,
+    backgroundColor: '#8BC34A',
+    borderRadius: 2,
+  },
+  progressLabel: {
+    color: 'rgba(139,195,74,0.80)',
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 3,
   },
 
   btnDisabled: {
