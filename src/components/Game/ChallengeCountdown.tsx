@@ -10,16 +10,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   StyleSheet,
-  Dimensions,
-  Image,
+  useWindowDimensions,
 } from 'react-native';
 import { usePlayerStore } from '../../store/playerStore';
 
 const LOGO_FR = require('../../../assets/elements/design_app/danslaforet.jpeg');
 const LOGO_EN = require('../../../assets/elements/design_app/intheforest.jpeg');
-
-const LOGO_WIDTH  = Math.min(Dimensions.get('window').width * 0.65, 280);
-const LOGO_HEIGHT = LOGO_WIDTH * (765 / 1024);
 
 const STEPS = ['3', '2', '1'] as const;
 const STEP_DURATION_MS = 800;
@@ -31,6 +27,9 @@ interface Props {
 export function ChallengeCountdown({ onDone }: Props) {
   const language = usePlayerStore(s => s.language);
   const isEn = language === 'en';
+  const { width, height } = useWindowDimensions();
+  const logoWidth  = Math.min(width * 0.65, 280);
+  const logoHeight = logoWidth * (765 / 1024);
 
   const [step, setStep] = useState(0);
 
@@ -108,11 +107,11 @@ export function ChallengeCountdown({ onDone }: Props) {
   }, []);
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeOut }]}>
+    <Animated.View style={[styles.container, { opacity: fadeOut, width, height }]}>
       {/* Logo pulsant */}
       <Animated.Image
         source={isEn ? LOGO_EN : LOGO_FR}
-        style={[styles.logo, { transform: [{ scale: pulse }] }]}
+        style={[{ width: logoWidth, height: logoHeight }, { transform: [{ scale: pulse }] }]}
         resizeMode="contain"
       />
 
@@ -132,16 +131,14 @@ export function ChallengeCountdown({ onDone }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 9998,
     gap: 24,
-  },
-  logo: {
-    width: LOGO_WIDTH,
-    height: LOGO_HEIGHT,
   },
   count: {
     fontWeight: '900',
