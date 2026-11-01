@@ -64,9 +64,18 @@ export interface PlayerProfile {
   // ── Mode ONF — Grille Forestière 4×4 ────────────────
   onfSolvedCount: number;              // nb de grilles 4×4 résolues
   completedOnfChallengeIds: string[]; // IDs des défis ONF terminés (pour ne pas reproposer)
-  // ── Badges : objectifs actifs + compteurs dédiés ────
+  // ── Badges : objectifs par track (système de 3 lignes) ──
+  trackGoals?: {
+    performance:  string | null;
+    perseverance: string | null;
+    exploration:  string | null;
+  };
+  // ── Badges : objectifs actifs + compteurs dédiés (compat descendante) ────
   activeBadgeGoals?: string[];
   goalCounters?: Record<string, number>;
+  // ── Streaks de rejeu (amelioration_cycle + amelioration_fusee) ──
+  retryStreak?: { challengeId: string | null; count: number };
+  retryStreakFusee?: { challengeId: string | null; count: number };
   // ── Herbier de la Forêt ──────────────────────────────
   collectedTreeCardIds?: number[];
   // ── Sélection musicale personnalisée ────────────────
@@ -87,10 +96,10 @@ export interface PlayerProfile {
 //   Niveau 1 : 0–9 défis complétés
 //   Niveau 2 : 10–19 défis complétés
 //   Niveau N : (N-1)*10 … N*10-1
-//   → formule : Math.floor(count / 10) + 1, plafonné à 15.
-// Exemples : 0 défis → Niv. 1, 10 défis → Niv. 2, 42 défis → Niv. 5, 150 défis → Niv. 15.
+//   → formule : Math.floor(count / 10) + 1, plafonné à 21.
+// Exemples : 0 défis → Niv. 1, 10 défis → Niv. 2, 42 défis → Niv. 5, 150 défis → Niv. 16, 210 défis → Niv. 21.
 export function computePlayerLevel(completedCount: number): number {
-  return Math.min(15, Math.floor(completedCount / 10) + 1);
+  return Math.min(21, Math.floor(completedCount / 10) + 1);
 }
 
 // ── Résultat de recherche d'ami ───────────────────────────────────────────────
@@ -161,8 +170,11 @@ function migrateProfile(raw: any): PlayerProfile {
     lastPlayedDate:    raw.lastPlayedDate ?? '',
     onfSolvedCount: raw.onfSolvedCount ?? raw.onf4x4SolvedCount ?? 0,
     completedOnfChallengeIds: raw.completedOnfChallengeIds ?? [],
+    trackGoals: raw.trackGoals ?? undefined,
     activeBadgeGoals,
     goalCounters,
+    retryStreak: raw.retryStreak ?? { challengeId: null, count: 0 },
+    retryStreakFusee: raw.retryStreakFusee ?? { challengeId: null, count: 0 },
     collectedTreeCardIds: raw.collectedTreeCardIds ?? [],
     selectedIngameTrackId: raw.selectedIngameTrackId,
     selectedMenuTrackId:   raw.selectedMenuTrackId,
@@ -240,6 +252,8 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
     onfSolvedCount: 0,
     completedOnfChallengeIds: [],
     collectedTreeCardIds: [],
+    retryStreak: { challengeId: null, count: 0 },
+    retryStreakFusee: { challengeId: null, count: 0 },
   };
   // usernameLower permet la recherche d'unicité insensible à la casse
   await setDoc(doc(db, 'players', userId), {

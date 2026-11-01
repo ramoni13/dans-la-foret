@@ -88,3 +88,24 @@ export async function addForetCommunePoints(amount: number): Promise<void> {
     }, { merge: true });
   });
 }
+
+/**
+ * Incrémente directement totalTrees de +1, sans toucher à cagnottePoints.
+ * Utilisé lors d'un achat premium (1 € = 1 arbre immédiat).
+ */
+export async function addTreeDirect(): Promise<void> {
+  const ref = GLOBAL_REF();
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.exists() ? snap.data() : { cagnottePoints: 0, totalTrees: 0 };
+
+    const currentTrees = data.totalTrees ?? 0;
+
+    tx.set(ref, {
+      cagnottePoints: data.cagnottePoints ?? 0,
+      totalTrees:     currentTrees + 1,
+      lastUpdated:    serverTimestamp(),
+    }, { merge: true });
+  });
+}
