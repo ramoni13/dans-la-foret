@@ -21,7 +21,7 @@ import { Colors } from '../../constants/colors';
 import { DifficultyLevel } from '../../core/models/Challenge';
 import { notificationSuccess } from '../../utils/haptics';
 import { Confetti, ConfettiPiece } from './Confetti';
-import { BadgeProgressInline } from '../Badges/BadgeProgressInline';
+import { BadgeProgressInline, TrackBadgeProgressMap } from '../Badges/BadgeProgressInline';
 import { BadgeToast } from '../Badges/BadgeToast';
 import { BadgeProgress } from '../../core/engine/badgeEngine';
 import { WorldRecord } from '../../services/worldRecordService';
@@ -40,6 +40,9 @@ interface VictoryModalProps {
   nextChallengeLabel?: string;
   onBackToMenu: () => void;
   confettiPieces?: ConfettiPiece[];
+  /** Progressions par track (nouveau système) — prioritaire sur closestBadges */
+  trackBadges?: TrackBadgeProgressMap;
+  /** Compat descendante */
   closestBadges?: BadgeProgress[];
   obtainedBadgeIds?: string[];
   newGoalBadgeIds?: string[];
@@ -65,7 +68,7 @@ const DIFFICULTY_EMOJIS: Partial<Record<DifficultyLevel, string>> = {
 export const VictoryModal: React.FC<VictoryModalProps> = ({
   visible, elapsedTime, seedsEarned, seedsBeforeGain, difficulty, challengeNumber,
   onNextChallenge, nextChallengeLabel, onBackToMenu, confettiPieces,
-  closestBadges = [], obtainedBadgeIds = [], newGoalBadgeIds = [], badgeQueue = [], onBadgeQueueEmpty,
+  trackBadges, closestBadges = [], obtainedBadgeIds = [], newGoalBadgeIds = [], badgeQueue = [], onBadgeQueueEmpty,
   worldRecord = null, isNewWorldRecord = false, previousRecordHolder = null,
   isPerfectRun = false, perfectSeedsBonus = 0, onPerfectBonusCollected,
 }) => {
@@ -120,6 +123,13 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
     }
   }, [visible]);
 
+  // ── Position mesurée du bloc titre (BRAVO) pour l'overlay PERFECT ────────
+  const [titleLayout, setTitleLayout] = useState<{ y: number; height: number } | null>(null);
+  const onTitleBlockLayout = useCallback((e: LayoutChangeEvent) => {
+    const { y, height } = e.nativeEvent.layout;
+    setTitleLayout({ y, height });
+  }, []);
+
   // ── Positions mesurées dans la carte (via onLayout) ───────────────────────
   const [fromY, setFromY] = useState<number | null>(null);
   const [fromX, setFromX] = useState<number>(225); // 75% de statsRow, recalculé
@@ -171,7 +181,11 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
       flyScheduledRef.current = false;
       return;
     }
-    if (seedsEarned <= 0) return;
+    // Pas de graines → animDone immédiatement après l'animation d'entrée de la carte
+    if (seedsEarned <= 0) {
+      const t = setTimeout(() => setAnimDone(true), 700);
+      return () => clearTimeout(t);
+    }
     // Ne pas re-déclencher si déjà planifié ou en cours
     if (flyScheduledRef.current || flyActive) return;
     flyScheduledRef.current = true;
@@ -261,13 +275,15 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
           </View>
 
           {/* ── Titre ────────────────────────────────────────────────────── */}
-          <Text style={styles.emoji}>🎉</Text>
-          <Text style={styles.title}>{t('victory_title')}</Text>
-          {challengeNumber > 0 && (
-            <Text style={styles.subtitle}>
-              {DIFFICULTY_EMOJIS[difficulty] ?? ''} {t('level_prefix')} {difficulty.replace('niveau_', '')} — {t('victory_challenge_label', { number: String(challengeNumber) })}
-            </Text>
-          )}
+          <View onLayout={onTitleBlockLayout} style={{ alignItems: 'center', width: '100%' }}>
+            <Text style={styles.emoji}>🎉</Text>
+            <Text style={styles.title}>{t('victory_title')}</Text>
+            {challengeNumber > 0 && (
+              <Text style={styles.subtitle}>
+                {DIFFICULTY_EMOJIS[difficulty] ?? ''} {t('level_prefix')} {difficulty.replace('niveau_', '')} — {t('victory_challenge_label', { number: String(challengeNumber) })}
+              </Text>
+            )}
+          </View>
 
           {/* ── Stats — SOURCE ────────────────────────────────────────────── */}
           <View style={styles.statsRow} onLayout={onStatsLayout}>
@@ -302,9 +318,15 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             </View>
           ) : null}
 
-          {closestBadges.length > 0 && (
+          {(trackBadges || closestBadges.length > 0) && (
             <View style={styles.badgeProgressWrapper}>
-              <BadgeProgressInline closestBadges={closestBadges} obtainedBadgeIds={obtainedBadgeIds} newGoalBadgeIds={newGoalBadgeIds} />
+              <BadgeProgressInline
+                trackBadges={trackBadges}
+                closestBadges={closestBadges}
+                obtainedBadgeIds={obtainedBadgeIds}
+                newGoalBadgeIds={newGoalBadgeIds}
+                seedAnimDone={animDone}
+              />
             </View>
           )}
 
@@ -333,17 +355,22 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             />
           )}
 
-          {/* ── Overlay PERFECT x2 ──────────────────────────────────────── */}
-          {showPerfectOverlay && (
+          {/* ── Overlay PERFECT — positionné sur le bloc BRAVO ─────────── */}
+          {showPerfectOverlay && titleLayout && (
             <Animated.View
               style={[
                 styles.perfectOverlay,
-                { opacity: perfectOpacityAnim, transform: [{ scale: perfectScaleAnim }] },
+                {
+                  top:    titleLayout.y - 4,
+                  height: titleLayout.height + 8,
+                  opacity: perfectOpacityAnim,
+                  transform: [{ scale: perfectScaleAnim }],
+                },
               ]}
               pointerEvents="none"
             >
               <Text style={styles.perfectLabel}>{t('perfect_run_label')}</Text>
-              <Text style={styles.perfectSub}>{t('victory_perfect_bonus', { count: String(perfectSeedsBonus) })}</Text>
+              <Text style={styles.perfectSub}>{t('perfect_run_gain_x2')}</Text>
             </Animated.View>
           )}
 
@@ -485,18 +512,18 @@ const styles = StyleSheet.create({
 
   badgeProgressWrapper: { width: '100%', marginBottom: 16 },
 
-  // ── PERFECT x2 ────────────────────────────────────────────────────────────
+  // ── PERFECT — positionné dynamiquement sur le bloc BRAVO ─────────────────
   perfectOverlay: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 16,
     zIndex: 20,
+    marginHorizontal: -32,
+    paddingVertical: 8,
   },
   perfectLabel: {
     fontSize: 36,
