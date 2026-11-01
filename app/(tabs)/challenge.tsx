@@ -64,7 +64,7 @@ const IMG_HACHES = require('../../assets/elements/design_app/Haches.png');
 // ── Correspondance niveau → difficulty + boardId ──────────
 // On mappe directement le numéro de niveau sur les LEVEL_PARAMS existants.
 function getLevelKey(level: number): string {
-  const clamped = Math.min(15, Math.max(1, level));
+  const clamped = Math.min(21, Math.max(1, level));
   return `niveau_${clamped}`;
 }
 
@@ -176,21 +176,37 @@ function FriendSearchModal({
           {results.length > 0 && (
             <View style={ms.list}>
               {results.map(p => {
+                const isLocked = p.level < 3;
                 const challengeLevel = Math.max(3, Math.min(myLevel, p.level));
                 return (
                   <TouchableOpacity
                     key={p.userId}
-                    style={ms.row}
-                    onPress={() => onSelectFriend(p)}
-                    activeOpacity={0.7}
+                    style={[ms.row, isLocked && ms.rowLocked]}
+                    onPress={() => {
+                      if (isLocked) return;
+                      onSelectFriend(p);
+                    }}
+                    activeOpacity={isLocked ? 1 : 0.7}
+                    disabled={isLocked}
                   >
                     <View style={ms.rowLeft}>
-                      <Text style={ms.username}>{p.username}</Text>
-                      <Text style={ms.levelText}>{t('challenge_search_level_row', { level: String(p.level) })}</Text>
+                      <Text style={[ms.username, isLocked && ms.textLocked]}>{p.username}</Text>
+                      <Text style={[ms.levelText, isLocked && ms.textLocked]}>
+                        {t('challenge_search_level_row', { level: String(p.level) })}
+                      </Text>
+                      {isLocked && (
+                        <Text style={ms.lockedBadge}>{t('challenge_search_locked_level')}</Text>
+                      )}
                     </View>
                     <View style={ms.rowRight}>
-                      <Text style={ms.challengeLevelLabel}>{t('challenge_search_defi_label')}</Text>
-                      <Text style={ms.challengeLevel}>{t('challenge_search_defi_level', { level: String(challengeLevel) })}</Text>
+                      {isLocked ? (
+                        <Text style={ms.lockedIcon}>🔒</Text>
+                      ) : (
+                        <>
+                          <Text style={ms.challengeLevelLabel}>{t('challenge_search_defi_label')}</Text>
+                          <Text style={ms.challengeLevel}>{t('challenge_search_defi_level', { level: String(challengeLevel) })}</Text>
+                        </>
+                      )}
                     </View>
                   </TouchableOpacity>
                 );
@@ -397,7 +413,8 @@ export default function ChallengeScreen() {
       return;
     }
 
-    const hasToken = player.friendChallengeTokens > 0;
+    const isDemoUser = player.username === 'planete';
+    const hasToken = player.isPremium || player.friendChallengeTokens > 0 || isDemoUser;
 
     if (!hasToken) {
       showAlert(
@@ -407,8 +424,8 @@ export default function ChallengeScreen() {
       return;
     }
 
-    // Jeton disponible → on le dépense directement
-    player.spendFriendChallengeToken();
+    // Jeton disponible → on le dépense directement (sauf démo)
+    if (!isDemoUser) player.spendFriendChallengeToken();
     setShowSearch(true);
   };
 
@@ -578,7 +595,7 @@ export default function ChallengeScreen() {
   }
 
   // ── Rendu : niveau insuffisant ────────────────────────────
-  if (player.currentLevel < FRIENDS_UNLOCK_LEVEL) {
+  if (player.currentLevel < FRIENDS_UNLOCK_LEVEL && player.username !== 'planete') {
     return (
       <View style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
@@ -872,6 +889,23 @@ const ms = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: Colors.forest.medium,
+  },
+  rowLocked: {
+    backgroundColor: Colors.ui.background,
+    opacity: 0.6,
+  },
+  textLocked: {
+    color: Colors.ui.textLight,
+  },
+  lockedBadge: {
+    fontSize: 10,
+    color: '#999',
+    fontStyle: 'italic',
+    marginLeft: 4,
+  },
+  lockedIcon: {
+    fontSize: 16,
+    color: '#999',
   },
   noResult: {
     fontSize: 13,

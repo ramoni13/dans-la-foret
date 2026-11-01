@@ -101,6 +101,36 @@ function BulletItem({ text }: { text: string }) {
   );
 }
 
+// ── Pavé explicatif d'un bonus (solo uniquement) ──────────────────────────
+function BonusExplainCard({ emoji, titleKey, descKey, color, steps }: {
+  emoji: string;
+  titleKey: string;
+  descKey: string;
+  color: string;
+  steps: { emoji: string; textKey: string }[];
+}) {
+  const t = useT();
+  return (
+    <View style={[bonusCardStyles.card, { borderColor: color }]}>
+      <View style={[bonusCardStyles.header, { backgroundColor: color + '22' }]}>
+        <Text style={bonusCardStyles.headerEmoji}>{emoji}</Text>
+        <Text style={[bonusCardStyles.headerTitle, { color }]}>{t(titleKey)}</Text>
+      </View>
+      <Text style={bonusCardStyles.desc}>{t(descKey)}</Text>
+      <View style={bonusCardStyles.steps}>
+        {steps.map((step, i) => (
+          <View key={i} style={bonusCardStyles.stepRow}>
+            <View style={bonusCardStyles.stepBadge}>
+              <Text style={bonusCardStyles.stepEmoji}>{step.emoji}</Text>
+            </View>
+            <Text style={bonusCardStyles.stepText}>{t(step.textKey)}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 // ── Onglet 2 : Les défis ───────────────────────────────────────────────────
 function ChallengesTab({ frameBottom, innerPadH }: { frameBottom: number; innerPadH: number }) {
   const t = useT();
@@ -117,6 +147,32 @@ function ChallengesTab({ frameBottom, innerPadH }: { frameBottom: number; innerP
         <BulletItem text={t('challenges_solo_desc4')} />
         <BulletItem text={t('challenges_solo_desc5')} />
         <BulletItem text={t('challenges_solo_desc6')} />
+
+        {/* ── Bonus disponibles (mode solo uniquement) ── */}
+        <View style={challengeStyles.bonusSectionSep} />
+        <Text style={challengeStyles.bonusSectionLabel}>{t('challenges_solo_bonus_label')}</Text>
+        <BonusExplainCard
+          emoji="🎁"
+          titleKey="bonus_reveal_title"
+          descKey="bonus_reveal_desc"
+          color="#F59E0B"
+          steps={[
+            { emoji: '👆', textKey: 'bonus_reveal_step1' },
+            { emoji: '🔍', textKey: 'bonus_reveal_step2' },
+            { emoji: '⏱️', textKey: 'bonus_reveal_step3' },
+          ]}
+        />
+        <BonusExplainCard
+          emoji="🔴"
+          titleKey="bonus_instinct_title"
+          descKey="bonus_instinct_desc"
+          color="#EF5350"
+          steps={[
+            { emoji: '🧩', textKey: 'bonus_instinct_step1' },
+            { emoji: '⚠️', textKey: 'bonus_instinct_step2' },
+            { emoji: '🧠', textKey: 'bonus_instinct_step3' },
+          ]}
+        />
       </ChallengeCard>
 
       {/* ── Défi du jour ── */}
@@ -148,6 +204,7 @@ export default function RulesScreen() {
   const ruleCardWidth = width - innerPadH * 2 - 32;
 
   const [activeTab, setActiveTab] = useState<'inhabitants' | 'challenges'>('inhabitants');
+  const isDemoUser = player.username === 'planete';
 
   return (
     <View style={styles.root}>
@@ -192,7 +249,7 @@ export default function RulesScreen() {
           </View>
 
           {ELEMENT_ORDER.map((entry) => {
-            const unlocked = currentLevel >= entry.introLevel;
+            const unlocked = isDemoUser || currentLevel >= entry.introLevel;
             const def = ElementRegistry[entry.id];
             if (!def) return null;
 
@@ -260,7 +317,7 @@ export default function RulesScreen() {
                           rule={rule}
                           isNew={false}
                           width={ruleCardWidth}
-                          animHeight={80}
+                          animHeight={rule.type === 'center_only' ? 200 : 80}
                         />
                       </View>
                     ))}
@@ -496,5 +553,78 @@ const challengeStyles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     lineHeight: 22,
+  },
+  bonusSectionSep: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.10)',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  bonusSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginBottom: 4,
+  },
+});
+
+// ── Styles pavés bonus ─────────────────────────────────────────────────────
+const bonusCardStyles = StyleSheet.create({
+  card: {
+    borderRadius: 12,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    marginTop: 6,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  headerEmoji: {
+    fontSize: 20,
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  desc: {
+    fontSize: 12,
+    color: '#555',
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    lineHeight: 17,
+  },
+  steps: {
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  stepBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepEmoji: {
+    fontSize: 16,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#444',
+    lineHeight: 17,
   },
 });

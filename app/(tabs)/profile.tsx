@@ -165,6 +165,7 @@ export default function ProfileScreen() {
     failCount:                -1,
     noErrorStreak:            player.stats.noErrorStreak,
     dailyStreak:              player.dailyStreak,
+    dailyCompleted:           player.stats.dailyWon,
     earnedBadges:             player.earnedBadges,
     completedChallenges:      player.completedChallenges,
     completedLevels:          [] as string[],
@@ -182,6 +183,8 @@ export default function ProfileScreen() {
     isWorldRecord:            false,
     isFirstRecord:            false,
     rank:                     undefined as any,
+    retryStreakCount:         player.retryStreak.count,
+    retryStreakFuseeCount:    player.retryStreakFusee.count,
   };
 
   // ── Compat web/mobile ────────────────────────────────────────────────────────
@@ -530,11 +533,25 @@ export default function ProfileScreen() {
                 if (badgeId) {
                   const progress = getBadgeProgress(badgeId, partialGameCtx as any);
                   const isObtained = player.earnedBadges.includes(badgeId);
+                  // Pour les badges de rejeu, passer le challengeId verrouillé.
+                  // Fallback sur lastPlayedChallengeId si le verrou n'a pas encore été posé
+                  // (compatibilité descendante : badge déjà actif avant la mise à jour).
+                  const targetChallengeId =
+                    badgeId === 'amelioration_cycle'
+                      ? (player.retryStreak.challengeId ?? player.lastPlayedChallengeId)
+                    : badgeId === 'amelioration_fusee'
+                      ? (player.retryStreakFusee.challengeId ?? player.lastPlayedChallengeId)
+                    : null;
+                  const handleReplay = targetChallengeId
+                    ? () => router.push(`/game/${targetChallengeId}` as any)
+                    : undefined;
                   return (
                     <ActiveGoalCard
                       key={badgeId}
                       progress={progress ?? { badgeId, currentValue: 1, targetValue: 1, percentage: 1 }}
                       obtained={isObtained}
+                      targetChallengeId={targetChallengeId}
+                      onReplay={handleReplay}
                     />
                   );
                 }

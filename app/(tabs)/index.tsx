@@ -13,6 +13,7 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
+  Easing,
   Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -149,7 +150,10 @@ function LevelsScreen({
     ? Math.round((completedCount / challenges.length) * 100)
     : 0;
 
+  const isDemoUser = player.username === 'planete';
+
   const isLevelUnlocked = (idx: number): boolean => {
+    if (isDemoUser) return true;
     if (idx === 0) return true;
     const prev = LEVELS[idx - 1];
     return (ALL_CHALLENGES_BY_LEVEL[prev.id] ?? []).every(
@@ -158,6 +162,7 @@ function LevelsScreen({
   };
 
   const isChallengeUnlocked = (challengeIdx: number): boolean => {
+    if (isDemoUser) return true;
     if (challengeIdx === 0) return true;
     return player.completedChallenges.includes(challenges[challengeIdx - 1].id);
   };
@@ -606,39 +611,57 @@ export default function HomeScreen() {
     return () => unsub();
   }, [todayStr]);
 
-  // ── Animations "chute du ciel" ────────────────────────────────────────────
-  const fallSolo   = useRef(new Animated.Value(-400)).current;
-  const fallDaily  = useRef(new Animated.Value(-400)).current;
-  const fallOnf    = useRef(new Animated.Value(-400)).current;
-  const fallWidget = useRef(new Animated.Value(-400)).current;
+  // ── Animations "émergence de brume" ─────────────────────────────────────
+  // Chaque carte apparaît progressivement (opacity 0→1, scale 0.92→1)
+  // comme si elle émergeait doucement de la brume de la forêt
+  const scaleSolo   = useRef(new Animated.Value(0.92)).current;
+  const scaleDaily  = useRef(new Animated.Value(0.92)).current;
+  const scaleOnf    = useRef(new Animated.Value(0.92)).current;
+  const scaleWidget = useRef(new Animated.Value(0.92)).current;
+  const opaSolo     = useRef(new Animated.Value(0)).current;
+  const opaDaily    = useRef(new Animated.Value(0)).current;
+  const opaOnf      = useRef(new Animated.Value(0)).current;
+  const opaWidget   = useRef(new Animated.Value(0)).current;
 
   // Redéclenché à chaque focus sur l'onglet (retour depuis un autre menu)
   useFocusEffect(
     useCallback(() => {
       if (!authReady || !isAuthenticated) return;
 
-      // Remise à -500 avant chaque lancement pour rejouer depuis le haut
-      fallSolo.setValue(-500);
-      fallDaily.setValue(-500);
-      fallOnf.setValue(-500);
-      fallWidget.setValue(-500);
+      // Remise aux valeurs initiales avant chaque lancement
+      scaleSolo.setValue(0.92);
+      scaleDaily.setValue(0.92);
+      scaleOnf.setValue(0.92);
+      scaleWidget.setValue(0.92);
+      opaSolo.setValue(0);
+      opaDaily.setValue(0);
+      opaOnf.setValue(0);
+      opaWidget.setValue(0);
 
-      // Chute séquentielle : chaque élément attend la fin du précédent
-      // bounciness élevé = rebond visible, speed faible = chute lente
-      const makeSpring = (anim: Animated.Value, delay: number) =>
-        Animated.spring(anim, {
-          toValue: 0,
-          delay,
-          bounciness: 14,
-          speed: 5,
-          useNativeDriver: true,
-        });
+      // Émergence douce : scale 0.92→1 + opacity 0→1 avec décalage entre chaque carte
+      const makeAppear = (scale: Animated.Value, opacity: Animated.Value, delay: number) =>
+        Animated.parallel([
+          Animated.timing(scale, {
+            toValue: 1,
+            delay,
+            duration: 700,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 1,
+            delay,
+            duration: 700,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]);
 
       Animated.parallel([
-        makeSpring(fallSolo,   0),
-        makeSpring(fallDaily,  220),
-        makeSpring(fallOnf,    440),
-        makeSpring(fallWidget, 660),
+        makeAppear(scaleSolo,   opaSolo,   0),
+        makeAppear(scaleDaily,  opaDaily,  180),
+        makeAppear(scaleOnf,    opaOnf,    360),
+        makeAppear(scaleWidget, opaWidget, 540),
       ]).start();
     }, [authReady, isAuthenticated])
   );
@@ -714,7 +737,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Défi Solo ── */}
-        <Animated.View style={{ transform: [{ translateY: fallSolo }] }}>
+        <Animated.View style={{ opacity: opaSolo, transform: [{ scale: scaleSolo }] }}>
           <WoodButton
             variant="green"
             label={t('index_solo_btn')}
@@ -736,10 +759,10 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ── Défi du Jour ── */}
-        <Animated.View style={{ transform: [{ translateY: fallDaily }] }}>
+        <Animated.View style={{ opacity: opaDaily, transform: [{ scale: scaleDaily }] }}>
         {(() => {
           const DAILY_UNLOCK_LEVEL = 9;
-          const DEV_USERS = ['Ramoni', 'Cedric'];
+          const DEV_USERS = ['Ramoni', 'Cedric', 'planete'];
           const dailyUnlocked = player.currentLevel >= DAILY_UNLOCK_LEVEL || DEV_USERS.includes(player.username ?? '');
 
           if (!dailyUnlocked) {
@@ -842,22 +865,36 @@ export default function HomeScreen() {
         })()}
         </Animated.View>
 
-        {/* ── Défi ONF — Grille Forestière 4×4 ── */}
-        <Animated.View style={{ transform: [{ translateY: fallOnf }] }}>
+        {/* ── Défi de la forêt — Planète Urgence 4×4 ── */}
+        <Animated.View style={{ opacity: opaOnf, transform: [{ scale: scaleOnf }] }}>
         {(() => {
-          // Débloqué par niveau OU par palier badge bois×9 (chantier 3)
-          const isOnfUnlocked = player.currentLevel >= ONF_4X4_LEVEL_UNLOCK;
+          // Débloqué par niveau OU par palier badge bois×9 (chantier 3) OU démo
+          const isOnfUnlocked = player.currentLevel >= ONF_4X4_LEVEL_UNLOCK || player.username === 'planete';
           const onfSolved = player.onfSolvedCount;
           const cards     = getUnlockedCardCount(onfSolved);
+          const ONF_DAILY_LIMIT = 3;
+          const isFreePlayer = !player.isPremium && player.username !== 'planete';
+          const onfRemaining = Math.max(0, ONF_DAILY_LIMIT - player.onfDailyCount);
 
-          // Sous-titre herbier
-          const sublabelOnf = onfSolved === 0
-            ? t('onf_btn_first_win')
-            : cards === 1
-              ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
-              : cards > 1
-                ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
-                : t('onf_btn_stats_no_card', { count: String(onfSolved) });
+          // Sous-titre : pour les joueurs gratuits, affiche les parties restantes
+          let sublabelOnf: string;
+          if (isFreePlayer) {
+            if (onfRemaining === 0) {
+              sublabelOnf = t('onf_btn_remaining_none');
+            } else if (onfRemaining === 1) {
+              sublabelOnf = t('onf_btn_remaining_one', { remaining: String(onfRemaining) });
+            } else {
+              sublabelOnf = t('onf_btn_remaining_other', { remaining: String(onfRemaining) });
+            }
+          } else {
+            sublabelOnf = onfSolved === 0
+              ? t('onf_btn_first_win')
+              : cards === 1
+                ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
+                : cards > 1
+                  ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
+                  : t('onf_btn_stats_no_card', { count: String(onfSolved) });
+          }
 
           if (!isOnfUnlocked) {
             return (
@@ -914,7 +951,8 @@ export default function HomeScreen() {
           bottom: frameBottom + 8,
           left: 16,
           right: 16,
-          transform: [{ translateY: fallWidget }],
+          opacity: opaWidget,
+          transform: [{ scale: scaleWidget }],
         }}
         pointerEvents="box-none"
       >
