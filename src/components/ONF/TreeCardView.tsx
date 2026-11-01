@@ -29,7 +29,7 @@ import { TreeCard, TREE_IMAGES } from '../../data/treesData';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
 
-const ONF_LOGO = require('../../../assets/elements/design_app/logo-onf.png');
+const ONF_LOGO = require('../../../assets/elements/design_app/planete-urgence.png');
 
 // ── Dimensions de référence ───────────────────────────────────────────────────
 const REF_W = 300;
