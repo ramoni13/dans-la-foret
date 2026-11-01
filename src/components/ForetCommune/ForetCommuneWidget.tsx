@@ -21,7 +21,7 @@ import { FORET_COMMUNE_POINTS_PER_VIDEO, FORET_COMMUNE_POINTS_PER_TREE } from '.
 import { PremiumCard } from '../Premium/PremiumCard';
 import { useT } from '../../i18n';
 
-const LOGO_ONF = require('../../../assets/elements/design_app/planete-urgence-blanc.png');
+const LOGO_ONF = require('../../../assets/elements/design_app/planete-urgence.png');
 
 export function ForetCommuneWidget() {
   const t = useT();
