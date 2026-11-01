@@ -32,6 +32,7 @@ import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
+import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { FailModal } from '../../src/components/Game/FailModal';
 
 import { useGame } from '../../src/hooks/useGame';
@@ -386,8 +387,7 @@ export default function FriendChallengeScreen() {
         availableCount: challenge.availableTokens?.length,
       });
       game.loadChallenge(challenge);
-      // Démarrer le timer immédiatement (pas de modal briefing en mode défi ami)
-      setTimeout(() => game.startTimer(), 100);
+      // Le timer démarrera après le countdown (handleCountdownDone)
     }
   }, []);
 
@@ -411,6 +411,9 @@ export default function FriendChallengeScreen() {
         el !== null || challenge.fixedPlacements.some(fp => fp.cellIndex === i)
       )
     : false;
+
+  // ── Countdown pré-défi ──────────────────────────────────────────────────────
+  const [countdownDone, setCountdownDone] = useState(false);
 
   // ── État modal résultat ─────────────────────────────────────────────────────
   const [showResult, setShowResult]   = useState(false);
@@ -724,6 +727,15 @@ export default function FriendChallengeScreen() {
         />
 
       </View>
+
+      {/* ── Countdown pré-défi — pas de briefing ici, s'affiche immédiatement ── */}
+      {!countdownDone && (
+        <ChallengeCountdown onDone={() => {
+          setCountdownDone(true);
+          setTimeout(() => game.startTimer(), 100);
+        }} />
+      )}
+
     </GestureHandlerRootView>
   );
 }

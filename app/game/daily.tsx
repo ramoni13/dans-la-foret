@@ -50,9 +50,10 @@ import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
-import { evaluateDailyBadges, DailyGameContext } from '../../src/core/engine/badgeEngine';
+import { evaluateDailyBadges, DailyGameContext, TRACK_PERFORMANCE, TRACK_PERSEVERANCE, TRACK_EXPLORATION } from '../../src/core/engine/badgeEngine';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
+import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { DailyBriefingModal } from '../../src/components/LevelBriefing/DailyBriefingModal';
 import { DailyStreakRecordModal } from '../../src/components/Game/DailyStreakRecordModal';
 import { DailyRouletteModal } from '../../src/components/Game/DailyRouletteModal';
@@ -232,6 +233,7 @@ export default function DailyGameScreen() {
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
   const [seedsEarned, setSeedsEarned] = useState(0);
   const [seedsBeforeGain, setSeedsBeforeGain] = useState(0);
+  const [countdownDone, setCountdownDone] = useState(false);
   const [briefingDone, setBriefingDone] = useState(false);
   const [isNewDailyRecord, setIsNewDailyRecord] = useState(false);
   const [prevDailyRecordHolder, setPrevDailyRecordHolder] = useState<string | null>(null);
@@ -312,11 +314,10 @@ export default function DailyGameScreen() {
       }
 
       setLoading(false);
-      // Le timer demarrera apres la fermeture du briefing (handleBriefingClose)
-      // sauf si on reprend (briefing deja vu)
+      // Si on reprend (briefing déjà vu), le countdown s'affiche directement
+      // et le timer démarrera après lui (handleCountdownDone).
       if (isResuming) {
         setBriefingDone(true);
-        setTimeout(() => game.startTimer(priorElapsed), 50);
       }
     };
 
@@ -342,10 +343,14 @@ export default function DailyGameScreen() {
     return new Set(challenge.fixedPlacements.map(fp => fp.cellIndex));
   }, [challenge]);
 
-  // -- Fermeture du briefing : demarre le timer --
+  // -- Fermeture du briefing : déclenche le countdown (le timer démarrera après) --
   const handleBriefingClose = useCallback(() => {
     setBriefingDone(true);
-    // Pas de priorElapsed ici car le briefing n'est montre qu'a la premiere ouverture
+    // Le timer sera démarré dans handleCountdownDone
+  }, []);
+
+  const handleCountdownDone = useCallback(() => {
+    setCountdownDone(true);
     setTimeout(() => game.startTimer(0), 50);
   }, [game]);
 
@@ -513,11 +518,11 @@ export default function DailyGameScreen() {
       setTimeout(() => setRankUpVisible(true), 1800);
     }
 
-    // Auto-avance des objectifs (toujours automatique désormais)
+    // Auto-avance des objectifs par track
     const allEarnedNowDaily = usePlayerStore.getState().earnedBadges;
     const completedGoalIdsDaily = activeGoalsBeforeDaily.filter(id => allEarnedNowDaily.includes(id));
     if (completedGoalIdsDaily.length > 0) {
-      player.advanceGoalAuto(completedGoalIdsDaily, allEarnedNowDaily);
+      player.advanceTrackGoals(completedGoalIdsDaily, allEarnedNowDaily);
     }
 
     // 4. Soumission Firestore en arriere-plan
@@ -694,6 +699,7 @@ export default function DailyGameScreen() {
           fixedCells={fixedCells}
           selectedElement={game.selectedElement}
           onSelectElement={game.selectElement}
+          onClearAll={game.clearPlayerBoard}
         />
 
         {/* Modal victoire */}
@@ -772,6 +778,12 @@ export default function DailyGameScreen() {
           challenge={challenge}
           onClose={handleBriefingClose}
         />
+      )}
+
+      {/* ── Countdown pré-défi ──
+           Affiché après le briefing (première ouverture) ou immédiatement en reprise. */}
+      {!countdownDone && briefingDone && (
+        <ChallengeCountdown onDone={handleCountdownDone} />
       )}
 
     </GestureHandlerRootView>

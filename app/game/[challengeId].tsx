@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Platform,
   BackHandler,
+  AppState,
   useWindowDimensions,
 } from 'react-native';
 import { useAudioStore } from '../../src/store/audioStore';
@@ -26,6 +27,7 @@ import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { FailModal } from '../../src/components/Game/FailModal';
 import { LevelBriefingModal } from '../../src/components/LevelBriefing/LevelBriefingModal';
 import { useGame } from '../../src/hooks/useGame';
+import { useGameStore } from '../../src/store/gameStore';
 import { usePlayerStore, getChallengeElapsed } from '../../src/store/playerStore';
 import { AbandonConfirmModal } from '../../src/components/Game/AbandonConfirmModal';
 import { auth } from '../../src/services/firebase';
@@ -47,10 +49,12 @@ import { Colors } from '../../src/constants/colors';
 import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { LEVEL_META } from '../../src/data/levelMeta';
 import { calculateSeedReward } from '../../src/core/engine/hintEngine';
-import { evaluateBadges, getClosestBadges, getBadgeProgress, GameContext } from '../../src/core/engine/badgeEngine';
+import { evaluateBadges, getClosestBadges, getBadgeProgress, GameContext, getTrackForBadge, TRACK_PERFORMANCE, TRACK_PERSEVERANCE, TRACK_EXPLORATION } from '../../src/core/engine/badgeEngine';
+import { TrackBadgeProgressMap } from '../../src/components/Badges/BadgeProgressInline';
 
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
+import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { useT } from '../../src/i18n';
 
 // Donnees de defis embarquees (offline) — 10 niveaux
@@ -69,6 +73,12 @@ import niveau12 from '../../src/data/challenges/niveau_12.json';
 import niveau13 from '../../src/data/challenges/niveau_13.json';
 import niveau14 from '../../src/data/challenges/niveau_14.json';
 import niveau15 from '../../src/data/challenges/niveau_15.json';
+import niveau16 from '../../src/data/challenges/niveau_16.json';
+import niveau17 from '../../src/data/challenges/niveau_17.json';
+import niveau18 from '../../src/data/challenges/niveau_18.json';
+import niveau19 from '../../src/data/challenges/niveau_19.json';
+import niveau20 from '../../src/data/challenges/niveau_20.json';
+import niveau21 from '../../src/data/challenges/niveau_21.json';
 import { Challenge } from '../../src/core/models/Challenge';
 
 const ALL_CHALLENGES: Record<string, Challenge[]> = {
@@ -87,6 +97,12 @@ const ALL_CHALLENGES: Record<string, Challenge[]> = {
   niveau_13: niveau13.challenges as Challenge[],
   niveau_14: niveau14.challenges as Challenge[],
   niveau_15: niveau15.challenges as Challenge[],
+  niveau_16: niveau16.challenges as Challenge[],
+  niveau_17: niveau17.challenges as Challenge[],
+  niveau_18: niveau18.challenges as Challenge[],
+  niveau_19: niveau19.challenges as Challenge[],
+  niveau_20: niveau20.challenges as Challenge[],
+  niveau_21: niveau21.challenges as Challenge[],
 };
 
 /** Calcule les niveaux entièrement complétés (tous les 10 défis présents). */
@@ -110,6 +126,12 @@ export default function GameScreen() {
   const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
 
+  // ── Countdown pré-défi ────────────────────────────────────
+  // Countdown pré-défi :
+  // - niveau 1 (avec briefing) : démarre après fermeture du briefing
+  // - niveaux 2+ (sans briefing) : démarre immédiatement au montage
+  const [countdownDone, setCountdownDone] = useState(false);
+
   // ── Briefing de niveau ─────────────────────────────────────
   const [briefingDone, setBriefingDone] = useState(false);
   const [briefingForcedOpen, setBriefingForcedOpen] = useState(false);
@@ -118,16 +140,28 @@ export default function GameScreen() {
     const wasFirstOpen = !briefingDone;
     setBriefingDone(true);
     setBriefingForcedOpen(false);
-    if (wasFirstOpen && challengeId) {
+    // Le timer démarrera après le countdown (voir handleCountdownDone)
+    // On ne le démarre plus ici pour les premières ouvertures
+    if (!wasFirstOpen && challengeId) {
+      // Réouverture du briefing via bouton "?" — le timer était déjà lancé, rien à faire
+    }
+  }, [game, briefingDone, challengeId]);
+
+  const handleCountdownDone = useCallback(() => {
+    setCountdownDone(true);
+    // Démarre le timer après le countdown
+    if (challengeId) {
       const pState = usePlayerStore.getState();
       const priorElapsed = getChallengeElapsed(pState.challengeStartedAt, challengeId);
       game.startTimer(priorElapsed);
     }
-  }, [game, briefingDone, challengeId]);
+  }, [game, challengeId]);
 
   // ── Badges toast queue ────────────────────────────────────
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
-  // closest badges pour la VictoryModal
+  // progressions par track pour la VictoryModal (nouveau système)
+  const [trackBadges, setTrackBadges] = useState<TrackBadgeProgressMap | undefined>(undefined);
+  // compat descendante : ancien tableau closestBadges[] (non utilisé si trackBadges est fourni)
   const [closestBadges, setClosestBadges] = useState<ReturnType<typeof getClosestBadges>>([]);
   // badges obtenus CE tour (pour affichage ✓ dans VictoryModal)
   const [obtainedBadgeIds, setObtainedBadgeIds] = useState<string[]>([]);
@@ -156,6 +190,17 @@ export default function GameScreen() {
   const [rankUpSeeds, setRankUpSeeds]            = useState(0);
   const [rankUpSeedsBefore, setRankUpSeedsBefore] = useState(0);
 
+  // ── Recharge bonus via pub ────────────────────────────────
+  // Disponible en mode free, si non déjà utilisé aujourd'hui, et bonus non désactivés
+  const watchAdAvailable =
+    !player.isPremium &&
+    !player.watchAdUsedToday &&
+    !game.bonusDisabled;
+
+  const handleWatchAd = useCallback(() => {
+    player.refillBonusWithAd();
+  }, [player]);
+
   // ── Abandon ───────────────────────────────────────────────
   const [showAbandonModal, setShowAbandonModal] = useState(false);
 
@@ -180,6 +225,33 @@ export default function GameScreen() {
     });
     return () => sub.remove();
   }, [handleAbandon]);
+
+  // ── AppState : arrêter le chrono si l'app passe en arrière-plan ───────────
+  // Équivalent d'un abandon silencieux : le chrono se fige, l'abandon est enregistré.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        // Ne rien faire si la partie est déjà terminée ou pas encore démarrée
+        const gameState = useGameStore.getState();
+        if (!gameState.startTime || gameState.isVictory) return;
+        // Geler le chrono
+        gameState.stopTimer();
+        // Enregistrer l'abandon pour qu'il compte dans les stats (ne navigue pas)
+        if (challengeId) {
+          usePlayerStore.getState().markChallengeAbandoned(challengeId);
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [challengeId]);
+
+  // ── Reset de la garde d'évaluation des badges quand la victoire est annulée ──
+  // Permet à la prochaine victoire (rejouer le même défi) d'être réévaluée.
+  useEffect(() => {
+    if (!game.isVictory) {
+      badgesEvaluatedRef.current = false;
+    }
+  }, [game.isVictory]);
 
   // ── Record mondial ────────────────────────────────────────
   const [worldRecord, setWorldRecord] = useState<WorldRecord | null>(null);
@@ -239,8 +311,24 @@ export default function GameScreen() {
     return new Set(challenge.fixedPlacements.map(fp => fp.cellIndex));
   }, [challenge]);
 
+  // Plateau d'affichage : playerBoard + élément révélé superposé sur sa case
+  const displayBoard = React.useMemo(() => {
+    if (game.revealCellIndex === null || game.revealElementId === null) {
+      return game.playerBoard;
+    }
+    const board = [...game.playerBoard];
+    board[game.revealCellIndex] = game.revealElementId;
+    return board;
+  }, [game.playerBoard, game.revealCellIndex, game.revealElementId]);
+
   // ── Tap sur une case du plateau ───────────────────────────
   const handleCellPress = useCallback((cellIndex: number) => {
+    // Mode révélation actif → le prochain clic révèle la solution de la case
+    if (game.revealActive) {
+      game.handleRevealCellPress(cellIndex);
+      return;
+    }
+
     if (game.selectedElement) {
       // placeAndDeselect fusionne placement + désélection en un seul set() Zustand
       // → un seul render → token visible immédiatement (pas de contentScale bloqué à 0).
@@ -333,6 +421,8 @@ export default function GameScreen() {
       abandonCountForChallenge: storeState.stats.abandonCount?.[challenge.id] ?? 0,
       isWorldRecord: false,
       isFirstRecord: false,
+      retryStreakCount:     storeState.retryStreak.count,     // post-update pour amelioration_cycle
+      retryStreakFuseeCount: storeState.retryStreakFusee.count, // post-update pour amelioration_fusee
     };
 
     // Capture du score AVANT l'attribution des badges
@@ -388,16 +478,12 @@ export default function GameScreen() {
     const allEarnedNow = usePlayerStore.getState().earnedBadges;
     const completedGoalIds = activeGoalsBeforeUpdate.filter(id => allEarnedNow.includes(id));
 
+    let injected: string[] = [];
     if (completedGoalIds.length > 0) {
-      // Auto-avance : remplacer chaque slot libéré par le prochain badge éligible
-      player.advanceGoalAuto(completedGoalIds, allEarnedNow);
-      // Détecter les nouveaux objectifs injectés (= ceux dans l'état post-avance
-      // qui n'étaient pas dans activeGoalsBeforeUpdate)
-      const goalsAfterAdvance = usePlayerStore.getState().activeBadgeGoals;
-      const injected = goalsAfterAdvance.filter(id => !activeGoalsBeforeUpdate.includes(id));
+      // Auto-avance typée par track
+      injected = player.advanceTrackGoals(completedGoalIds, allEarnedNow);
       if (injected.length > 0) setNewGoalBadgeIds(injected);
-      // Persister activeBadgeGoals + goalCounters dans Firestore pour que restoreFromCloud
-      // ne réécrase pas le résultat de l'auto-avance au prochain chargement
+      // Persister trackGoals + goalCounters dans Firestore
       const uidAdv = auth.currentUser?.uid;
       const isAnonAdv = auth.currentUser?.isAnonymous ?? true;
       if (uidAdv && !isAnonAdv) {
@@ -406,6 +492,7 @@ export default function GameScreen() {
           if (currentProfile) {
             upsertPlayer({
               ...currentProfile,
+              trackGoals:       stateAfterAdvance.trackGoals,
               activeBadgeGoals: stateAfterAdvance.activeBadgeGoals,
               goalCounters:     stateAfterAdvance.goalCounters,
             }).catch(() => {});
@@ -415,34 +502,76 @@ export default function GameScreen() {
     }
 
     const updatedState = usePlayerStore.getState();
-    // Calculer la progression pour :
-    // 1. Les objectifs actifs AVANT la partie (y compris ceux obtenus ce tour)
-    // 2. Les nouveaux objectifs injectés par l'auto-avance
+    // Calculer la progression par track pour la VictoryModal.
     // Pour les badges obtenus ce tour, on exclut temporairement leur ID de earnedBadges
     // afin que getBadgeProgress calcule leur progression finale (sinon il retourne null).
-    const goalsAfterAdvanceFinal = updatedState.activeBadgeGoals;
-    const injectedFinal = goalsAfterAdvanceFinal.filter(id => !activeGoalsBeforeUpdate.includes(id));
-    const allGoalsToShow = [...activeGoalsBeforeUpdate, ...injectedFinal];
     const earnedWithoutNewBadges = updatedState.earnedBadges.filter(
       id => !newBadges.includes(id)
     );
-    // goalCounters après advanceGoalAuto (nouveaux objectifs ont goalCounters[id]=0)
     const ctxForProgress = {
       ...ctx,
       earnedBadges: earnedWithoutNewBadges,
       goalCounters: updatedState.goalCounters,
     };
-    const activeProgress = allGoalsToShow
-      .map(badgeId => getBadgeProgress(badgeId, ctxForProgress))
-      .filter((p): p is NonNullable<typeof p> => p !== null);
-    setClosestBadges(activeProgress);
+    // Contexte "avant" pour calculer previousValue (delta +N sur la jauge)
+    const ctxBeforeProgress = {
+      ...ctx,
+      earnedBadges: earnedWithoutNewBadges,
+      goalCounters: stateBeforeUpdate.goalCounters,
+    };
+
+    // Construire trackBadges : pour chaque track, afficher l'objectif actif d'avant
+    // (y compris s'il vient d'être obtenu) OU le nouveau goal injecté.
+    const trackGoalsAfter = updatedState.trackGoals;
+    const trackBadgesResult: TrackBadgeProgressMap = {
+      performance:  null,
+      perseverance: null,
+      exploration:  null,
+    };
+    const tracksConfig: Array<{ key: 'performance' | 'perseverance' | 'exploration'; seq: string[] }> = [
+      { key: 'performance',  seq: TRACK_PERFORMANCE },
+      { key: 'perseverance', seq: TRACK_PERSEVERANCE },
+      { key: 'exploration',  seq: TRACK_EXPLORATION },
+    ];
+    for (const { key, seq } of tracksConfig) {
+      // Badge affiché = celui qui était objectif avant la partie (pour montrer la progression)
+      // OU le nouveau injecté (s'il vient d'être remplacé)
+      const prevGoal = activeGoalsBeforeUpdate.find(id => seq.includes(id)) ?? null;
+      const newGoal  = injected.find(id => seq.includes(id)) ?? null;
+      const badgeToShow = newGoal ?? prevGoal;
+      if (badgeToShow) {
+        const progress = getBadgeProgress(badgeToShow, ctxForProgress);
+        if (progress) {
+          // Calculer la valeur avant la partie pour l'animation +N
+          const progressBefore = getBadgeProgress(badgeToShow, ctxBeforeProgress);
+          // Pour amelioration_cycle / amelioration_fusee : défi verrouillé à afficher
+          const targetChallengeId =
+            badgeToShow === 'amelioration_cycle'
+              ? (updatedState.retryStreak.challengeId ?? null)
+              : badgeToShow === 'amelioration_fusee'
+                ? (updatedState.retryStreakFusee.challengeId ?? null)
+                : null;
+          trackBadgesResult[key] = {
+            ...progress,
+            previousValue: progressBefore?.currentValue ?? progress.currentValue,
+            ...(targetChallengeId !== null ? { targetChallengeId } : {}),
+          };
+        }
+      }
+    }
+    setTrackBadges(trackBadgesResult);
 
     // 3. Synchronisation Firestore en arrière-plan (si connecté, non anonyme)
     const uid = auth.currentUser?.uid;
     const username = auth.currentUser?.displayName ?? 'Joueur';
     const isAnonymous = auth.currentUser?.isAnonymous ?? true;
+    // Le Record du Monde ne peut être battu que lors du premier essai (défi jamais complété avant).
+    const isFirstAttempt = !completedChallengesBeforeUpdate.includes(challenge.id);
     if (uid && !isAnonymous) {
-      trySetWorldRecord(challenge.id, uid, username, game.elapsedTime).then(wrResult => {
+      (isFirstAttempt
+        ? trySetWorldRecord(challenge.id, uid, username, game.elapsedTime)
+        : Promise.resolve({ isNewRecord: false, previousRecord: null, newRecord: null })
+      ).then(wrResult => {
         if (wrResult.isNewRecord) {
           setIsNewWorldRecord(true);
           setPreviousRecordHolder(wrResult.previousRecord?.username ?? null);
@@ -610,10 +739,13 @@ export default function GameScreen() {
           bonusDisabled={bonusDisabled}
           onActivateBonus={game.activateBonus}
           dailyBonusUses={player.dailyBonusUses}
-          highlightDeadline={game.highlightDeadline}
+          highlightDeadline={game.revealDeadline}
           instinctDeadline={game.instinctDeadline}
-          highlightActive={game.highlightActive}
+          highlightActive={game.revealActive}
+          revealActive={game.revealActive}
           hasPlacedElements={hasPlacedElements}
+          watchAdAvailable={watchAdAvailable}
+          onWatchAd={handleWatchAd}
           rightSlot={
             <TouchableOpacity
               style={[
@@ -634,10 +766,10 @@ export default function GameScreen() {
           <View style={[styles.boardContainer, { maxHeight: Math.min(screenWidth, screenHeight * 0.52) }]}>
             <BoardRenderer
               boardDef={boardDef}
-              playerBoard={game.playerBoard}
+              playerBoard={displayBoard}
               fixedCells={fixedCells}
-              selectedElement={game.selectedElement}
-              highlightActive={game.validHintCells.length > 0 || game.errorHintCells.length > 0}
+              selectedElement={game.revealActive ? null : game.selectedElement}
+              highlightActive={game.validHintCells.length > 0 || game.errorHintCells.length > 0 || game.revealCellIndex !== null}
               getCellColor={(idx) => game.getCellColor(idx)}
               onCellPress={handleCellPress}
               challengeKey={challenge?.id}
@@ -645,14 +777,21 @@ export default function GameScreen() {
           </View>
         </View>
 
-        {/* ── Palette ── */}
-        <ElementPalette
-          availableTokens={challenge.availableTokens}
-          playerBoard={game.playerBoard}
-          fixedCells={fixedCells}
-          selectedElement={game.selectedElement}
-          onSelectElement={game.selectElement}
-        />
+        {/* ── Palette (non sélectionnable en mode révélation) ── */}
+        <View style={{ position: 'relative' }}>
+          <ElementPalette
+            availableTokens={challenge.availableTokens}
+            playerBoard={displayBoard}
+            fixedCells={fixedCells}
+            selectedElement={game.selectedElement}
+            onSelectElement={game.selectElement}
+            onClearAll={game.clearPlayerBoard}
+          />
+          {/* Overlay bloquant les interactions palette quand reveal actif */}
+          {game.revealActive && (
+            <View style={styles.paletteOverlay} pointerEvents="box-only" />
+          )}
+        </View>
 
         {/* ── Modal victoire ── */}
         <VictoryModal
@@ -663,6 +802,7 @@ export default function GameScreen() {
           difficulty={challenge.level}
           challengeNumber={challenge.challengeNumber}
           confettiPieces={confettiPieces}
+          trackBadges={trackBadges}
           closestBadges={closestBadges}
           obtainedBadgeIds={obtainedBadgeIds}
           newGoalBadgeIds={newGoalBadgeIds}
@@ -687,9 +827,20 @@ export default function GameScreen() {
             const nextExists = levelChallenges.some(c => c.id === nextId);
             game.resetGame();
             if (nextExists) {
+              // Défi suivant dans le même niveau
               router.replace(`/game/${nextId}`);
             } else {
-              router.replace('/(tabs)/');
+              // Dernier défi du niveau → passer au niveau suivant si disponible
+              const currentLevelNum = parseInt(challenge.level.replace('niveau_', ''), 10);
+              const nextLevelKey = `niveau_${currentLevelNum + 1}`;
+              const nextLevelChallenges = ALL_CHALLENGES[nextLevelKey];
+              if (nextLevelChallenges && nextLevelChallenges.length > 0) {
+                const firstNextChallenge = nextLevelChallenges[0];
+                router.replace(`/game/${firstNextChallenge.id}`);
+              } else {
+                // Dernier niveau atteint → retour à l'accueil
+                router.replace('/(tabs)/');
+              }
             }
           }}
           onBackToMenu={() => {
@@ -726,7 +877,7 @@ export default function GameScreen() {
         />
       </View>
 
-      {/* ── Briefing de niveau ── */}
+        {/* ── Briefing de niveau ── */}
       {challenge && levelMeta &&
        (briefingForcedOpen || (!briefingDone && challenge.challengeNumber === 1)) && (
         <LevelBriefingModal
@@ -734,6 +885,14 @@ export default function GameScreen() {
           levelMeta={levelMeta}
           onClose={handleBriefingClose}
         />
+      )}
+
+      {/* ── Countdown pré-défi ──
+           Affiché après le briefing (niveau 1) ou immédiatement (niveaux 2+).
+           Le briefing forcé (bouton "?") ne redéclenche PAS le countdown. */}
+      {!countdownDone && challenge &&
+       (challenge.challengeNumber !== 1 || briefingDone) && (
+        <ChallengeCountdown onDone={handleCountdownDone} />
       )}
 
     </GestureHandlerRootView>
@@ -861,6 +1020,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Colors.ui.background,
     padding: 4,
+  },
+  paletteOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.12)',
+    borderRadius: 8,
+    zIndex: 10,
   },
   boardContainer: {
     width: '100%',

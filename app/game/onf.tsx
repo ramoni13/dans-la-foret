@@ -39,6 +39,7 @@ import { formatTime } from '../../src/utils/boardUtils';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
+import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
 import { recordVictory } from '../../src/services/metricsService';
@@ -89,6 +90,7 @@ export default function ONFGameScreen() {
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
   const { borderW } = useFrameLayout();
   // ── État local ────────────────────────────────────────────
+  const [countdownDone, setCountdownDone] = useState(false);
   const [loading, setLoading] = useState(true);
   const [allCompleted, setAllCompleted] = useState(false);
   const [seedsEarned, setSeedsEarned] = useState(0);
@@ -102,7 +104,8 @@ export default function ONFGameScreen() {
   const [showPremium, setShowPremium] = useState(false);
   /** Limite quotidienne ONF atteinte (free uniquement) */
   const ONF_DAILY_LIMIT = 3;
-  const dailyLimitReached = !player.isPremium && player.onfDailyCount >= ONF_DAILY_LIMIT;
+  const isDemoUser = player.username === 'planete';
+  const dailyLimitReached = !player.isPremium && !isDemoUser && player.onfDailyCount >= ONF_DAILY_LIMIT;
 
   const [showFailModal, setShowFailModal] = useState(false);
   const badgesEvaluatedRef = useRef(false);
@@ -148,10 +151,8 @@ export default function ONFGameScreen() {
       game.loadChallenge(result.challenge);
       // Mode ONF : aucun bonus disponible
       game.setBonusDisabled(true);
-      // Le timer démarre après la fermeture du briefing (ou immédiatement si déjà vu)
-      if (usePlayerStore.getState().hasSeenOnfBriefing) {
-        game.startTimer(0);
-      }
+      // Le timer démarrera après le countdown (handleCountdownDone)
+      // Pas de startTimer ici — le countdown s'en charge
       setLoading(false);
     };
 
@@ -176,8 +177,13 @@ export default function ONFGameScreen() {
   const handleBriefingClose = useCallback(() => {
     player.markOnfBriefingSeen();
     setBriefingDone(true);
+    // Le timer démarrera après le countdown (handleCountdownDone)
+  }, [player]);
+
+  const handleCountdownDone = useCallback(() => {
+    setCountdownDone(true);
     setTimeout(() => game.startTimer(0), 50);
-  }, [player, game]);
+  }, [game]);
 
   // ── Données dérivées ──────────────────────────────────────
   const challenge = game.challenge;
@@ -313,11 +319,11 @@ export default function ONFGameScreen() {
       player.awardBadges(newOnfBadges);
       setBadgeQueue(newOnfBadges);
     }
-    // Auto-avance des objectifs
+    // Auto-avance des objectifs par track
     const allEarnedNowOnf = usePlayerStore.getState().earnedBadges;
     const completedGoalIdsOnf = activeGoalsBeforeOnf.filter(id => allEarnedNowOnf.includes(id));
     if (completedGoalIdsOnf.length > 0) {
-      player.advanceGoalAuto(completedGoalIdsOnf, allEarnedNowOnf);
+      player.advanceTrackGoals(completedGoalIdsOnf, allEarnedNowOnf);
     }
 
     // ── Détection changement de rang ─────────────────────────
@@ -658,6 +664,12 @@ export default function ONFGameScreen() {
         onfSolvedCount={player.onfSolvedCount}
         initialCardId={justUnlockedCard?.id}
       />
+
+      {/* ── Countdown pré-défi ──
+           Affiché après le briefing ONF (première fois) ou immédiatement (parties suivantes). */}
+      {!countdownDone && briefingDone && (
+        <ChallengeCountdown onDone={handleCountdownDone} />
+      )}
 
     </GestureHandlerRootView>
   );
