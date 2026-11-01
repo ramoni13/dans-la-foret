@@ -20,7 +20,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import { MASTER_SEQUENCE, ELIGIBLE_GOAL_BADGE_IDS } from '../../src/core/engine/badgeEngine';
+import {
+  MASTER_SEQUENCE,
+  ELIGIBLE_GOAL_BADGE_IDS,
+  TRACK_PERFORMANCE,
+  TRACK_PERSEVERANCE,
+  TRACK_EXPLORATION,
+} from '../../src/core/engine/badgeEngine';
 import { BADGE_MAP, BadgeRarity } from '../../src/constants/badges';
 import { Colors } from '../../src/constants/colors';
 import { usePlayerStore } from '../../src/store/playerStore';
@@ -46,6 +52,7 @@ export default function BadgeSequenceAdminScreen() {
   const [filterRarity, setFilterRarity] = useState<BadgeRarity | null>(null);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
+  const [showTracks, setShowTracks] = useState(false);
 
   // Garde admin
   if (username !== 'Ramoni') {
@@ -111,6 +118,29 @@ export default function BadgeSequenceAdminScreen() {
     setImportText('');
     setImportError('');
   }, []);
+
+  // Rendu d'une ligne de track (vue Tracks)
+  const renderTrackBadge = (id: string, isLast: boolean) => {
+    const def = BADGE_MAP[id];
+    if (!def) return null;
+    const isEligible = ELIGIBLE_GOAL_BADGE_IDS.includes(id);
+    return (
+      <View key={id} style={[styles.trackBadgeRow, !isEligible && styles.badgeRowExcluded]}>
+        <Text style={styles.badgeEmoji}>{def.emoji}</Text>
+        <View style={styles.badgeInfo}>
+          <Text style={styles.badgeLabel}>{def.label}</Text>
+          <Text style={styles.badgeMeta}>
+            <Text style={[styles.badgeRarity, { color: RARITY_COLORS[def.rarity] }]}>{def.rarity}</Text>
+            {'  ·  '}
+            <Text style={styles.badgeCat}>{id}</Text>
+          </Text>
+        </View>
+        {!isLast && (
+          <Text style={styles.trackArrow}>↓</Text>
+        )}
+      </View>
+    );
+  };
 
   // Rendu d'un badge
   const renderBadge = useCallback(({ item, index }: { item: string; index: number }) => {
@@ -191,14 +221,64 @@ export default function BadgeSequenceAdminScreen() {
         ))}
       </ScrollView>
 
-      {/* Liste */}
-      <FlatList
-        data={displayedSequence}
-        keyExtractor={item => item}
-        renderItem={renderBadge}
-        contentContainerStyle={styles.list}
-        style={styles.flatList}
-      />
+      {/* Bascule vue tracks / liste */}
+      <View style={styles.viewToggleRow}>
+        <TouchableOpacity
+          style={[styles.chip, !showTracks && styles.chipActive]}
+          onPress={() => setShowTracks(false)}
+        >
+          <Text style={[styles.chipText, !showTracks && styles.chipTextActive]}>Liste</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.chip, showTracks && styles.chipActive]}
+          onPress={() => setShowTracks(true)}
+        >
+          <Text style={[styles.chipText, showTracks && styles.chipTextActive]}>3 Lignes (Tracks)</Text>
+        </TouchableOpacity>
+      </View>
+
+      {showTracks ? (
+        /* ── Vue 3 Tracks côte à côte ── */
+        <ScrollView style={styles.flatList} contentContainerStyle={styles.tracksContainer}>
+          <View style={styles.tracksRow}>
+            {/* Performance */}
+            <View style={styles.trackCol}>
+              <View style={[styles.trackHeader, { borderColor: '#D97706' }]}>
+                <Text style={[styles.trackHeaderText, { color: '#D97706' }]}>⚡ Performance</Text>
+                <Text style={styles.trackHeaderSub}>{TRACK_PERFORMANCE.length} badges</Text>
+              </View>
+              {TRACK_PERFORMANCE.map((id, idx) => renderTrackBadge(id, idx === TRACK_PERFORMANCE.length - 1))}
+            </View>
+
+            {/* Persévérance */}
+            <View style={styles.trackCol}>
+              <View style={[styles.trackHeader, { borderColor: '#4ADE80' }]}>
+                <Text style={[styles.trackHeaderText, { color: '#4ADE80' }]}>🌿 Persévérance</Text>
+                <Text style={styles.trackHeaderSub}>{TRACK_PERSEVERANCE.length} badges</Text>
+              </View>
+              {TRACK_PERSEVERANCE.map((id, idx) => renderTrackBadge(id, idx === TRACK_PERSEVERANCE.length - 1))}
+            </View>
+
+            {/* Exploration */}
+            <View style={styles.trackCol}>
+              <View style={[styles.trackHeader, { borderColor: '#60A5FA' }]}>
+                <Text style={[styles.trackHeaderText, { color: '#60A5FA' }]}>🌍 Exploration</Text>
+                <Text style={styles.trackHeaderSub}>{TRACK_EXPLORATION.length} badges</Text>
+              </View>
+              {TRACK_EXPLORATION.map((id, idx) => renderTrackBadge(id, idx === TRACK_EXPLORATION.length - 1))}
+            </View>
+          </View>
+        </ScrollView>
+      ) : (
+        /* ── Vue liste MASTER_SEQUENCE ── */
+        <FlatList
+          data={displayedSequence}
+          keyExtractor={item => item}
+          renderItem={renderBadge}
+          contentContainerStyle={styles.list}
+          style={styles.flatList}
+        />
+      )}
 
       {/* Actions */}
       <View style={[styles.footer, { paddingBottom: safeInsets.bottom + 8 }]}>
@@ -417,5 +497,52 @@ const styles = StyleSheet.create({
     color: '#F0FDF4',
     fontSize: 14,
     fontWeight: '600',
+  },
+  viewToggleRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E3A1F',
+  },
+  tracksContainer: {
+    paddingVertical: 8,
+  },
+  tracksRow: {
+    flexDirection: 'row',
+    gap: 0,
+  },
+  trackCol: {
+    flex: 1,
+    paddingHorizontal: 6,
+    borderRightWidth: 1,
+    borderRightColor: '#1A2E1B',
+  },
+  trackHeader: {
+    borderBottomWidth: 2,
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
+  trackHeaderText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  trackHeaderSub: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  trackBadgeRow: {
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A2E1B',
+    alignItems: 'center',
+  },
+  trackArrow: {
+    color: '#374151',
+    fontSize: 12,
+    textAlign: 'center',
   },
 });
