@@ -35,15 +35,15 @@ interface BonusTutorialData {
 }
 
 const TUTORIAL_DATA: Record<BonusId, BonusTutorialData> = {
-  highlight_valid_cells: {
-    titleKey: 'bonus_highlight_title',
-    descKey: 'bonus_highlight_desc',
-    headerEmoji: '💡',
-    headerColor: Colors.cell.valid,
+  reveal_cell: {
+    titleKey: 'bonus_reveal_title',
+    descKey: 'bonus_reveal_desc',
+    headerEmoji: '🎁',
+    headerColor: '#F59E0B',
     steps: [
-      { emoji: '👆', textKey: 'bonus_highlight_step1' },
-      { emoji: '✅', textKey: 'bonus_highlight_step2' },
-      { emoji: '🔄', textKey: 'bonus_highlight_step3' },
+      { emoji: '👆', textKey: 'bonus_reveal_step1' },
+      { emoji: '🔍', textKey: 'bonus_reveal_step2' },
+      { emoji: '⏱️', textKey: 'bonus_reveal_step3' },
     ],
   },
   instinct: {
