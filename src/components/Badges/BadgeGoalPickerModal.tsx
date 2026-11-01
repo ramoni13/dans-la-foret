@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { BADGE_MAP, BADGE_DEFINITIONS, BadgeRarity, getBadgeTexts } from '../../constants/badges';
 import { usePlayerStore } from '../../store/playerStore';
-import { ELIGIBLE_GOAL_BADGE_IDS } from '../../core/engine/badgeEngine';
+import { ELIGIBLE_GOAL_BADGE_IDS, isBadgeEligibleAsGoal } from '../../core/engine/badgeEngine';
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 
@@ -93,12 +93,13 @@ export const BadgeGoalPickerModal: React.FC<BadgeGoalPickerModalProps> = ({
   }
 
   /**
-   * Pour chaque catégorie, seul le premier badge non-obtenu ET non-déjà-objectif-actif
-   * est proposé. Les suivants sont verrouillés (il faut finir le précédent d'abord).
+   * Pour chaque catégorie, seul le premier badge non-obtenu, non-déjà-objectif-actif
+   * ET dont le prérequis est satisfait est proposé.
+   * Les badges dont le prérequis n'est pas encore obtenu sont verrouillés.
    */
   const getNextAvailableInCategory = (ids: string[]): string | null => {
     for (const id of ids) {
-      if (!earnedSet.has(id) && !currentGoalSet.has(id)) return id;
+      if (!earnedSet.has(id) && !currentGoalSet.has(id) && isBadgeEligibleAsGoal(id, earnedBadges)) return id;
     }
     return null;
   };
