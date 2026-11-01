@@ -81,6 +81,12 @@ interface PersistedPlayerState {
   // Objectifs actifs
   activeBadgeGoals: string[];
   goalCounters: Record<string, number>;
+  // Streaks de rejeu
+  retryStreak: { challengeId: string | null; count: number };
+  retryStreakFusee: { challengeId: string | null; count: number };
+  // Utilisations journalières des bonus
+  dailyBonusUses: Record<string, number>;
+  lastBonusResetDate: string | null;
 }
 
 /** Extrait le sous-ensemble persistable depuis l'état Zustand courant */
@@ -108,6 +114,10 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     challengedFriendIds:       state.challengedFriendIds,
     activeBadgeGoals:          state.activeBadgeGoals,
     goalCounters:              state.goalCounters,
+    retryStreak:               state.retryStreak,
+    retryStreakFusee:          state.retryStreakFusee,
+    dailyBonusUses:            state.dailyBonusUses,
+    lastBonusResetDate:        state.lastBonusResetDate,
   };
 }
 
@@ -181,6 +191,30 @@ export function useStorage() {
             challengedFriendIds:    (saved as any).challengedFriendIds ?? [],
             activeBadgeGoals:       (saved as any).activeBadgeGoals ?? [...DEFAULT_BADGE_GOALS],
             goalCounters:           (saved as any).goalCounters ?? {},
+            retryStreak:            (() => {
+              const savedStreak = (saved as any).retryStreak ?? { challengeId: null, count: 0 };
+              // Compat descendante : si le badge est actif mais challengeId non verrouillé,
+              // utiliser le dernier défi solo complété comme défi cible.
+              const goals: string[] = (saved as any).activeBadgeGoals ?? [];
+              const lastSolo = (saved.completedChallenges ?? []).filter((id: string) => id.startsWith('niveau_')).slice(-1)[0] ?? null;
+              if (goals.includes('amelioration_cycle') && !savedStreak.challengeId && lastSolo) {
+                return { challengeId: lastSolo, count: savedStreak.count };
+              }
+              return savedStreak;
+            })(),
+            retryStreakFusee:       (() => {
+              const savedStreak = (saved as any).retryStreakFusee ?? { challengeId: null, count: 0 };
+              const goals: string[] = (saved as any).activeBadgeGoals ?? [];
+              const lastSolo = (saved.completedChallenges ?? []).filter((id: string) => id.startsWith('niveau_')).slice(-1)[0] ?? null;
+              if (goals.includes('amelioration_fusee') && !savedStreak.challengeId && lastSolo) {
+                return { challengeId: lastSolo, count: savedStreak.count };
+              }
+              return savedStreak;
+            })(),
+            dailyBonusUses:        (saved as any).dailyBonusUses
+              ? { reveal_cell: (saved as any).dailyBonusUses.reveal_cell ?? (saved as any).dailyBonusUses.highlight_valid_cells ?? 3, instinct: (saved as any).dailyBonusUses.instinct ?? 3 }
+              : { reveal_cell: 3, instinct: 3 },
+            lastBonusResetDate:    (saved as any).lastBonusResetDate ?? null,
           });
           return saved.earnedBadges ?? [];
         } catch {
@@ -294,7 +328,13 @@ export function useStorage() {
         newState.challengedFriendIds.length     !== prevState.challengedFriendIds.length ||
         newState.earnedBadges.length            !== prevState.earnedBadges.length        ||
         newState.activeBadgeGoals.join(',')     !== prevState.activeBadgeGoals.join(',') ||
-        JSON.stringify(newState.goalCounters)   !== JSON.stringify(prevState.goalCounters);
+        JSON.stringify(newState.goalCounters)   !== JSON.stringify(prevState.goalCounters) ||
+        newState.retryStreak.count              !== prevState.retryStreak.count ||
+        newState.retryStreak.challengeId        !== prevState.retryStreak.challengeId ||
+        newState.retryStreakFusee.count         !== prevState.retryStreakFusee.count ||
+        newState.retryStreakFusee.challengeId   !== prevState.retryStreakFusee.challengeId ||
+        JSON.stringify(newState.dailyBonusUses) !== JSON.stringify(prevState.dailyBonusUses) ||
+        newState.lastBonusResetDate             !== prevState.lastBonusResetDate;
 
       if (!changed) return;
 

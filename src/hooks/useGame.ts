@@ -3,9 +3,9 @@
 // Logique de jeu centralisée — connecte le store au gameplay
 //
 // Bonus one-shot temporaires (indépendants, peuvent coexister) :
-// - highlight_valid_cells : MODE ACTIF 10s — recalcule dynamiquement
-//   les cases valides à chaque changement de sélection ou de plateau.
-//   Efface les cases quand aucun élément n'est sélectionné.
+// - reveal_cell : MODE RÉVÉLATION — le joueur sélectionne une case,
+//   la solution est affichée 10s puis la case est vidée.
+//   Durant les 10s, le jeu reprend normalement.
 // - instinct : snapshot figé 5s des cases en erreur
 //   → une case vidée perd son halo rouge (géré dans le store)
 // ============================================================
@@ -22,9 +22,9 @@ import {
 import { BonusId } from '../constants/bonus';
 import { Colors } from '../constants/colors';
 
-/** Durée d'affichage des bonus (ms) */
-const HIGHLIGHT_DURATION_MS = 10_000;
-const INSTINCT_DURATION_MS  =  5_000;
+/** Durée d'affichage du bonus reveal (ms) */
+const REVEAL_DURATION_MS   = 5_000;
+const INSTINCT_DURATION_MS = 5_000;
 
 export function useGame() {
   const game = useGameStore();
@@ -32,12 +32,12 @@ export function useGame() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Timers indépendants pour chaque bonus ──────────────────
-  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const instinctTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const instinctTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Deadlines exposées à HintOverlay pour le countdown ─────
-  const [highlightDeadline, setHighlightDeadline] = useState<number | null>(null);
-  const [instinctDeadline, setInstinctDeadline]   = useState<number | null>(null);
+  const [revealDeadline, setRevealDeadline]     = useState<number | null>(null);
+  const [instinctDeadline, setInstinctDeadline] = useState<number | null>(null);
 
   const boardDef = game.currentChallenge
     ? BoardRegistry[game.currentChallenge.boardId]
@@ -53,7 +53,7 @@ export function useGame() {
     if (game.startTime && !game.isVictory) {
       timerRef.current = setInterval(() => {
         game.tick(Date.now() - (game.startTime ?? 0));
-      }, 1000); // 1s : précision suffisante pour l'affichage MM:SS, évite les violations setInterval sur web
+      }, 1000);
     }
 
     return () => {
@@ -73,34 +73,10 @@ export function useGame() {
   // ── Cleanup des timers bonus au démontage ou reset ────────
   useEffect(() => {
     return () => {
-      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-      if (instinctTimerRef.current)  clearTimeout(instinctTimerRef.current);
+      if (revealTimerRef.current)   clearTimeout(revealTimerRef.current);
+      if (instinctTimerRef.current) clearTimeout(instinctTimerRef.current);
     };
   }, [game.currentChallenge?.id]);
-
-  // ── Mode highlight actif : recalcul dynamique ─────────────
-  // Quand highlightActive=true :
-  //   - selectedElement change → recalculer les cases valides
-  //   - selectedElement=null (placement fait) → effacer les cases valides
-  //   - playerBoard change (= placement) → effacer (l'élément est désélectionné)
-  //     le prochain selectElement déclenchera un nouveau calcul
-  useEffect(() => {
-    if (!game.highlightActive || !boardDef) return;
-
-    if (game.selectedElement) {
-      const state = useGameStore.getState();
-      const validCells = getValidCellsForElement(
-        game.selectedElement,
-        state.playerBoard,
-        boardDef,
-        ElementRegistry
-      );
-      game.setValidHintCells(validCells);
-    } else {
-      // Pas d'élément sélectionné → effacer les cases valides
-      game.clearValidHint();
-    }
-  }, [game.highlightActive, game.selectedElement, game.playerBoard, boardDef]);
 
   // ── Place un élément sur une case ─────────────────────────
   const tryPlaceElement = (cellIndex: number, elementId: string): boolean => {
@@ -116,8 +92,6 @@ export function useGame() {
   };
 
   // ── Place ET désélectionne en un seul set() atomique ──────
-  // À préférer à tryPlaceElement + selectElement(null) pour éviter
-  // deux renders Zustand successifs (bug token invisible).
   const placeAndDeselect = (cellIndex: number, elementId: string): boolean => {
     if (!game.currentChallenge) return false;
     game.placeAndDeselect(cellIndex, elementId);
@@ -126,9 +100,13 @@ export function useGame() {
 
   // ── Couleur d'une case selon son état ─────────────────────
   const getCellColor = (cellIndex: number): string => {
-    // Priorité : erreur (rouge) > valide (vert) > fixe > vide
+    // Priorité : erreur (rouge) > révélation (or) > valide (vert) > fixe > vide
     if (game.errorHintCells.includes(cellIndex)) {
       return Colors.cell.wrong;
+    }
+    // Case révélée par le bonus reveal_cell — fond doré distinctif
+    if (game.revealCellIndex === cellIndex) {
+      return '#F59E0B'; // Amber-500
     }
     if (game.validHintCells.includes(cellIndex)) {
       return Colors.cell.valid;
@@ -142,28 +120,73 @@ export function useGame() {
     return Colors.cell.empty;
   };
 
-  // ── Démarrer le mode highlight (timer 10s) ────────────────
-  const startHighlightMode = useCallback(() => {
-    game.setHighlightActive(true);
+  // ── Activer le mode révélation — chrono démarre immédiatement ──
+  // Phase 1 (10s) : attente de sélection d'une case.
+  //   → Si le joueur ne tape rien → revealActive=false, fin du bonus.
+  // Phase 2 (10s) : affichage de la solution sur la case sélectionnée.
+  //   → La case se vide automatiquement à l'issue.
+  const startRevealMode = useCallback(() => {
+    // Désélectionner l'élément actif
+    game.selectElement(null);
+    // Passer en mode attente de sélection
+    game.setRevealActive(true);
 
-    const deadline = Date.now() + HIGHLIGHT_DURATION_MS;
-    setHighlightDeadline(deadline);
+    // Démarrer le chrono dès "Activer !" — phase 1 : sélection de case
+    const deadline = Date.now() + REVEAL_DURATION_MS;
+    setRevealDeadline(deadline);
 
-    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-    highlightTimerRef.current = setTimeout(() => {
-      game.setHighlightActive(false);
-      game.clearValidHint();
-      highlightTimerRef.current = null;
-      setHighlightDeadline(null);
-    }, HIGHLIGHT_DURATION_MS);
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+    revealTimerRef.current = setTimeout(() => {
+      // Timeout phase 1 : le joueur n'a pas tapé de case → annuler
+      const state = useGameStore.getState();
+      if (state.revealActive) {
+        game.clearReveal();
+      }
+      revealTimerRef.current = null;
+      setRevealDeadline(null);
+    }, REVEAL_DURATION_MS);
   }, []);
 
+  // ── Appelé par handleCellPress quand revealActive=true ──────
+  // Renvoie true si la révélation a été prise en charge.
+  const handleRevealCellPress = useCallback((cellIndex: number): boolean => {
+    if (!game.revealActive || !game.currentChallenge) return false;
+
+    const isFixed = game.currentChallenge.fixedPlacements.some(
+      fp => fp.cellIndex === cellIndex
+    );
+    if (isFixed) return true; // Case fixe — on absorbe le clic mais on ne révèle rien
+
+    const solutionElement = game.currentChallenge.solution[cellIndex];
+    if (!solutionElement) return true;
+
+    // Annuler le timer phase 1 (attente de sélection)
+    if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+
+    // Marquer la case comme révélée dans le store (passe revealActive à false)
+    game.revealSolution(cellIndex, solutionElement);
+
+    // Démarrer le timer phase 2 : 10s d'affichage de la solution
+    const deadline = Date.now() + REVEAL_DURATION_MS;
+    setRevealDeadline(deadline);
+
+    revealTimerRef.current = setTimeout(() => {
+      // À l'issue des 10s : vider la case révélée
+      const state = useGameStore.getState();
+      if (state.revealCellIndex === cellIndex) {
+        game.removeElement(cellIndex);
+        game.clearReveal();
+      }
+      revealTimerRef.current = null;
+      setRevealDeadline(null);
+    }, REVEAL_DURATION_MS);
+
+    return true;
+  }, [game.revealActive, game.currentChallenge]);
+
   // ── Activation d'un bonus ─────────────────────────────────
-  // Les bonus ne coûtent plus de graines (chantier 4) :
-  // le joueur dispose de 5 utilisations par jour (∞ si premium).
   const activateBonus = (bonusId: BonusId): boolean => {
     if (!game.currentChallenge) return false;
-    // Mode sans bonus (ONF) — aucun bonus activable
     if (game.bonusDisabled) return false;
 
     const spent = player.spendBonus(bonusId);
@@ -171,8 +194,8 @@ export function useGame() {
 
     game.useBonus(bonusId);
 
-    if (bonusId === 'highlight_valid_cells') {
-      startHighlightMode();
+    if (bonusId === 'reveal_cell') {
+      startRevealMode();
     }
 
     if (bonusId === 'instinct') {
@@ -211,13 +234,19 @@ export function useGame() {
     errorHintCells: game.errorHintCells,
     highlightActive: game.highlightActive,
     validationResult: game.validationResult,
-    highlightDeadline,
+    revealDeadline,
     instinctDeadline,
+    // Alias pour compatibilité avec HintOverlay (highlight → reveal)
+    highlightDeadline: revealDeadline,
+    revealActive: game.revealActive,
+    revealCellIndex: game.revealCellIndex,
+    revealElementId: game.revealElementId,
     boardDef,
     tryPlaceElement,
     placeAndDeselect,
     getCellColor,
     activateBonus,
+    handleRevealCellPress,
     bonusDisabled: game.bonusDisabled,
     setBonusDisabled: game.setBonusDisabled,
     selectElement: game.selectElement,
@@ -229,6 +258,7 @@ export function useGame() {
     isDailyChallenge: game.isDailyChallenge,
     dailyValidationUsed: game.dailyValidationUsed,
     startTimer: game.startTimer,
+    stopTimer: game.stopTimer,
     validateChallenge: game.validateChallenge,
     dismissValidation: game.dismissValidation,
     resetGame: game.resetGame,
