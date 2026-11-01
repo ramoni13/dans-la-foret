@@ -5,6 +5,27 @@ Jeu de logique mobile/web (Expo ~57 / React Native 0.86 / React 19).
 
 ---
 
+## Convention de maintenance de ce fichier
+
+**Ce fichier est la source de vérité architecturale du projet. Il doit rester synchronisé avec le code.**
+
+Toute modification structurelle doit entraîner une mise à jour de ce fichier dans la même session :
+
+| Type de changement | Sections à mettre à jour |
+|---|---|
+| Nouveau mode de jeu ou nouvel écran | Routing, Flux de jeu, section dédiée |
+| Nouvelle formule de récompense en graines | Section "Système de récompenses en graines" |
+| Nouveau badge ou modification de condition | Section "Système de badges", "Notion de Perfect" si pertinent |
+| Nouveau store / action Zustand | Section "Stores Zustand" |
+| Nouveau service ou hook | Section "Structure source `src/`" |
+| Nouveau plateau ou élément | Tableaux "Plateaux" et "Éléments disponibles" |
+| Nouvelle constante ou invariant | Sections "Système de bonus", "Invariants composition" |
+| Modification de la stack technique | Section "Stack technique" |
+
+**Règle** : si une section de ce fichier décrit un comportement ou une valeur qui a changé dans le code, corriger ce fichier avant de clore la tâche.
+
+---
+
 ## Stack technique
 
 | Couche | Technologie |
@@ -39,7 +60,7 @@ app/
   game/
     [challengeId].tsx      ← Écran de jeu principal (drag & drop complet)
     daily.tsx              ← Défi du Jour (15 cases, 1 validation, pas de bonus)
-    onf.tsx                ← Mode ONF Grille Forestière (?size=3 ou ?size=4)
+    onf.tsx                ← Mode Planète Urgence / Grille Forestière (?size=3 ou ?size=4)
     friend-challenge.tsx   ← Défi ami
 ```
 
@@ -215,6 +236,13 @@ Profil + progression + badges + graines. Points critiques :
 - `onfSolvedCount` — compteur unifié de grilles ONF résolues (ne fait PAS progresser `currentLevel`)
 - `incrementOnfSolved()` — appelé après victoire ONF (jamais `markChallengeCompleted`)
 
+**Système de tracks de badges (chantier 3 — system v2) :**
+- `trackGoals: { performance, perseverance, exploration }` — un objectif actif par ligne (badge ID ou null si track épuisée)
+- `activeBadgeGoals: string[]` — champ dérivé maintenu en sync avec `trackGoals` (= values filtrées). Passé à `evaluateBadges()`.
+- `advanceTrackGoals(completedBadgeIds, updatedEarnedBadges) → string[]` — appelé après `awardBadges()` ; remplace l'objectif complété par le suivant dans chaque track concernée. Retourne les IDs des nouveaux goals injectés.
+- `goalCounters` — compteurs par badge actif (vitesse, précision). Remis à 0 à chaque activation.
+- Auto-migration au `checkDailyLogin()` : répare les `trackGoals` si les badges sont déjà obtenus ou si les prérequis ne sont pas satisfaits. Mappe aussi les anciens `activeBadgeGoals` (pré-tracks) vers les nouvelles tracks.
+
 ### audioStore
 - `ingameEnabled` — son pendant le jeu
 - `userHasInteracted` — requis sur web avant toute lecture audio
@@ -253,6 +281,18 @@ Profil + progression + badges + graines. Points critiques :
 Catégories : vitesse, précision, régularité, social, amélioration, exploration, secrets (5), saisonniers (4)
 Raretés : bois (5🌱) → pierre (15🌱) → or (30🌱) → cristal (75🌱)
 
+**3 lignes de badges typées (Track system — `badgeEngine.ts`) :**
+
+| Track | Clé | Description |
+|---|---|---|
+| ⚡ Performance | `TRACK_PERFORMANCE` | Vitesse et précision — 12 badges de précision_pousse à précision_couronne |
+| 🌿 Persévérance | `TRACK_PERSEVERANCE` | Régularité et accumulation — 12 badges de regularite_aube à daily_champion |
+| 🌍 Exploration | `TRACK_EXPLORATION` | Modes, social, amélioration — 13 badges de exploration_graine à exploration_crane |
+
+Fonctions : `getTrackForBadge(id) → TrackName | null`, `pickNextTrackGoal(track, earnedBadges, currentGoal) → string | null`.
+`ELIGIBLE_GOAL_BADGE_IDS` est dérivé de l'union des 3 tracks + `MASTER_SEQUENCE`. `exploration_graine` est désormais inclus (plus d'exclusion).
+Badges hors track (déclenchement automatique sans objectif actif) : `social_*`, `ami_*`, `record_*`, `secret_*`, `saisonnier_*`, `regularite_lune`, `regularite_soleil`, `onf_premier`, `ami_de_la_foret`.
+
 **Rang forestier** : le score est la somme de deux composantes.
 
 **Badges** (Bois=5pts, Pierre=10pts, Or=20pts, Cristal=50pts) — score max badges : 880 pts
@@ -260,26 +300,54 @@ Raretés : bois (5🌱) → pierre (15🌱) → or (30🌱) → cristal (75🌱)
 **Activité** (défis complétés) :
 - Défi solo : +1 pt
 - Défi entre amis : +2 pts
-- Grille ONF : +3 pts
+- Grille Planète Urgence : +3 pts
 - Défi du jour : +5 pts
 
 7 rangs de Promeneur à Esprit de la Forêt (paliers : 0 / 30 / 100 / 300 / 700 / 1500 / 3000 pts).
 Score calculé par `getPlayerScore(earnedBadges, activityStats)` dans `src/constants/badges.ts`.
-Chaque changement de rang déclenche une récompense en graines (voir `RANK_SEED_REWARDS` dans `RankUpModal.tsx`).
-La détection de rang est active dans **tous les modes** : solo, daily, ONF, ami.
+Chaque changement de rang déclenche une récompense en graines (`RANK_SEED_REWARDS` dans `src/components/Game/RankUpModal.tsx`) :
+
+| Rang | Graines |
+|---|---|
+| Promeneur | 0 |
+| Bucheron | 10 |
+| Sylviculteur | 25 |
+| Garde Forestier | 50 |
+| Technicien Planète Urgence | 100 |
+| Ingénieur des Forêts | 200 |
+| Esprit de la Forêt | 500 |
+
+La détection de rang est active dans **tous les modes** : solo, daily, Planète Urgence, ami.
 
 `evaluateBadges(GameContext)` dans `badgeEngine.ts` — appelé après chaque victoire.
 
 ---
 
-## Système de bonus (4 bonus)
+## Système de bonus (2 bonus)
 
-| id | Coût | Requis |
+| id | Limite | Comportement |
 |---|---|---|
-| highlight_valid_cells | 3🌱 | non |
-| count_errors | 2🌱 | non |
-| instinct | 6🌱 | 3 badges or |
-| flash | 8🌱 | 5 badges pierre |
+| reveal_cell | 3/jour (∞ premium) | Révèle la solution d'une case 5 s — le joueur tape une case, la solution s'affiche en surbrillance dorée puis la case se vide. Palette non-sélectionnable pendant l'attente de sélection. |
+| instinct | 3/jour (∞ premium) | Révèle les cases mal placées en rouge pendant 5 s. Nécessite au moins un élément posé. |
+
+**UX modale bonus :** au clic sur un bouton bonus, une modale d'explication s'affiche toujours :
+- Bouton **"Compris !"** — ferme sans activer.
+- Bouton **"Activer !"** — visible uniquement si les conditions sont remplies (pas de cooldown, pas épuisé, condition contextuelle OK). Active le bonus.
+
+**Recharge via pub (mode free uniquement) :**
+- Quand tous les bonus sont épuisés (`dailyBonusUses` = 0 pour tous), chaque bouton épuisé affiche l'icône 🎬 (fond grisé, bordure pointillée violette) à la place du compteur.
+- Un clic ouvre `WatchAdModal` (`src/components/Bonus/WatchAdModal.tsx`) — popup avec compte à rebours simulé de 5 s.
+- Après confirmation, `player.refillBonusWithAd()` est appelé : recharge `dailyBonusUses` à 3 pour tous les bonus ET pose `watchAdUsedToday = true`.
+- **1 seule recharge par jour** (reset dans `checkDailyLogin` à minuit).
+- Non accessible si `isPremium` (bonus déjà illimités) ou `bonusDisabled` (mode ONF, niveau 15).
+- État dans `playerStore` : `watchAdUsedToday: boolean`, `lastWatchAdDate: string | null`.
+- Props dans `HintOverlay` : `watchAdAvailable` (boolean) + `onWatchAd` (callback).
+
+**Canal reveal dans gameStore :**
+- `revealActive` — true = en attente de sélection d'une case par le joueur
+- `revealCellIndex` — index de la case révélée
+- `revealElementId` — élément de la solution affiché
+- `displayBoard` — calculé dans `[challengeId].tsx` : playerBoard + revealElementId sur revealCellIndex
 
 Niveau 15 : `bonusDisabled = true` → aucun bonus utilisable.
 
@@ -294,6 +362,12 @@ t('a11y_no_same', { element: 'ours' }) // interpolation {{element}}
 ```
 Langue stockée dans `playerStore.language` (détectée via `getSystemLocale()`).
 Fichiers : `src/i18n/locales/fr.json` et `en.json`.
+
+**Règle obligatoire — tout texte UI doit être traduit :**
+- Tout nouveau texte affiché à l'écran doit avoir une entrée dans **les deux fichiers** : `fr.json` ET `en.json`.
+- Ne jamais hardcoder un texte visible dans un composant React. Toujours passer par `t('clé')`.
+- Lors de l'ajout ou de la modification d'une clé, mettre à jour `fr.json` ET `en.json` dans le même commit/modification.
+- Les clés manquantes dans `en.json` sont considérées comme des bugs.
 
 ---
 
@@ -351,18 +425,18 @@ Le générateur (`challengeGenerator.ts`) garantit :
 
 ---
 
-## Mode ONF — Grille Forestière (Sudoku Forestier)
+## Mode Planète Urgence — Grille Forestière (Sudoku Forestier)
 
-- **Écrans** : `app/game/onf.tsx` — route `/game/onf?size=3` ou `/game/onf?size=4`
+- **Écrans** : `app/game/onf.tsx` — route `/game/onf?size=3` ou `/game/onf?size=4` (affiché en UI sous le nom "Planète Urgence" / "Défi de la forêt")
 - **Mécanique** : grille N×N orthogonale + règles de voisinage standard + contrainte `row_col_unique` (max 1 élément identique par ligne ET par colonne)
 - **Progression** : `currentLevel >= ONF_UNLOCK_LEVEL (5)` → 3×3 débloqué ; `currentLevel >= ONF_4X4_LEVEL_UNLOCK (14)` → 4×4 débloqué
 - **Solveur** : `solveOnf()` dans `solver.ts` — backtracking + élagage ligne/colonne via `isPlacementValidOnf()`
 - **Validation** : bouton Valider → `validateBoard()` + `validateRowColUnique()` (union violations) ; victoire = `checkVictory()` seul (solution pré-calculée satisfait déjà la contrainte)
 - **Générateur** : `src/services/onfChallengeService.ts` — compositions 3×3 et 4×4, retry max 50
-- **Récompense** : `calculateOnfReward(gridSize, elapsedMs)` → 3–7 graines selon taille + bonus vitesse
+- **Récompense** : `calculateOnfReward(elapsedMs)` → 5 graines de base + 2 si résolu en < 120 s (= 5 ou 7 graines, indépendant de la taille)
 - **Affichage contrainte** : surlignage ligne/colonne (Option A) — `getCellColorOnf` dans `onf.tsx` calcule les cases à fond jaune depuis `gridMeta`
 - **Éléments exclus** : `chien` (connected_group + sudoku impossible), `champignon` (center_only, pas de specialCells ONF)
-- **Carte d'accueil** : `app/(tabs)/index.tsx` — bouton ONF verrouillé si `currentLevel < ONF_4X4_LEVEL_UNLOCK` ; débloqué sinon
+- **Carte d'accueil** : `app/(tabs)/index.tsx` — bouton "Défi de la forêt" verrouillé si `currentLevel < ONF_4X4_LEVEL_UNLOCK` ; débloqué sinon
 - **Constantes** : `src/constants/onf.ts` — `ONF_UNLOCK_LEVEL = 5`, `ONF_4X4_UNLOCK_COUNT = 10`, `ONF_4X4_LEVEL_UNLOCK = 14`
 - **Pas de Firestore spécifique** : pas de collection dédiée ONF ; seeds synchées via le flux standard ; compteur unifié `onfSolvedCount` dans `PlayerProfile` (était `onf4x4SolvedCount` — migré via `migrateProfile`)
 
@@ -417,6 +491,137 @@ Après chaque modification de fichier `.tsx`, vérifier avec :
 ```powershell
 Select-String -Path "app\(tabs)\*.tsx","src\components\**\*.tsx" -Pattern '\\u[0-9a-fA-F]{4}'
 ```
+
+---
+
+## Système de récompenses en graines
+
+Les graines sont la monnaie du jeu. Chaque mode de jeu a sa propre formule, calculée à la victoire.
+
+### Mode solo (`app/game/[challengeId].tsx` + `src/core/engine/hintEngine.ts:207`)
+
+```ts
+// calculateSeedReward(elapsedMs, estimatedDurationMs, bonusUsed)
+let seeds = 10;                               // base
+if (elapsedMs < estimatedDurationMs * 0.5)    seeds += 5;  // bonus rapidité (< 50% du temps estimé)
+seeds -= bonusUsed.length * 2;                // -2 par bonus utilisé
+return Math.max(seeds, 1);                    // minimum 1 graine
+```
+
+| Situation | Graines |
+|---|---|
+| Base | 10 |
+| + bonus rapidité (< 50% temps estimé) | +5 |
+| − par bonus utilisé | −2 chacun |
+| Minimum garanti | 1 |
+| Maximum (sans bonus, rapide) | 15 |
+
+### Mode solo — PERFECT x2 (`app/game/[challengeId].tsx:311,705`)
+
+Si le run est parfait (voir section ci-dessous), les graines de base sont **doublées** : `player.addSeeds(seedsEarned)` est appelé une 2e fois via `onPerfectBonusCollected` dans `VictoryModal`. Le maximum effectif devient **30 graines**.
+
+### Défi du Jour (`src/services/dailyChallengeService.ts:654`)
+
+```ts
+// calculateDailyReward(rank, totalParticipants, dailyStreak)
+const baseSeeds      = 5;
+const topPercentBonus = rank <= ceil(totalParticipants * 0.10) ? 5  : 0;  // top 10%
+const top3Bonus       = rank <= 3                              ? 15 : 0;  // top 3
+const firstPlaceBonus = rank === 1                             ? 25 : 0;  // #1 mondial
+const streakBonus     = dailyStreak === 7                      ? 20 : 0;  // passage palier 7 jours
+```
+
+| Composante | Graines |
+|---|---|
+| Base | 5 |
+| Top 10% | +5 |
+| Top 3 | +15 |
+| #1 mondial | +25 |
+| Streak 7 jours (bonus unique au palier) | +20 |
+| **Maximum cumulé** | **70** |
+
+Bonus streak record : si le joueur bat son record de série ET `newStreak > 1`, `player.addSeeds(newStreak)` est appelé en plus.
+
+### Mode ONF (`src/services/onfChallengeService.ts:59`)
+
+```ts
+// calculateOnfReward(elapsedMs) — indépendant de la taille (3×3 ou 4×4)
+return 5 + (elapsedMs < 120_000 ? 2 : 0);  // 5 ou 7 graines
+```
+
+### Défi entre amis (`src/services/challengeService.ts:34`)
+
+```ts
+export const CHALLENGE_WINNER_SEEDS = 15;  // victoire uniquement, aucun bonus
+```
+
+### Connexion journalière (`(tabs)/_layout.tsx`)
+
+`player.checkDailyLogin()` → retourne `true` si première connexion du jour → `player.addSeeds(3)`.
+
+### Badges débloqués (`src/constants/badges.ts:35`)
+
+```ts
+export const BADGE_SEED_REWARDS: Record<BadgeRarity, number> = {
+  bois:    5,
+  pierre:  15,
+  or:      30,
+  cristal: 75,
+};
+```
+
+### Changement de rang (`src/components/Game/RankUpModal.tsx:29`)
+
+Voir tableau `RANK_SEED_REWARDS` dans la section Système de badges ci-dessus.
+
+---
+
+## Notion de Perfect
+
+### Définition — Run Parfait (mode solo uniquement)
+
+**Fichier :** `app/game/[challengeId].tsx:313–320`
+
+Un run est parfait si **4 critères cumulatifs** sont vrais au moment de la victoire :
+
+| Critère | Champ | Détail |
+|---|---|---|
+| Aucun jeton posé déplacé/retiré/remplacé | `game.elementChangeCount === 0` | Incrémenté dans `gameStore` à chaque `moveElement` / `removeElement` / `placeAndDeselect` sur case occupée. La pose initiale sur une case vide ne compte pas. |
+| Aucune validation ratée pendant la partie | `failsDuringGame === 0` | `failsDuringGame` = nb de fois où Valider a renvoyé `status: 'failure'`. Différent de `errorCount` (nb de cases fausses dans la grille). |
+| Jamais abandonné ce défi par le passé | `abandonCountForChallenge === 0` | Lu dans `stats.abandonCount[challengeId]` **avant** `markChallengeCompleted`. |
+| Aucun bonus utilisé | `game.bonusUsed.length === 0` | Tous les 4 bonus (hint, count, instinct, flash) sont bloquants. |
+
+Condition supplémentaire pour afficher l'overlay : `seedsEarned > 0`.
+
+```ts
+const isPerfect =
+  game.elementChangeCount === 0 &&
+  failsDuringGame === 0 &&
+  abandonCountForChallenge === 0 &&
+  game.bonusUsed.length === 0;
+if (isPerfect && seedsEarned > 0) setIsPerfectRun(true);
+```
+
+**Récompense :** les graines sont doublées (`PERFECT x2`) — `player.addSeeds(seedsEarned)` est appelé une 2e fois via `VictoryModal.onPerfectBonusCollected`.
+
+### dailyPerfect — Défi du Jour
+
+Le daily n'autorise qu'**une seule pression sur Valider**. Toute victoire est parfaite par construction : `stats.dailyPerfectCount` est toujours incrémenté dans `recordDailyVictory`. (`playerStore.ts:1048`)
+
+### onfPerfect — Mode ONF
+
+Condition : grille **jamais complétée** auparavant ET `failCount === 0`. Incrémente `stats.onfPerfectCount`. (`playerStore.ts:1021–1025`)
+
+### Badges liés au Perfect
+
+| Badge ID | Label | Rareté | Graines | Condition |
+|---|---|---|---|---|
+| `precision_parfaite` | Pose Parfaite 🎯 | Or | 30 | 3 défis **consécutifs** avec les 4 critères (goalCounter remis à 0 si un défi n'est pas parfait) |
+| `amelioration_etoile` | Perfection absolue 💫 | Or | 30 | `failCount === 0` ET `elapsedMs / estimatedDurationMs < 0.20` |
+| `daily_perfect` | Quotidien sans faute 🏅 | Or | 30 | 10 victoires daily (= toujours parfait par construction) |
+| `onf_precision` | Grille sans faute 🎯 | Pierre | 15 | 3 grilles Planète Urgence résolues sans erreur (`onfPerfectCount >= 3`) |
+
+Sources : `src/constants/badges.ts:144,293,494,537` + `src/core/engine/badgeEngine.ts:205,358,406`.
 
 ---
 
