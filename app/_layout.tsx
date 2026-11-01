@@ -8,12 +8,13 @@
 import { Stack, useSegments } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, Platform } from 'react-native';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStorage } from '../src/hooks/useStorage';
 import { AudioController } from '../src/components/Audio/AudioController';
 import { MusicUnlockModal } from '../src/components/Audio/MusicUnlockModal';
 import { useAudioStore } from '../src/store/audioStore';
 import { NavigationBar } from 'expo-navigation-bar';
+import { AppSplashScreen } from '../src/components/SplashScreen';
 
 
 // ── Error Boundary audio ──────────────────────────────────────────────────────
@@ -99,6 +100,8 @@ function AudioBridge() {
 }
 
 export default function RootLayout() {
+  const [splashDone, setSplashDone] = useState(false);
+
   // Masque la barre de navigation Android dès le démarrage.
   // Mode immersif : la barre réapparaît temporairement au swipe depuis le bas.
   useEffect(() => {
@@ -124,6 +127,9 @@ export default function RootLayout() {
           options={{ animation: 'slide_from_right' }}
         />
       </Stack>
+      {!splashDone && (
+        <AppSplashScreen onDone={() => setSplashDone(true)} />
+      )}
     </GestureHandlerRootView>
   );
 }
