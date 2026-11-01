@@ -420,48 +420,52 @@ export default function ONFGameScreen() {
   // ── Limite quotidienne atteinte (free) ───────────────────
   if (dailyLimitReached) {
     return (
-      <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.allCompletedEmoji}>🌲</Text>
-        <Text style={styles.allCompletedTitle}>
-          {t('onf_daily_limit_title')}
-        </Text>
-        <Text style={styles.allCompletedText}>
-          {t('onf_daily_limit_msg', { count: String(ONF_DAILY_LIMIT) })}
-        </Text>
-        <TouchableOpacity
-          style={styles.errorBtn}
-          onPress={() => router.replace('/(tabs)')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.errorBtnText}>{t('onf_daily_limit_back')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.premiumBtn}
-          onPress={() => setShowPremium(true)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.premiumBtnText}>{t('onf_daily_limit_premium')}</Text>
-        </TouchableOpacity>
-        <PremiumCard
-          visible={showPremium}
-          onClose={() => setShowPremium(false)}
-          onPurchase={() => {
-            player.unlockPremium();
-            setShowPremium(false);
-          }}
-        />
-      </View>
+      <GestureHandlerRootView style={styles.root}>
+        <View style={[styles.loading, { paddingTop: insets.top }]}>
+          <Text style={styles.allCompletedEmoji}>🌲</Text>
+          <Text style={styles.allCompletedTitle}>
+            {t('onf_daily_limit_title')}
+          </Text>
+          <Text style={styles.allCompletedText}>
+            {t('onf_daily_limit_msg', { count: String(ONF_DAILY_LIMIT) })}
+          </Text>
+          <TouchableOpacity
+            style={styles.errorBtn}
+            onPress={() => router.replace('/(tabs)')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.errorBtnText}>{t('onf_daily_limit_back')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.premiumBtn}
+            onPress={() => setShowPremium(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.premiumBtnText}>{t('onf_daily_limit_premium')}</Text>
+          </TouchableOpacity>
+          <PremiumCard
+            visible={showPremium}
+            onClose={() => setShowPremium(false)}
+            onPurchase={() => {
+              player.unlockPremium();
+              setShowPremium(false);
+            }}
+          />
+        </View>
+      </GestureHandlerRootView>
     );
   }
 
   // ── Chargement ────────────────────────────────────────────
   if (loading) {
     return (
-      <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>
-          Chargement du défi...
-        </Text>
-      </View>
+      <GestureHandlerRootView style={styles.root}>
+        <View style={[styles.loading, { paddingTop: insets.top }]}>
+          <Text style={styles.loadingText}>
+            {t('onf_loading')}
+          </Text>
+        </View>
+      </GestureHandlerRootView>
     );
   }
 
@@ -469,30 +473,34 @@ export default function ONFGameScreen() {
   if (allCompleted) {
     const total = getTotalOnfChallenges();
     return (
-      <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.allCompletedEmoji}>🏆</Text>
-        <Text style={styles.allCompletedTitle}>
-          {t('onf_all_completed_title')}
-        </Text>
-        <Text style={styles.allCompletedText}>
-          {t('onf_all_completed_msg', { count: String(total), total: String(total) })}
-        </Text>
-        <TouchableOpacity
-          style={styles.errorBtn}
-          onPress={() => router.replace('/(tabs)')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.errorBtnText}>{t('onf_back_home')}</Text>
-        </TouchableOpacity>
-      </View>
+      <GestureHandlerRootView style={styles.root}>
+        <View style={[styles.loading, { paddingTop: insets.top }]}>
+          <Text style={styles.allCompletedEmoji}>🏆</Text>
+          <Text style={styles.allCompletedTitle}>
+            {t('onf_all_completed_title')}
+          </Text>
+          <Text style={styles.allCompletedText}>
+            {t('onf_all_completed_msg', { count: String(total), total: String(total) })}
+          </Text>
+          <TouchableOpacity
+            style={styles.errorBtn}
+            onPress={() => router.replace('/(tabs)')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.errorBtnText}>{t('onf_back_home')}</Text>
+          </TouchableOpacity>
+        </View>
+      </GestureHandlerRootView>
     );
   }
 
   if (!challenge || !boardDef) {
     return (
-      <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>{t('onf_loading')}</Text>
-      </View>
+      <GestureHandlerRootView style={styles.root}>
+        <View style={[styles.loading, { paddingTop: insets.top }]}>
+          <Text style={styles.loadingText}>{t('onf_loading')}</Text>
+        </View>
+      </GestureHandlerRootView>
     );
   }
 

@@ -584,32 +584,38 @@ export default function DailyGameScreen() {
   // -- Chargement --
   if (loading) {
     return (
-      <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>{t('daily_loading')}</Text>
-      </View>
+      <GestureHandlerRootView style={styles.root}>
+        <View style={[styles.loading, { paddingTop: insets.top }]}>
+          <Text style={styles.loadingText}>{t('daily_loading')}</Text>
+        </View>
+      </GestureHandlerRootView>
     );
   }
 
   if (generationError) {
     return (
-      <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>{t('daily_error')}</Text>
-        <TouchableOpacity
-          style={styles.errorBtn}
-          onPress={() => router.replace('/(tabs)')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.errorBtnText}>{t('daily_error_back')}</Text>
-        </TouchableOpacity>
-      </View>
+      <GestureHandlerRootView style={styles.root}>
+        <View style={[styles.loading, { paddingTop: insets.top }]}>
+          <Text style={styles.loadingText}>{t('daily_error')}</Text>
+          <TouchableOpacity
+            style={styles.errorBtn}
+            onPress={() => router.replace('/(tabs)')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.errorBtnText}>{t('daily_error_back')}</Text>
+          </TouchableOpacity>
+        </View>
+      </GestureHandlerRootView>
     );
   }
 
   if (!challenge || !boardDef) {
     return (
-      <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>{t('game_loading')}</Text>
-      </View>
+      <GestureHandlerRootView style={styles.root}>
+        <View style={[styles.loading, { paddingTop: insets.top }]}>
+          <Text style={styles.loadingText}>{t('game_loading')}</Text>
+        </View>
+      </GestureHandlerRootView>
     );
   }
 

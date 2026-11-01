@@ -570,10 +570,12 @@ export default function FriendChallengeScreen() {
 
   if (!challenge || !boardDef) {
     return (
-      <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={Colors.forest.medium} />
-        <Text style={styles.loadingText}>{t('fc_loading')}</Text>
-      </View>
+      <GestureHandlerRootView style={styles.root}>
+        <View style={[styles.loading, { paddingTop: insets.top }]}>
+          <ActivityIndicator size="large" color={Colors.forest.medium} />
+          <Text style={styles.loadingText}>{t('fc_loading')}</Text>
+        </View>
+      </GestureHandlerRootView>
     );
   }
 

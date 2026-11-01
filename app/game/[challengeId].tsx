@@ -676,9 +676,11 @@ export default function GameScreen() {
 
   if (!challenge || !boardDef) {
     return (
-      <View style={[styles.loading, { paddingTop: insets.top }]}>
-        <Text style={styles.loadingText}>{t('game_loading')}</Text>
-      </View>
+      <GestureHandlerRootView style={styles.root}>
+        <View style={[styles.loading, { paddingTop: insets.top }]}>
+          <Text style={styles.loadingText}>{t('game_loading')}</Text>
+        </View>
+      </GestureHandlerRootView>
     );
   }
 
