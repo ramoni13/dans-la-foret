@@ -9,24 +9,17 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Image,
   Animated,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   Text,
-  Platform,
 } from 'react-native';
 import { usePlayerStore } from '../store/playerStore';
 
 const LOGO_FR = require('../../assets/elements/design_app/danslaforet.jpeg');
 const LOGO_EN = require('../../assets/elements/design_app/intheforest.jpeg');
 
-// Ratio original 1024×765 → on laisse la largeur s'adapter, hauteur proportionnelle
 const LOGO_RATIO = 765 / 1024;
-const LOGO_WIDTH  = Math.min(Dimensions.get('window').width * 0.72, 320);
-const LOGO_HEIGHT = LOGO_WIDTH * LOGO_RATIO;
-
 const MIN_DURATION_MS = 2500;
 
 interface Props {
@@ -36,6 +29,9 @@ interface Props {
 export function AppSplashScreen({ onDone }: Props) {
   const language  = usePlayerStore(s => s.language);
   const authReady = usePlayerStore(s => s.authReady);
+  const { width, height } = useWindowDimensions();
+  const logoWidth  = Math.min(width * 0.72, 320);
+  const logoHeight = logoWidth * LOGO_RATIO;
 
   // Pulse du logo : scale + opacité
   const pulse  = useRef(new Animated.Value(1)).current;
@@ -118,11 +114,11 @@ export function AppSplashScreen({ onDone }: Props) {
     : `Chargement${dots}`;
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeOut }]}>
+    <Animated.View style={[styles.container, { opacity: fadeOut, width, height }]}>
       <Animated.Image
         source={isEn ? LOGO_EN : LOGO_FR}
         style={[
-          styles.logo,
+          { width: logoWidth, height: logoHeight },
           { transform: [{ scale: pulse }] },
         ]}
         resizeMode="contain"
@@ -134,15 +130,13 @@ export function AppSplashScreen({ onDone }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 9999,
-  },
-  logo: {
-    width: LOGO_WIDTH,
-    height: LOGO_HEIGHT,
   },
   loadingText: {
     marginTop: 32,
