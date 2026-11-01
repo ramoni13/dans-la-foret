@@ -1,6 +1,10 @@
 ﻿// ============================================================
-// ConnectedGroupAnim — 3 chiens toujours visibles, reliés par
-// des lignes pulsées bleues pour illustrer la meute connexe.
+// ConnectedGroupAnim — 3 tokens toujours visibles, reliés par
+// des lignes pulsées bleues pour illustrer le groupe connexe.
+//
+// connected_group      : elements = [id, id, id]       → 3 tokens identiques (ex: chien)
+// connected_group_with : elements = [id, id, altId]    → token 3 = altId (ex: arbre + bûches)
+//
 // API Animated (legacy) — compatible web + native
 // Cycle : 1800ms
 // ============================================================
@@ -21,8 +25,10 @@ const TOKEN_SIZE = 44;
 const GAP = 12; // espace entre tokens
 
 export const ConnectedGroupAnim: React.FC<Props> = ({ rule, accessibilityLabel }) => {
-  const [elementId] = rule.elements;
-  const def = ElementRegistry[elementId];
+  const elementId  = rule.elements[0];
+  const element3Id = rule.elements[2] ?? elementId; // altId pour connected_group_with
+  const def  = ElementRegistry[elementId];
+  const def3 = ElementRegistry[element3Id] ?? def;
 
   // Ligne 1 (entre token 1 et 2) : opacity + scale
   const line1Op  = useRef(new Animated.Value(0)).current;
@@ -95,10 +101,10 @@ export const ConnectedGroupAnim: React.FC<Props> = ({ rule, accessibilityLabel }
       {/* Ligne 2 */}
       <Animated.View style={[styles.line, { width: lineWidth, opacity: line2Op }]} />
 
-      {/* Token 3 */}
+      {/* Token 3 (altId si connected_group_with) */}
       <Animated.View style={{ transform: [{ scale: glowScale }] }}>
-        <View style={[styles.token, { backgroundColor: tokenColor + '20', borderColor: '#2196F3' }]}>
-          <Image source={getSpriteOrIcon(elementId, def.icon)} style={styles.image} resizeMode="contain" />
+        <View style={[styles.token, { backgroundColor: def3.color + '20', borderColor: '#2196F3' }]}>
+          <Image source={getSpriteOrIcon(element3Id, def3.icon)} style={styles.image} resizeMode="contain" />
         </View>
         <Animated.View style={[styles.glowRing, { opacity: glowOp }]} />
       </Animated.View>
