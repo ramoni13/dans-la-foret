@@ -1,6 +1,6 @@
 export type BonusId =
-  | 'highlight_valid_cells'  // Allume les cases où le placement est légal pour l'élément sélectionné
-  | 'instinct';              // Allume les cases en erreur sur le plateau (comparaison avec la solution)
+  | 'reveal_cell'  // Révèle la solution d'une case pendant 10 secondes
+  | 'instinct';    // Allume les cases en erreur sur le plateau (comparaison avec la solution)
 
 export interface BonusDefinition {
   id: BonusId;
@@ -12,11 +12,11 @@ export interface BonusDefinition {
 }
 
 export const BONUS_DEFINITIONS: Record<BonusId, BonusDefinition> = {
-  highlight_valid_cells: {
-    id: 'highlight_valid_cells',
-    label: 'Cases valides',
-    description: 'Indique les cases où le placement est possible selon les règles',
-    icon: '💡',
+  reveal_cell: {
+    id: 'reveal_cell',
+    label: '1 case offerte',
+    description: 'Révèle la solution d\'une case pendant 10 secondes',
+    icon: '🎁',
     dailyLimit: 3,
   },
   instinct: {
@@ -29,7 +29,7 @@ export const BONUS_DEFINITIONS: Record<BonusId, BonusDefinition> = {
 };
 
 /** Bonus disponibles pour tous les joueurs */
-export const BASE_BONUS_IDS: BonusId[] = ['highlight_valid_cells', 'instinct'];
+export const BASE_BONUS_IDS: BonusId[] = ['reveal_cell', 'instinct'];
 
 /** Bonus avancés réservés au premium (aucun pour l'instant) */
 export const ADVANCED_BONUS_IDS: BonusId[] = [];
