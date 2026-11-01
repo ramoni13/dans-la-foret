@@ -31,15 +31,20 @@ interface GameState {
   validationResult: ValidationResult;
 
   // ── Bonus highlights (2 canaux indépendants) ───────────────
-  validHintCells: number[];    // cases valides (highlight) — vert
+  validHintCells: number[];    // cases valides (highlight) — vert (conservé pour compatibilité)
   errorHintCells: number[];    // cases en erreur (instinct) — rouge
 
-  // ── Bonus « highlight_valid_cells » mode actif temporaire ────
-  highlightActive: boolean;    // true = mode highlight actif (10s), recalcul dynamique
+  // ── Bonus « reveal_cell » mode révélation ────────────────────
+  revealActive: boolean;       // true = en attente de sélection d'une case à révéler
+  revealCellIndex: number | null; // index de la case révélée (-1 = aucune)
+  revealElementId: string | null; // élément de la solution révélé sur cette case
 
   // ── Défi journalier ────────────────────────────────────────────
   isDailyChallenge: boolean;        // true = mode défi journalier actif
   dailyValidationUsed: boolean;     // true = le joueur a déjà utilisé sa validation unique
+
+  // ── Bonus « highlight_valid_cells » mode actif temporaire (conservé pour compatibilité) ────
+  highlightActive: boolean;    // non utilisé par reveal_cell mais conservé pour éviter les TS errors
 
   // ── Mode sans bonus (ONF) ─────────────────────────────────────
   bonusDisabled: boolean;           // true = aucun bonus activable (mode ONF)
@@ -64,10 +69,16 @@ interface GameState {
   setErrorHintCells: (cells: number[]) => void;
   clearErrorHint: () => void;
   setHighlightActive: (active: boolean) => void;
+  // ── Reveal cell ───────────────────────────────────────────────
+  setRevealActive: (active: boolean) => void;
+  revealSolution: (cellIndex: number, elementId: string) => void;
+  clearReveal: () => void;
   tick: (elapsedMs: number) => void;
   validateChallenge: () => ValidationResult;
   dismissValidation: () => void;
   startTimer: (elapsedOffset?: number) => void;
+  /** Arrête le chronomètre en gelant elapsedTime et en mettant startTime à null. */
+  stopTimer: () => void;
   resetGame: () => void;
 }
 
@@ -84,6 +95,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   validationResult: EMPTY_VALIDATION,
   validHintCells: [],
   errorHintCells: [],
+  revealActive: false,
+  revealCellIndex: null,
+  revealElementId: null,
   highlightActive: false,
   isDailyChallenge: false,
   dailyValidationUsed: false,
@@ -108,6 +122,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       validationResult: EMPTY_VALIDATION,
       validHintCells: [],
       errorHintCells: [],
+      revealActive: false,
+      revealCellIndex: null,
+      revealElementId: null,
       highlightActive: false,
       isDailyChallenge: false,
       dailyValidationUsed: false,
@@ -131,6 +148,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       validationResult: EMPTY_VALIDATION,
       validHintCells: [],
       errorHintCells: [],
+      revealActive: false,
+      revealCellIndex: null,
+      revealElementId: null,
       highlightActive: false,
       isDailyChallenge: true,
       dailyValidationUsed: false,
@@ -202,11 +222,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   clearPlayerBoard: () => {
-    const { currentChallenge, playerBoard } = get();
+    const { currentChallenge, playerBoard, elementChangeCount } = get();
     if (!currentChallenge) return;
     const fixedSet = new Set(currentChallenge.fixedPlacements.map(fp => fp.cellIndex));
     const newBoard = playerBoard.map((el, i) => (fixedSet.has(i) ? el : null));
-    set({ playerBoard: newBoard, selectedElement: null });
+    // Si au moins un jeton joueur était posé, invalider le perfect (comme un déplacement)
+    const hadPlayerElements = playerBoard.some((el, i) => el !== null && !fixedSet.has(i));
+    set({
+      playerBoard: newBoard,
+      selectedElement: null,
+      elementChangeCount: hadPlayerElements ? elementChangeCount + 1 : elementChangeCount,
+    });
   },
 
   moveElement: (fromCell, toCell) => {
@@ -246,8 +272,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   clearErrorHint: () => set({ errorHintCells: [] }),
   setHighlightActive: (active) => set({ highlightActive: active }),
 
+  // ── Reveal cell ───────────────────────────────────────────────
+  setRevealActive: (active) => set({ revealActive: active }),
+  revealSolution: (cellIndex, elementId) => set({ revealCellIndex: cellIndex, revealElementId: elementId, revealActive: false }),
+  clearReveal: () => set({ revealCellIndex: null, revealElementId: null, revealActive: false }),
+
   tick: (elapsedMs) => set({ elapsedTime: elapsedMs }),
   startTimer: (elapsedOffset?: number) => set({ startTime: Date.now() - (elapsedOffset ?? 0) }),
+  stopTimer: () => {
+    const { startTime, elapsedTime } = get();
+    // Figer le temps écoulé et désactiver le chronomètre
+    const frozen = startTime ? Date.now() - startTime : elapsedTime;
+    set({ startTime: null, elapsedTime: frozen });
+  },
 
   // ── Validation manuelle (bouton "Valider") ──────────────────
   validateChallenge: () => {
@@ -317,6 +354,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     validationResult: EMPTY_VALIDATION,
     validHintCells: [],
     errorHintCells: [],
+    revealActive: false,
+    revealCellIndex: null,
+    revealElementId: null,
     highlightActive: false,
     isDailyChallenge: false,
     dailyValidationUsed: false,

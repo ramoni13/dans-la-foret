@@ -14,7 +14,30 @@ import {
   BADGE_MAP,
   BADGE_SEED_REWARDS,
 } from '../constants/badges';
-import { DEFAULT_BADGE_GOALS, pickNextAutoGoal } from '../core/engine/badgeEngine';
+import {
+  DEFAULT_BADGE_GOALS,
+  pickNextAutoGoal,
+  isBadgeEligibleAsGoal,
+  TRACK_PERFORMANCE,
+  TRACK_PERSEVERANCE,
+  TRACK_EXPLORATION,
+  getTrackForBadge,
+  pickNextTrackGoal,
+  TrackName,
+} from '../core/engine/badgeEngine';
+
+// ── Type des objectifs de track ───────────────────────────────────────────────
+export interface TrackGoals {
+  performance:  string | null;
+  perseverance: string | null;
+  exploration:  string | null;
+}
+
+/** Calcule activeBadgeGoals depuis trackGoals (tableau plat des goals non-null). */
+function deriveActiveBadgeGoals(trackGoals: TrackGoals): string[] {
+  return [trackGoals.performance, trackGoals.perseverance, trackGoals.exploration]
+    .filter((id): id is string => id !== null);
+}
 
 // ── Helpers de date ────────────────────────────────────────────────────────────
 
@@ -128,8 +151,19 @@ interface PlayerState {
   /** IDs (1-indexés) des cartes arbre débloquées. 1 carte tous les ONF_CARD_UNLOCK_EVERY défis. */
   collectedTreeCardIds: number[];
 
-  // ── Badges : objectifs actifs (chantier 3) ───────────────────────────────────
-  activeBadgeGoals: string[];  // max 3 badgeIds choisis par le joueur
+  // ── Badges : objectifs actifs par track (chantier 3 — système de lignes) ─────
+  /**
+   * Un objectif actif par ligne de badges. Auto-avance séquentielle après obtention.
+   * null = la track est épuisée (tous les badges de la ligne ont été obtenus).
+   */
+  trackGoals: TrackGoals;
+  /**
+   * Champ dérivé maintenu en sync avec trackGoals.
+   * = Object.values(trackGoals).filter(Boolean)
+   * Passé à evaluateBadges() comme activeBadgeGoals pour contrôler quels badges
+   * sont décernables. Ne jamais écrire directement — toujours passer par trackGoals.
+   */
+  activeBadgeGoals: string[];
   /**
    * Compteurs dédiés par badge objectif actif.
    * Remis à 0 à chaque activation (sélection ou auto-avance).
@@ -139,6 +173,21 @@ interface PlayerState {
    */
   goalCounters: Record<string, number>;
 
+  // ── Persévérant (amelioration_cycle) — rejouer le même défi ─────────────────
+  /**
+   * Défi verrouillé à l'activation de l'objectif "Persévérant" + compteur de victoires.
+   * challengeId = null → objectif pas encore activé ou badge déjà obtenu.
+   * count s'incrémente uniquement si la victoire est sur exactement ce challengeId.
+   * Ni les échecs ni les abandons ne touchent ce compteur.
+   */
+  retryStreak: { challengeId: string | null; count: number };
+
+  // ── Sur orbite (amelioration_fusee) — rejouer le même défi ──────────────────
+  /**
+   * Même mécanique que retryStreak mais pour le badge "Sur orbite" (seuil 5).
+   */
+  retryStreakFusee: { challengeId: string | null; count: number };
+
 
   // ── Défis amis : amis uniques défiés (pour badge social_poignee / social_cirque) ──
   /** UIDs des amis à qui le joueur a envoyé au moins un défi. Jamais de doublons. */
@@ -147,6 +196,10 @@ interface PlayerState {
   // ── Bonus journaliers (chantier 4) ───────────────────────────────────────────
   dailyBonusUses: Record<BonusId, number>; // utilisations restantes aujourd'hui
   lastBonusResetDate: string | null;        // "YYYY-MM-DD" du dernier reset
+
+  // ── Publicité : recharge des bonus (1 fois/jour, mode free uniquement) ───────
+  watchAdUsedToday: boolean;      // true = la recharge pub a déjà été utilisée aujourd'hui
+  lastWatchAdDate: string | null; // "YYYY-MM-DD" du dernier visionnage
 
   // ── Actions de base ─────────────────────────────────────────────────────────
   setAuthState: (ready: boolean, authenticated: boolean) => void;
@@ -188,9 +241,21 @@ interface PlayerState {
    * @param updatedEarnedBadges Liste earnedBadges APRÈS awardBadges() — évite le stale state Zustand batché
    */
   advanceGoalAuto: (completedGoalIds: string[], updatedEarnedBadges: string[]) => void;
+  /**
+   * Nouvelle version typée de l'auto-avance : remplace advanceGoalAuto.
+   * Pour chaque badge complété qui appartient à une track, avance cette track
+   * vers le prochain badge éligible.
+   * @param completedBadgeIds IDs des badges qui viennent d'être obtenus
+   * @param updatedEarnedBadges earnedBadges APRÈS awardBadges()
+   * @returns IDs des nouveaux buts injectés (pour affichage "Nouveau" dans l'UI)
+   */
+  advanceTrackGoals: (completedBadgeIds: string[], updatedEarnedBadges: string[]) => string[];
 
   // ── Actions bonus journaliers (chantier 4) ───────────────────────────────────
   spendBonus: (bonusId: BonusId) => boolean;
+  /** Recharge tous les bonus après visionnage d'une pub (1 fois/jour, free seulement).
+   *  Retourne false si déjà utilisé aujourd'hui ou si premium. */
+  refillBonusWithAd: () => boolean;
 
   // ── Actions social ───────────────────────────────────────────────────────────
   recordFriendWin: () => void;
@@ -328,13 +393,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   lastOnfDailyDate: '',
   collectedTreeCardIds: [],
 
-  activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+  trackGoals: {
+    performance:  TRACK_PERFORMANCE[0],   // 'precision_pousse'
+    perseverance: TRACK_PERSEVERANCE[0],  // 'regularite_aube'
+    exploration:  TRACK_EXPLORATION[0],   // 'exploration_graine'
+  },
+  activeBadgeGoals: [TRACK_PERFORMANCE[0], TRACK_PERSEVERANCE[0], TRACK_EXPLORATION[0]],
   goalCounters: {},
+
+  retryStreak: { challengeId: null, count: 0 },
+  retryStreakFusee: { challengeId: null, count: 0 },
 
   challengedFriendIds: [],
 
-  dailyBonusUses: { highlight_valid_cells: 3, instinct: 3 },
+  dailyBonusUses: { reveal_cell: 3, instinct: 3 },
   lastBonusResetDate: null,
+
+  watchAdUsedToday: false,
+  lastWatchAdDate: null,
 
   // ── setAuthState ──────────────────────────────────────────
   setAuthState: (ready, authenticated) => set({ authReady: ready, isAuthenticated: authenticated }),
@@ -351,7 +427,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   })),
 
   spendFriendChallengeToken: () => {
-    const { friendChallengeTokens } = get();
+    const { isPremium, friendChallengeTokens } = get();
+    if (isPremium) return true; // Illimité en premium
     if (friendChallengeTokens <= 0) return false;
     set(state => ({ friendChallengeTokens: state.friendChallengeTokens - 1 }));
     return true;
@@ -461,22 +538,94 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         ...(get().collectedTreeCardIds ?? []),
         ...((profile as any).collectedTreeCardIds ?? []),
       ])).sort((a, b) => a - b),
-      // Objectifs actifs : merger local vs cloud.
-      // Priorité au local si la version locale est plus propre (ne contient pas de badges déjà obtenus).
-      // Priorité au cloud si le local est vide ou si le cloud est plus récent (ex: autre appareil).
-      activeBadgeGoals: (() => {
-        const cloudGoals: string[] = (profile as any).activeBadgeGoals ?? [];
-        const localGoals: string[] = get().activeBadgeGoals;
+      // trackGoals : merger local vs cloud.
+      // Stratégie par track : prendre le goal le plus avancé dans la séquence
+      // (le plus loin = le local ou le cloud ayant le plus progressé).
+      // Un goal null signifie que la track est épuisée — on le respecte.
+      trackGoals: (() => {
+        const cloudTrack: TrackGoals = (profile as any).trackGoals ?? {
+          performance:  null,
+          perseverance: null,
+          exploration:  null,
+        };
+        const localTrack: TrackGoals = get().trackGoals;
         const allEarned = new Set([
           ...get().earnedBadges,
           ...(profile.earnedBadges ?? []),
         ]);
-        // Nettoyer les deux versions des badges obtenus
-        const cleanCloud = cloudGoals.filter(id => !allEarned.has(id));
-        const cleanLocal = localGoals.filter(id => !allEarned.has(id));
-        // Garder la version avec le plus de slots remplis (local prioritaire en cas d'égalité)
-        const merged = cleanLocal.length >= cleanCloud.length ? cleanLocal : cleanCloud;
-        return merged.length > 0 ? merged : [...DEFAULT_BADGE_GOALS];
+        const allEarnedArray = [...allEarned];
+
+        function mergeTrack(track: TrackName): string | null {
+          const sequence = track === 'performance' ? TRACK_PERFORMANCE
+            : track === 'perseverance' ? TRACK_PERSEVERANCE
+            : TRACK_EXPLORATION;
+          const localGoal = localTrack[track];
+          const cloudGoal = cloudTrack[track];
+
+          // Choisir le goal le plus avancé dans la séquence (index le plus élevé)
+          const localIdx = localGoal ? sequence.indexOf(localGoal) : -1;
+          const cloudIdx = cloudGoal ? sequence.indexOf(cloudGoal) : -1;
+
+          let candidate = localIdx >= cloudIdx ? localGoal : cloudGoal;
+
+          // Si le candidat est déjà obtenu, avancer dans la séquence
+          if (candidate && allEarned.has(candidate)) {
+            candidate = pickNextTrackGoal(track, allEarnedArray, null);
+          }
+          // Si null (pas encore de track goals) → prendre le premier non-obtenu
+          if (candidate === null || candidate === undefined) {
+            candidate = pickNextTrackGoal(track, allEarnedArray, null);
+          }
+          // Vérifier que le candidat a ses prérequis satisfaits
+          if (candidate && !isBadgeEligibleAsGoal(candidate, allEarnedArray)) {
+            candidate = pickNextTrackGoal(track, allEarnedArray, null);
+          }
+          return candidate ?? null;
+        }
+
+        const merged: TrackGoals = {
+          performance:  mergeTrack('performance'),
+          perseverance: mergeTrack('perseverance'),
+          exploration:  mergeTrack('exploration'),
+        };
+        return merged;
+      })(),
+      // activeBadgeGoals est dérivé de trackGoals (champ en sync)
+      activeBadgeGoals: (() => {
+        // Recalculé après trackGoals merge — utilise une logique locale pour éviter
+        // la dépendance sur le set() précédent (Zustand batch).
+        const cloudTrack: TrackGoals = (profile as any).trackGoals ?? {
+          performance:  null, perseverance: null, exploration: null,
+        };
+        const localTrack: TrackGoals = get().trackGoals;
+        const allEarned = new Set([
+          ...get().earnedBadges,
+          ...(profile.earnedBadges ?? []),
+        ]);
+        const allEarnedArray = [...allEarned];
+        const tracks: TrackName[] = ['performance', 'perseverance', 'exploration'];
+        const goals: string[] = [];
+        for (const track of tracks) {
+          const sequence = track === 'performance' ? TRACK_PERFORMANCE
+            : track === 'perseverance' ? TRACK_PERSEVERANCE
+            : TRACK_EXPLORATION;
+          const localGoal = localTrack[track];
+          const cloudGoal = cloudTrack[track];
+          const localIdx = localGoal ? sequence.indexOf(localGoal) : -1;
+          const cloudIdx = cloudGoal ? sequence.indexOf(cloudGoal) : -1;
+          let candidate = localIdx >= cloudIdx ? localGoal : cloudGoal;
+          if (candidate && allEarned.has(candidate)) {
+            candidate = pickNextTrackGoal(track, allEarnedArray, null);
+          }
+          if (!candidate) {
+            candidate = pickNextTrackGoal(track, allEarnedArray, null);
+          }
+          if (candidate && !isBadgeEligibleAsGoal(candidate, allEarnedArray)) {
+            candidate = pickNextTrackGoal(track, allEarnedArray, null);
+          }
+          if (candidate) goals.push(candidate);
+        }
+        return goals;
       })(),
       // goalCounters : merger local + cloud — prendre le max par badge
       // pour ne pas perdre les progrès offline (offline peut être plus avancé que cloud)
@@ -486,6 +635,54 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         const merged: Record<string, number> = { ...cloudCounters };
         for (const [k, v] of Object.entries(localCounters)) {
           merged[k] = Math.max(merged[k] ?? 0, v);
+        }
+        return merged;
+      })(),
+      // retryStreak : si même challengeId → prendre le count le plus élevé (offline peut être + avancé)
+      // sinon → prendre celui avec le count le plus élevé.
+      // Compat descendante : si le badge est actif mais challengeId null après merge,
+      // verrouiller sur le dernier défi solo complété.
+      retryStreak: (() => {
+        const cloud: { challengeId: string | null; count: number } =
+          (profile as any).retryStreak ?? { challengeId: null, count: 0 };
+        const local = get().retryStreak;
+        let merged: { challengeId: string | null; count: number };
+        if (local.challengeId === cloud.challengeId) {
+          merged = { challengeId: cloud.challengeId, count: Math.max(local.count, cloud.count) };
+        } else {
+          merged = local.count >= cloud.count ? local : cloud;
+        }
+        // Compat descendante : verrouiller si challengeId encore null
+        if (!merged.challengeId) {
+          const localTG = get().trackGoals;
+          const cloudTG: TrackGoals = (profile as any).trackGoals ?? { performance: null, perseverance: null, exploration: null };
+          const explorationGoals = [localTG.exploration, cloudTG.exploration].filter(Boolean);
+          if (explorationGoals.includes('amelioration_cycle')) {
+            const lastSolo = (profile.completedChallenges ?? []).filter((id: string) => id.startsWith('niveau_')).slice(-1)[0] ?? null;
+            merged = { challengeId: lastSolo, count: merged.count };
+          }
+        }
+        return merged;
+      })(),
+      retryStreakFusee: (() => {
+        const cloud: { challengeId: string | null; count: number } =
+          (profile as any).retryStreakFusee ?? { challengeId: null, count: 0 };
+        const local = get().retryStreakFusee;
+        let merged: { challengeId: string | null; count: number };
+        if (local.challengeId === cloud.challengeId) {
+          merged = { challengeId: cloud.challengeId, count: Math.max(local.count, cloud.count) };
+        } else {
+          merged = local.count >= cloud.count ? local : cloud;
+        }
+        // Compat descendante : verrouiller si challengeId encore null
+        if (!merged.challengeId) {
+          const localTG = get().trackGoals;
+          const cloudTG: TrackGoals = (profile as any).trackGoals ?? { performance: null, perseverance: null, exploration: null };
+          const explorationGoals = [localTG.exploration, cloudTG.exploration].filter(Boolean);
+          if (explorationGoals.includes('amelioration_fusee')) {
+            const lastSolo = (profile.completedChallenges ?? []).filter((id: string) => id.startsWith('niveau_')).slice(-1)[0] ?? null;
+            merged = { challengeId: lastSolo, count: merged.count };
+          }
         }
         return merged;
       })(),
@@ -621,11 +818,47 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         // leurs métriques globales directement — pas besoin de goalCounters.
       }
 
+      // ── retryStreak (amelioration_cycle, seuil 3) ──────────────────────────────
+      // S'incrémente uniquement si la victoire est sur le défi verrouillé à l'activation
+      // et que l'objectif est encore actif et non obtenu.
+      // Auto-verrouillage : si challengeId est null (badge activé avant que le joueur
+      // ait joué un défi), on verrouille sur le défi courant et on compte cette victoire.
+      const cycleActive = state.activeBadgeGoals.includes('amelioration_cycle')
+        && !state.earnedBadges.includes('amelioration_cycle');
+      const newRetryStreak = (() => {
+        if (!cycleActive) return state.retryStreak;
+        if (state.retryStreak.challengeId === challengeId) {
+          return { challengeId, count: state.retryStreak.count + 1 };
+        }
+        if (state.retryStreak.challengeId === null) {
+          // Auto-verrouillage sur le premier défi joué avec l'objectif actif
+          return { challengeId, count: 1 };
+        }
+        return state.retryStreak;
+      })();
+
+      // ── retryStreakFusee (amelioration_fusee, seuil 5) ─────────────────────────
+      const fuseeActive = state.activeBadgeGoals.includes('amelioration_fusee')
+        && !state.earnedBadges.includes('amelioration_fusee');
+      const newRetryStreakFusee = (() => {
+        if (!fuseeActive) return state.retryStreakFusee;
+        if (state.retryStreakFusee.challengeId === challengeId) {
+          return { challengeId, count: state.retryStreakFusee.count + 1 };
+        }
+        if (state.retryStreakFusee.challengeId === null) {
+          // Auto-verrouillage sur le premier défi joué avec l'objectif actif
+          return { challengeId, count: 1 };
+        }
+        return state.retryStreakFusee;
+      })();
+
       return {
         completedChallenges: newCompleted,
         currentLevel: computePlayerLevel(newCompleted.length),
         challengeStartedAt: restStarted,
         goalCounters: newGoalCounters,
+        retryStreak: newRetryStreak,
+        retryStreakFusee: newRetryStreakFusee,
         stats: {
           ...state.stats,
           totalSolved: alreadyCompleted ? state.stats.totalSolved : state.stats.totalSolved + 1,
@@ -666,9 +899,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   unlockPremium: () => {
     set({ isPremium: true });
     usePlayerStore.getState().awardBadges(['ami_de_la_foret']);
-    // Contribue à la cagnotte partagée Firestore (fire-and-forget)
-    import('../services/foretCommuneService').then(({ addForetCommunePoints }) => {
-      addForetCommunePoints(2_000).catch(() => {});
+    // Plante 1 arbre immédiatement dans la cagnotte partagée (1 € = 1 arbre)
+    import('../services/foretCommuneService').then(({ addTreeDirect }) => {
+      addTreeDirect().catch(() => {});
     });
   },
 
@@ -726,9 +959,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     onfDailyCount: 0,
     lastOnfDailyDate: '',
     collectedTreeCardIds: [],
-    activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
+    trackGoals: {
+      performance:  TRACK_PERFORMANCE[0],
+      perseverance: TRACK_PERSEVERANCE[0],
+      exploration:  TRACK_EXPLORATION[0],
+    },
+    activeBadgeGoals: [TRACK_PERFORMANCE[0], TRACK_PERSEVERANCE[0], TRACK_EXPLORATION[0]],
     goalCounters: {},
-    dailyBonusUses: { highlight_valid_cells: 3, instinct: 3 },
+    retryStreak: { challengeId: null, count: 0 },
+    retryStreakFusee: { challengeId: null, count: 0 },
+    dailyBonusUses: { reveal_cell: 3, instinct: 3 },
     lastBonusResetDate: null,
   }),
 
@@ -749,6 +989,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       const newEarned = toAdd.length > 0
         ? [...state.earnedBadges, ...toAdd]
         : state.earnedBadges;
+      const newEarnedSet = new Set(newEarned);
 
       // Retirer des objectifs actifs TOUS les badges désormais obtenus —
       // y compris ceux déjà dans earnedBadges qui traîneraient encore dans activeBadgeGoals.
@@ -767,9 +1008,21 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         return acc + (def ? BADGE_SEED_REWARDS[def.rarity] : 0);
       }, 0);
 
+      // Nettoyer trackGoals : si le goal actif d'une track vient d'être obtenu,
+      // mettre ce slot à null (advanceTrackGoals le replacera plus tard avec le suivant).
+      const newTrackGoals: TrackGoals = {
+        performance: (state.trackGoals.performance && newEarnedSet.has(state.trackGoals.performance))
+          ? null : state.trackGoals.performance,
+        perseverance: (state.trackGoals.perseverance && newEarnedSet.has(state.trackGoals.perseverance))
+          ? null : state.trackGoals.perseverance,
+        exploration: (state.trackGoals.exploration && newEarnedSet.has(state.trackGoals.exploration))
+          ? null : state.trackGoals.exploration,
+      };
+
       return {
         earnedBadges:    newEarned,
         seeds:           state.seeds + totalSeeds,
+        trackGoals:      newTrackGoals,
         activeBadgeGoals: newActiveBadgeGoals,
       };
     });
@@ -804,15 +1057,63 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const today     = todayISO();
     const yesterday = yesterdayISO();
 
-    // Reset quotidien : bonus, jetons amis et compteur ONF (à minuit)
+    // Reset quotidien : bonus, jetons amis, compteur ONF et pub (à minuit)
     if (lastBonusResetDate !== today) {
       set({
-        dailyBonusUses: { highlight_valid_cells: 3, instinct: 3 },
+        dailyBonusUses: { reveal_cell: 3, instinct: 3 },
         friendChallengeTokens: 3,
         onfDailyCount: 0,
         lastOnfDailyDate: today,
         lastBonusResetDate: today,
+        watchAdUsedToday: false,
       });
+    }
+
+    // Migration one-shot : réparer les trackGoals si des badges sont déjà obtenus
+    // ou si les prérequis ne sont pas satisfaits. Aussi initialiser trackGoals si absent
+    // (profils créés avant le système de tracks).
+    {
+      const { trackGoals, earnedBadges, goalCounters, activeBadgeGoals } = get();
+      const tracks: TrackName[] = ['performance', 'perseverance', 'exploration'];
+      let changed = false;
+      const newTrackGoals: TrackGoals = { ...trackGoals };
+      const newCounters = { ...goalCounters };
+
+      // Détecter si trackGoals est vide/absent (profil pré-tracks)
+      const tracksMissing = !trackGoals.performance && !trackGoals.perseverance && !trackGoals.exploration;
+
+      for (const track of tracks) {
+        const current = newTrackGoals[track];
+        if (!current || earnedBadges.includes(current) || !isBadgeEligibleAsGoal(current, earnedBadges)) {
+          // Trouver le prochain badge valide pour cette track
+          const next = pickNextTrackGoal(track, earnedBadges, null);
+          if (next !== current) {
+            if (current) delete newCounters[current];
+            newTrackGoals[track] = next;
+            if (next && !(next in newCounters)) newCounters[next] = 0;
+            changed = true;
+          }
+        }
+      }
+
+      // Si le profil avait des activeBadgeGoals de l'ancien système, les mapper aux tracks
+      if (tracksMissing && activeBadgeGoals.length > 0) {
+        for (const goal of activeBadgeGoals) {
+          const track = getTrackForBadge(goal);
+          if (track && !earnedBadges.includes(goal) && isBadgeEligibleAsGoal(goal, earnedBadges)) {
+            if (!newTrackGoals[track]) {
+              newTrackGoals[track] = goal;
+              if (!(goal in newCounters)) newCounters[goal] = 0;
+              changed = true;
+            }
+          }
+        }
+      }
+
+      if (changed) {
+        const newActiveBadgeGoals = deriveActiveBadgeGoals(newTrackGoals);
+        set({ trackGoals: newTrackGoals, activeBadgeGoals: newActiveBadgeGoals, goalCounters: newCounters });
+      }
     }
 
     if (lastPlayedDate === today) return false; // Déjà compté aujourd'hui
@@ -981,7 +1282,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   // ── Objectifs de badges actifs (chantier 3) ───────────────
   setActiveBadgeGoals: (ids) => set(state => {
-    const deduped = ids.slice(0, 3).filter((id, i, arr) => arr.indexOf(id) === i);
+    // Filtrer les badges dont le prérequis n'est pas encore obtenu
+    const eligible = ids.filter(id => isBadgeEligibleAsGoal(id, state.earnedBadges));
+    const deduped = eligible.slice(0, 3).filter((id, i, arr) => arr.indexOf(id) === i);
     // Remettre à 0 le compteur de chaque badge nouvellement ajouté comme objectif.
     // Les badges déjà actifs conservent leur compteur (reprise sans perte).
     const newCounters = { ...state.goalCounters };
@@ -997,9 +1300,32 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         delete newCounters[id];
       }
     }
+    // Verrouiller le défi cible si amelioration_cycle ou amelioration_fusee
+    // vient d'être ajouté manuellement comme objectif actif.
+    let newRetryStreak = state.retryStreak;
+    if (deduped.includes('amelioration_cycle') && !state.activeBadgeGoals.includes('amelioration_cycle')) {
+      newRetryStreak = { challengeId: state.lastPlayedChallengeId, count: 0 };
+    }
+    let newRetryStreakFusee = state.retryStreakFusee;
+    if (deduped.includes('amelioration_fusee') && !state.activeBadgeGoals.includes('amelioration_fusee')) {
+      newRetryStreakFusee = { challengeId: state.lastPlayedChallengeId, count: 0 };
+    }
+    // Mettre à jour trackGoals en sync avec les ids demandés
+    const newTrackGoals: TrackGoals = { ...state.trackGoals };
+    const tracks: TrackName[] = ['performance', 'perseverance', 'exploration'];
+    for (const track of tracks) {
+      const seq = track === 'performance' ? TRACK_PERFORMANCE
+        : track === 'perseverance' ? TRACK_PERSEVERANCE
+        : TRACK_EXPLORATION;
+      const trackBadge = deduped.find(id => seq.includes(id)) ?? null;
+      newTrackGoals[track] = trackBadge;
+    }
     return {
+      trackGoals: newTrackGoals,
       activeBadgeGoals: deduped,
       goalCounters: newCounters,
+      retryStreak: newRetryStreak,
+      retryStreakFusee: newRetryStreakFusee,
     };
   }),
 
@@ -1012,6 +1338,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set(state => {
       let goals = [...state.activeBadgeGoals];
       const newCounters = { ...state.goalCounters };
+      let newRetryStreak = state.retryStreak;
+      let newRetryStreakFusee = state.retryStreakFusee;
 
       for (const completedId of completedGoalIds) {
         // Retirer le badge complété des objectifs actifs et nettoyer son compteur
@@ -1024,14 +1352,87 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           goals = [...goals, nextId];
           // Nouveau badge → compteur à zéro (repart de 0 quoi qu'il arrive)
           newCounters[nextId] = 0;
+
+          // Verrouiller le défi cible si le nouveau badge est cycle ou fusee.
+          // count: 1 car la victoire courante (sur ce même défi) compte déjà pour l'objectif.
+          if (nextId === 'amelioration_cycle') {
+            newRetryStreak = { challengeId: state.lastPlayedChallengeId, count: 1 };
+          }
+          if (nextId === 'amelioration_fusee') {
+            newRetryStreakFusee = { challengeId: state.lastPlayedChallengeId, count: 1 };
+          }
         }
       }
 
       return {
         activeBadgeGoals: goals.slice(0, 3),
         goalCounters: newCounters,
+        retryStreak: newRetryStreak,
+        retryStreakFusee: newRetryStreakFusee,
       };
     });
+  },
+
+  // ── Nouvelle auto-avance typée par track ──────────────────
+  advanceTrackGoals: (completedBadgeIds, updatedEarnedBadges) => {
+    if (completedBadgeIds.length === 0) return [];
+
+    let injectedIds: string[] = [];
+
+    set(state => {
+      const newTrackGoals: TrackGoals = { ...state.trackGoals };
+      const newCounters = { ...state.goalCounters };
+      let newRetryStreak = state.retryStreak;
+      let newRetryStreakFusee = state.retryStreakFusee;
+      const localInjected: string[] = [];
+
+      for (const completedId of completedBadgeIds) {
+        // Identifier la track du badge complété
+        const track = getTrackForBadge(completedId);
+        if (!track) continue; // badge hors séquence, ignoré
+
+        // Ne traiter que si ce badge était bien le goal actif de cette track,
+        // OU si le slot est déjà null (awardBadges l'a déjà nettoyé avant nous).
+        if (newTrackGoals[track] !== completedId && newTrackGoals[track] !== null) continue;
+
+        // Nettoyer le compteur du badge complété
+        delete newCounters[completedId];
+
+        // Trouver le prochain badge de la track
+        const nextId = pickNextTrackGoal(track, updatedEarnedBadges, completedId);
+        newTrackGoals[track] = nextId;
+
+        if (nextId) {
+          // Nouveau goal → compteur à zéro
+          newCounters[nextId] = 0;
+          localInjected.push(nextId);
+
+          // Verrouiller le défi si c'est amelioration_cycle ou amelioration_fusee.
+          // count: 1 car la victoire courante (sur ce même défi) compte déjà pour l'objectif.
+          if (nextId === 'amelioration_cycle') {
+            newRetryStreak = { challengeId: state.lastPlayedChallengeId, count: 1 };
+          }
+          if (nextId === 'amelioration_fusee') {
+            newRetryStreakFusee = { challengeId: state.lastPlayedChallengeId, count: 1 };
+          }
+        }
+      }
+
+      // Recalculer activeBadgeGoals depuis trackGoals mis à jour
+      const newActiveBadgeGoals = deriveActiveBadgeGoals(newTrackGoals);
+
+      injectedIds = localInjected;
+
+      return {
+        trackGoals: newTrackGoals,
+        activeBadgeGoals: newActiveBadgeGoals,
+        goalCounters: newCounters,
+        retryStreak: newRetryStreak,
+        retryStreakFusee: newRetryStreakFusee,
+      };
+    });
+
+    return injectedIds;
   },
 
   // ── Dépense de bonus journalier (chantier 4) ──────────────
@@ -1046,6 +1447,19 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         [bonusId]: (state.dailyBonusUses[bonusId] ?? 0) - 1,
       },
     }));
+    return true;
+  },
+
+  // ── Recharge des bonus via pub (1 fois/jour, free seulement) ──
+  refillBonusWithAd: () => {
+    const { isPremium, watchAdUsedToday } = get();
+    if (isPremium) return false;       // Premium = bonus illimités, pas de pub
+    if (watchAdUsedToday) return false; // Déjà utilisé aujourd'hui
+    set({
+      dailyBonusUses: { reveal_cell: 3, instinct: 3 },
+      watchAdUsedToday: true,
+      lastWatchAdDate: todayISO(),
+    });
     return true;
   },
 
