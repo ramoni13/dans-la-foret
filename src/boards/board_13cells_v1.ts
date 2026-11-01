@@ -52,27 +52,27 @@ export const board13cellsV1: BoardDefinition = {
   //
   // Positions visuelles (%) — symétrie 4 axes :
   //
-  //   [0]            [1]   [4]            [3]
-  //          [2]                   [5]
+  //   [0]               [1]  [4]               [3]
+  //       [2]                        [5]
   //
-  //                      [12]
+  //                        [12]
   //
-  //          [7]                  [10]
-  //   [6]            [8]   [11]           [9]
+  //       [8]                        [11]
+  //   [6]               [7]  [10]              [9]
   //
   cellPositions: [
     { x: 8,  y: 18 }, // 0  — coin NW
-    { x: 30, y: 8  }, // 1  — sat NW-haut
-    { x: 20, y: 38 }, // 2  — sat NW-bas
+    { x: 35, y: 8  }, // 1  — sat NW-haut
+    { x: 25, y: 38 }, // 2  — sat NW-bas  (rapproché du centre)
     { x: 92, y: 18 }, // 3  — coin NE
-    { x: 70, y: 8  }, // 4  — sat NE-haut
-    { x: 80, y: 38 }, // 5  — sat NE-bas
+    { x: 65, y: 8  }, // 4  — sat NE-haut
+    { x: 75, y: 38 }, // 5  — sat NE-bas  (rapproché du centre)
     { x: 8,  y: 82 }, // 6  — coin SW
-    { x: 30, y: 92 }, // 7  — sat SW-haut
-    { x: 20, y: 62 }, // 8  — sat SW-bas
+    { x: 35, y: 92 }, // 7  — sat SW-haut
+    { x: 25, y: 62 }, // 8  — sat SW-bas  (rapproché du centre)
     { x: 92, y: 82 }, // 9  — coin SE
-    { x: 70, y: 92 }, // 10 — sat SE-haut
-    { x: 80, y: 62 }, // 11 — sat SE-bas
+    { x: 65, y: 92 }, // 10 — sat SE-haut
+    { x: 75, y: 62 }, // 11 — sat SE-bas  (rapproché du centre)
     { x: 50, y: 50 }, // 12 — CENTRE
   ],
   backgroundAsset: require('../../assets/boards/fond.jpg'),
