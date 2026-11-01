@@ -315,21 +315,8 @@ export default function ForestFrame() {
         resizeMode="contain"
       />
 
-      {/* ── OVERLAYS (graines + son) ──────────────────────────────────────── */}
+      {/* ── OVERLAYS (graines) ───────────────────────────────────────────── */}
       <SeedsOverlay seeds={seeds} screenW={screenW} topBarCenterY={topBarCenterY} />
-      <SoundButton iconTopY={iconTopY} />
-
-      {/* ── Bouton Retour (tous onglets) ─────────────────────────────────── */}
-      {backLabel != null && onBack != null && (
-        <TouchableOpacity
-          onPress={onBack}
-          activeOpacity={0.8}
-          style={[styles.backTextBtn, { top: iconTopY }]}
-          accessibilityLabel={t('forest_frame_back_label')}
-        >
-          <Text style={styles.backTextBtnLabel}>{t('forest_frame_back')}</Text>
-        </TouchableOpacity>
-      )}
 
       {/* ── Zones de tap + voyant actif ──────────────────────────────────── */}
       {BUTTONS.map((btn) => {
