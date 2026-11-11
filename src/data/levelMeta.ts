@@ -25,6 +25,12 @@ export interface RuleCard {
   i18nKey: string;
   /** Variables d'interpolation pour i18nKey */
   i18nVars?: Record<string, string>;
+  /**
+   * Clé i18n d'une mention « déjà croisé » affichée sous la règle (Progression v2, C5) : le champignon est
+   * présenté pour la première fois dans le briefing du Défi du Jour (ligue Pousse), qui s'ouvre avant le
+   * niveau 17 ; le briefing du niveau 17 le dit au joueur au lieu de le lui présenter comme inédit.
+   */
+  seenElsewhereKey?: string;
 }
 
 export interface LevelMeta {
@@ -186,6 +192,8 @@ const rCenterOnlyChampignon: RuleCard = {
   elements: ['champignon'],
   i18nKey: 'a11y_center_only',
   i18nVars: { element: 'champignon' },
+  // Le Défi du Jour (ligue Pousse, fin du chapitre 3) présente déjà le champignon : bien avant le niveau 17.
+  seenElsewhereKey: 'rule_champignon_seen_in_daily',
 };
 const rNoSameChampignon: RuleCard = {
   id: 'no_same_champignon',
@@ -211,7 +219,7 @@ const rConnectedArbreBuches: RuleCard = {
   i18nVars: { e1: 'arbre', e2: 'bûches' },
 };
 
-// ── LEVEL_META × 15 niveaux ──────────────────────────────────────────────────
+// ── LEVEL_META × 21 niveaux ──────────────────────────────────────────────────
 // Nouvel ordre d'introduction :
 //   Niv 1  : bucheron, ours, mouton
 //   Niv 3  : chien
@@ -220,6 +228,8 @@ const rConnectedArbreBuches: RuleCard = {
 //   Niv 9  : cerf, biche
 //   Niv 11 : tas_buches
 //   Niv 12 : chalet
+//   Niv 17 : champignon
+//   Niv 19 : arbre
 
 export const LEVEL_META: Record<number, LevelMeta> = {
   1: {

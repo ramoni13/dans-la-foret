@@ -12,6 +12,9 @@ import React, { useEffect, useState } from 'react';
 import { useStorage } from '../src/hooks/useStorage';
 import { AudioController } from '../src/components/Audio/AudioController';
 import { MusicUnlockModal } from '../src/components/Audio/MusicUnlockModal';
+import { RewardedAdHost } from '../src/components/Ads/RewardedAdHost';
+import { DialogHost } from '../src/components/Game/DialogHost';
+import { PremiumCelebrationModal } from '../src/components/Premium/PremiumCelebrationModal';
 import { useAudioStore } from '../src/store/audioStore';
 import { NavigationBar } from 'expo-navigation-bar';
 import { AppSplashScreen } from '../src/components/SplashScreen';
@@ -113,6 +116,12 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <StorageBridge />
+      {/* Pub récompensée (simulée) : un seul hôte pour tous les emplacements (Lot B) */}
+      <RewardedAdHost />
+      {/* Dialogues d'information / confirmation : remplacent Alert.alert et window.alert / confirm */}
+      <DialogHost />
+      {/* Félicitations après l'achat premium (déclenchée par playerStore.unlockPremium) */}
+      <PremiumCelebrationModal />
       <AudioErrorBoundary>
         <AudioBridge />
       </AudioErrorBoundary>

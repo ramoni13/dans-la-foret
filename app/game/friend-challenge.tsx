@@ -17,7 +17,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Platform,
   Modal,
   ActivityIndicator,
   useWindowDimensions,
@@ -37,15 +36,14 @@ import { FailModal } from '../../src/components/Game/FailModal';
 
 import { useGame } from '../../src/hooks/useGame';
 import { usePlayerStore } from '../../src/store/playerStore';
-import { SeedFlyAnimation, useCounterPulse } from '../../src/components/Game/SeedFlyAnimation';
+import ReAnimated from 'react-native-reanimated';
+import { RewardFly, useCounterPulse } from '../../src/components/Game/RewardFly';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
 import { Colors } from '../../src/constants/colors';
 import { ConfirmModal } from '../../src/components/Game/ConfirmModal';
 import { Challenge } from '../../src/core/models/Challenge';
-import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
-import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 import {
   FriendChallengeData,
   createFriendChallenge,
@@ -53,6 +51,8 @@ import {
   CHALLENGE_WINNER_SEEDS,
 } from '../../src/services/challengeService';
 import { updateSeeds } from '../../src/services/playerService';
+import { awardEarnedTrophies } from '../../src/services/trophyService';
+import { awardBadgesFirestore } from '../../src/services/badgeService';
 import { auth } from '../../src/services/firebase';
 import { useT } from '../../src/i18n';
 
@@ -65,6 +65,7 @@ function ChallengerResultModal({
   challengeLevel,
   sending,
   sent,
+  sendError,
   onSend,
   onQuit,
   t,
@@ -76,9 +77,10 @@ function ChallengerResultModal({
   challengeLevel: number;
   sending: boolean;
   sent: boolean;
+  sendError: boolean;
   onSend: () => void;
   onQuit: () => void;
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t: (key: string, vars?: Record<string, string>) => string;
 }) {
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -111,6 +113,7 @@ function ChallengerResultModal({
             </View>
           ) : (
             <View style={rs.btnGroup}>
+              {sendError && <Text style={rs.errorText}>{t('fc_send_error')}</Text>}
               <TouchableOpacity
                 style={[rs.btnSend, sending && rs.btnDisabled]}
                 onPress={onSend}
@@ -162,7 +165,7 @@ function OpponentResultModal({
   seedsBeforeGain?: number;
   onClose: () => void;
   confettiPieces: any[];
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t: (key: string, vars?: Record<string, string>) => string;
 }) {
   const diff = Math.abs(myTime - challengerTime);
 
@@ -207,7 +210,7 @@ function OpponentResultModal({
   }, []);
 
   // ── Pulse et halo ─────────────────────────────────────────────────────────
-  const { scale: counterScale, haloOpacity, haloScale, pulse } = useCounterPulse();
+  const { counterStyle, haloStyle, pulse } = useCounterPulse();
 
   // ── Callback : une graine arrive au compteur ──────────────────────────────
   const onSeedArrived = useCallback(() => {
@@ -244,16 +247,11 @@ function OpponentResultModal({
           {/* ── Compteur de graines — CIBLE (affiché uniquement si victoire) ── */}
           {iWon && (
             <View style={rs.counterWrapper} onLayout={onCounterLayout}>
-              <Animated.View
-                style={[
-                  rs.halo,
-                  { opacity: haloOpacity, transform: [{ scale: haloScale }] },
-                ]}
+              <ReAnimated.View
+                style={[rs.halo, haloStyle]}
                 pointerEvents="none"
               />
-              <Animated.View
-                style={[rs.seedCounterBadge, { transform: [{ scale: counterScale }] }]}
-              >
+              <ReAnimated.View style={[rs.seedCounterBadge, counterStyle]}>
                 <Text style={rs.seedCounterValue}>{displayedSeeds}</Text>
                 <Text style={rs.seedCounterEmoji}>🌱</Text>
                 {displayedGain > 0 && !animDone && (
@@ -261,7 +259,7 @@ function OpponentResultModal({
                     <Text style={rs.seedGainText}>+{displayedGain}</Text>
                   </View>
                 )}
-              </Animated.View>
+              </ReAnimated.View>
             </View>
           )}
 
@@ -301,14 +299,15 @@ function OpponentResultModal({
 
           {/* Graines volantes — absoluteFill dans la carte */}
           {flyActive && fromY !== null && toY !== null && (
-            <SeedFlyAnimation
+            <RewardFly
               key={flyKey}
+              target="seeds"
               count={particleCount}
               fromX={fromX}
               fromY={fromY}
               targetX={toX}
               targetY={toY}
-              onSeedArrived={onSeedArrived}
+              onArrived={onSeedArrived}
             />
           )}
 
@@ -419,60 +418,27 @@ export default function FriendChallengeScreen() {
   const [showResult, setShowResult]   = useState(false);
   const [sending, setSending]         = useState(false);
   const [sent, setSent]               = useState(false);
+  const [sendError, setSendError]     = useState(false);
   const [opponentWon, setOpponentWon] = useState<boolean | null>(null);
   const [showAbandonModal, setShowAbandonModal] = useState(false);
   const confettiPieces = useConfetti(showResult);
   // Total de graines AVANT le gain — pour l'animation de OpponentResultModal
   const [seedsBeforeGain, setSeedsBeforeGain] = useState(0);
-  const [rankUpVisible, setRankUpVisible]         = useState(false);
-  const [rankUpNewRank, setRankUpNewRank]          = useState(RANK_DEFINITIONS[0]);
-  const [rankUpPrevLabel, setRankUpPrevLabel]      = useState('');
-  const [rankUpSeeds, setRankUpSeeds]              = useState(0);
-  const [rankUpSeedsBefore, setRankUpSeedsBefore]  = useState(0);
+
+
+  /** Décerne les trophées de série atteints (Duel, Rassembleur…) et les synchronise (best-effort). */
+  const syncTrophies = () => {
+    const fresh = awardEarnedTrophies();
+    const uid = auth.currentUser?.uid;
+    if (fresh.length > 0 && uid && !auth.currentUser?.isAnonymous) awardBadgesFirestore(uid, fresh).catch(() => {});
+  };
 
   useEffect(() => {
     if (game.isVictory && challenge) {
       setShowResult(true);
-      // Capture du score AVANT l'incrément de friendPlayed
-      const stateBeforeFriend = usePlayerStore.getState();
-      const activityStatsBefore: PlayerActivityStats = {
-        soloCompleted:   stateBeforeFriend.completedChallenges.length,
-        friendCompleted: stateBeforeFriend.stats.friendPlayed,
-        onfCompleted:    stateBeforeFriend.onfSolvedCount,
-        dailyCompleted:  stateBeforeFriend.stats.dailyWon,
-      };
-      const scoreBeforeFriend = getPlayerScore(stateBeforeFriend.earnedBadges, activityStatsBefore);
-      const rankBeforeFriend  = getRank(scoreBeforeFriend);
 
-      // Incrémenter friendPlayed + friendWins pour le Joueur A (Challenger)
-      // (Le Joueur B les incrémente dans son propre useEffect via answerFriendChallenge)
-      if (isChallenger) {
-        player.incrementStat('friendPlayed');
-        player.recordFriendWin();
-      }
-
-      // ── Détection changement de rang ─────────────────────────────────────
-      const stateAfterFriend = usePlayerStore.getState();
-      const activityStatsAfter: PlayerActivityStats = {
-        soloCompleted:   stateAfterFriend.completedChallenges.length,
-        friendCompleted: stateAfterFriend.stats.friendPlayed,
-        onfCompleted:    stateAfterFriend.onfSolvedCount,
-        dailyCompleted:  stateAfterFriend.stats.dailyWon,
-      };
-      const scoreAfterFriend = getPlayerScore(stateAfterFriend.earnedBadges, activityStatsAfter);
-      const rankAfterFriend  = getRank(scoreAfterFriend);
-      if (rankAfterFriend.id !== rankBeforeFriend.id) {
-        const rankSeeds = RANK_SEED_REWARDS[rankAfterFriend.id] ?? 0;
-        if (rankSeeds > 0) {
-          setRankUpSeedsBefore(usePlayerStore.getState().seeds);
-          player.addSeeds(rankSeeds);
-        }
-        const lang = usePlayerStore.getState().language;
-        setRankUpPrevLabel(lang === 'en' ? rankBeforeFriend.labelEn : rankBeforeFriend.label);
-        setRankUpNewRank(rankAfterFriend);
-        setRankUpSeeds(rankSeeds);
-        setTimeout(() => setRankUpVisible(true), 1800);
-      }
+      // Lot D : le challenger n'est PLUS compté gagnant ici. Son résultat n'est connu que lorsque l'adversaire a joué ;
+      // `playerStore.recordDuelResults` le compte alors, depuis la liste des défis terminés (écran Défis).
     }
   }, [game.isVictory]);
 
@@ -493,9 +459,18 @@ export default function FriendChallengeScreen() {
         const iWon = winnerId === params.opponentUid;
         setOpponentWon(iWon);
 
-        // Statistiques Joueur B : partie jouée + victoire éventuelle
-        player.incrementStat('friendPlayed');
-        if (iWon) player.recordFriendWin();
+        // Statistiques Joueur B : le résultat est connu (la réponse vient d'être enregistrée). Le défi est compté UNE
+        // fois, par identifiant, via la liste des défis terminés (Lot D) : victoire ou défaite, et série.
+        const uidB = auth.currentUser?.uid;
+        if (uidB && params.friendChallengeId && params.challengerUid && params.opponentUid) {
+          player.recordDuelResults(uidB, [{
+            id: params.friendChallengeId,
+            challengerUid: params.challengerUid,
+            opponentUid: params.opponentUid,
+            winnerId,
+          }]);
+          syncTrophies();
+        }
 
         // Récompense : 15 graines au vainqueur
         if (iWon) {
@@ -518,6 +493,7 @@ export default function FriendChallengeScreen() {
   const handleSendChallenge = async () => {
     if (!challengeData || !friendData || !params.challengerUid || !params.challengerName || sending) return;
     setSending(true);
+    setSendError(false);
     try {
       await createFriendChallenge(
         challengeData,
@@ -536,17 +512,12 @@ export default function FriendChallengeScreen() {
       const isNewFriend = !playerState.challengedFriendIds.includes(friendData.userId);
       player.recordFriendChallenged(friendData.userId);
 
-      // Si c'est un nouvel ami ET que social_poignee est dans les objectifs actifs → décerner
-      if (isNewFriend && playerState.activeBadgeGoals.includes('social_poignee')) {
-        if (!playerState.earnedBadges.includes('social_poignee')) {
-          player.awardBadges(['social_poignee']);
-          // Auto-avance — passer earnedBadges post-awardBadges pour éviter stale state
-          const { earnedBadges: earnedAfterSocial } = usePlayerStore.getState();
-          player.advanceGoalAuto(['social_poignee'], earnedAfterSocial);
-        }
-      }
+      // Trophées (Progression v2, C8) : Rassembleur (amis distincts défiés), Duel… — tout trophée atteint est décerné.
+      syncTrophies();
+      void isNewFriend;
     } catch {
-      if (Platform.OS === 'web') window.alert(t('fc_send_error'));
+      // Dans une Modal native (ChallengerResultModal) : le message s'affiche dans la carte, pas dans un dialogue global
+      setSendError(true);
     } finally {
       setSending(false);
     }
@@ -657,6 +628,7 @@ export default function FriendChallengeScreen() {
             challengeLevel={challengeLevel}
             sending={sending}
             sent={sent}
+            sendError={sendError}
             onSend={handleSendChallenge}
             onQuit={handleClose}
             t={t}
@@ -718,15 +690,6 @@ export default function FriendChallengeScreen() {
           onCancel={handleConfirmAbandon}
         />
 
-        {/* ── Modal changement de rang ── */}
-        <RankUpModal
-          visible={rankUpVisible}
-          newRank={rankUpNewRank}
-          previousRankLabel={rankUpPrevLabel}
-          seedsAwarded={rankUpSeeds}
-          seedsBeforeGain={rankUpSeedsBefore}
-          onClose={() => setRankUpVisible(false)}
-        />
 
       </View>
 
@@ -869,6 +832,7 @@ const rs = StyleSheet.create({
   },
   btnSendText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   btnDisabled: { opacity: 0.5 },
+  errorText: { fontSize: 14, fontWeight: '600', color: '#C62828', textAlign: 'center' },
   btnQuit: {
     paddingVertical: 10,
     alignItems: 'center',

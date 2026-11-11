@@ -1,12 +1,12 @@
 ﻿// ============================================================
-// PARAMÈTRES DE DIFFICULTÉ — 15 niveaux
+// PARAMÈTRES DE DIFFICULTÉ — 21 niveaux
 //
 // 3 leviers combinés :
-//   1. Plateau : 6 → 7 → 8 → 9 → 10 → 11 → 12 cases
+//   1. Plateau : 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 cases
 //   2. Composition : nombre et types d'éléments
 //   3. Cases vides : valeur FIXE et unique par niveau (pas de plage)
 //
-// Progression des cases vides :
+// Progression des cases vides (cases fixées = cases − vides) :
 //   Niv 1  : 6 cases,  3 vides  — bucheron, ours, mouton
 //   Niv 2  : 7 cases,  4 vides  — (mêmes éléments, nouveau board)
 //   Niv 3  : 8 cases,  4 vides  — + chien (meute connexe)
@@ -22,6 +22,15 @@
 //   Niv 13 : 12 cases, 7 vides  — consolidation (5 fixés)
 //   Niv 14 : 12 cases, 8 vides  — accélération (4 fixés)
 //   Niv 15 : 12 cases, 8 vides  — bonus désactivés (4 fixés)
+//   Niv 16 : 13 cases, 8 vides  — nouveau board 13 cases, tous éléments standard (5 fixés)
+//   Niv 17 : 13 cases, 8 vides  — + champignon (cases centrales uniquement, 5 fixés)
+//   Niv 18 : 13 cases, 8 vides  — bonus désactivés (5 fixés)
+//   Niv 19 : 14 cases, 9 vides  — nouveau board 14 cases, + Arbre (5 fixés)
+//   Niv 20 : 14 cases, 8 vides  — densité augmentée (6 fixés)
+//   Niv 21 : 14 cases, 8 vides  — finale, bonus désactivés (6 fixés)
+//
+// Plateaux : 6 (niv 1) · 7 (niv 2) · 8 (niv 3-4) · 9 (niv 5-6) · 10 (niv 7-8)
+//            11 (niv 9-11) · 12 (niv 12-15) · 13 (niv 16-18) · 14 (niv 19-21)
 //
 // Nouveaux éléments introduits progressivement :
 //   Niv 1    : Bucheron, Ours, Mouton
@@ -31,6 +40,10 @@
 //   Niv 9    : + Cerf + Biche (couples 1-pour-1)
 //   Niv 11   : + Bûches (voisin Bucheron, + voisin Chalet si présent)
 //   Niv 12   : + Chalet (voisin Bucheron obligatoire, bucheron >= chalet)
+//   Niv 17   : + Champignon (cases centrales, ≠ voisin champignon)
+//   Niv 19   : + Arbre (forêt connexe avec bûches, arbre >= 2 si présent)
+//
+// Bonus désactivés : niveaux 15, 18 et 21.
 //
 // Invariants à respecter dans chaque composition :
 //   I1  : Σ éléments = cellCount
@@ -70,7 +83,7 @@ export interface Composition {
   tas_buches?: number; // = voisin bucheron · = voisin chalet si chalet présent (I7)
   // ── Introduits niv 12+ ──────────────────────────────────────
   chalet?: number;     // = voisin bucheron · ≠ voisin chalet · bucheron >= chalet (I6)
-  // ── Défi journalier uniquement ────────────────────────────
+  // ── Introduits niv 17+ (et Défi du Jour) ───────────────────
   champignon?: number; // center_only · ≠ voisin champignon · max 3 (I8)
   // ── Introduits niv 19+ ──────────────────────────────────────
   arbre?: number;      // connected_group_with tas_buches (forêt connexe) · TOUJOURS >= 2 si > 0

@@ -20,12 +20,35 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
-import { ONF_4X4_LEVEL_UNLOCK } from '../../src/constants/onf';
-import { getUnlockedCardCount } from '../../src/utils/onfCards';
+import { getLockMessageKey } from '../../src/constants/unlocks';
+import { useFeatureAccess } from '../../src/hooks/useFeatureAccess';
+import { useCeremonyPlayer } from '../../src/hooks/useCeremonyPlayer';
+import { CeremonyModal } from '../../src/components/Game/CeremonyModal';
+import { PineconeIcon, PineconeText } from '../../src/components/Game/PineconeIcon';
+import { getRatingVariants } from '../../src/constants/pinecone';
+import { hasNewBadge } from '../../src/constants/ceremonies';
+import { PROGRESSION_V2 } from '../../src/constants/featureFlags';
+import {
+  CHAPTERS,
+  computeLevelProgress,
+  countTotalStars,
+  getChapterForLevel,
+  getChapterProgress,
+  getChapterSeeds,
+  getLevelStatus,
+  getNextRecommended,
+  getRecommendedChallengeId,
+} from '../../src/constants/progression';
+import { isAdminAccount, isDemoAccount } from '../../src/constants/devAccess';
+import { getOnfRemaining, isLimitsOfDay, todayLocalISO } from '../../src/constants/dailyLimits';
+import { getAdViews } from '../../src/constants/adRewards';
+import { getOwnedCardCount } from '../../src/utils/onfCards';
+import { HerbierEntry } from '../../src/components/ONF/HerbierEntry';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { useNavStore } from '../../src/store/navStore';
 import { auth } from '../../src/services/firebase';
 import { getDailyDateString, subscribeDailyLeaderboard, DailyResult } from '../../src/services/dailyChallengeService';
+import { getPlayerLeague } from '../../src/constants/dailyLeagues';
 
 import { formatTime } from '../../src/utils/boardUtils';
 import { DifficultyLevel } from '../../src/core/models/Challenge';
@@ -150,11 +173,17 @@ function LevelsScreen({
     ? Math.round((completedCount / challenges.length) * 100)
     : 0;
 
-  const isDemoUser = player.username === 'planete';
+  const isDemoUser = isDemoAccount(player.username);
+
+  // Progression v2 : le niveau N+1 s'ouvre quand étoiles(N) >= seuil(N) ; les 10 défis d'un niveau
+  // ouvert sont accessibles (D13). Sinon : ancien comportement (10 défis complétés, défis séquentiels).
+  const progress = useMemo(() => computeLevelProgress(player.challengeStars), [player.challengeStars]);
+  const totalStars = useMemo(() => countTotalStars(player.challengeStars), [player.challengeStars]);
 
   const isLevelUnlocked = (idx: number): boolean => {
     if (isDemoUser) return true;
     if (idx === 0) return true;
+    if (PROGRESSION_V2) return getLevelStatus(idx + 1, player.challengeStars, progress).isOpen;
     const prev = LEVELS[idx - 1];
     return (ALL_CHALLENGES_BY_LEVEL[prev.id] ?? []).every(
       (c: any) => player.completedChallenges.includes(c.id)
@@ -163,13 +192,22 @@ function LevelsScreen({
 
   const isChallengeUnlocked = (challengeIdx: number): boolean => {
     if (isDemoUser) return true;
+    if (PROGRESSION_V2) return true; // D13 : niveau ouvert = 10 défis accessibles
     if (challengeIdx === 0) return true;
     return player.completedChallenges.includes(challenges[challengeIdx - 1].id);
   };
 
+  const levelStatus = getLevelStatus(levelIndex + 1, player.challengeStars, progress);
+  const recommendedId = PROGRESSION_V2 ? getRecommendedChallengeId(levelIndex + 1, player.challengeStars) : null;
+
   const currentUnlocked = isLevelUnlocked(levelIndex);
   const canGoPrev = levelIndex > 0;
   const canGoNext = levelIndex < LEVELS.length - 1;
+
+  // Progression v2 : regroupement par chapitre (C3). Le chapitre du niveau affiché et son avancement.
+  const chapter = PROGRESSION_V2 ? getChapterForLevel(levelIndex + 1) : null;
+  const chapterProg = chapter ? getChapterProgress(chapter.id, player.challengeStars, progress) : null;
+  const chapterSeeds = chapter ? getChapterSeeds(chapter) : 0;
 
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -178,12 +216,72 @@ function LevelsScreen({
       {/* Header titre */}
       <View style={[styles.levelsHeader, { paddingTop: Math.max(insets.top + 8, innerTop + 20) }]}>
         <Text style={styles.levelsHeaderTitle}>{t('index_all_challenges')}</Text>
+        {PROGRESSION_V2 && (
+          <PineconeText
+            style={styles.levelsHeaderStars}
+            liveRegion
+            text={t('levels_total_stars', { count: String(totalStars), max: String(LEVELS.length * 30) })}
+          />
+        )}
       </View>
 
       <ScrollView
         contentContainerStyle={[styles.levelsContainer, { paddingBottom: frameBottom + 16 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Bande des chapitres (Progression v2) : un appui saute au 1er niveau du chapitre */}
+        {PROGRESSION_V2 && (
+          <View style={styles.chapterStrip} accessibilityRole="tablist">
+            {CHAPTERS.map(c => {
+              const cp = getChapterProgress(c.id, player.challengeStars, progress);
+              const active = chapter?.id === c.id;
+              const locked = cp.status === 'locked' && !isDemoUser;
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  style={[
+                    styles.chapterChip,
+                    active && styles.chapterChipActive,
+                    cp.status === 'completed' && styles.chapterChipDone,
+                    locked && styles.chapterChipLocked,
+                  ]}
+                  onPress={() => setLevelIndex(c.levels[0] - 1)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active, disabled: false }}
+                  accessibilityLabel={`${t('levels_chapter_header', { n: String(c.id), name: t(c.nameKey) })}, ${t(
+                    cp.status === 'completed' ? 'rank_chapter_done' : cp.status === 'current' ? 'rank_chapter_current' : 'rank_chapter_locked',
+                  )}`}
+                >
+                  <Text style={styles.chapterChipEmoji}>{locked ? '🔒' : c.emoji}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* En-tête du chapitre du niveau affiché */}
+        {chapter && chapterProg && (
+          <View style={styles.chapterHeader}>
+            <Text style={styles.chapterTitle}>
+              {chapter.emoji} {t('levels_chapter_header', { n: String(chapter.id), name: t(chapter.nameKey) })}
+            </Text>
+            <Text style={styles.chapterSub}>
+              {chapterProg.status === 'completed'
+                ? `✓ ${t('levels_chapter_done')}`
+                : chapterProg.status === 'locked' && !isDemoUser
+                  ? t('levels_chapter_locked')
+                  : t('levels_chapter_progress', {
+                      done: String(chapterProg.levelsDone),
+                      total: String(chapterProg.levelsTotal),
+                      stars: String(chapterProg.stars),
+                    })}
+              {chapterSeeds > 0 && chapterProg.status !== 'completed'
+                ? `  ·  ${t('levels_chapter_reward_seeds', { count: String(chapterSeeds) })}`
+                : ''}
+            </Text>
+          </View>
+        )}
+
         {/* Navigateur de niveau ‹/› */}
         <View style={styles.levelNavigator}>
           <TouchableOpacity
@@ -214,15 +312,53 @@ function LevelsScreen({
             </Text>
             <Text style={styles.levelCardDesc}>{selectedLevelDef.description}</Text>
 
-            <View style={styles.progressRow}>
-              <View style={styles.progressBarBg}>
-                <View style={[
-                  styles.progressBarFill,
-                  { width: `${progressPct}%`, backgroundColor: currentUnlocked ? selectedLevelDef.color : Colors.ui.border },
-                ]} />
+            {PROGRESSION_V2 ? (
+              <View
+                style={styles.starGaugeBlock}
+                accessible
+                accessibilityLabel={t('levels_stars_gauge_a11y', {
+                  current: String(levelStatus.starsShown),
+                  threshold: String(levelStatus.threshold),
+                  level: String(levelIndex + 1),
+                })}
+              >
+                <View style={styles.progressRow}>
+                  <View style={styles.progressBarBg}>
+                    <View style={[
+                      styles.progressBarFill,
+                      {
+                        width: `${Math.round(levelStatus.ratio * 100)}%`,
+                        backgroundColor: levelStatus.isCompleted ? '#FFC107' : (currentUnlocked ? selectedLevelDef.color : Colors.ui.border),
+                      },
+                    ]} />
+                  </View>
+                  <PineconeText
+                    style={[styles.progressLabel, styles.starGaugeLabel]}
+                    text={t('levels_stars_gauge', { current: String(levelStatus.starsShown), threshold: String(levelStatus.threshold) })}
+                  />
+                </View>
+                {currentUnlocked && (
+                  <PineconeText
+                    style={styles.starGaugeHint}
+                    text={recommendedId === null
+                      ? `🌟 ${t('levels_perfect_level')}`
+                      : levelStatus.isCompleted
+                        ? `✓ ${t('levels_level_completed')}`
+                        : t('levels_stars_missing', { count: String(levelStatus.starsMissing) })}
+                  />
+                )}
               </View>
-              <Text style={styles.progressLabel}>{completedCount}/{challenges.length}</Text>
-            </View>
+            ) : (
+              <View style={styles.progressRow}>
+                <View style={styles.progressBarBg}>
+                  <View style={[
+                    styles.progressBarFill,
+                    { width: `${progressPct}%`, backgroundColor: currentUnlocked ? selectedLevelDef.color : Colors.ui.border },
+                  ]} />
+                </View>
+                <Text style={styles.progressLabel}>{completedCount}/{challenges.length}</Text>
+              </View>
+            )}
 
             <View style={styles.dotsRow}>
               {LEVELS.map((_, i) => (
@@ -258,11 +394,16 @@ function LevelsScreen({
             <Text style={styles.lockedEmoji}>🔒</Text>
             <Text style={styles.lockedTitle}>{t('index_level_locked_title')}</Text>
             <Text style={styles.lockedSubtitle}>
-              {t('index_level_locked_sub', {
-                level: LEVELS[levelIndex - 1]
-                  ? t('level_prefix') + ' ' + LEVELS[levelIndex - 1].id.replace('niveau_', '')
-                  : t('index_prev_level'),
-              })}
+              {PROGRESSION_V2 && LEVELS[levelIndex - 1]
+                ? t('levels_level_locked_stars', {
+                    threshold: String(getLevelStatus(levelIndex, player.challengeStars, progress).threshold),
+                    level: t('level_prefix') + ' ' + LEVELS[levelIndex - 1].id.replace('niveau_', ''),
+                  })
+                : t('index_level_locked_sub', {
+                    level: LEVELS[levelIndex - 1]
+                      ? t('level_prefix') + ' ' + LEVELS[levelIndex - 1].id.replace('niveau_', '')
+                      : t('index_prev_level'),
+                  })}
             </Text>
           </View>
         ) : (
@@ -272,6 +413,9 @@ function LevelsScreen({
               const unlocked    = isChallengeUnlocked(idx);
               const bestTime    = player.stats.bestTimes[challenge.id];
               const wr          = worldRecords.get(challenge.id);
+              // Progression v2 : meilleure note du défi (0 = jamais gagné) et défi conseillé
+              const stars: number = PROGRESSION_V2 ? (player.challengeStars[challenge.id] ?? 0) : 0;
+              const isRecommended = PROGRESSION_V2 && challenge.id === recommendedId;
               return (
                 <TouchableOpacity
                   key={challenge.id}
@@ -279,7 +423,15 @@ function LevelsScreen({
                     styles.challengeCard,
                     isCompleted && styles.challengeCardDone,
                     !unlocked && styles.challengeCardLocked,
+                    isRecommended && styles.challengeCardRecommended,
                   ]}
+                  accessibilityLabel={PROGRESSION_V2 && unlocked
+                    ? [
+                        t('index_challenge_label', { number: String(challenge.challengeNumber) }),
+                        stars > 0 ? t('levels_challenge_stars_a11y', { count: String(stars) }) : t('levels_challenge_never_won'),
+                        isRecommended ? t('levels_recommended_badge') : '',
+                      ].filter(Boolean).join(', ')
+                    : undefined}
                   onPress={() => unlocked && router.push(`/game/${challenge.id}`)}
                   activeOpacity={unlocked ? 0.8 : 1}
                 >
@@ -291,9 +443,16 @@ function LevelsScreen({
                     <Text style={styles.challengeNumber}>#{idx + 1}</Text>
                   </View>
                   <View style={styles.challengeCenter}>
-                    <Text style={[styles.challengeTitle, !unlocked && styles.challengeTitleLocked]}>
-                      {unlocked ? t('index_challenge_label', { number: String(challenge.challengeNumber) }) : t('index_challenge_locked')}
-                    </Text>
+                    <View style={styles.challengeTitleRow}>
+                      <Text style={[styles.challengeTitle, !unlocked && styles.challengeTitleLocked]}>
+                        {unlocked ? t('index_challenge_label', { number: String(challenge.challengeNumber) }) : t('index_challenge_locked')}
+                      </Text>
+                      {isRecommended && (
+                        <View style={styles.recommendedBadge}>
+                          <Text style={styles.recommendedBadgeText}>{t('levels_recommended_badge')}</Text>
+                        </View>
+                      )}
+                    </View>
                     {unlocked && (
                       <View style={styles.challengeTimes}>
                         {bestTime
@@ -308,7 +467,14 @@ function LevelsScreen({
                       </View>
                     )}
                   </View>
-                  {isCompleted
+                  {PROGRESSION_V2 && unlocked ? (
+                    // Trois emplacements : bois (obtenue), vide (à gagner), trois dorées si le défi est à 3
+                    <View style={styles.challengeStars} accessible={false}>
+                      {getRatingVariants(stars).map((variant, n) => (
+                        <PineconeIcon key={n} size={24} variant={variant} opacity={variant === 'empty' ? 0.75 : 1} />
+                      ))}
+                    </View>
+                  ) : isCompleted
                     ? <Text style={styles.checkmark}>✓</Text>
                     : unlocked
                       ? <Text style={styles.challengeArrow}>→</Text>
@@ -554,11 +720,20 @@ export default function HomeScreen() {
   const { frameBottom, innerTop } = useFrameLayout();
   const player = usePlayerStore();
   const { authReady, isAuthenticated } = player;
+  // Déblocages des modes (Progression v2, C3) : dev = Ramoni/Cedric/planete, demo = planete.
+  const devAccess  = useFeatureAccess('dev');
+  const demoAccess = useFeatureAccess('demo');
 
   const [showSoloModal, setShowSoloModal] = useState(false);
   const [showLevels, setShowLevels]       = useState(false);
   const [showPremium, setShowPremium]     = useState(false);
   const { showBack, hideBack } = useNavStore();
+
+  // Cérémonies de fin de chapitre (Progression v2, C7) : jouées au retour sur l'accueil, jamais
+  // pendant une partie. Pas pendant l'écran des niveaux, la modale solo ou la carte premium.
+  const ceremony = useCeremonyPlayer(
+    authReady && isAuthenticated && !showLevels && !showSoloModal && !showPremium,
+  );
 
   // Synchronise le bouton Retour du ForestFrame avec l'écran niveaux
   useEffect(() => {
@@ -578,19 +753,33 @@ export default function HomeScreen() {
   }, []);
 
   // ── Prochain défi non complété ─────────────────────────────────────────────
+  // PROGRESSION_V2 : « prochain conseillé » (premier défi jamais gagné du niveau jouable le plus
+  // haut, sinon premier défi sans ⭐⭐⭐). Sinon : premier défi non complété dans l'ordre des niveaux.
   const nextChallenge = useMemo(() => {
-    for (const level of LEVELS) {
-      const list = ALL_CHALLENGES_BY_LEVEL[level.id] ?? [];
-      const next = list.find((c: any) => !player.completedChallenges.includes(c.id));
-      if (next) return { challenge: next, level };
+    if (PROGRESSION_V2) {
+      const rec = getNextRecommended(player.challengeStars);
+      if (rec) {
+        const level = LEVELS[rec.level - 1];
+        const challenge = (ALL_CHALLENGES_BY_LEVEL[level.id] ?? []).find((c: any) => c.id === rec.challengeId);
+        if (challenge) return { challenge, level };
+      }
+    } else {
+      for (const level of LEVELS) {
+        const list = ALL_CHALLENGES_BY_LEVEL[level.id] ?? [];
+        const next = list.find((c: any) => !player.completedChallenges.includes(c.id));
+        if (next) return { challenge: next, level };
+      }
     }
     const first = (ALL_CHALLENGES_BY_LEVEL[LEVELS[0].id] ?? [])[0];
     return first ? { challenge: first, level: LEVELS[0] } : null;
-  }, [player.completedChallenges]);
+  }, [player.completedChallenges, player.challengeStars]);
 
   const totalCompleted  = player.completedChallenges.length;
   const totalChallenges = ALL_CHALLENGES_FLAT.length;
-  const allCompleted    = totalCompleted >= totalChallenges;
+  // PROGRESSION_V2 : « tout terminé » = les 210 défis à ⭐⭐⭐ (plus aucun défi conseillé).
+  const allCompleted    = PROGRESSION_V2
+    ? getNextRecommended(player.challengeStars) === null
+    : totalCompleted >= totalChallenges;
 
   // Index initial du niveau (niveau courant du joueur)
   const initialLevelIndex = Math.min(Math.max(0, player.currentLevel - 1), LEVELS.length - 1);
@@ -602,14 +791,16 @@ export default function HomeScreen() {
   const isDailyToday  = dailyLastDate === todayStr;
   const dailyStreak   = player.dailyChallengeStreak;
 
-  // Record du jour : top 1 du leaderboard journalier
+  // Record du jour DE MA LIGUE : top 1 du classement de la ligue du joueur (Pousse / Grand Chêne).
+  // Avant l'ouverture du Journalier le joueur n'a pas de ligue : on lit la Pousse, la plus accessible.
+  const dailyLeague = getPlayerLeague(devAccess.dailyLeagues) ?? 'pousse';
   const [dailyLeader, setDailyLeader] = useState<DailyResult | null>(null);
   useEffect(() => {
-    const unsub = subscribeDailyLeaderboard(todayStr, 1, (results) => {
+    const unsub = subscribeDailyLeaderboard(todayStr, dailyLeague, 1, (results) => {
       setDailyLeader(results.length > 0 ? results[0] : null);
     });
     return () => unsub();
-  }, [todayStr]);
+  }, [todayStr, dailyLeague]);
 
   // ── Animations "émergence de brume" ─────────────────────────────────────
   // Chaque carte apparaît progressivement (opacity 0→1, scale 0.92→1)
@@ -659,8 +850,8 @@ export default function HomeScreen() {
 
       Animated.parallel([
         makeAppear(scaleSolo,   opaSolo,   0),
-        makeAppear(scaleDaily,  opaDaily,  180),
-        makeAppear(scaleOnf,    opaOnf,    360),
+        makeAppear(scaleOnf,    opaOnf,    180),
+        makeAppear(scaleDaily,  opaDaily,  360),
         makeAppear(scaleWidget, opaWidget, 540),
       ]).start();
     }, [authReady, isAuthenticated])
@@ -758,19 +949,82 @@ export default function HomeScreen() {
           />
         </Animated.View>
 
+        {/* ── Défi de la forêt — Planète Urgence 4×4 (avant le Journalier : il s'ouvre au chapitre 2, le Journalier au chapitre 3) ── */}
+        <Animated.View style={{ opacity: opaOnf, transform: [{ scale: scaleOnf }] }}>
+        {(() => {
+          // Le Forestier s'ouvre avec le palier Sentier (fin du chapitre 2) ; compte démo exempté.
+          const isOnfUnlocked = demoAccess.isOpen('onf_sentier');
+          const onfSolved = player.onfSolvedCount;
+          const cards     = getOwnedCardCount(player.collectedTreeCardIds);
+          const isFreePlayer = !player.isPremium && !isDemoAccount(player.username);
+          // Compteur d'un autre jour (app restée ouverte à minuit) : périmé, donc 0 grille jouée aujourd'hui
+          const onfPlayedToday = isLimitsOfDay(player, todayLocalISO()) ? player.onfDailyCount : 0;
+          const onfRecharges = isLimitsOfDay(player, todayLocalISO()) ? getAdViews(player.adViews, 'onf_recharge') : 0;
+          const onfRemaining = getOnfRemaining({ onfDailyCount: onfPlayedToday, exempt: false, onfRecharges });
+
+          // Sous-titre : pour les joueurs gratuits, affiche les parties restantes
+          let sublabelOnf: string;
+          if (isFreePlayer) {
+            if (onfRemaining === 0) {
+              sublabelOnf = t('onf_btn_remaining_none');
+            } else if (onfRemaining === 1) {
+              sublabelOnf = t('onf_btn_remaining_one', { remaining: String(onfRemaining) });
+            } else {
+              sublabelOnf = t('onf_btn_remaining_other', { remaining: String(onfRemaining) });
+            }
+          } else {
+            sublabelOnf = onfSolved === 0
+              ? t('onf_btn_first_win')
+              : cards === 1
+                ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
+                : cards > 1
+                  ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
+                  : t('onf_btn_stats_no_card', { count: String(onfSolved) });
+          }
+
+          if (!isOnfUnlocked) {
+            const lock = getLockMessageKey(demoAccess.lockHint('onf_sentier'));
+            return (
+              <WoodButton
+                variant="locked"
+                label={t('index_onf_btn')}
+                sublabel={t(lock.key, lock.vars)}
+                height={76}
+                onPress={() => {}}
+                disabled
+              />
+            );
+          }
+
+          return (
+            <WoodButton
+              variant="green"
+              label={t('index_onf_btn')}
+              sublabel={sublabelOnf}
+              height={76}
+              newBadge={hasNewBadge('onf', player.newFeatureBadges) ? t('ceremony_new_badge') : undefined}
+              onPress={() => {
+                player.clearNewFeatureBadge('onf');
+                router.push('/game/onf-lobby');
+              }}
+            />
+          );
+        })()}
+        </Animated.View>
+
         {/* ── Défi du Jour ── */}
         <Animated.View style={{ opacity: opaDaily, transform: [{ scale: scaleDaily }] }}>
         {(() => {
-          const DAILY_UNLOCK_LEVEL = 9;
-          const DEV_USERS = ['Ramoni', 'Cedric', 'planete'];
-          const dailyUnlocked = player.currentLevel >= DAILY_UNLOCK_LEVEL || DEV_USERS.includes(player.username ?? '');
+          // Le Journalier s'ouvre avec la ligue Pousse (fin du chapitre 3) ; comptes de développement exemptés.
+          const dailyUnlocked = devAccess.isOpen('daily_pousse');
 
           if (!dailyUnlocked) {
+            const lock = getLockMessageKey(devAccess.lockHint('daily_pousse'));
             return (
               <WoodButton
                 variant="locked"
                 label={t('index_daily_btn')}
-                sublabel={t('daily_locked', { level: String(DAILY_UNLOCK_LEVEL) })}
+                sublabel={t(lock.key, lock.vars)}
                 height={76}
                 onPress={() => {}}
                 disabled
@@ -789,7 +1043,12 @@ export default function HomeScreen() {
                   label={t('index_daily_btn')}
                   sublabel={dailySublabel}
                   height={76}
-                  onPress={() => router.push('/game/daily')}
+                  newBadge={hasNewBadge('daily', player.newFeatureBadges) ? t('ceremony_new_badge') : undefined}
+                  onPress={() => {
+                    // 1re partie dans ce mode : la pastille « Nouveau » disparaît
+                    player.clearNewFeatureBadge('daily');
+                    router.push('/game/daily');
+                  }}
                 />
               </Animated.View>
             );
@@ -825,7 +1084,7 @@ export default function HomeScreen() {
                   onPress={() => {}}
                   disabled
                 />
-                {player.username === 'Ramoni' && (
+                {isAdminAccount(player.username) && (
                   <TouchableOpacity
                     style={styles.dailyReplayBtn}
                     onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
@@ -851,7 +1110,7 @@ export default function HomeScreen() {
                 onPress={() => {}}
                 disabled
               />
-              {player.username === 'Ramoni' && (
+              {isAdminAccount(player.username) && (
                 <TouchableOpacity
                   style={styles.dailyReplayBtn}
                   onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
@@ -865,61 +1124,13 @@ export default function HomeScreen() {
         })()}
         </Animated.View>
 
-        {/* ── Défi de la forêt — Planète Urgence 4×4 ── */}
-        <Animated.View style={{ opacity: opaOnf, transform: [{ scale: scaleOnf }] }}>
-        {(() => {
-          // Débloqué par niveau OU par palier badge bois×9 (chantier 3) OU démo
-          const isOnfUnlocked = player.currentLevel >= ONF_4X4_LEVEL_UNLOCK || player.username === 'planete';
-          const onfSolved = player.onfSolvedCount;
-          const cards     = getUnlockedCardCount(onfSolved);
-          const ONF_DAILY_LIMIT = 3;
-          const isFreePlayer = !player.isPremium && player.username !== 'planete';
-          const onfRemaining = Math.max(0, ONF_DAILY_LIMIT - player.onfDailyCount);
-
-          // Sous-titre : pour les joueurs gratuits, affiche les parties restantes
-          let sublabelOnf: string;
-          if (isFreePlayer) {
-            if (onfRemaining === 0) {
-              sublabelOnf = t('onf_btn_remaining_none');
-            } else if (onfRemaining === 1) {
-              sublabelOnf = t('onf_btn_remaining_one', { remaining: String(onfRemaining) });
-            } else {
-              sublabelOnf = t('onf_btn_remaining_other', { remaining: String(onfRemaining) });
-            }
-          } else {
-            sublabelOnf = onfSolved === 0
-              ? t('onf_btn_first_win')
-              : cards === 1
-                ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
-                : cards > 1
-                  ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
-                  : t('onf_btn_stats_no_card', { count: String(onfSolved) });
-          }
-
-          if (!isOnfUnlocked) {
-            return (
-              <WoodButton
-                variant="locked"
-                label={t('index_onf_btn')}
-                sublabel={t('daily_locked', { level: String(ONF_4X4_LEVEL_UNLOCK) })}
-                height={76}
-                onPress={() => {}}
-                disabled
-              />
-            );
-          }
-
-          return (
-            <WoodButton
-              variant="green"
-              label={t('index_onf_btn')}
-              sublabel={sublabelOnf}
-              height={76}
-              onPress={() => router.push('/game/onf-lobby')}
-            />
-          );
-        })()}
-        </Animated.View>
+        {/* ── Herbier de la Forêt (Progression v2, C6) : accessible dès le chapitre 1 ──
+             Visible uniquement avec PROGRESSION_V2 : sans le drapeau, l'Herbier reste dans le lobby Forestier. */}
+        {PROGRESSION_V2 && (
+          <Animated.View style={{ opacity: opaDaily, transform: [{ scale: scaleDaily }] }}>
+            <HerbierEntry />
+          </Animated.View>
+        )}
 
         {/* ── Soutenir la forêt — masqué, intégré dans ForetCommuneWidget ── */}
         {/* {!player.isPremium && (
@@ -933,6 +1144,19 @@ export default function HomeScreen() {
         )} */}
 
       </ScrollView>
+
+      {/* ── Cérémonie de fin de chapitre (Progression v2, C7) ── */}
+      <CeremonyModal
+        visible={ceremony.visible}
+        chapterId={ceremony.chapterId}
+        language={player.language}
+        seedsBefore={ceremony.seedsBefore}
+        onClose={ceremony.onClose}
+        onTryNow={() => {
+          const destination = ceremony.onTryNow();
+          if (destination !== '/(tabs)/') router.push(destination as any);
+        }}
+      />
 
       {/* ── PremiumCard (overlay modal) ── */}
       <PremiumCard
@@ -1051,6 +1275,24 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
+  levelsHeaderStars: { fontSize: 13, fontWeight: '700', color: '#FFE082', marginTop: 2 },
+  chapterStrip: { flexDirection: 'row', justifyContent: 'center', gap: 6, flexWrap: 'wrap' },
+  chapterChip: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  chapterChipActive: { borderColor: '#FFC107', borderWidth: 2, backgroundColor: 'rgba(255,193,7,0.2)' },
+  chapterChipDone: { backgroundColor: 'rgba(76,175,80,0.28)', borderColor: 'rgba(139,195,74,0.7)' },
+  chapterChipLocked: { opacity: 0.45 },
+  chapterChipEmoji: { fontSize: 18 },
+  chapterHeader: {
+    alignItems: 'center', gap: 2, paddingVertical: 8, paddingHorizontal: 12,
+    backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 14,
+  },
+  chapterTitle: { fontSize: 15, fontWeight: '800', color: '#fff', textAlign: 'center' },
+  chapterSub: { fontSize: 12, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
   levelsContainer: { paddingHorizontal: 16, gap: 12 },
 
   // Navigateur de niveau
@@ -1116,4 +1358,16 @@ const styles = StyleSheet.create({
   challengeNew:     { fontSize: 10, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' },
   checkmark:        { fontSize: 16, color: Colors.forest.accent, fontWeight: '800', paddingLeft: 4 },
   challengeArrow:   { fontSize: 14, color: 'rgba(255,255,255,0.5)' },
+
+  // ── Progression v2 (Lot 2) : jauge d'étoiles, défi conseillé, étoiles par défi ──
+  starGaugeBlock: { width: '100%', gap: 2, marginTop: 4 },
+  starGaugeLabel: { color: '#FFE082', minWidth: 52 },
+  starGaugeHint:  { fontSize: 11, color: 'rgba(255,255,255,0.65)', textAlign: 'center', marginTop: 2 },
+  challengeCardRecommended: { borderColor: '#FFC107', borderWidth: 2, backgroundColor: 'rgba(60,50,10,0.88)' },
+  challengeTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  recommendedBadge: {
+    backgroundColor: '#FFC107', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2,
+  },
+  recommendedBadgeText: { fontSize: 10, fontWeight: '800', color: '#3E2F00', textTransform: 'uppercase', letterSpacing: 0.4 },
+  challengeStars:   { flexDirection: 'row', alignItems: 'center', gap: 2, paddingLeft: 6 },
 });

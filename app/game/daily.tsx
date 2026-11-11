@@ -38,19 +38,20 @@ import {
   generateDailyChallenge,
   getDailyFixedPlacements,
   getDailyDateString,
-  getDailyChallengeId,
   submitDailyResult as submitDailyResultFirestore,
   subscribeDailyLeaderboard,
   calculateDailyReward,
   DailyResult,
 } from '../../src/services/dailyChallengeService';
+import { DailyLeague, buildDailyChallengeKey, computeLeagueRank, getPlayerLeague } from '../../src/constants/dailyLeagues';
+import { useFeatureAccess } from '../../src/hooks/useFeatureAccess';
 import { awardBadgesFirestore } from '../../src/services/badgeService';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
-import { evaluateDailyBadges, DailyGameContext, TRACK_PERFORMANCE, TRACK_PERSEVERANCE, TRACK_EXPLORATION } from '../../src/core/engine/badgeEngine';
+import { awardEarnedTrophies } from '../../src/services/trophyService';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
@@ -59,9 +60,8 @@ import { DailyStreakRecordModal } from '../../src/components/Game/DailyStreakRec
 import { DailyRouletteModal } from '../../src/components/Game/DailyRouletteModal';
 import { Challenge, FixedPlacement, TokenCount } from '../../src/core/models/Challenge';
 import { notificationError } from '../../src/utils/haptics';
-import { getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
+import { getRankForLevel } from '../../src/constants/progression';
 import { recordVictory } from '../../src/services/metricsService';
-import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 import { useT } from '../../src/i18n';
 
 const native = Platform.OS !== 'web';
@@ -224,6 +224,10 @@ export default function DailyGameScreen() {
   const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
   const { borderW } = useFrameLayout();
+  // Ligue du joueur : la plus haute ouverte (Pousse fin ch.3, Grand Chêne fin ch.4) ; compte de
+  // développement : Grand Chêne. Même grille, mêmes cases fixées pour tous les joueurs de la ligue.
+  const dailyAccess = useFeatureAccess('dev');
+  const league: DailyLeague = getPlayerLeague(dailyAccess.dailyLeagues) ?? 'pousse';
   // -- Etat local --
   const [loading, setLoading] = useState(true);
   const [generationError, setGenerationError] = useState(false);
@@ -240,11 +244,6 @@ export default function DailyGameScreen() {
 
   const [rouletteVisible, setRouletteVisible]      = useState(false);
   const [streakRecordModal, setStreakRecordModal] = useState<{ newRecord: number; seeds: number } | null>(null);
-  const [rankUpVisible, setRankUpVisible]         = useState(false);
-  const [rankUpNewRank, setRankUpNewRank]          = useState(RANK_DEFINITIONS[0]);
-  const [rankUpPrevLabel, setRankUpPrevLabel]      = useState('');
-  const [rankUpSeeds, setRankUpSeeds]              = useState(0);
-  const [rankUpSeedsBefore, setRankUpSeedsBefore]  = useState(0);
 
   const badgesEvaluatedRef = useRef(false);
   // uid capturé à la victoire pour la détection record
@@ -267,8 +266,8 @@ export default function DailyGameScreen() {
       return;
     }
 
-    // Cle unique pour le daily d'aujourd'hui
-    const dailyKey = `daily_${dateStr}`;
+    // Cle unique pour le daily d'aujourd'hui, PAR LIGUE (deux grilles différentes le même jour)
+    const dailyKey = buildDailyChallengeKey(dateStr, league);
     const isResuming = status === 'in_progress';
 
     // Generer le defi journalier de facon asynchrone pour ne pas bloquer le thread JS
@@ -276,20 +275,15 @@ export default function DailyGameScreen() {
     let leaderboardUnsub: (() => void) | null = null;
 
     const runGeneration = () => {
-      const dailyChallenge = generateDailyChallenge(now);
+      const dailyChallenge = generateDailyChallenge(now, league);
       if (!dailyChallenge) {
         setGenerationError(true);
         setLoading(false);
         return;
       }
 
-      // Adapter les cases fixes au niveau du joueur
-      const playerLevel = player.currentLevel;
-      const { fixedPlacements, availableTokens } = getDailyFixedPlacements(
-        playerLevel,
-        dailyChallenge,
-        now
-      );
+      // Cases fixées de la LIGUE : identiques pour tous ses joueurs, indépendantes du niveau
+      const { fixedPlacements, availableTokens } = getDailyFixedPlacements(league, dailyChallenge);
 
       // Construire le challenge adapte
       const adaptedChallenge: Challenge = {
@@ -325,7 +319,8 @@ export default function DailyGameScreen() {
     const genTimeout = setTimeout(runGeneration, 16);
 
     // Ecouter le leaderboard
-    leaderboardUnsub = subscribeDailyLeaderboard(dateStr, 50, (results) => {
+    // Classement de MA ligue uniquement
+    leaderboardUnsub = subscribeDailyLeaderboard(dateStr, league, 50, (results) => {
       setLeaderboard(results);
     });
 
@@ -362,13 +357,13 @@ export default function DailyGameScreen() {
   }, []);
 
   const handleDailyAbandonConfirm = useCallback(() => {
-    const dailyKey = `daily_${dailyDate}`;
-    player.submitDailyResult(dailyDate, false);
+    const dailyKey = buildDailyChallengeKey(dailyDate, league);
+    player.submitDailyResult(dailyDate, false, undefined, league);
     player.markChallengeAbandoned(dailyKey);
     setShowDailyAbandonModal(false);
     game.resetGame();
     router.replace('/(tabs)');
-  }, [dailyDate, player, game, router]);
+  }, [dailyDate, league, player, game, router]);
 
   // -- BackHandler Android --
   useEffect(() => {
@@ -400,9 +395,9 @@ export default function DailyGameScreen() {
     // Echec du daily = pas de retry
     if (result.status === 'failure') {
       setDailyFailed(true);
-      player.submitDailyResult(dailyDate, false);
+      player.submitDailyResult(dailyDate, false, undefined, league);
     }
-  }, [game, dailyDate, player]);
+  }, [game, dailyDate, player, league]);
 
   // -- Victoire --
   useEffect(() => {
@@ -424,8 +419,8 @@ export default function DailyGameScreen() {
     const willBreakRecord = nextStreak > prevRecord;
 
     // 1b. Mettre a jour le store local (calcule et enregistre le nouveau record en interne)
-    player.submitDailyResult(dailyDate, true, game.elapsedTime);
-    player.markChallengeAbandoned(`daily_${dailyDate}`);
+    player.submitDailyResult(dailyDate, true, game.elapsedTime, league);
+    player.markChallengeAbandoned(buildDailyChallengeKey(dailyDate, league));
 
     // 2. Calculer les recompenses
     const uid = auth.currentUser?.uid;
@@ -439,17 +434,12 @@ export default function DailyGameScreen() {
     }
     const isAnonymous = auth.currentUser?.isAnonymous ?? true;
 
-    // Trouver le rang du joueur dans le leaderboard
-    let rank = leaderboard.length + 1; // Par defaut, dernier
-    if (uid) {
-      const existingIdx = leaderboard.findIndex(r => r.userId === uid);
-      if (existingIdx >= 0) {
-        rank = existingIdx + 1;
-      }
-    }
+    // Rang du joueur dans SA ligue (le classement ci-dessus ne contient que sa ligue) : un temps de la
+    // Pousse n'est jamais comparé à un temps du Grand Chêne.
+    const { rank, total: leagueTotal } = computeLeagueRank(leaderboard, uid, game.elapsedTime);
 
     const storeState = usePlayerStore.getState();
-    const reward = calculateDailyReward(rank, leaderboard.length + 1, storeState.dailyChallengeStreak);
+    const reward = calculateDailyReward(rank, leagueTotal, storeState.dailyChallengeStreak);
     // seedsBeforeGain a été capturé dans handleValidate (state React) — déjà disponible
     // dans VictoryModal dès son premier rendu.
     setSeedsEarned(reward.total);
@@ -461,80 +451,19 @@ export default function DailyGameScreen() {
       setStreakRecordModal({ newRecord: nextStreak, seeds: nextStreak });
     }
 
-    // 3. Evaluer les badges journaliers
-    // Capturer activeBadgeGoals AVANT recordDailyVictory (qui ne les modifie pas, mais par sécurité)
-    const activeGoalsBeforeDaily = storeState.activeBadgeGoals;
-    // Incrémenter les compteurs daily (parfait par définition : 1 seule validation)
+    // 3. Trophées (Progression v2, C8) : Rendez-vous, Série, Podium… — tout trophée atteint est décerné.
+    // Podium : le rang est celui DANS LA LIGUE, enregistré maintenant (le « top 10 % » dépend du nombre de
+    // participants du jour, on ne peut pas le recalculer ensuite). Une seule fois par victoire (1 partie / jour).
     player.recordDailyVictory(game.elapsedTime);
-    const stateAfterDailyRecord = usePlayerStore.getState();
-
-    const dailyCtx: DailyGameContext = {
-      dailyChallengeStreak: storeState.dailyChallengeStreak,
-      rank,
-      earnedBadges: storeState.earnedBadges,
-      dailyPerfectCount: stateAfterDailyRecord.stats.dailyPerfectCount,
-      dailySpeedCount:   stateAfterDailyRecord.stats.dailySpeedCount,
-      activeBadgeGoals:  storeState.activeBadgeGoals,
-      goalCounters:      storeState.goalCounters,
-    };
-
-    // Capture du score AVANT attribution des badges
-    // storeState est post-submitDailyResult : dailyWon inclut déjà ce défi
-    const activityStatsBefore: PlayerActivityStats = {
-      soloCompleted:   storeState.completedChallenges.length,
-      friendCompleted: storeState.stats.friendPlayed,
-      onfCompleted:    storeState.onfSolvedCount,
-      dailyCompleted:  storeState.stats.dailyWon,
-    };
-    const scoreBeforeBadges = getPlayerScore(storeState.earnedBadges, activityStatsBefore);
-    const rankBefore = getRank(scoreBeforeBadges);
-
-    const newBadges = evaluateDailyBadges(dailyCtx);
-    if (newBadges.length > 0) {
-      player.awardBadges(newBadges);
-      setBadgeQueue(newBadges);
-    }
-
-    // ── Détection changement de rang ──────────────────────────────────────────
-    const stateAfterBadges = usePlayerStore.getState();
-    const activityStatsAfter: PlayerActivityStats = {
-      soloCompleted:   stateAfterBadges.completedChallenges.length,
-      friendCompleted: stateAfterBadges.stats.friendPlayed,
-      onfCompleted:    stateAfterBadges.onfSolvedCount,
-      dailyCompleted:  stateAfterBadges.stats.dailyWon,
-    };
-    const scoreAfterBadges = getPlayerScore(stateAfterBadges.earnedBadges, activityStatsAfter);
-    const rankAfter = getRank(scoreAfterBadges);
-    if (rankAfter.id !== rankBefore.id) {
-      const rankSeeds = RANK_SEED_REWARDS[rankAfter.id] ?? 0;
-      if (rankSeeds > 0) {
-        setRankUpSeedsBefore(usePlayerStore.getState().seeds);
-        player.addSeeds(rankSeeds);
-      }
-      const lang = usePlayerStore.getState().language;
-      setRankUpPrevLabel(lang === 'en' ? rankBefore.labelEn : rankBefore.label);
-      setRankUpNewRank(rankAfter);
-      setRankUpSeeds(rankSeeds);
-      setTimeout(() => setRankUpVisible(true), 1800);
-    }
-
-    // Auto-avance des objectifs par track
-    const allEarnedNowDaily = usePlayerStore.getState().earnedBadges;
-    const completedGoalIdsDaily = activeGoalsBeforeDaily.filter(id => allEarnedNowDaily.includes(id));
-    if (completedGoalIdsDaily.length > 0) {
-      player.advanceTrackGoals(completedGoalIdsDaily, allEarnedNowDaily);
-    }
+    player.recordDailyPodium(rank, leagueTotal);
+    const newBadges = awardEarnedTrophies();
+    if (newBadges.length > 0) setBadgeQueue(newBadges);
 
     // 4. Soumission Firestore en arriere-plan
     if (uid && !isAnonymous) {
       // ── Métriques de rétention ─────────────────────────────────────────────
       const stateForMetrics = usePlayerStore.getState();
-      const rankForMetrics = getRank(getPlayerScore(stateForMetrics.earnedBadges, {
-        soloCompleted:   stateForMetrics.completedChallenges.length,
-        friendCompleted: stateForMetrics.stats.friendPlayed,
-        onfCompleted:    stateForMetrics.onfSolvedCount,
-        dailyCompleted:  stateForMetrics.stats.dailyWon,
-      }));
+      const rankForMetrics = { label: getRankForLevel(stateForMetrics.currentLevel).labelFr };
       recordVictory(
         uid,
         'daily',
@@ -549,6 +478,7 @@ export default function DailyGameScreen() {
 
       submitDailyResultFirestore(
         dailyDate,
+        league,
         uid,
         username,
         game.elapsedTime,
@@ -755,15 +685,6 @@ export default function DailyGameScreen() {
           onClose={() => setStreakRecordModal(null)}
         />
 
-        {/* Modal changement de rang */}
-        <RankUpModal
-          visible={rankUpVisible}
-          newRank={rankUpNewRank}
-          previousRankLabel={rankUpPrevLabel}
-          seedsAwarded={rankUpSeeds}
-          seedsBeforeGain={rankUpSeedsBefore}
-          onClose={() => setRankUpVisible(false)}
-        />
 
         {/* Roulette journalière */}
         <DailyRouletteModal
@@ -782,6 +703,7 @@ export default function DailyGameScreen() {
       {challenge && !briefingDone && (
         <DailyBriefingModal
           challenge={challenge}
+          league={league}
           onClose={handleBriefingClose}
         />
       )}

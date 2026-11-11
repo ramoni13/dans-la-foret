@@ -20,8 +20,6 @@ interface NavState {
   pendingFriendChallenges: number;
   setPendingFriendChallenges: (count: number) => void;
   /** Nombre de slots d'objectif badge libres (0–3) — alimente le badge rouge sur l'onglet Profil */
-  goalSlotsToFill: number;
-  setGoalSlotsToFill: (count: number) => void;
 }
 
 export const useNavStore = create<NavState>((set) => ({
@@ -31,6 +29,4 @@ export const useNavStore = create<NavState>((set) => ({
   hideBack: () => set({ onBack: null, backLabel: null }),
   pendingFriendChallenges: 0,
   setPendingFriendChallenges: (count) => set({ pendingFriendChallenges: count }),
-  goalSlotsToFill: 0,
-  setGoalSlotsToFill: (count) => set({ goalSlotsToFill: count }),
 }));

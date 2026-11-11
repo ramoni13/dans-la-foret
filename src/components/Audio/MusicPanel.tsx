@@ -16,15 +16,16 @@ import {
   Switch,
   TouchableOpacity,
   Platform,
-  Alert,
 } from 'react-native';
 import { AudioPlayer } from 'expo-audio';
 
 import { Colors } from '../../constants/colors';
 import { useAudioStore } from '../../store/audioStore';
+import { showAlert } from '../../store/dialogStore';
 import { usePlayerStore, VisualEffect } from '../../store/playerStore';
 import { MUSIC_CATALOG, MusicTrack } from '../../constants/music';
-import { BADGE_MAP } from '../../constants/badges';
+import { BADGE_MAP, getTrophyTexts } from '../../constants/badges';
+import { getChapter } from '../../constants/progression';
 import { audioService } from '../../services/audioService';
 import { useT } from '../../i18n';
 import { auth } from '../../services/firebase';
@@ -306,12 +307,37 @@ export function MusicPanel() {
     }
   };
 
-  // ── Info de déblocage par badge spécifique ───────────────
-  /** Retourne la définition du badge requis pour débloquer un titre */
-  const getUnlockBadgeDef = (unlockBadgeId: string) => BADGE_MAP[unlockBadgeId] ?? null;
+  // ── Condition de déblocage d'un titre (Progression v2, C8 / D11) ─────────────
+  // Un titre est débloqué par la fin d'un chapitre, ou par un trophée précis (palier « pierre » de 5 séries).
+  /** true si le joueur remplit déjà la condition du titre (chapitre terminé ou trophée obtenu). */
+  const isUnlockMet = (track: MusicTrack): boolean => {
+    const u = track.unlock;
+    if (!u) return true;
+    if (u.type === 'chapter') return player.levelsCompleted >= u.chapter * 3;
+    if (u.type === 'trophy') return player.earnedBadges.includes(u.id);
+    return false; // « graines » : prévu pour plus tard, jamais rempli tout seul
+  };
 
-  /** true si le joueur possède déjà ce badge */
-  const hasBadge = (badgeId: string) => player.earnedBadges.includes(badgeId);
+  /** Libellé de la condition : « Fin du chapitre N » ou « Trophée : … ». */
+  const describeUnlock = (track: MusicTrack): { emoji: string; label: string; detail?: string } | null => {
+    const u = track.unlock;
+    if (!u) return null;
+    if (u.type === 'chapter') {
+      const chapter = getChapter(u.chapter);
+      return {
+        emoji: chapter?.emoji ?? '🔒',
+        label: t('music_unlock_chapter', { chapter: String(u.chapter) }),
+        detail: chapter ? t(chapter.nameKey) : undefined,
+      };
+    }
+    if (u.type === 'trophy') {
+      const def = BADGE_MAP[u.id];
+      if (!def) return null;
+      const texts = getTrophyTexts(def, player.language, t);
+      return { emoji: def.emoji, label: t('music_unlock_trophy', { trophy: texts.label }), detail: texts.description };
+    }
+    return { emoji: '🌱', label: t('music_unlock_seeds', { cost: String(u.cost) }) };
+  };
 
   // ── Volume — slider simplifié via 5 boutons ───────────────
   const VOLUMES = [0, 0.25, 0.5, 0.75, 1.0];
@@ -408,7 +434,7 @@ export function MusicPanel() {
         style={styles.resetTutorialsBtn}
         onPress={() => {
           player.resetBonusTutorials();
-          Alert.alert('', t('settings_reset_tutorials_done'));
+          showAlert({ icon: '💡', message: t('settings_reset_tutorials_done') });
         }}
         activeOpacity={0.7}
       >
@@ -422,8 +448,8 @@ export function MusicPanel() {
           <View style={styles.divider} />
           <Text style={styles.unlockTitle}>{t('music_locked_section')}</Text>
           {lockedTracks.map(track => {
-            const badgeDef = track.unlockBadgeId ? getUnlockBadgeDef(track.unlockBadgeId) : null;
-            const alreadyHas = track.unlockBadgeId ? hasBadge(track.unlockBadgeId) : false;
+            const requirement = describeUnlock(track);
+            const alreadyHas = isUnlockMet(track);
             return (
               <View key={track.id} style={styles.lockedTrack}>
                 {/* En-tête : titre + type */}
@@ -437,23 +463,23 @@ export function MusicPanel() {
                   )}
                 </View>
 
-                {/* Badge requis */}
-                {badgeDef && (
+                {/* Condition de déblocage : fin de chapitre ou trophée */}
+                {requirement && (
                   <View style={[
                     styles.badgeRequirementRow,
                     alreadyHas && styles.badgeRequirementRowDone,
                   ]}>
-                    <Text style={styles.badgeRequirementEmoji}>{badgeDef.emoji}</Text>
+                    <Text style={styles.badgeRequirementEmoji}>{requirement.emoji}</Text>
                     <View style={styles.badgeRequirementTextBlock}>
                       <Text style={[
                         styles.badgeRequirementLabel,
                         alreadyHas && styles.badgeRequirementLabelDone,
                       ]}>
-                        {alreadyHas ? t('music_badge_earned') : t('music_badge_required', { badge: badgeDef.label })}
+                        {alreadyHas ? t('music_badge_earned') : requirement.label}
                       </Text>
-                      {!alreadyHas && (
+                      {!alreadyHas && !!requirement.detail && (
                         <Text style={styles.badgeRequirementDesc} numberOfLines={2}>
-                          {badgeDef.description}
+                          {requirement.detail}
                         </Text>
                       )}
                     </View>

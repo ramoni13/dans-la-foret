@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 
-import { BadgeDefinition, BadgeRarity, getBadgeTexts } from '../../constants/badges';
+import { BadgeDefinition, BadgeRarity, getTrophyTexts } from '../../constants/badges';
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
@@ -62,7 +62,7 @@ export const BadgeCard: React.FC<BadgeCardProps> = ({
 }) => {
   const t = useT();
   const language = usePlayerStore(s => s.language);
-  const texts = getBadgeTexts(badge, language);
+  const texts = getTrophyTexts(badge, language, t);
   const displayLabel = label ?? texts.label;
   const scaleAnim = useRef(new Animated.Value(animateOnMount ? 0 : 1)).current;
   const glowAnim  = useRef(new Animated.Value(0)).current;

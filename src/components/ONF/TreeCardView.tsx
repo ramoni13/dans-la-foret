@@ -60,7 +60,6 @@ const C = {
   anecBorder:  '#A8D4A8',
   gold:        '#C9A84C',
   mutedText:   '#9E8E78',
-  footerText:  '#6B8C6B',
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -175,6 +174,9 @@ export function TreeCardView({
   const isMini = w < 200;
   const s      = h / REF_H; // facteur d'échelle
 
+  const frontBorder = Math.round(3 * s);
+  const imageAreaW = w - frontBorder * 2;
+  const imageAreaH = h - frontBorder * 2;
   const progress = useSharedValue(startFlipped ? 1 : 0);
 
   const flip = useCallback(() => {
@@ -199,14 +201,24 @@ export function TreeCardView({
 
   // ── Recto ─────────────────────────────────────────────────────────────────
   const recto = (
-    <Animated.View style={[styles.card, cardSz, { borderRadius: r, borderWidth: Math.round(3 * s), borderColor: C.frameBorder }, frontAnim]}>
+    <Animated.View style={[styles.card, cardSz, { borderRadius: r, borderWidth: frontBorder, borderColor: C.frameBorder }, frontAnim]}>
 
       {/* Fond vert foncé (toujours visible derrière l'image) */}
       <View style={[StyleSheet.absoluteFill, { backgroundColor: C.frontBg }]} />
 
-      {/* Image plein format — cover centré sur toute la carte */}
+      {/* Image centrée, recadrée pour remplir la carte sans déformation. */}
       {image ? (
-        <Image source={image} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <Image
+          source={image}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: imageAreaW,
+            height: imageAreaH,
+          }}
+          resizeMode="cover"
+        />
       ) : (
         <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
           <Text style={{ fontSize: Math.round(64 * s) }}>🌳</Text>
@@ -215,7 +227,7 @@ export function TreeCardView({
 
       {/* Dégradé bas — une seule couche dense en bas */}
       <View style={[StyleSheet.absoluteFill, {
-        bottom: 0, top: '80%',
+        bottom: 0, top: '84%',
         backgroundColor: 'rgba(8,24,8,0.78)',
         borderBottomLeftRadius: r - 2, borderBottomRightRadius: r - 2,
       }]} />
@@ -256,21 +268,7 @@ export function TreeCardView({
       </View>
 
       {/* Zone texte bas — sur le dégradé, pas de fond opaque supplémentaire */}
-      <View style={[styles.frontBottom, { paddingHorizontal: Math.round(14 * s), paddingBottom: Math.round(14 * s), paddingTop: Math.round(8 * s) }]}>
-        {/* Pill type image */}
-        {!isMini && (
-          <View style={[styles.typePill, {
-            borderRadius: Math.round(4 * s),
-            paddingHorizontal: Math.round(7 * s),
-            paddingVertical: Math.round(2 * s),
-            marginBottom: Math.round(6 * s),
-            alignSelf: 'flex-start',
-          }]}>
-            <Text style={[styles.typePillText, { fontSize: Math.round(9 * s), letterSpacing: Math.round(0.8 * s) }]}>
-              {tree.image_type === 'fruit' ? t('card_image_fruit') : tree.image_type === 'feuille' ? t('card_image_leaf') : t('card_image_photo')}
-            </Text>
-          </View>
-        )}
+      <View style={[styles.frontBottom, { paddingHorizontal: Math.round(14 * s), paddingBottom: Math.round(10 * s), paddingTop: Math.round(6 * s) }]}>
         <Text style={[styles.frontName, { fontSize: Math.round((isMini ? 11 : 19) * s), lineHeight: Math.round((isMini ? 14 : 24) * s) }]} numberOfLines={2}>
           {treeName}
         </Text>
@@ -332,10 +330,10 @@ export function TreeCardView({
 
       {/* Géolocalisation */}
       <View style={[styles.geoBlock, { borderRadius: Math.round(8 * s), padding: Math.round(10 * s), marginBottom: Math.round(10 * s) }]}>
-        <Text style={[styles.geoLabel, { fontSize: Math.round((isMini ? 7 : 10) * s), marginBottom: Math.round(3 * s) }]}>
+        <Text style={[styles.geoLabel, { fontSize: Math.round((isMini ? 7 : 11) * s), marginBottom: Math.round(3 * s) }]}>
           {t('card_geo_label')}
         </Text>
-        <Text style={[styles.geoText, { fontSize: Math.round((isMini ? 9 : 13) * s), lineHeight: Math.round(18 * s) }]} numberOfLines={isMini ? 2 : 4}>
+        <Text style={[styles.geoText, { fontSize: Math.round((isMini ? 9 : 14) * s), lineHeight: Math.round(19 * s) }]} numberOfLines={isMini ? 2 : 4}>
           {'📍 '}{treeGeo}
         </Text>
       </View>
@@ -343,26 +341,32 @@ export function TreeCardView({
       {/* Anecdote — prend tout l'espace restant */}
       {!isMini && (
         <View style={[styles.anecBlock, { borderRadius: Math.round(8 * s), padding: Math.round(12 * s), marginBottom: Math.round(10 * s) }]}>
-          <Text style={[styles.anecLabel, { fontSize: Math.round(10 * s), marginBottom: Math.round(6 * s) }]}>
+          <Text style={[styles.anecLabel, { fontSize: Math.round(11 * s), marginBottom: Math.round(6 * s) }]}>
             {t('card_anec_label')}
           </Text>
-          <Text style={[styles.anecText, { fontSize: Math.round(14 * s), lineHeight: Math.round(21 * s) }]}>
+          <Text style={[styles.anecText, { fontSize: Math.round(15 * s), lineHeight: Math.round(22 * s) }]}>
             {treeAnec}
           </Text>
         </View>
       )}
 
-      {/* Footer ONF */}
-      <View style={styles.backFooter}>
-        <Text style={[styles.onfLabel, { fontSize: Math.round((isMini ? 7 : 10) * s) }]}>
-          {t('card_onf_credit')}
-        </Text>
-        <View style={[styles.imageTypePill, { borderRadius: Math.round(10 * s), paddingHorizontal: Math.round(7 * s), paddingVertical: Math.round(2 * s) }]}>
-          <Text style={[styles.imageTypeText, { fontSize: Math.round((isMini ? 7 : 9) * s) }]}>
-            {tree.image_type === 'fruit' ? t('card_image_fruit_short') : tree.image_type === 'feuille' ? t('card_image_leaf_short') : t('card_image_photo_short')}
-          </Text>
+      {(tree.photographer || tree.license) && (
+        <View style={[styles.creditsBlock, { marginBottom: Math.round(6 * s) }]}>
+          {tree.photographer && (
+            <Text style={[styles.creditText, { fontSize: Math.round((isMini ? 7 : 9) * s) }]}>
+              <Text style={styles.creditLabel}>{t('card_photographer_label')} </Text>
+              {tree.photographer}
+            </Text>
+          )}
+          {tree.license && (
+            <Text style={[styles.creditText, { fontSize: Math.round((isMini ? 7 : 9) * s) }]}>
+              <Text style={styles.creditLabel}>{t('card_license_label')} </Text>
+              {tree.license}
+            </Text>
+          )}
         </View>
-      </View>
+      )}
+
     </Animated.View>
   ) : null;
 
@@ -407,16 +411,6 @@ const styles = StyleSheet.create({
     left:     0,
     right:    0,
     bottom:   0,
-  },
-  typePill: {
-    backgroundColor: 'rgba(201,168,76,0.22)',
-    borderWidth:     1,
-    borderColor:     'rgba(201,168,76,0.55)',
-  },
-  typePillText: {
-    color:         C.frameBorder,
-    fontWeight:    '700',
-    textTransform: 'uppercase',
   },
   frontName: {
     color:      '#FFFFFF',
@@ -511,22 +505,14 @@ const styles = StyleSheet.create({
     color:      C.anecText,
     fontWeight: '500',
   },
-  backFooter: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-    marginTop:      'auto',
-    paddingTop:     6,
+  creditsBlock: {
+    gap: 2,
   },
-  onfLabel: {
-    color:      C.footerText,
-    fontWeight: '600',
+  creditText: {
+    color: C.mutedText,
   },
-  imageTypePill: {
-    backgroundColor: 'rgba(45,106,45,0.12)',
-  },
-  imageTypeText: {
-    color:      C.midGreen,
-    fontWeight: '600',
+  creditLabel: {
+    color: C.darkGreen,
+    fontWeight: '700',
   },
 });

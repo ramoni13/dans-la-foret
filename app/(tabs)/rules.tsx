@@ -21,6 +21,13 @@ import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { usePlayerStore } from '../../src/store/playerStore';
+import { isDemoAccount } from '../../src/constants/devAccess';
+import { AD_DAILY_CAPS, ONF_AD_RECHARGE_GRIDS } from '../../src/constants/adRewards';
+import { FEATURE_UNLOCK_CHAPTER, ProgressionFeature } from '../../src/constants/progression';
+import { ONF_TIER_ORDER, OnfTier } from '../../src/constants/onfTiers';
+import { ONF_CARD_UNLOCK_EVERY } from '../../src/constants/onf';
+import { calculateOnfReward, getOnfChallengeCount } from '../../src/services/onfChallengeService';
+import { BONUS_USES_PER_DAY, FRIEND_TOKENS_PER_DAY, ONF_DAILY_LIMIT } from '../../src/constants/dailyLimits';
 import { ElementRegistry } from '../../src/elements/ElementRegistry';
 import { useT } from '../../src/i18n';
 import { LEVEL_META, RuleCard as RuleCardData } from '../../src/data/levelMeta';
@@ -61,13 +68,12 @@ for (let lvl = 1; lvl <= 21; lvl++) {
   }
 }
 
-// ── Types de défis ─────────────────────────────────────────────────────────
-interface ChallengeTypeEntry {
-  icon: string;
-  titleKey: string;
-  color: string;
-  content: React.ReactNode;
-}
+// ── Palier du Défi de la forêt → fonctionnalité qui l'ouvre (le chapitre est lu dans CHAPTERS) ──
+const ONF_TIER_FEATURE: Record<OnfTier, ProgressionFeature> = {
+  sentier: 'onf_sentier',
+  clairiere: 'onf_clairiere',
+  profonde: 'onf_profonde',
+};
 
 // ── Sous-composant : carte d'un type de défi ───────────────────────────────
 function ChallengeCard({ icon, titleKey, color, children }: {
@@ -139,6 +145,23 @@ function ChallengesTab({ frameBottom, innerPadH }: { frameBottom: number; innerP
       contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}
       showsVerticalScrollIndicator={false}
     >
+      {/* ── Gratuit, Premium et vidéos : tout est expliqué ici ── */}
+      <ChallengeCard icon="🌳" titleKey="challenges_plans_title" color="#00695C">
+        <BulletItem text={t('challenges_plans_all')} />
+        <BulletItem text={t('challenges_plans_free', {
+          onf: String(ONF_DAILY_LIMIT),
+          tokens: String(FRIEND_TOKENS_PER_DAY),
+          bonus: String(BONUS_USES_PER_DAY),
+        })} />
+        <BulletItem text={t('challenges_plans_premium')} />
+        <BulletItem text={t('challenges_plans_bonus')} />
+        <BulletItem text={t('challenges_plans_videos', {
+          videos: String(AD_DAILY_CAPS.foret_commune),
+          bonusVideos: String(AD_DAILY_CAPS.bonus_reveal_cell),
+          onfGrids: String(ONF_AD_RECHARGE_GRIDS),
+        })} />
+      </ChallengeCard>
+
       {/* ── Défis solos ── */}
       <ChallengeCard icon="🏆" titleKey="challenges_solo_title" color="#2E7D32">
         <BulletItem text={t('challenges_solo_desc1')} />
@@ -185,9 +208,31 @@ function ChallengesTab({ frameBottom, innerPadH }: { frameBottom: number; innerP
         <Text style={challengeStyles.paraText}>{t('challenges_friends_desc')}</Text>
       </ChallengeCard>
 
-      {/* ── Mode ONF ── */}
+      {/* ── Défi de la forêt : règle, 3 paliers (déblocage, contenu), fonctionnement, récompenses ── */}
       <ChallengeCard icon="🌲" titleKey="challenges_onf_title" color="#6A1B9A">
         <Text style={challengeStyles.paraText}>{t('challenges_onf_desc')}</Text>
+
+        <View style={challengeStyles.bonusSectionSep} />
+        <Text style={challengeStyles.bonusSectionLabel}>{t('challenges_onf_tiers_label')}</Text>
+        {ONF_TIER_ORDER.map(tier => (
+          <BulletItem
+            key={tier}
+            text={t(`challenges_onf_tier_${tier}`, {
+              chapter: String(FEATURE_UNLOCK_CHAPTER[ONF_TIER_FEATURE[tier]]),
+              count: String(getOnfChallengeCount([tier])),
+            })}
+          />
+        ))}
+
+        <View style={challengeStyles.bonusSectionSep} />
+        <Text style={challengeStyles.paraText}>{t('challenges_onf_how')}</Text>
+        <Text style={challengeStyles.paraText}>
+          {t('challenges_onf_rewards', {
+            base: String(calculateOnfReward(Infinity)),
+            bonus: String(calculateOnfReward(0) - calculateOnfReward(Infinity)),
+            every: String(ONF_CARD_UNLOCK_EVERY),
+          })}
+        </Text>
       </ChallengeCard>
     </ScrollView>
   );
@@ -204,7 +249,7 @@ export default function RulesScreen() {
   const ruleCardWidth = width - innerPadH * 2 - 32;
 
   const [activeTab, setActiveTab] = useState<'inhabitants' | 'challenges'>('inhabitants');
-  const isDemoUser = player.username === 'planete';
+  const isDemoUser = isDemoAccount(player.username);
 
   return (
     <View style={styles.root}>

@@ -15,7 +15,7 @@ import {
   ScrollView,
 } from 'react-native';
 
-import { BadgeDefinition, BadgeRarity, getBadgeTexts } from '../../constants/badges';
+import { BadgeDefinition, BadgeRarity, getTrophyTexts } from '../../constants/badges';
 import { MusicTrack } from '../../constants/music';
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
@@ -56,16 +56,16 @@ const RARITY_KEYS: Record<BadgeRarity, string> = {
   cristal: 'rarity_cristal',
 };
 
-// Clés i18n pour les catégories
+// Clés i18n pour les familles de trophées (Progression v2, C8)
 const CATEGORY_KEYS: Record<string, string> = {
-  vitesse:      'cat_vitesse',
-  precision:    'cat_precision',
-  regularite:   'cat_regularite',
-  social:       'cat_social',
-  amelioration: 'cat_amelioration',
-  exploration:  'cat_exploration',
-  secret:       'cat_secret',
-  saisonnier:   'cat_saisonnier',
+  solo:     'trophy_family_solo',
+  daily:    'trophy_family_daily',
+  onf:      'trophy_family_onf',
+  duel:     'trophy_family_duel',
+  herbier:  'trophy_family_herbier',
+  fidelite: 'trophy_family_fidelite',
+  surprise: 'trophy_family_surprise',
+  final:    'trophy_family_final',
 };
 
 export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
@@ -110,7 +110,7 @@ export const BadgeDetailModal: React.FC<BadgeDetailModalProps> = ({
   const isSecret    = badge.isSecret && !earned;
   const rarityColor = RARITY_COLORS[badge.rarity];
   const bgColor     = earned ? RARITY_BG[badge.rarity] : Colors.badges.pierreBg;
-  const texts       = getBadgeTexts(badge, language);
+  const texts       = getTrophyTexts(badge, language, t);
 
   const handleClose = () => {
     Animated.parallel([

@@ -9,9 +9,11 @@
 //   est affiché dans la modale.
 //
 // Recharge via pub (mode free uniquement) :
-// - Quand TOUS les bonus sont épuisés ET que watchAdAvailable=true,
-//   chaque bouton épuisé affiche une icône clap 🎬 (fond grisé mais cliquable).
-// - Un clic ouvre WatchAdModal → visionnage simulé → recharge complète.
+// - CHAQUE bonus épuisé propose SA pub (icône clap 🎬, fond violet pointillé) dès qu'il atteint 0,
+//   sans attendre l'autre : la pub ne recharge que CE bonus (retour à 3 utilisations).
+// - `adRemaining(bonusId)` > 0 : plafond quotidien de recharges de ce bonus non atteint.
+// - Un clic appelle `onWatchAd(bonusId)` ; l'écran montre la pub (service `rewardedAdService`) puis crédite.
+// Premium : bonus illimités, aucune pub.
 // ============================================================
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -29,7 +31,6 @@ import { BonusId, BONUS_DEFINITIONS, BASE_BONUS_IDS } from '../../constants/bonu
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
-import { WatchAdModal } from './WatchAdModal';
 
 const native = Platform.OS !== 'web';
 
@@ -55,13 +56,12 @@ interface HintOverlayProps {
   /** Le mode révélation est actif (en attente de sélection d'une case) */
   revealActive?: boolean;
   /**
-   * Mode free : la recharge via pub est disponible (1 fois/jour).
-   * true  = afficher l'icône clap sur les bonus épuisés.
-   * false = déjà utilisé aujourd'hui, ne pas afficher.
+   * Mode free : recharges par pub encore possibles aujourd'hui pour CHAQUE bonus (plafond quotidien par bonus).
+   * Un bonus absent ou à 0 n'affiche pas l'icône clap.
    */
-  watchAdAvailable?: boolean;
-  /** Appelé après confirmation du visionnage de pub → déclenche le rechargement. */
-  onWatchAd?: () => void;
+  adRemaining?: Partial<Record<BonusId, number>>;
+  /** Appelé au clic sur l'icône clap d'un bonus épuisé : l'écran montre la pub puis recharge CE bonus. */
+  onWatchAd?: (bonusId: BonusId) => void;
 }
 
 // ── Composant countdown pulsant pour un seul bouton ──────────
@@ -220,7 +220,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
   hasPlacedElements = false,
   rightSlot,
   revealActive = false,
-  watchAdAvailable = false,
+  adRemaining,
   onWatchAd,
 }) => {
   const t = useT();
@@ -228,8 +228,12 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
   // Modale d'explication ouverte
   const [explainBonusId, setExplainBonusId] = useState<BonusId | null>(null);
 
-  // Modale pub
-  const [watchAdVisible, setWatchAdVisible] = useState(false);
+  /** Pub proposable pour CE bonus : épuisé (free), non désactivé, plafond du jour non atteint. */
+  const canWatchAdFor = (bonusId: BonusId): boolean =>
+    !isPremium &&
+    !bonusDisabled &&
+    (dailyBonusUses?.[bonusId] ?? 1) <= 0 &&
+    (adRemaining?.[bonusId] ?? 0) > 0;
 
   const getDeadline = (bonusId: BonusId): number | null => {
     if (bonusId === 'reveal_cell') return highlightDeadline;
@@ -252,21 +256,6 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
     return true;
   };
 
-  /** true si TOUS les bonus du joueur (free) sont à 0 */
-  const allBonusesExhausted = !isPremium && BASE_BONUS_IDS.every(
-    id => (dailyBonusUses?.[id] ?? 0) <= 0
-  );
-
-  /** Clic sur l'icône clap d'un bonus épuisé → popup pub */
-  const handleWatchAdPress = () => {
-    setWatchAdVisible(true);
-  };
-
-  const handleWatchAdConfirm = () => {
-    onWatchAd?.();
-    setWatchAdVisible(false);
-  };
-
   const handleBonus = (bonusId: BonusId) => {
     if (isCooldown(bonusId)) return;
 
@@ -278,9 +267,9 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
     if (!isPremium && dailyBonusUses) {
       const remaining = dailyBonusUses[bonusId] ?? 0;
       if (remaining <= 0) {
-        // Si la pub est disponible, on ouvre la popup pub au lieu de la modale bonus
-        if (watchAdAvailable && allBonusesExhausted) {
-          handleWatchAdPress();
+        // Bonus épuisé : si une pub est proposable POUR CE BONUS, on la lance au lieu de la modale d'explication
+        if (canWatchAdFor(bonusId)) {
+          onWatchAd?.(bonusId);
           return;
         }
         setExplainBonusId(bonusId);
@@ -349,12 +338,8 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
             ? '\u221e'
             : `${remainingUses}/${def.dailyLimit}`;
 
-          // Afficher l'icône clap si bonus épuisé + pub disponible + pas désactivé par bonusDisabled
-          const showWatchAdClap =
-            exhausted &&
-            !bonusDisabled &&
-            watchAdAvailable &&
-            allBonusesExhausted;
+          // Icône clap : CE bonus est épuisé et sa pub est proposable (indépendant de l'autre bonus)
+          const showWatchAdClap = exhausted && canWatchAdFor(bonusId);
 
           return (
             <View key={def.id} style={styles.bonusBtnWrapper}>
@@ -408,14 +393,6 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
           onActivate={handleModalActivate}
         />
       )}
-
-      {/* Modale pub (recharge des bonus) */}
-      <WatchAdModal
-        visible={watchAdVisible}
-        alreadyUsed={!watchAdAvailable}
-        onConfirm={handleWatchAdConfirm}
-        onDismiss={() => setWatchAdVisible(false)}
-      />
     </View>
   );
 };

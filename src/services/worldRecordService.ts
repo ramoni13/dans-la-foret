@@ -12,14 +12,11 @@ import {
   runTransaction,
   serverTimestamp,
   collection,
-  query,
-  orderBy,
-  limit,
-  getDocs,
   onSnapshot,
   Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { RecordHolderEntry, WorldRecordLite, rankRecordHolders } from '../constants/leaderboardRank';
 
 export interface WorldRecord {
   challengeId: string;
@@ -120,17 +117,6 @@ export async function trySetWorldRecord(
   }
 }
 
-// ── Récupérer les N meilleurs records mondiaux (multi-défis) ─────────────────
-export async function getTopWorldRecords(maxCount = 20): Promise<WorldRecord[]> {
-  try {
-    const ref  = collection(db, COLLECTION);
-    const snap = await getDocs(ref);
-    return snap.docs.map(d => ({ challengeId: d.id, ...d.data() } as WorldRecord));
-  } catch {
-    return [];
-  }
-}
-
 /** Écoute en temps réel tous les records mondiaux (indexés par challengeId) */
 export function subscribeAllWorldRecords(
   onChange: (records: Map<string, WorldRecord>) => void,
@@ -145,34 +131,24 @@ export function subscribeAllWorldRecords(
   }, () => onChange(new Map()));
 }
 
-// ── Classement par nombre de records détenus ─────────────────────────────────
-export interface RecordHolderEntry {
-  userId: string;
-  username: string;
-  recordCount: number;
-}
+// ── Classement par nombre de records détenus (Lot C) ─────────────────────────
+// Le nombre de records est borné (un par défi Solo : 210 documents), donc la lecture de la collection reste légère ;
+// le classement est calculé par `rankRecordHolders` (départage : le dernier record le plus ancien passe devant).
+export type { RecordHolderEntry } from '../constants/leaderboardRank';
 
-/** Écoute en temps réel tous les records et agrège par joueur */
+/** Écoute en temps réel tous les records et classe les détenteurs (liste complète : l'écran en affiche le top). */
 export function subscribeRecordHolders(
   onChange: (holders: RecordHolderEntry[]) => void,
 ): Unsubscribe {
   const ref = collection(db, COLLECTION);
   return onSnapshot(ref, snap => {
-    const byUser = new Map<string, { username: string; count: number }>();
-    for (const d of snap.docs) {
+    const records: WorldRecordLite[] = snap.docs.map(d => {
       const data = d.data() as Omit<WorldRecord, 'challengeId'>;
-      const existing = byUser.get(data.userId);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        byUser.set(data.userId, { username: data.username, count: 1 });
-      }
-    }
-    const holders: RecordHolderEntry[] = [];
-    for (const [userId, { username, count }] of byUser) {
-      holders.push({ userId, username, recordCount: count });
-    }
-    holders.sort((a, b) => b.recordCount - a.recordCount);
-    onChange(holders);
+      const at = data.achievedAt;
+      // Timestamp Firestore (toMillis), Date ou absent (écriture locale en attente)
+      const achievedAtMs = at && typeof at.toMillis === 'function' ? at.toMillis() : at instanceof Date ? at.getTime() : 0;
+      return { userId: data.userId, username: data.username, achievedAtMs };
+    });
+    onChange(rankRecordHolders(records));
   }, () => onChange([]));
 }

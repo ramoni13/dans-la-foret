@@ -17,7 +17,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePlayerStore } from '../store/playerStore';
 import { useAudioStore } from '../store/audioStore';
 import { Lang, getSystemLocale } from '../i18n/locale';
-import { DEFAULT_BADGE_GOALS } from '../core/engine/badgeEngine';
+import { PROGRESSION_V2 } from '../constants/featureFlags';
+import { computeLevelProgress, mergeChallengeStars, mergeRewardedChapters, needsProgressionReset } from '../constants/progression';
+import { mergeCeremonyIds } from '../constants/ceremonies';
+import { mergeCollectedIds } from '../constants/herbier';
+import { createFreshDailyLimits, sanitizeDailyLimits } from '../constants/dailyLimits';
+import { readLotDStats } from '../constants/profileDefaults';
+import type { MusicProgress } from '../store/audioStore';
 
 const STORAGE_KEY = 'dlf_player_v1';
 const AUDIO_STORAGE_KEY = 'dlf_audio_v1';
@@ -35,6 +41,23 @@ interface PersistedAudioState {
 
 // Sous-ensemble du store à persister (on exclut les fonctions)
 interface PersistedPlayerState {
+  // Progression v2 (section D) — absent d'un profil pré-v2
+  progressionVersion?: number;
+  challengeStars?: Record<string, number>;
+  levelsCompleted?: number;
+  pendingCeremonies?: string[];
+  seenCeremonies?: string[];
+  rewardedChapters?: number[];
+  chapterCardsGranted?: number[];
+  newFeatureBadges?: string[];
+  unlockedMusicIds?: string[];
+  starStreak?: number;
+  quickFirstWins?: number;
+  improvedStarChallengeIds?: string[];
+  loyaltyStreak?: number;
+  loyaltyBest?: number;
+  bestStarStreak?: number;
+  dailyPodium?: { top10Percent: number; top3: number; first: number };
   seeds: number;
   completedChallenges: string[];
   isPremium: boolean;
@@ -53,7 +76,6 @@ interface PersistedPlayerState {
     failCount: Record<string, number>;
     improvedChallengesCount: number;
     seasonalChallengesPlayed: number;
-    speedBadgeHits: Record<string, number>;
   };
   // Badges
   earnedBadges: string[];
@@ -76,22 +98,46 @@ interface PersistedPlayerState {
   friendNotifBadgeEnabled: boolean;
   // Mode ONF
   onfSolvedCount: number;
+  /** Cartes de l'Herbier possédées (source de vérité depuis la Progression v2, Lot 7). */
+  collectedTreeCardIds?: number[];
+  seenTreeCardIds?: number[];
   // Amis défiés (pour badge social_poignee / social_cirque)
   challengedFriendIds: string[];
-  // Objectifs actifs
-  activeBadgeGoals: string[];
-  goalCounters: Record<string, number>;
-  // Streaks de rejeu
-  retryStreak: { challengeId: string | null; count: number };
-  retryStreakFusee: { challengeId: string | null; count: number };
+  /** Défis entre amis déjà comptés dans les statistiques (Lot D). */
+  countedDuelIds?: string[];
+  duelWinStreak?: number;
   // Utilisations journalières des bonus
   dailyBonusUses: Record<string, number>;
   lastBonusResetDate: string | null;
+  // Limites quotidiennes (Lot A) : persistées pour survivre à un redémarrage
+  onfDailyCount?: number;
+  lastOnfDailyDate?: string;
+  friendChallengeTokens?: number;
+  /** Pubs récompensées regardées aujourd'hui, par emplacement (Lot B). */
+  adViews?: Record<string, number>;
+  /** @deprecated Avant le Lot B (recharge unique par jour) : converti en `adViews` au chargement. */
+  watchAdUsedToday?: boolean;
 }
 
 /** Extrait le sous-ensemble persistable depuis l'état Zustand courant */
 function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): PersistedPlayerState {
   return {
+    progressionVersion:       state.progressionVersion,
+    challengeStars:           state.challengeStars,
+    levelsCompleted:          state.levelsCompleted,
+    pendingCeremonies:        state.pendingCeremonies,
+    seenCeremonies:           state.seenCeremonies,
+    rewardedChapters:         state.rewardedChapters,
+    chapterCardsGranted:      state.chapterCardsGranted,
+    newFeatureBadges:         state.newFeatureBadges,
+    unlockedMusicIds:         state.unlockedMusicIds,
+    starStreak:               state.starStreak,
+    quickFirstWins:           state.quickFirstWins,
+    improvedStarChallengeIds: state.improvedStarChallengeIds,
+    loyaltyStreak:            state.loyaltyStreak,
+    loyaltyBest:              state.loyaltyBest,
+    bestStarStreak:           state.bestStarStreak,
+    dailyPodium:              state.dailyPodium,
     seeds:               state.seeds,
     completedChallenges: state.completedChallenges,
     isPremium:           state.isPremium,
@@ -111,13 +157,27 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     challengeStartedAt:        state.challengeStartedAt,
     friendNotifBadgeEnabled:   state.friendNotifBadgeEnabled,
     onfSolvedCount:            state.onfSolvedCount,
+    collectedTreeCardIds:      state.collectedTreeCardIds,
+    seenTreeCardIds:           state.seenTreeCardIds,
     challengedFriendIds:       state.challengedFriendIds,
-    activeBadgeGoals:          state.activeBadgeGoals,
-    goalCounters:              state.goalCounters,
-    retryStreak:               state.retryStreak,
-    retryStreakFusee:          state.retryStreakFusee,
+    countedDuelIds:            state.countedDuelIds,
+    duelWinStreak:             state.duelWinStreak,
     dailyBonusUses:            state.dailyBonusUses,
     lastBonusResetDate:        state.lastBonusResetDate,
+    onfDailyCount:             state.onfDailyCount,
+    lastOnfDailyDate:          state.lastOnfDailyDate,
+    friendChallengeTokens:     state.friendChallengeTokens,
+    adViews:                   state.adViews as Record<string, number>,
+  };
+}
+
+/** Progression lue par `audioStore.syncOwnedMusic` : niveaux validés, trophées, titres mémorisés. */
+function readMusicProgress(): MusicProgress {
+  const s = usePlayerStore.getState();
+  return {
+    levelsCompleted: s.levelsCompleted,
+    earnedTrophies: s.earnedBadges,
+    unlockedIds: s.unlockedMusicIds,
   };
 }
 
@@ -126,7 +186,7 @@ export function useStorage() {
   const saveTimeoutRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Flag : true une fois le chargement initial terminé.
-  // Tant qu'il est false, syncOwnedFromBadges est appelé en mode silencieux
+  // Tant qu'il est false, syncOwnedMusic est appelé en mode silencieux
   // pour éviter que la restauration des badges au démarrage déclenche la modale.
   const bootDoneRef = useRef(false);
 
@@ -134,9 +194,9 @@ export function useStorage() {
   // S'exécute UNE SEULE FOIS au montage — pas de dépendances variables.
   useEffect(() => {
     // ── Chargement séquencé : player d'abord, puis audio, puis sync badges ──
-    // Les deux lectures sont lancées en parallèle mais syncOwnedFromBadges
+    // Les deux lectures sont lancées en parallèle mais syncOwnedMusic
     // est appelé APRÈS hydrate() pour garantir que ownedTrackIds reflète
-    // bien les badges du joueur, quelle que soit l'ordre de résolution.
+    // bien la progression du joueur, quelle que soit l'ordre de résolution.
     const playerPromise = AsyncStorage.getItem(STORAGE_KEY)
       .then(raw => {
         if (!raw) return null;
@@ -161,7 +221,6 @@ export function useStorage() {
               failCount:                saved.stats?.failCount                ?? {},
               improvedChallengesCount:  saved.stats?.improvedChallengesCount  ?? 0,
               seasonalChallengesPlayed: saved.stats?.seasonalChallengesPlayed ?? 0,
-              speedBadgeHits:           (saved.stats as any)?.speedBadgeHits  ?? {},
               abandonCount:             (saved.stats as any)?.abandonCount    ?? {},
               // Nouveaux champs (chantier 5)
               dailyPlayed:              (saved.stats as any)?.dailyPlayed              ?? 0,
@@ -174,6 +233,8 @@ export function useStorage() {
               onfSpeedCount:            (saved.stats as any)?.onfSpeedCount            ?? 0,
               dailyPerfectCount:        (saved.stats as any)?.dailyPerfectCount        ?? 0,
               dailySpeedCount:          (saved.stats as any)?.dailySpeedCount          ?? 0,
+              // Lot D : compteurs ajoutés ; une sauvegarde antérieure n'a pas ces champs : 0
+              ...readLotDStats(saved.stats),
             },
             earnedBadges:    saved.earnedBadges    ?? [],
             badgeShowcase:   (saved.badgeShowcase  ?? []) as [string?, string?, string?],
@@ -188,34 +249,59 @@ export function useStorage() {
             challengeStartedAt:     saved.challengeStartedAt     ?? {},
             friendNotifBadgeEnabled: saved.friendNotifBadgeEnabled ?? true,
             onfSolvedCount:         (saved as any).onfSolvedCount ?? 0,
+            // Herbier : identifiants valides, sans doublon (valeurs corrompues écartées)
+            collectedTreeCardIds:   mergeCollectedIds((saved as any).collectedTreeCardIds, undefined),
+            // Sauvegarde sans ce champ (avant le badge) : les cartes déjà possédées sont considérées comme vues
+            seenTreeCardIds:        mergeCollectedIds((saved as any).seenTreeCardIds ?? (saved as any).collectedTreeCardIds, undefined),
             challengedFriendIds:    (saved as any).challengedFriendIds ?? [],
-            activeBadgeGoals:       (saved as any).activeBadgeGoals ?? [...DEFAULT_BADGE_GOALS],
-            goalCounters:           (saved as any).goalCounters ?? {},
-            retryStreak:            (() => {
-              const savedStreak = (saved as any).retryStreak ?? { challengeId: null, count: 0 };
-              // Compat descendante : si le badge est actif mais challengeId non verrouillé,
-              // utiliser le dernier défi solo complété comme défi cible.
-              const goals: string[] = (saved as any).activeBadgeGoals ?? [];
-              const lastSolo = (saved.completedChallenges ?? []).filter((id: string) => id.startsWith('niveau_')).slice(-1)[0] ?? null;
-              if (goals.includes('amelioration_cycle') && !savedStreak.challengeId && lastSolo) {
-                return { challengeId: lastSolo, count: savedStreak.count };
-              }
-              return savedStreak;
+            countedDuelIds:         Array.isArray((saved as any).countedDuelIds) ? (saved as any).countedDuelIds : [],
+            duelWinStreak:          Math.max(0, Math.floor(Number((saved as any).duelWinStreak) || 0)),
+            // Limites quotidiennes (Lots A et B) : relues via `sanitizeDailyLimits` (valeurs bornées ; ancien
+            // `watchAdUsedToday` converti en `adViews`). `rolloverDailyLimits` les remet à neuf si elles datent
+            // d'un autre jour. Une sauvegarde sans date (ou d'avant le Lot A) donne un jour neuf.
+            ...(() => {
+              const limits = sanitizeDailyLimits({
+                ...saved,
+                dailyBonusUses: (saved as any).dailyBonusUses
+                  ? { reveal_cell: (saved as any).dailyBonusUses.reveal_cell ?? (saved as any).dailyBonusUses.highlight_valid_cells, instinct: (saved as any).dailyBonusUses.instinct }
+                  : undefined,
+              });
+              return limits
+                ? { ...limits, dailyBonusUses: limits.dailyBonusUses as Record<import('../constants/bonus').BonusId, number> }
+                : { ...createFreshDailyLimits(''), lastBonusResetDate: null, lastOnfDailyDate: '', dailyBonusUses: { reveal_cell: 3, instinct: 3 } as Record<import('../constants/bonus').BonusId, number> };
             })(),
-            retryStreakFusee:       (() => {
-              const savedStreak = (saved as any).retryStreakFusee ?? { challengeId: null, count: 0 };
-              const goals: string[] = (saved as any).activeBadgeGoals ?? [];
-              const lastSolo = (saved.completedChallenges ?? []).filter((id: string) => id.startsWith('niveau_')).slice(-1)[0] ?? null;
-              if (goals.includes('amelioration_fusee') && !savedStreak.challengeId && lastSolo) {
-                return { challengeId: lastSolo, count: savedStreak.count };
-              }
-              return savedStreak;
-            })(),
-            dailyBonusUses:        (saved as any).dailyBonusUses
-              ? { reveal_cell: (saved as any).dailyBonusUses.reveal_cell ?? (saved as any).dailyBonusUses.highlight_valid_cells ?? 3, instinct: (saved as any).dailyBonusUses.instinct ?? 3 }
-              : { reveal_cell: 3, instinct: 3 },
-            lastBonusResetDate:    (saved as any).lastBonusResetDate ?? null,
+            // ── Progression v2 ──
+            progressionVersion:       saved.progressionVersion ?? 0,
+            challengeStars:           mergeChallengeStars(saved.challengeStars, undefined),
+            levelsCompleted:          computeLevelProgress(saved.challengeStars).levelsCompleted,
+            // Identifiants validés (valeurs corrompues écartées) ; une cérémonie vue ne revient jamais en file.
+            pendingCeremonies:        mergeCeremonyIds(saved.pendingCeremonies, undefined).filter(id => !mergeCeremonyIds(saved.seenCeremonies, undefined).includes(id)),
+            seenCeremonies:           mergeCeremonyIds(saved.seenCeremonies, undefined),
+            rewardedChapters:         mergeRewardedChapters(saved.rewardedChapters, undefined),
+            chapterCardsGranted:      mergeRewardedChapters(saved.chapterCardsGranted, undefined),
+            newFeatureBadges:         saved.newFeatureBadges ?? [],
+            unlockedMusicIds:         saved.unlockedMusicIds ?? [],
+            starStreak:               saved.starStreak ?? 0,
+            quickFirstWins:           saved.quickFirstWins ?? 0,
+            improvedStarChallengeIds: saved.improvedStarChallengeIds ?? [],
+            loyaltyStreak:            saved.loyaltyStreak ?? 0,
+            loyaltyBest:              Math.max(saved.loyaltyBest ?? 0, saved.loyaltyStreak ?? 0),
+            bestStarStreak:           Math.max(saved.bestStarStreak ?? 0, saved.starStreak ?? 0),
+            dailyPodium:              { top10Percent: saved.dailyPodium?.top10Percent ?? 0, top3: saved.dailyPodium?.top3 ?? 0, first: saved.dailyPodium?.first ?? 0 },
           });
+          // Limites quotidiennes : si la sauvegarde date d'un autre jour, remise à neuf tout de suite (la lecture
+          // asynchrone peut finir après checkDailyLogin et réinstaller des compteurs périmés).
+          usePlayerStore.getState().rolloverDailyLimits();
+          // Progression v2 (C9) : sauvegarde locale pré-v2 → remise à zéro locale, une seule fois.
+          // progressionVersion passe à 2 et est persisté ; la remise à zéro cloud est faite par _layout.tsx.
+          if (PROGRESSION_V2 && needsProgressionReset(saved.progressionVersion)) {
+            usePlayerStore.getState().resetProgression();
+            return [];
+          }
+          if (PROGRESSION_V2) {
+            // Le niveau suit les étoiles
+            usePlayerStore.setState({ currentLevel: computeLevelProgress(saved.challengeStars).currentLevel });
+          }
           return saved.earnedBadges ?? [];
         } catch {
           console.warn('[useStorage] Données corrompues, réinitialisation.');
@@ -230,7 +316,7 @@ export function useStorage() {
         try {
           const savedAudio: PersistedAudioState = JSON.parse(rawAudio);
           // Pré-remplir ownedTrackIds avec les pistes déjà connues au dernier démarrage.
-          // Cela évite que syncOwnedFromBadges() détecte à tort des "nouveaux déblocages"
+          // Cela évite que syncOwnedMusic() détecte à tort des "nouveaux déblocages"
           // et affiche la modale MusicUnlockModal à chaque lancement.
           if (savedAudio.ownedTrackIds && savedAudio.ownedTrackIds.length > 0) {
             useAudioStore.setState({ ownedTrackIds: savedAudio.ownedTrackIds });
@@ -250,10 +336,9 @@ export function useStorage() {
 
     // Synchroniser les musiques débloquées APRÈS les deux chargements :
     // silent=true → pas de modale au démarrage (pistes déjà connues du joueur)
-    Promise.all([playerPromise, audioPromise]).then(([earnedBadges]) => {
-      if (earnedBadges) {
-        useAudioStore.getState().syncOwnedFromBadges(earnedBadges, true);
-      }
+    Promise.all([playerPromise, audioPromise]).then(() => {
+      // Progression lue sur le store déjà hydraté (niveaux validés, trophées, titres mémorisés)
+      useAudioStore.getState().syncOwnedMusic(readMusicProgress(), true);
       // Marquer le boot comme terminé : les appels suivants du subscriber
       // peuvent déclencher la modale (vrais nouveaux déblocages en jeu)
       bootDoneRef.current = true;
@@ -304,17 +389,11 @@ export function useStorage() {
         newState.earnedBadges.length !== prevState.earnedBadges.length ||
         newState.completedChallenges.length !== prevState.completedChallenges.length ||
         newState.badgeShowcase.join(',')    !== prevState.badgeShowcase.join(',')    ||
-        // Stats : comparer les valeurs numériques directes
-        newState.stats.totalSolved              !== prevState.stats.totalSolved              ||
-        newState.stats.currentStreak            !== prevState.stats.currentStreak            ||
-        newState.stats.longestStreak            !== prevState.stats.longestStreak            ||
-        newState.stats.noErrorStreak            !== prevState.stats.noErrorStreak            ||
-        newState.stats.friendWins               !== prevState.stats.friendWins               ||
-        newState.stats.totalFriendsInvited      !== prevState.stats.totalFriendsInvited      ||
-        newState.stats.topDEJCount              !== prevState.stats.topDEJCount              ||
-        newState.stats.improvedChallengesCount  !== prevState.stats.improvedChallengesCount  ||
-        JSON.stringify(newState.stats.speedBadgeHits) !== JSON.stringify(prevState.stats.speedBadgeHits) ||
-        newState.stats.seasonalChallengesPlayed !== prevState.stats.seasonalChallengesPlayed ||
+        // Stats : toute action de statistique crée un NOUVEL objet stats (immuabilité) : la référence suffit et couvre
+        // tous les compteurs (avant le Lot D, dailyPlayed, friendPlayed, onf* et daily* n'étaient pas surveillés).
+        newState.stats                          !== prevState.stats                          ||
+        newState.countedDuelIds                 !== prevState.countedDuelIds                 ||
+        newState.duelWinStreak                  !== prevState.duelWinStreak                  ||
         newState.bonusTutorialDismissed.length  !== prevState.bonusTutorialDismissed.length ||
         newState.visualEffect                   !== prevState.visualEffect ||
         newState.dailyChallengeStreak           !== prevState.dailyChallengeStreak ||
@@ -327,24 +406,41 @@ export function useStorage() {
         newState.onfSolvedCount                 !== prevState.onfSolvedCount ||
         newState.challengedFriendIds.length     !== prevState.challengedFriendIds.length ||
         newState.earnedBadges.length            !== prevState.earnedBadges.length        ||
-        newState.activeBadgeGoals.join(',')     !== prevState.activeBadgeGoals.join(',') ||
-        JSON.stringify(newState.goalCounters)   !== JSON.stringify(prevState.goalCounters) ||
-        newState.retryStreak.count              !== prevState.retryStreak.count ||
-        newState.retryStreak.challengeId        !== prevState.retryStreak.challengeId ||
-        newState.retryStreakFusee.count         !== prevState.retryStreakFusee.count ||
-        newState.retryStreakFusee.challengeId   !== prevState.retryStreakFusee.challengeId ||
         JSON.stringify(newState.dailyBonusUses) !== JSON.stringify(prevState.dailyBonusUses) ||
-        newState.lastBonusResetDate             !== prevState.lastBonusResetDate;
+        newState.lastBonusResetDate             !== prevState.lastBonusResetDate ||
+        // Limites quotidiennes (Lot A)
+        newState.onfDailyCount                  !== prevState.onfDailyCount ||
+        newState.friendChallengeTokens          !== prevState.friendChallengeTokens ||
+        newState.adViews                        !== prevState.adViews ||
+        // Progression v2
+        newState.progressionVersion             !== prevState.progressionVersion ||
+        newState.challengeStars                 !== prevState.challengeStars ||
+        newState.pendingCeremonies              !== prevState.pendingCeremonies ||
+        newState.seenCeremonies                 !== prevState.seenCeremonies ||
+        newState.rewardedChapters               !== prevState.rewardedChapters ||
+        newState.chapterCardsGranted            !== prevState.chapterCardsGranted ||
+        newState.collectedTreeCardIds           !== prevState.collectedTreeCardIds ||
+        newState.seenTreeCardIds                !== prevState.seenTreeCardIds ||
+        newState.newFeatureBadges               !== prevState.newFeatureBadges ||
+        newState.unlockedMusicIds               !== prevState.unlockedMusicIds ||
+        newState.starStreak                     !== prevState.starStreak ||
+        newState.quickFirstWins                 !== prevState.quickFirstWins ||
+        newState.improvedStarChallengeIds       !== prevState.improvedStarChallengeIds ||
+        newState.loyaltyStreak                  !== prevState.loyaltyStreak ||
+        newState.loyaltyBest                    !== prevState.loyaltyBest ||
+        newState.bestStarStreak                 !== prevState.bestStarStreak ||
+        newState.dailyPodium                    !== prevState.dailyPodium;
 
       if (!changed) return;
 
-      // Synchroniser les musiques débloquées quand de nouveaux badges sont obtenus.
-      // silent si le boot n'est pas encore terminé (chargement initial depuis AsyncStorage).
-      if (newState.earnedBadges.length !== prevState.earnedBadges.length) {
-        useAudioStore.getState().syncOwnedFromBadges(
-          newState.earnedBadges,
-          !bootDoneRef.current,
-        );
+      // Synchroniser les musiques débloquées quand la progression change : fin de chapitre (niveaux validés),
+      // nouveau trophée, ou titre déjà mémorisé. silent si le boot n'est pas terminé (chargement initial).
+      if (
+        newState.levelsCompleted !== prevState.levelsCompleted ||
+        newState.earnedBadges.length !== prevState.earnedBadges.length ||
+        newState.unlockedMusicIds !== prevState.unlockedMusicIds
+      ) {
+        useAudioStore.getState().syncOwnedMusic(readMusicProgress(), !bootDoneRef.current);
       }
 
       // Debounce 500 ms pour regrouper les écritures rapprochées (ex: awardBadges + addSeeds)

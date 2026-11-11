@@ -27,21 +27,32 @@ import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { FailModal } from '../../src/components/Game/FailModal';
 import { LevelBriefingModal } from '../../src/components/LevelBriefing/LevelBriefingModal';
 import { useGame } from '../../src/hooks/useGame';
+import { useRewardedAd } from '../../src/hooks/useRewardedAd';
+import type { BonusId } from '../../src/constants/bonus';
 import { useGameStore } from '../../src/store/gameStore';
 import { usePlayerStore, getChallengeElapsed } from '../../src/store/playerStore';
 import { AbandonConfirmModal } from '../../src/components/Game/AbandonConfirmModal';
 import { auth } from '../../src/services/firebase';
-import { getPlayer, markCompleted, updateSeeds, upsertPlayer } from '../../src/services/playerService';
+import { buildSoloProgressionPayload, getPlayer, markCompleted, updateSeeds, updateSoloProgression, upsertPlayer } from '../../src/services/playerService';
+import { PROGRESSION_V2 } from '../../src/constants/featureFlags';
+import {
+  buildStarSequence,
+  computeSoloSeeds,
+  computeStars,
+  getLevelGaugeResult,
+  getNextAfterWin,
+  getLevelFromChallengeId,
+  getVictoryNavigation,
+} from '../../src/constants/progression';
+import type { VictoryStarResult } from '../../src/components/Game/VictoryModal';
 import { awardBadgesFirestore } from '../../src/services/badgeService';
 import {
   WorldRecord,
   subscribeWorldRecord,
   trySetWorldRecord,
 } from '../../src/services/worldRecordService';
-import { upsertLeaderboardEntry } from '../../src/services/leaderboardService';
-import { getBadgeScore, getPlayerScore, getRank, RANK_DEFINITIONS, PlayerActivityStats } from '../../src/constants/badges';
+import { getRankForLevel } from '../../src/constants/progression';
 import { recordVictory } from '../../src/services/metricsService';
-import { RankUpModal, RANK_SEED_REWARDS } from '../../src/components/Game/RankUpModal';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
@@ -49,8 +60,8 @@ import { Colors } from '../../src/constants/colors';
 import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { LEVEL_META } from '../../src/data/levelMeta';
 import { calculateSeedReward } from '../../src/core/engine/hintEngine';
-import { evaluateBadges, getClosestBadges, getBadgeProgress, GameContext, getTrackForBadge, TRACK_PERFORMANCE, TRACK_PERSEVERANCE, TRACK_EXPLORATION } from '../../src/core/engine/badgeEngine';
-import { TrackBadgeProgressMap } from '../../src/components/Badges/BadgeProgressInline';
+import { awardEarnedTrophies, computeNextTrophies, readTrophyState } from '../../src/services/trophyService';
+import type { NextTrophyItem } from '../../src/components/Badges/BadgeProgressInline';
 
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
@@ -159,11 +170,8 @@ export default function GameScreen() {
 
   // ── Badges toast queue ────────────────────────────────────
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
-  // progressions par track pour la VictoryModal (nouveau système)
-  const [trackBadges, setTrackBadges] = useState<TrackBadgeProgressMap | undefined>(undefined);
-  // compat descendante : ancien tableau closestBadges[] (non utilisé si trackBadges est fourni)
-  const [closestBadges, setClosestBadges] = useState<ReturnType<typeof getClosestBadges>>([]);
-  // badges obtenus CE tour (pour affichage ✓ dans VictoryModal)
+  // « Prochains trophées » (3 plus proches) avec leur progression, pour la VictoryModal (Lot 8)
+  const [nextTrophies, setNextTrophies] = useState<NextTrophyItem[]>([]);
   const [obtainedBadgeIds, setObtainedBadgeIds] = useState<string[]>([]);
   // nouveaux objectifs injectés par l'auto-avance CE tour (pour badge "Nouveau")
   const [newGoalBadgeIds, setNewGoalBadgeIds] = useState<string[]>([]);
@@ -183,23 +191,20 @@ export default function GameScreen() {
   // ── Run parfait (PERFECT x2) ─────────────────────────────────────────────────
   const [isPerfectRun, setIsPerfectRun] = useState(false);
 
-  // ── Changement de rang ───────────────────────────────────────────────────────
-  const [rankUpVisible, setRankUpVisible]       = useState(false);
-  const [rankUpNewRank, setRankUpNewRank]        = useState(RANK_DEFINITIONS[0]);
-  const [rankUpPrevLabel, setRankUpPrevLabel]    = useState('');
-  const [rankUpSeeds, setRankUpSeeds]            = useState(0);
-  const [rankUpSeedsBefore, setRankUpSeedsBefore] = useState(0);
+  // ── Recharge d'UN bonus via pub (joueur gratuit) ──────────
+  // Chaque bonus a sa propre pub et son propre plafond quotidien (3 recharges). Un bonus à 0 propose sa pub
+  // tout de suite, sans attendre l'autre ; la pub ne recharge que ce bonus. Premium : bonus illimités, aucune pub.
+  const revealAd  = useRewardedAd('bonus_reveal_cell');
+  const instinctAd = useRewardedAd('bonus_instinct');
+  const bonusAdRemaining = {
+    reveal_cell: revealAd.available ? revealAd.remaining : 0,
+    instinct: instinctAd.available ? instinctAd.remaining : 0,
+  };
 
-  // ── Recharge bonus via pub ────────────────────────────────
-  // Disponible en mode free, si non déjà utilisé aujourd'hui, et bonus non désactivés
-  const watchAdAvailable =
-    !player.isPremium &&
-    !player.watchAdUsedToday &&
-    !game.bonusDisabled;
-
-  const handleWatchAd = useCallback(() => {
-    player.refillBonusWithAd();
-  }, [player]);
+  const handleWatchAd = useCallback((bonusId: BonusId) => {
+    if (bonusId === 'reveal_cell') revealAd.watch();
+    else if (bonusId === 'instinct') instinctAd.watch();
+  }, [revealAd.watch, instinctAd.watch]);
 
   // ── Abandon ───────────────────────────────────────────────
   const [showAbandonModal, setShowAbandonModal] = useState(false);
@@ -346,14 +351,72 @@ export default function GameScreen() {
     game.validateChallenge();
   }, [game]);
 
-  const seedsEarned = React.useMemo(() => {
-    if (!challenge) return 0;
-    return calculateSeedReward(
+  // Graines de CE défi. Calculé au passage en victoire, AVANT le useEffect qui met le store à jour.
+  //   - PROGRESSION_V2 : 1re victoire = calculateSeedReward ; défi rejoué = 5 🌱 par NOUVELLE étoile (C2).
+  //   - sinon : calculateSeedReward à chaque victoire (comportement historique).
+  const soloOutcome = React.useMemo(() => {
+    if (!challenge) return { seeds: 0, stars: 1 as 1 | 2 | 3, isFirstWin: true, previousStars: 0, starsBefore: {} as Record<string, number> };
+    const baseSeeds = calculateSeedReward(
       game.elapsedTime,
       challenge.estimatedDuration * 1000,
       game.bonusUsed
     );
+    const stars = computeStars({
+      failCount: failCountForGameRef.current,
+      bonusUsedCount: game.bonusUsed.length,
+      elementChangeCount: game.elementChangeCount,
+    });
+    // Meilleures notes AVANT la partie : sert à la séquence d'étoiles et à la jauge du niveau.
+    // Lu ici (useMemo déclenché au passage en victoire), donc avant que recordSoloStars ne les modifie.
+    const st = usePlayerStore.getState();
+    const starsBefore: Record<string, number> = st.challengeStars;
+    const previousStars: number = starsBefore[challenge.id] ?? 0;
+    if (!PROGRESSION_V2) return { seeds: baseSeeds, stars, isFirstWin: true, previousStars, starsBefore };
+    const isFirstWin = !st.completedChallenges.includes(challenge.id) && previousStars === 0;
+    return {
+      seeds: computeSoloSeeds({ isFirstWin, baseSeeds, previousStars, newStars: stars }),
+      stars,
+      isFirstWin,
+      previousStars,
+      starsBefore,
+    };
   }, [game.isVictory]);
+
+  // ── Étoiles de la victoire (Progression v2, Lot 2) ─────────────────────────
+  // Uniquement quand l'interface des étoiles est active : sinon la VictoryModal reste celle d'avant.
+  // Calculé sans lire le store APRÈS mise à jour : starsBefore est figé dans le useMemo ci-dessus,
+  // starsAfter = starsBefore + la meilleure note de cette partie.
+  const starResult = React.useMemo<VictoryStarResult | null>(() => {
+    if (!PROGRESSION_V2 || !game.isVictory || !challenge) return null;
+    const level = getLevelFromChallengeId(challenge.id);
+    if (level === null) return null;
+    const best = Math.max(soloOutcome.previousStars, soloOutcome.stars);
+    const starsAfter = { ...soloOutcome.starsBefore, [challenge.id]: best };
+    return {
+      sequence: buildStarSequence(soloOutcome.stars, soloOutcome.previousStars),
+      gauge: getLevelGaugeResult(level, soloOutcome.starsBefore, starsAfter),
+      isReplay: !soloOutcome.isFirstWin,
+    };
+  }, [game.isVictory, soloOutcome]);
+  const seedsEarned = soloOutcome.seeds;
+
+  // ── Boutons de la VictoryModal (Progression v2) ──────────────────────────────
+  // Niveau validé → bouton principal vers le niveau suivant + secondaire « continuer le niveau » ;
+  // cérémonie en file → le principal ramène à l'accueil, où elle se joue (jamais sur l'écran de jeu).
+  // `player` est abonné au store entier : `pendingCeremonies` se met à jour après l'effet de victoire.
+  const victoryNav = React.useMemo(() => {
+    if (!PROGRESSION_V2 || !game.isVictory || !challenge || !starResult) return null;
+    const level = getLevelFromChallengeId(challenge.id);
+    if (level === null) return null;
+    const best = Math.max(soloOutcome.previousStars, soloOutcome.stars);
+    return getVictoryNavigation({
+      level,
+      playedChallengeId: challenge.id,
+      challengeStars: { ...soloOutcome.starsBefore, [challenge.id]: best },
+      unlockedLevel: starResult.gauge.unlockedLevel,
+      ceremonyPending: player.pendingCeremonies.length > 0,
+    });
+  }, [game.isVictory, challenge, starResult, soloOutcome, player.pendingCeremonies]);
 
   // ── Victoire : enregistrer la progression (local + Firestore) + évaluer badges ──
   useEffect(() => {
@@ -369,206 +432,88 @@ export default function GameScreen() {
     const bestTimesBeforeUpdate          = stateBeforeUpdate.stats.bestTimes;
     const sameChallengePlaysBeforeUpdate = stateBeforeUpdate.stats.sameChallengePlays;
     const completedChallengesBeforeUpdate = stateBeforeUpdate.completedChallenges;
-    // Objectifs actifs AVANT : pour détecter lesquels viennent d'être atteints
-    const activeGoalsBeforeUpdate = stateBeforeUpdate.activeBadgeGoals;
+    // Compteurs de trophées AVANT la partie : sert à animer le « +N » des prochains trophées
+    const trophyStateBefore = readTrophyState(stateBeforeUpdate);
 
     // 2. Mise à jour locale immédiate (store Zustand)
     // seedsBeforeGain a été capturé dans handleValidate (state React) — déjà disponible
     // dans VictoryModal dès son premier rendu.
-    player.markChallengeCompleted(challenge.id, game.elapsedTime, failsDuringGame, game.elementChangeCount, game.bonusUsed.length);
-    player.addSeeds(seedsEarned);
-
-    // Détection du run parfait : aucun déplacement, aucun échec, aucun abandon, aucun bonus
-    const abandonCountForChallenge = stateBeforeUpdate.stats.abandonCount?.[challenge.id] ?? 0;
-    const isPerfect =
-      game.elementChangeCount === 0 &&
-      failsDuringGame === 0 &&
-      abandonCountForChallenge === 0 &&
-      game.bonusUsed.length === 0;
-    if (isPerfect && seedsEarned > 0) setIsPerfectRun(true);
-
-    // 3. Évaluation des badges — storeState post-update pour noErrorStreak/dailyStreak,
-    //    mais bestTimes/sameChallengePlays/completedChallenges pris AVANT la mise à jour.
-    const storeState = usePlayerStore.getState();
-    const completedLevels = computeCompletedLevels(storeState.completedChallenges);
-
-    const ctx: GameContext = {
+    // Progression v2 : étoiles AVANT markChallengeCompleted (qui ajoute le défi à completedChallenges :
+    // l'état d'avant sert à savoir si c'est la 1re victoire). Garde la meilleure note.
+    // Toujours enregistrées (additif, sans effet visible) ; seul le NIVEAU dépend de PROGRESSION_V2.
+    player.recordSoloStars({
       challengeId: challenge.id,
-      levelId: challenge.level,
-      levelNumber: parseInt(challenge.level.replace('niveau_', ''), 10),
-      challengeNumber: challenge.challengeNumber,
+      failCount: failsDuringGame,
+      bonusUsedCount: game.bonusUsed.length,
+      elementChangeCount: game.elementChangeCount,
       elapsedMs: game.elapsedTime,
       estimatedDurationMs: challenge.estimatedDuration * 1000,
-      bonusUsed: game.bonusUsed,
+    });
+    player.markChallengeCompleted(challenge.id, game.elapsedTime, failsDuringGame, game.elementChangeCount, game.bonusUsed.length);
+    if (seedsEarned > 0) player.addSeeds(seedsEarned);
+
+    // Progression v2 (C3) : graines de fin de chapitre. Idempotent (jamais versées deux fois).
+    // Versées ICI pour que le total local synchronisé plus bas les inclue ; la cérémonie
+    // de chapitre qui les met en scène arrive au Lot 4.
+    const chapterGrant = player.grantChapterRewards();
+    // Carte d'Herbier de fin de chapitre (C6) : offerte une fois par chapitre récompensé (idempotent).
+    player.grantChapterCards();
+    // Cérémonies de fin de chapitre : MISES EN FILE ici (état persisté), JOUÉES plus tard — au retour sur
+    // l'accueil, jamais pendant une partie ni par-dessus la VictoryModal (C7).
+    player.enqueueCeremonies();
+
+    // Détection du run parfait (PERFECT ×2).
+    //   - PROGRESSION_V2 : ⭐⭐⭐ à la 1re victoire seulement (pas de ×2 en rejeu, C2) ;
+    //   - sinon : aucun déplacement, aucun échec, aucun abandon, aucun bonus.
+    const abandonCountForChallenge = stateBeforeUpdate.stats.abandonCount?.[challenge.id] ?? 0;
+    const isPerfect = PROGRESSION_V2
+      ? soloOutcome.stars === 3 && soloOutcome.isFirstWin
+      : game.elementChangeCount === 0 &&
+        failsDuringGame === 0 &&
+        abandonCountForChallenge === 0 &&
+        game.bonusUsed.length === 0;
+    if (isPerfect && seedsEarned > 0) setIsPerfectRun(true);
+
+    // 3. Trophées (Progression v2, C8) : plus d'« objectif actif » — TOUT trophée dont la condition est
+    //    remplie est décerné, en un seul lot. Les compteurs (étoiles, séries, Herbier…) sont lus sur le store
+    //    déjà mis à jour par recordSoloStars / markChallengeCompleted ci-dessus.
+    const storeState = usePlayerStore.getState();
+    const newBadges = awardEarnedTrophies({
+      playedAt: new Date(),
+      dailyStreak: storeState.dailyStreak,
       failCount: failsDuringGame,
-      noErrorStreak:     storeState.stats.noErrorStreak,     // post-update : intentionnel
-      dailyStreak:       storeState.dailyStreak,
-      earnedBadges:      storeState.earnedBadges,
-      completedChallenges: completedChallengesBeforeUpdate,  // AVANT : pour off-by-one correct
-      completedLevels,
-      friendWins:        storeState.stats.friendWins,
-      bestTimes:         bestTimesBeforeUpdate,              // AVANT : pour isPersonalBest()
-      totalFriendsInvited: storeState.stats.totalFriendsInvited,
-      topDEJCount:       storeState.stats.topDEJCount,
-      playedAt:          new Date(),
-      sameChallengePlays: sameChallengePlaysBeforeUpdate,    // AVANT : pour playsOnThisChallenge
+      sameChallengePlaysBefore: sameChallengePlaysBeforeUpdate[challenge.id] ?? 0,
       seasonalChallengesPlayed: storeState.stats.seasonalChallengesPlayed,
-      improvedChallengesCount: storeState.stats.improvedChallengesCount, // post-update : pour amelioration_fusee
-      activeBadgeGoals:  activeGoalsBeforeUpdate,             // objectifs actifs : contrôle quels badges sont décernables
-      goalCounters:      storeState.goalCounters,            // post-update : compteurs dédiés par badge objectif
-      speedBadgeHits:    storeState.stats.speedBadgeHits,   // conservé pour compatibilité
-      elementChangeCount: game.elementChangeCount,           // pour badge precision_parfaite
-      abandonCountForChallenge: storeState.stats.abandonCount?.[challenge.id] ?? 0,
+      isFirstRecord: false,   // décerné plus bas, une fois le record du monde connu (Firestore)
       isWorldRecord: false,
-      isFirstRecord: false,
-      retryStreakCount:     storeState.retryStreak.count,     // post-update pour amelioration_cycle
-      retryStreakFuseeCount: storeState.retryStreakFusee.count, // post-update pour amelioration_fusee
-    };
-
-    // Capture du score AVANT l'attribution des badges
-    // storeState est post-markChallengeCompleted : completedChallenges inclut déjà ce défi solo
-    const activityStatsBefore: PlayerActivityStats = {
-      soloCompleted:   storeState.completedChallenges.length,
-      friendCompleted: storeState.stats.friendPlayed,
-      onfCompleted:    storeState.onfSolvedCount,
-      dailyCompleted:  storeState.stats.dailyWon,
-    };
-    const scoreBeforeBadges = getPlayerScore(storeState.earnedBadges, activityStatsBefore);
-    const rankBefore = getRank(scoreBeforeBadges);
-
-    const newBadges = evaluateBadges(ctx);
-    player.awardBadges(newBadges);
-
+    });
     if (newBadges.length > 0) {
       setBadgeQueue(newBadges);
       setObtainedBadgeIds(newBadges);
     }
+    // Les 3 trophées les plus proches, avec leur progression (VictoryModal)
+    setNextTrophies(computeNextTrophies(usePlayerStore.getState(), trophyStateBefore, newBadges));
 
-    // ── Détection changement de rang ──────────────────────────────────────────
-    const stateAfterBadges = usePlayerStore.getState();
-    const allEarnedAfterBadges = stateAfterBadges.earnedBadges;
-    const activityStatsAfter: PlayerActivityStats = {
-      soloCompleted:   stateAfterBadges.completedChallenges.length,
-      friendCompleted: stateAfterBadges.stats.friendPlayed,
-      onfCompleted:    stateAfterBadges.onfSolvedCount,
-      dailyCompleted:  stateAfterBadges.stats.dailyWon,
-    };
-    const scoreAfterBadges = getPlayerScore(allEarnedAfterBadges, activityStatsAfter);
-    const rankAfter = getRank(scoreAfterBadges);
-    if (rankAfter.id !== rankBefore.id) {
-      const rankSeeds = RANK_SEED_REWARDS[rankAfter.id] ?? 0;
-      if (rankSeeds > 0) {
-        setRankUpSeedsBefore(usePlayerStore.getState().seeds);
-        player.addSeeds(rankSeeds);
-      }
-      const lang = usePlayerStore.getState().language;
-      setRankUpPrevLabel(lang === 'en' ? rankBefore.labelEn : rankBefore.label);
-      setRankUpNewRank(rankAfter);
-      setRankUpSeeds(rankSeeds);
-      // Déclencher le modal après un délai (laisse la VictoryModal s'installer)
-      setTimeout(() => setRankUpVisible(true), 1800);
-    }
+    // Le changement de rang n'est plus une modale : le rang est le chapitre en cours (Progression v2,
+    // C3 / D4) et sa célébration est la cérémonie de chapitre (Lot 4).
 
     // Total réel gagné ce défi = store actuel − score capturé avant validation
-    // Inclut : graines de jeu + graines de badges + graines de rang
-    setTotalSeedsGained(usePlayerStore.getState().seeds - seedsBeforeGain);
-
-    // Détecter les objectifs actifs qui sont désormais obtenus
-    // (soit nouvellement décernés ce tour, soit déjà obtenus mais restés dans activeBadgeGoals)
-    const allEarnedNow = usePlayerStore.getState().earnedBadges;
-    const completedGoalIds = activeGoalsBeforeUpdate.filter(id => allEarnedNow.includes(id));
-
-    let injected: string[] = [];
-    if (completedGoalIds.length > 0) {
-      // Auto-avance typée par track
-      injected = player.advanceTrackGoals(completedGoalIds, allEarnedNow);
-      if (injected.length > 0) setNewGoalBadgeIds(injected);
-      // Persister trackGoals + goalCounters dans Firestore
-      const uidAdv = auth.currentUser?.uid;
-      const isAnonAdv = auth.currentUser?.isAnonymous ?? true;
-      if (uidAdv && !isAnonAdv) {
-        const stateAfterAdvance = usePlayerStore.getState();
-        getPlayer(uidAdv).then(currentProfile => {
-          if (currentProfile) {
-            upsertPlayer({
-              ...currentProfile,
-              trackGoals:       stateAfterAdvance.trackGoals,
-              activeBadgeGoals: stateAfterAdvance.activeBadgeGoals,
-              goalCounters:     stateAfterAdvance.goalCounters,
-            }).catch(() => {});
-          }
-        }).catch(() => {});
-      }
-    }
-
-    const updatedState = usePlayerStore.getState();
-    // Calculer la progression par track pour la VictoryModal.
-    // Pour les badges obtenus ce tour, on exclut temporairement leur ID de earnedBadges
-    // afin que getBadgeProgress calcule leur progression finale (sinon il retourne null).
-    const earnedWithoutNewBadges = updatedState.earnedBadges.filter(
-      id => !newBadges.includes(id)
-    );
-    const ctxForProgress = {
-      ...ctx,
-      earnedBadges: earnedWithoutNewBadges,
-      goalCounters: updatedState.goalCounters,
-    };
-    // Contexte "avant" pour calculer previousValue (delta +N sur la jauge)
-    const ctxBeforeProgress = {
-      ...ctx,
-      earnedBadges: earnedWithoutNewBadges,
-      goalCounters: stateBeforeUpdate.goalCounters,
-    };
-
-    // Construire trackBadges : pour chaque track, afficher l'objectif actif d'avant
-    // (y compris s'il vient d'être obtenu) OU le nouveau goal injecté.
-    const trackGoalsAfter = updatedState.trackGoals;
-    const trackBadgesResult: TrackBadgeProgressMap = {
-      performance:  null,
-      perseverance: null,
-      exploration:  null,
-    };
-    const tracksConfig: Array<{ key: 'performance' | 'perseverance' | 'exploration'; seq: string[] }> = [
-      { key: 'performance',  seq: TRACK_PERFORMANCE },
-      { key: 'perseverance', seq: TRACK_PERSEVERANCE },
-      { key: 'exploration',  seq: TRACK_EXPLORATION },
-    ];
-    for (const { key, seq } of tracksConfig) {
-      // Badge affiché = celui qui était objectif avant la partie (pour montrer la progression)
-      // OU le nouveau injecté (s'il vient d'être remplacé)
-      const prevGoal = activeGoalsBeforeUpdate.find(id => seq.includes(id)) ?? null;
-      const newGoal  = injected.find(id => seq.includes(id)) ?? null;
-      const badgeToShow = newGoal ?? prevGoal;
-      if (badgeToShow) {
-        const progress = getBadgeProgress(badgeToShow, ctxForProgress);
-        if (progress) {
-          // Calculer la valeur avant la partie pour l'animation +N
-          const progressBefore = getBadgeProgress(badgeToShow, ctxBeforeProgress);
-          // Pour amelioration_cycle / amelioration_fusee : défi verrouillé à afficher
-          const targetChallengeId =
-            badgeToShow === 'amelioration_cycle'
-              ? (updatedState.retryStreak.challengeId ?? null)
-              : badgeToShow === 'amelioration_fusee'
-                ? (updatedState.retryStreakFusee.challengeId ?? null)
-                : null;
-          trackBadgesResult[key] = {
-            ...progress,
-            previousValue: progressBefore?.currentValue ?? progress.currentValue,
-            ...(targetChallengeId !== null ? { targetChallengeId } : {}),
-          };
-        }
-      }
-    }
-    setTrackBadges(trackBadgesResult);
+    // Inclut : graines de jeu + graines de trophées
+    // Les graines de fin de chapitre (chapterGrant) sont exclues : la VictoryModal anime le gain de la
+    // PARTIE ; la cérémonie de chapitre met en scène celles du chapitre.
+    setTotalSeedsGained(usePlayerStore.getState().seeds - seedsBeforeGain - chapterGrant.seeds);
 
     // 3. Synchronisation Firestore en arrière-plan (si connecté, non anonyme)
     const uid = auth.currentUser?.uid;
     const username = auth.currentUser?.displayName ?? 'Joueur';
     const isAnonymous = auth.currentUser?.isAnonymous ?? true;
-    // Le Record du Monde ne peut être battu que lors du premier essai (défi jamais complété avant).
+    // Le Record du Monde ne peut être battu que lors du premier essai (défi jamais complété avant) ET sans
+    // aucun bonus : sinon un joueur premium (bonus illimités) ou un joueur gratuit rechargeant ses bonus par
+    // vidéo pourrait s'en servir pour battre un record.
     const isFirstAttempt = !completedChallengesBeforeUpdate.includes(challenge.id);
+    const canSetRecord = isFirstAttempt && game.bonusUsed.length === 0;
     if (uid && !isAnonymous) {
-      (isFirstAttempt
+      (canSetRecord
         ? trySetWorldRecord(challenge.id, uid, username, game.elapsedTime)
         : Promise.resolve({ isNewRecord: false, previousRecord: null, newRecord: null })
       ).then(wrResult => {
@@ -593,12 +538,7 @@ export default function GameScreen() {
 
       // ── Métriques de rétention ─────────────────────────────────────────────
       const stateForMetrics = usePlayerStore.getState();
-      const rankForMetrics = getRank(getPlayerScore(stateForMetrics.earnedBadges, {
-        soloCompleted:   stateForMetrics.completedChallenges.length,
-        friendCompleted: stateForMetrics.stats.friendPlayed,
-        onfCompleted:    stateForMetrics.onfSolvedCount,
-        dailyCompleted:  stateForMetrics.stats.dailyWon,
-      }));
+      const rankForMetrics = { label: getRankForLevel(stateForMetrics.currentLevel).labelFr };
       recordVictory(
         uid,
         'solo',
@@ -616,32 +556,16 @@ export default function GameScreen() {
       getPlayer(uid).then(async profile => {
         if (profile) {
           await markCompleted(uid, challenge.id, game.elapsedTime, profile);
+          {
+            await updateSoloProgression(uid, buildSoloProgressionPayload(usePlayerStore.getState()));
+          }
           // Utiliser le total local plutôt que profile.seeds + seedsEarned :
           // profile.seeds peut être en retard (pas de badges ni de rang comptabilisés)
           await updateSeeds(uid, finalLocalSeeds);
           if (newBadges.length > 0) {
             await awardBadgesFirestore(uid, newBadges);
           }
-          const updatedCompleted = profile.completedChallenges.includes(challenge.id)
-            ? profile.completedChallenges.length
-            : profile.completedChallenges.length + 1;
-          const allEarnedBadges = [...profile.earnedBadges, ...newBadges];
-          const updatedBadges   = allEarnedBadges.length;
-          const leaderboardActivityStats: PlayerActivityStats = {
-            soloCompleted:   updatedCompleted,
-            friendCompleted: (profile.stats as any).friendPlayed ?? 0,
-            onfCompleted:    profile.onfSolvedCount ?? 0,
-            dailyCompleted:  (profile.stats as any).dailyWon ?? 0,
-          };
-          const updatedScore = getPlayerScore(allEarnedBadges, leaderboardActivityStats);
-          await upsertLeaderboardEntry(
-            uid,
-            username,
-            updatedCompleted,
-            updatedBadges,
-            finalLocalSeeds,
-            updatedScore,
-          );
+          // Classement : publié par `(tabs)/_layout.tsx` (point d'entrée unique, tous modes confondus, Lot C).
         }
       }).catch(() => {});
     }
@@ -746,7 +670,7 @@ export default function GameScreen() {
           highlightActive={game.revealActive}
           revealActive={game.revealActive}
           hasPlacedElements={hasPlacedElements}
-          watchAdAvailable={watchAdAvailable}
+          adRemaining={bonusAdRemaining}
           onWatchAd={handleWatchAd}
           rightSlot={
             <TouchableOpacity
@@ -804,15 +728,14 @@ export default function GameScreen() {
           difficulty={challenge.level}
           challengeNumber={challenge.challengeNumber}
           confettiPieces={confettiPieces}
-          trackBadges={trackBadges}
-          closestBadges={closestBadges}
+          nextTrophies={nextTrophies}
           obtainedBadgeIds={obtainedBadgeIds}
-          newGoalBadgeIds={newGoalBadgeIds}
           badgeQueue={badgeQueue}
           onBadgeQueueEmpty={() => setBadgeQueue([])}
           worldRecord={isNewWorldRecord ? null : worldRecord}
           isNewWorldRecord={isNewWorldRecord}
           previousRecordHolder={previousRecordHolder}
+          starResult={starResult}
           isPerfectRun={isPerfectRun}
           perfectSeedsBonus={seedsEarned}
           onPerfectBonusCollected={() => {
@@ -828,7 +751,23 @@ export default function GameScreen() {
             const levelChallenges = ALL_CHALLENGES[challenge.level] ?? [];
             const nextExists = levelChallenges.some(c => c.id === nextId);
             game.resetGame();
-            if (nextExists) {
+            if (PROGRESSION_V2) {
+              // Progression v2 : accès libre aux 10 défis d'un niveau ouvert (D13). Destination calculée
+              // par getVictoryNavigation : niveau suivant si le niveau vient d'être validé, accueil si une
+              // cérémonie est en file (elle s'y joue), sinon prochain défi conseillé.
+              if (victoryNav) {
+                router.replace(
+                  victoryNav.primary.kind === 'challenge'
+                    ? `/game/${victoryNav.primary.challengeId}`
+                    : '/(tabs)/',
+                );
+              } else {
+                const after = usePlayerStore.getState().challengeStars;
+                const level = getLevelFromChallengeId(challenge.id);
+                const target = level !== null ? getNextAfterWin(level, challenge.id, after) : null;
+                router.replace(target ? `/game/${target}` : '/(tabs)/');
+              }
+            } else if (nextExists) {
               // Défi suivant dans le même niveau
               router.replace(`/game/${nextId}`);
             } else {
@@ -845,6 +784,27 @@ export default function GameScreen() {
               }
             }
           }}
+          nextChallengeLabel={
+            victoryNav?.primaryLabel === 'next_level' && victoryNav.primaryLevel !== null
+              ? t('victory_go_next_level', { level: String(victoryNav.primaryLevel) })
+              : victoryNav?.primaryLabel === 'ceremony'
+                ? t('victory_go_home_ceremony')
+                : undefined
+          }
+          onSecondaryAction={
+            victoryNav?.secondary
+              ? () => {
+                  const target = victoryNav.secondary;
+                  game.resetGame();
+                  if (target) router.replace(`/game/${target.challengeId}`);
+                }
+              : undefined
+          }
+          secondaryActionLabel={
+            victoryNav?.secondary
+              ? t('victory_continue_level', { level: String(victoryNav.secondary.level) })
+              : undefined
+          }
           onBackToMenu={() => {
             game.resetGame();
             router.replace('/(tabs)/');
@@ -868,15 +828,6 @@ export default function GameScreen() {
           onAbandon={handleAbandonConfirm}
         />
 
-        {/* ── Modal changement de rang ── */}
-        <RankUpModal
-          visible={rankUpVisible}
-          newRank={rankUpNewRank}
-          previousRankLabel={rankUpPrevLabel}
-          seedsAwarded={rankUpSeeds}
-          seedsBeforeGain={rankUpSeedsBefore}
-          onClose={() => setRankUpVisible(false)}
-        />
       </View>
 
         {/* ── Briefing de niveau ── */}

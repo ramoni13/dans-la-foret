@@ -14,7 +14,7 @@ import {
   Dimensions,
 } from 'react-native';
 
-import { BADGE_MAP, BADGE_SEED_REWARDS, BadgeRarity, getBadgeTexts } from '../../constants/badges';
+import { BADGE_MAP, BADGE_SEED_REWARDS, BadgeRarity, getTrophyTexts } from '../../constants/badges';
 import { Colors } from '../../constants/colors';
 import { notificationSuccess } from '../../utils/haptics';
 import { useT } from '../../i18n';
@@ -224,7 +224,7 @@ export const BadgeToast: React.FC<BadgeToastProps> = ({
 
   const bgColor     = RARITY_BG[currentBadge.rarity] ?? '#fff';
   const borderColor = RARITY_BORDER[currentBadge.rarity] ?? Colors.ui.border;
-  const texts       = getBadgeTexts(currentBadge, language);
+  const texts       = getTrophyTexts(currentBadge, language, t);
   const remaining   = queue.length - currentIndex;
   const seedsGained = BADGE_SEED_REWARDS[currentBadge.rarity] ?? 0;
 

@@ -16,23 +16,21 @@ import { board11cellsV2 } from './board_11cells_v2';
 import { board15cellsDaily } from './board_15cells_daily';
 import { board13cellsV1 } from './board_13cells_v1';
 import { board14cellsV1 } from './board_14cells_v1';
-import { board3x3Onf } from './board_3x3_onf';
 import { board4x4Onf } from './board_4x4_onf';
 
 export const BoardRegistry: Record<string, BoardDefinition> = {
-  board_6_v1: board6cellsV1,   //  6 cases — Clairière
+  board_6_v1: board6cellsV1,   //  6 cases — Clairière (niveau 1)
   board_7_v1: board7cellsV1,   //  7 cases — Clairière (niveau 2)
-  board_8_v2: board8cellsV2,   //  8 cases — Lisière
-  board_9_v1: board9cellsV1,   //  9 cases — Lisière Étendue (niveaux 6-8)
-  board_10_v3: board10cellsV3, // 10 cases — Sous-bois (niveaux 9-10)
-  board_11_v1: board11cellsV1, // 11 cases — Sous-bois Profond v1 (obsolète)
-  board_11_v2: board11cellsV2, // 11 cases — Sous-bois Profond v2 (niveaux 11-12, nouvelle map lisible)
-  board_12: board12cells,      // 12 cases — Forêt Profonde (niveaux 13-15)
+  board_8_v2: board8cellsV2,   //  8 cases — Lisière (niveaux 3-4)
+  board_9_v1: board9cellsV1,   //  9 cases — Lisière Étendue (niveaux 5-6)
+  board_10_v3: board10cellsV3, // 10 cases — Sous-bois (niveaux 7-8)
+  board_11_v1: board11cellsV1, // 11 cases — Sous-bois Profond v1 (obsolète, aucun niveau)
+  board_11_v2: board11cellsV2, // 11 cases — Sous-bois Profond v2 (niveaux 9-11, nouvelle map lisible)
+  board_12: board12cells,      // 12 cases — Forêt Profonde (niveaux 12-15)
   board_13_v1: board13cellsV1, // 13 cases — Cœur de la Forêt (niveaux 16-18)
   board_14_v1: board14cellsV1, // 14 cases — Cœur Profond (niveaux 19-21)
   // ── Défi journalier ──────────────────────────────────────────────────
   board_15_daily: board15cellsDaily, // 15 cases — Clairière Secrète (défi journalier)
   // ── Mode ONF — Grille Forestière ─────────────────────────────────────
-  board_3x3_onf: board3x3Onf, //  9 cases — Clairière Carrée (ONF 3×3)
   board_4x4_onf: board4x4Onf, // 16 cases — Forêt Carrée (ONF 4×4)
 };

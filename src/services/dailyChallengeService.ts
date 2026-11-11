@@ -1,30 +1,32 @@
-﻿// ============================================================
+// ============================================================
 // SERVICE DÉFI JOURNALIER
 // Génération déterministe (seed = date UTC) + Firestore
 //
-// Même défi pour tous les joueurs chaque jour.
+// Deux LIGUES (Progression v2, C5) : Pousse (sans chalet ni tas de bûches) et Grand Chêne (tout).
+// Deux grilles par jour : même seed de date, avec un sel par ligue. Même grille, avec le même
+// nombre de cases fixées, pour tous les joueurs d'une ligue. Le joueur joue sa ligue la plus haute.
 // Plateau : board_15_daily (15 cases, "Clairière Secrète").
 // Inclut le champignon (élément exclusif au défi journalier).
 //
-// Firestore :
-//   /dailyChallenges/{YYYY-MM-DD}/results/{userId}
+// Firestore (un classement par ligue et par date) :
+//   /dailyChallenges/{YYYY-MM-DD}_{ligue}/results/{userId}
+// Les anciens documents `/dailyChallenges/{YYYY-MM-DD}/results/{userId}` (avant les ligues) ne sont
+// ni lus ni écrits : voir docs/daily-leagues-firestore.md.
 // ============================================================
 
 import {
   doc,
   setDoc,
   getDoc,
-  updateDoc,
   collection,
-  collectionGroup,
   query,
   orderBy,
   limit,
   getDocs,
   onSnapshot,
   Unsubscribe,
+  runTransaction,
   serverTimestamp,
-  increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { board15cellsDaily } from '../boards/board_15cells_daily';
@@ -33,6 +35,16 @@ import { solve, RngFunction } from '../core/engine/solver';
 import { BoardDefinition } from '../core/models/Board';
 import { Challenge, FixedPlacement, TokenCount } from '../core/models/Challenge';
 import { Composition } from '../constants/difficulty';
+import { computeDailyRank, dailyRankField, dateEndMinutes, unpackDailyRank } from '../constants/leaderboardRank';
+import {
+  DAILY_LEAGUE_ORDER,
+  DailyLeague,
+  buildDailyChallengeKey,
+  buildLeagueDocId,
+  getLeagueCompositions,
+  getLeagueSeed,
+  resolveLeagueFixedCount,
+} from '../constants/dailyLeagues';
 
 // ── PRNG déterministe — Mulberry32 ────────────────────────────────────────────
 // Retourne une fonction RNG [0, 1) à partir d'un seed entier.
@@ -298,11 +310,7 @@ function computeDailyAvailableTokens(
 
 // ── Génération du défi journalier ─────────────────────────────────────────────
 
-/** Nombre minimal de cases fixes visé (joueur niveau 10+ = le plus difficile) */
-const MIN_FIXED_COUNT = 4;
-/** Nombre maximal de cases fixes (joueur niveau 1 = le plus assisté) */
-const MAX_FIXED_COUNT = 9;
-/** Objectif : au moins 9 cases vides pour le niveau max → ≤ 6 cases fixes */
+/** Objectif : au moins 9 cases vides → ≤ 6 cases fixes (le plancher de la Pousse est justement 6) */
 const TARGET_MAX_FIXED = 6;
 /** Tentatives par composition avant de passer à la suivante */
 const ATTEMPTS_PER_COMPOSITION = 5;
@@ -313,7 +321,7 @@ export interface DailyChallenge extends Challenge {
   /**
    * Ordre déterministe des indices de cases pour les placements fixes.
    * Les `baseFixedCount` premières cases sont le noyau dur (unicité garantie).
-   * getDailyFixedPlacements prend les N premières pour le niveau du joueur.
+   * getDailyFixedPlacements prend les N premières pour la ligue (identique pour tous ses joueurs).
    */
   fixedOrder: number[];
 }
@@ -333,18 +341,25 @@ export interface DailyChallenge extends Challenge {
  *
  * Retourne null si aucune composition ne produit un défi valide (très improbable).
  */
-export function generateDailyChallenge(date: Date): DailyChallenge | null {
-  const seed = dateSeed(date);
+export function generateDailyChallenge(
+  date: Date,
+  league: DailyLeague = 'grand_chene',
+): DailyChallenge | null {
+  // Seed de la date + sel de la ligue : deux grilles différentes le même jour, identiques pour tous
+  // les joueurs d'une même ligue. La Pousse garde le seed d'origine (sel nul).
+  const seed = getLeagueSeed(dateSeed(date), league);
   const rng  = mulberry32(seed);
 
   const boardDef    = board15cellsDaily;
   const elementDefs = ElementRegistry;
-  const challengeId = getDailyChallengeId(date);
+  const challengeId = getDailyChallengeId(date) + '_' + league;
 
-  // Trier les compositions dans un ordre déterministe mais varié
-  // (rotation par jour via le seed)
+  // Compositions de la ligue (Pousse : sans chalet ni tas de bûches), dans un ordre déterministe mais
+  // varié (rotation par jour via le seed). `compIndex` reste l'indice dans la liste COMPLÈTE : il sert
+  // aux seeds de tentative, donc les grilles du Grand Chêne ne changent pas d'une version à l'autre.
+  const allowed = new Set(getLeagueCompositions(DAILY_COMPOSITIONS, league));
   const compositionOrder = seededShuffle(
-    DAILY_COMPOSITIONS.map((_, i) => i),
+    DAILY_COMPOSITIONS.map((_, i) => i).filter(i => allowed.has(DAILY_COMPOSITIONS[i])),
     rng
   );
 
@@ -498,36 +513,23 @@ export function generateDailyChallenge(date: Date): DailyChallenge | null {
   return null;
 }
 
-// ── Cases pré-remplies adaptées au niveau du joueur ───────────────────────────
+// ── Cases pré-remplies de la ligue ────────────────────────────────────────────
 
 /**
- * Retourne les placements fixes adaptés au niveau du joueur.
+ * Retourne les placements fixes de la grille pour une LIGUE.
  *
- * Stratégie :
- *   - Le défi est généré avec `baseFixedCount` cases fixes (le minimum
- *     nécessaire pour l'unicité, cas le plus dur = joueur expert).
+ * Le nombre de cases fixées est le même pour TOUS les joueurs de la ligue (C5) : il ne dépend plus du
+ * niveau du joueur, seulement de la ligue (`DAILY_LEAGUE_FIXED_COUNT`) et de la grille du jour.
+ *   - Le défi est généré avec `baseFixedCount` cases fixes (le minimum nécessaire à l'unicité).
  *   - `fixedOrder` contient l'ordre déterministe de toutes les cases.
- *   - Pour un joueur de niveau inférieur, on prend PLUS de cases dans
- *     fixedOrder → on AJOUTE des indices au noyau dur.
- *   - L'unicité est automatiquement préservée car ajouter des cases
- *     fixes ne fait que réduire l'espace de recherche.
+ *   - On prend les N premières de `fixedOrder`, avec N >= baseFixedCount (`resolveLeagueFixedCount`) :
+ *     ajouter des cases fixes ne fait que réduire l'espace de recherche, l'unicité est donc préservée.
  */
 export function getDailyFixedPlacements(
-  playerLevel: number,
+  league: DailyLeague,
   dailyChallenge: DailyChallenge,
-  _date: Date
 ): { fixedPlacements: FixedPlacement[]; availableTokens: TokenCount[] } {
-  // Nombre de cases pré-remplies selon le niveau du joueur
-  let targetFixed: number;
-  if (playerLevel >= 10) targetFixed = MIN_FIXED_COUNT;  // 4 (le plus dur)
-  else if (playerLevel >= 8) targetFixed = 5;
-  else if (playerLevel >= 6) targetFixed = 6;
-  else if (playerLevel >= 4) targetFixed = 7;
-  else if (playerLevel >= 2) targetFixed = 8;
-  else                       targetFixed = MAX_FIXED_COUNT; // 9 (le plus assisté)
-
-  // S'assurer qu'on a au moins baseFixedCount (sinon pas d'unicité)
-  targetFixed = Math.max(targetFixed, dailyChallenge.baseFixedCount);
+  const targetFixed = resolveLeagueFixedCount(league, dailyChallenge.baseFixedCount);
 
   const { solution, fixedOrder } = dailyChallenge;
 
@@ -558,36 +560,47 @@ export function getDailyFixedPlacements(
   return { fixedPlacements, availableTokens };
 }
 
-// ── Firestore — Résultats journaliers ─────────────────────────────────────────
+/** Clé de chrono local du défi d'une ligue : `daily_2026-11-06_pousse`. */
+export { buildDailyChallengeKey };
+// ── Firestore — Résultats journaliers, PAR LIGUE ─────────────────────────────
+//
+// Schéma : /dailyChallenges/{YYYY-MM-DD}_{ligue}/results/{userId}
+//   - un classement par ligue ET par date ; un joueur ne joue qu'UNE ligue par jour (sa plus haute) ;
+//   - le chemin garde 4 segments, comme avant les ligues : `collectionGroup('results')` reste valable ;
+//   - les anciens documents `/dailyChallenges/{date}/…` (sans ligue) ne sont plus lus ni écrits.
 
 export interface DailyResult {
   userId: string;
   username: string;
   timeMs: number;
   playerLevel: number;
+  /** Ligue jouée. Absent des anciens résultats (avant la Progression v2). */
+  league?: DailyLeague;
   completedAt: any; // Firestore Timestamp
 }
 
 const DAILY_COLLECTION = 'dailyChallenges';
 
 /**
- * Soumet le résultat du défi journalier pour un joueur.
- * Écrit une seule fois par joueur par jour (write-once).
+ * Soumet le résultat du défi journalier d'un joueur dans le classement de SA ligue.
+ * Écrit une seule fois par joueur, par jour et par ligue (write-once).
  */
 export async function submitDailyResult(
   date: string,
+  league: DailyLeague,
   userId: string,
   username: string,
   timeMs: number,
   playerLevel: number
 ): Promise<void> {
   try {
-    const resultRef = doc(db, DAILY_COLLECTION, date, 'results', userId);
+    const resultRef = doc(db, DAILY_COLLECTION, buildLeagueDocId(date, league), 'results', userId);
     await setDoc(resultRef, {
       userId,
       username,
       timeMs,
       playerLevel,
+      league,
       completedAt: serverTimestamp(),
     });
   } catch (error) {
@@ -597,14 +610,15 @@ export async function submitDailyResult(
 }
 
 /**
- * Vérifie si le joueur a déjà joué le défi journalier aujourd'hui.
+ * Vérifie si le joueur a déjà joué le défi journalier de cette ligue aujourd'hui.
  */
 export async function getDailyStatus(
   date: string,
+  league: DailyLeague,
   userId: string
 ): Promise<DailyResult | null> {
   try {
-    const resultRef = doc(db, DAILY_COLLECTION, date, 'results', userId);
+    const resultRef = doc(db, DAILY_COLLECTION, buildLeagueDocId(date, league), 'results', userId);
     const snap = await getDoc(resultRef);
     if (!snap.exists()) return null;
     return snap.data() as DailyResult;
@@ -614,15 +628,16 @@ export async function getDailyStatus(
 }
 
 /**
- * Écoute le classement journalier en temps réel.
- * Trié par timeMs ascendant (plus rapide = meilleur).
+ * Écoute le classement journalier d'UNE ligue en temps réel.
+ * Trié par timeMs ascendant (plus rapide = meilleur). Les autres ligues n'y figurent jamais.
  */
 export function subscribeDailyLeaderboard(
   date: string,
+  league: DailyLeague,
   maxCount: number,
   onChange: (results: DailyResult[]) => void
 ): Unsubscribe {
-  const resultsRef = collection(db, DAILY_COLLECTION, date, 'results');
+  const resultsRef = collection(db, DAILY_COLLECTION, buildLeagueDocId(date, league), 'results');
   const q = query(resultsRef, orderBy('timeMs', 'asc'), limit(maxCount));
 
   return onSnapshot(q, snapshot => {
@@ -636,7 +651,6 @@ export function subscribeDailyLeaderboard(
     onChange([]);
   });
 }
-
 // ── Calcul des récompenses journalières ───────────────────────────────────────
 
 export interface DailyReward {
@@ -677,117 +691,74 @@ export function calculateDailyReward(
   return { baseSeeds, topPercentBonus, top3Bonus, firstPlaceBonus, streakBonus, total };
 }
 
-// ── Classement "records du jour" par joueur ───────────────────────────────────
-
-export interface DailyRecordHolder {
-  userId: string;
-  username: string;
-  dailyRecordCount: number;
-}
-
-/**
- * Écoute en temps réel tous les résultats de toutes les dates
- * via collectionGroup("results"), puis conserve pour chaque date
- * uniquement le meilleur temps (rang 1). Agrège par joueur.
- *
- * Nécessite un index Firestore : collectionGroup "results" orderBy "timeMs" asc.
- */
-export function subscribeDailyRecordHolders(
-  onChange: (holders: DailyRecordHolder[]) => void,
-): Unsubscribe {
-  // collectionGroup permet de requêter toutes les sous-collections "results"
-  // à travers tous les documents dailyChallenges/{date}/results/{userId}
-  const q = query(collectionGroup(db, 'results'), orderBy('timeMs', 'asc'));
-
-  return onSnapshot(q, snapshot => {
-    // Pour chaque date (id du parent), garder le meilleur (timeMs le plus petit)
-    const bestByDate = new Map<string, { userId: string; username: string }>();
-
-    snapshot.forEach(docSnap => {
-      // Le path est: dailyChallenges/{date}/results/{userId}
-      const dateId = docSnap.ref.parent.parent?.id;
-      if (!dateId) return;
-      const data = docSnap.data() as DailyResult;
-      // onSnapshot orderBy timeMs asc → le premier pour chaque date est le record
-      if (!bestByDate.has(dateId)) {
-        bestByDate.set(dateId, { userId: data.userId, username: data.username });
-      }
-    });
-
-    // Agréger par joueur
-    const byUser = new Map<string, { username: string; count: number }>();
-    for (const { userId, username } of bestByDate.values()) {
-      const existing = byUser.get(userId);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        byUser.set(userId, { username, count: 1 });
-      }
-    }
-
-    const holders: DailyRecordHolder[] = [];
-    for (const [userId, { username, count }] of byUser) {
-      holders.push({ userId, username, dailyRecordCount: count });
-    }
-    holders.sort((a, b) => b.dailyRecordCount - a.dailyRecordCount);
-    onChange(holders);
-  }, () => onChange([]));
-}
-
-// ── Scellement du record du jour précédent ────────────────────────────────────
+// ── Scellement du record du jour précédent, PAR LIGUE (Lot C) ─────────────────
 //
-// Appelé au démarrage de l'app quand on détecte un nouveau jour.
-// Pour la date `previousDate` :
-//   1. Lit le document /dailyChallenges/{previousDate} — si déjà scellé, stop.
-//   2. Lit le top 1 des résultats (timeMs asc).
-//   3. Incrémente atomiquement leaderboard/{userId}.dailyWins de +1.
-//   4. Marque /dailyChallenges/{previousDate}.sealed = true pour ne pas re-créditer.
+// Appelé au démarrage de l'app quand on détecte un nouveau jour. Pour la date `previousDate` ET chaque ligue :
+//   1. Lit le top 1 des résultats de cette ligue (timeMs asc).
+//   2. DANS UNE TRANSACTION : relit le document `dailyChallenges/{date}_{ligue}` ; s'il est déjà scellé, ne fait rien ;
+//      sinon crédite le gagnant ET marque la ligue `sealed = true`. Les deux écritures sont atomiques : une victoire
+//      n'est jamais créditée deux fois (deux appareils qui scellent en même temps) ni perdue (échec entre les deux).
+//   3. Le crédit va dans le classement DE LA LIGUE du gagnant (`leaderboard/{uid}.dailyRankPousse` ou
+//      `dailyRankGrandChene`), jamais mélangé avec l'autre ligue. Le départage est « le premier arrivé » à ce nombre
+//      de victoires : l'instant de crédit est la fin de la journée scellée (déterministe, identique quel que soit
+//      l'appareil qui scelle).
+//   4. Le document `leaderboard/{uid}` est créé s'il n'existe pas (`setDoc merge`) : avant ce lot, `updateDoc` échouait
+//      et la victoire du jour n'était jamais créditée tant que le gagnant n'avait pas gagné une partie Solo.
 //
-// Idempotent : le champ `sealed` garantit qu'on ne crédite qu'une seule fois.
+// Chaque ligue a SON record : un joueur de la Pousse et un joueur du Grand Chêne peuvent donc chacun gagner une
+// victoire du jour. Idempotent grâce à `sealed`.
 
 export async function sealDailyRecord(previousDate: string): Promise<void> {
+  for (const league of DAILY_LEAGUE_ORDER) {
+    await sealLeagueRecord(previousDate, league);
+  }
+}
+
+async function sealLeagueRecord(previousDate: string, league: DailyLeague): Promise<void> {
   try {
-    const dailyDocRef = doc(db, DAILY_COLLECTION, previousDate);
+    const docId = buildLeagueDocId(previousDate, league);
+    const dailyDocRef = doc(db, DAILY_COLLECTION, docId);
 
-    // Vérifier si déjà scellé
-    const dailySnap = await getDoc(dailyDocRef);
-    if (dailySnap.exists() && dailySnap.data()?.sealed === true) {
-      return; // déjà crédité
-    }
+    // Lecture rapide hors transaction : déjà scellé → rien à faire (cas le plus fréquent, une lecture par ligue)
+    const pre = await getDoc(dailyDocRef);
+    if (pre.exists() && pre.data()?.sealed === true) return;
 
-    // Lire le top 1 des résultats de ce jour
-    const resultsRef = collection(db, DAILY_COLLECTION, previousDate, 'results');
-    const q = query(resultsRef, orderBy('timeMs', 'asc'), limit(1));
-    const snap = await getDocs(q);
+    // Top 1 des résultats de ce jour, dans cette ligue
+    const resultsRef = collection(db, DAILY_COLLECTION, docId, 'results');
+    const snap = await getDocs(query(resultsRef, orderBy('timeMs', 'asc'), limit(1)));
+    const winner = snap.empty ? null : (snap.docs[0].data() as DailyResult);
 
-    if (snap.empty) {
-      // Personne n'a joué ce jour — on scelle quand même pour ne pas retraiter
-      await setDoc(dailyDocRef, { sealed: true, sealedAt: serverTimestamp() }, { merge: true });
-      return;
-    }
+    await runTransaction(db, async tx => {
+      const dailySnap = await tx.get(dailyDocRef);
+      if (dailySnap.exists() && dailySnap.data()?.sealed === true) return; // scellé entre-temps par un autre appareil
 
-    const winner = snap.docs[0].data() as DailyResult;
+      if (!winner) {
+        // Personne n'a joué cette ligue ce jour : on scelle quand même pour ne pas retraiter
+        tx.set(dailyDocRef, { sealed: true, sealedAt: serverTimestamp(), league }, { merge: true });
+        return;
+      }
 
-    // Incrémenter dailyWins dans /leaderboard/{userId} (atomique, sans race condition)
-    const leaderboardRef = doc(db, 'leaderboard', winner.userId);
-    await updateDoc(leaderboardRef, {
-      dailyWins: increment(1),
-      dailyWinsUsername: winner.username, // dénormalisation pour le classement
-    });
+      const lbRef = doc(db, 'leaderboard', winner.userId);
+      const lbSnap = await tx.get(lbRef);
+      const field = dailyRankField(league);
+      const previousRank = lbSnap.exists() && typeof lbSnap.data()?.[field] === 'number' ? (lbSnap.data()![field] as number) : 0;
+      const wins = unpackDailyRank(previousRank).wins + 1;
 
-    // Sceller le daily — stocke aussi le recordHolder pour l'affichage
-    await setDoc(dailyDocRef, {
-      sealed: true,
-      sealedAt: serverTimestamp(),
-      recordHolder: {
+      tx.set(lbRef, {
         userId: winner.userId,
         username: winner.username,
-        timeMs: winner.timeMs,
-      },
-    }, { merge: true });
-
+        [field]: computeDailyRank(wins, dateEndMinutes(previousDate)),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      tx.set(dailyDocRef, {
+        sealed: true,
+        sealedAt: serverTimestamp(),
+        league,
+        recordHolder: { userId: winner.userId, username: winner.username, timeMs: winner.timeMs },
+      }, { merge: true });
+    });
   } catch (e) {
-    // Silencieux : erreur réseau ou joueur non encore dans /leaderboard
-    console.warn('[sealDailyRecord] erreur:', e);
+    // Silencieux : erreur réseau. Le scellement est retenté au prochain démarrage (idempotent).
+    console.warn(`[sealDailyRecord] erreur (${league}):`, e);
   }
 }

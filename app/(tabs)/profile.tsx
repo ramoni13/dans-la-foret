@@ -4,7 +4,7 @@
 // État 2 : connecté → hub 4 tuiles + sous-sections
 // ============================================================
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,9 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
-  Platform,
   Switch,
   Modal,
-  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,8 +27,8 @@ import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { useNavStore } from '../../src/store/navStore';
+import { showAlert as showDialogAlert, showConfirm as showDialogConfirm } from '../../src/store/dialogStore';
 import { usePlayerStore } from '../../src/store/playerStore';
-import { formatTime } from '../../src/utils/boardUtils';
 import { Lang } from '../../src/i18n';
 import {
   registerWithEmail,
@@ -43,14 +40,20 @@ import {
 } from '../../src/services/authService';
 import { getPlayer, upsertPlayer } from '../../src/services/playerService';
 import { BadgeCollection, RankPanel } from '../../src/components/Badges/BadgeCollection';
-import { ActiveGoalCard } from '../../src/components/Badges/ActiveGoalCard';
 import { useT } from '../../src/i18n';
 
 import { LeaderboardScreen } from '../../src/components/Leaderboard/LeaderboardScreen';
+import { StatsScreen } from '../../src/components/Stats/StatsScreen';
 import { MusicPanel } from '../../src/components/Audio/MusicPanel';
-import { getBadgeProgress, ELIGIBLE_GOAL_BADGE_IDS, DEFAULT_BADGE_GOALS } from '../../src/core/engine/badgeEngine';
-import { getRank, getPlayerScore, getNextRank } from '../../src/constants/badges';
+import { computeNextTrophies, readTrophyState } from '../../src/services/trophyService';
+import { BadgeProgressInline } from '../../src/components/Badges/BadgeProgressInline';
+import { getChapter, getChapterProgress, getRankForLevel, getRankLabel } from '../../src/constants/progression';
+import { PROGRESSION_V2 } from '../../src/constants/featureFlags';
 import { AdminCleanModal } from '../../src/components/Admin/AdminCleanModal';
+import { AdminPurgeModal } from '../../src/components/Admin/AdminPurgeModal';
+import { isAdminAccount } from '../../src/constants/devAccess';
+import { DeleteAccountModal } from '../../src/components/Account/DeleteAccountModal';
+import { LegalConsentNotice, LegalLinksPanel } from '../../src/components/Account/LegalLinks';
 
 // ── Types ───────────────────────────────────────────────────────────────────────
 type ActiveSection = 'hub' | 'stats' | 'badges' | 'classement' | 'reglages' | 'about';
@@ -79,6 +82,10 @@ export default function ProfileScreen() {
 
   // ── Modal admin nettoyage base (Ramoni uniquement) ───────────────────────────
   const [showAdminClean, setShowAdminClean] = useState(false);
+  // ── Modal admin purge de la progression v2 (Ramoni uniquement) ───────────────
+  const [showAdminPurge, setShowAdminPurge] = useState(false);
+  // ── Suppression du compte (droit à l'effacement, exigence des stores) ────────
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
 
   // ── Bouton Retour dans la barre bois haute (via ForestFrame) ────────────────
   const goHub = React.useCallback(() => setActiveSection('hub'), []);
@@ -119,89 +126,25 @@ export default function ProfileScreen() {
     return unsub;
   }, []);
 
-  // ── Slots d'objectif libres ───────────────────────────────────────────────────
-  const earnedSet = new Set(player.earnedBadges);
-  // Objectifs en cours non encore obtenus
-  const activeNonEarned = player.activeBadgeGoals.filter(id => !earnedSet.has(id));
-  // Badges encore disponibles (non obtenus, non déjà en objectif actif)
-  const availableGoalCount = ELIGIBLE_GOAL_BADGE_IDS.filter(
-    id => !earnedSet.has(id) && !activeNonEarned.includes(id)
-  ).length;
-  const goalSlotsToFill = availableGoalCount > 0 ? Math.max(0, 3 - activeNonEarned.length) : 0;
-  const hasGoalSlotFree = goalSlotsToFill > 0;
-
-  // ── Stats dérivées ────────────────────────────────────────────────────────────
-  const allBestTimes = Object.values(player.stats.bestTimes);
-  const fastestTime  = allBestTimes.length > 0 ? Math.min(...allBestTimes) : null;
-  // Temps moyen calculé depuis bestTimes (données historiques complètes, défis solo)
-  const avgBestTime  = allBestTimes.length > 0
-    ? Math.round(allBestTimes.reduce((a, b) => a + b, 0) / allBestTimes.length)
-    : null;
-  // Total défis résolus toutes catégories confondues
-  const totalAllModes = player.stats.totalSolved
-    + player.stats.dailyWon
-    + player.stats.friendWins
-    + player.onfSolvedCount;
-
-  // Stats chantier 5 (affichage dans la section statistiques)
-  const dailyPct  = player.stats.dailyPlayed > 0
-    ? Math.round(player.stats.dailyWon / player.stats.dailyPlayed * 100)
-    : null;
-  const friendPct = player.stats.friendPlayed > 0
-    ? Math.round((player.stats.friendWins / player.stats.friendPlayed) * 100)
-    : null;
-
-  // Contexte partiel pour getBadgeProgress (objectifs actifs — hors partie en cours)
-  // failCount = -1 signifie "hors-partie" : les badges qui dépendent de failCount
-  // (ex. precision_pousse) affichent 0/1 et non 1/1 par défaut.
-  const partialGameCtx = {
-    challengeId:              '',
-    levelId:                  `niveau_${player.currentLevel}`,
-    levelNumber:              player.currentLevel,
-    challengeNumber:          0,
-    elapsedMs:                0,
-    estimatedDurationMs:      0,
-    bonusUsed:                [],
-    failCount:                -1,
-    noErrorStreak:            player.stats.noErrorStreak,
-    dailyStreak:              player.dailyStreak,
-    dailyCompleted:           player.stats.dailyWon,
-    earnedBadges:             player.earnedBadges,
-    completedChallenges:      player.completedChallenges,
-    completedLevels:          [] as string[],
-    friendWins:               player.stats.friendWins,
-    bestTimes:                player.stats.bestTimes,
-    totalFriendsInvited:      player.stats.totalFriendsInvited,
-    topDEJCount:              player.stats.topDEJCount,
-    playedAt:                 new Date(),
-    sameChallengePlays:       player.stats.sameChallengePlays,
-    seasonalChallengesPlayed: player.stats.seasonalChallengesPlayed,
-    improvedChallengesCount:  player.stats.improvedChallengesCount,
-    speedBadgeHits:           player.stats.speedBadgeHits,
-    activeBadgeGoals:         player.activeBadgeGoals,
-    goalCounters:             player.goalCounters,
-    isWorldRecord:            false,
-    isFirstRecord:            false,
-    rank:                     undefined as any,
-    retryStreakCount:         player.retryStreak.count,
-    retryStreakFuseeCount:    player.retryStreakFusee.count,
-  };
+  // ── Prochains trophées (Progression v2, C8) ───────────────────────────────────
+  // Plus d'objectifs à choisir : les 3 séries les plus proches s'affichent toutes seules.
+  const nextTrophies = computeNextTrophies(player, readTrophyState(player), []);
 
   // ── Compat web/mobile ────────────────────────────────────────────────────────
+  // Modales de l'app (DialogHost) : plus d'Alert natif ni de window.alert / confirm
   const showAlert = (message: string) => {
-    if (Platform.OS === 'web') window.alert(message);
-    else Alert.alert(t('profile_alert_info'), message);
+    showDialogAlert({ title: t('profile_alert_info'), message });
   };
 
   const showConfirm = (message: string, onConfirm: () => void) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(message)) onConfirm();
-    } else {
-      Alert.alert(t('profile_alert_confirm_title'), message, [
-        { text: t('profile_alert_cancel'), style: 'cancel' },
-        { text: t('profile_alert_confirm'), style: 'destructive', onPress: onConfirm },
-      ]);
-    }
+    showDialogConfirm({
+      title: t('profile_alert_confirm_title'),
+      message,
+      confirmLabel: t('profile_alert_confirm'),
+      cancelLabel: t('profile_alert_cancel'),
+      destructive: true,
+      onConfirm,
+    });
   };
 
   // ── Handlers auth ─────────────────────────────────────────────────────────────
@@ -267,7 +210,6 @@ export default function ProfileScreen() {
         usePlayerStore.setState({
           earnedBadges:     [],
           badgeShowcase:    [undefined, undefined, undefined],
-          activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
         });
 
         // 2. Firestore — réinitialisation cloud
@@ -277,7 +219,6 @@ export default function ProfileScreen() {
             await updateDoc(doc(db, 'players', uid), {
               earnedBadges:     [],
               badgeShowcase:    [],
-              activeBadgeGoals: [...DEFAULT_BADGE_GOALS],
               updatedAt:        serverTimestamp(),
             });
           } catch (e) {
@@ -376,6 +317,9 @@ export default function ProfileScreen() {
               }
             </TouchableOpacity>
 
+            {/* Information avant collecte : CGU + politique de confidentialité */}
+            {!isLogin && <LegalConsentNotice />}
+
             {isLogin && !showForgotPassword && (
               <TouchableOpacity
                 onPress={() => { setShowForgotPassword(true); setResetEmail(email); setResetSent(false); }}
@@ -444,17 +388,11 @@ export default function ProfileScreen() {
   // ──────────────────────────────────────────────────────────────────────────────
   const displayName = firebaseUser.displayName ?? firebaseUser.email ?? 'Joueur';
 
-  // ── Rang forestier ────────────────────────────────────────────────────────────
-  const rankActivityStats = {
-    soloCompleted:   player.stats.totalSolved,
-    friendCompleted: player.stats.friendWins,
-    onfCompleted:    player.onfSolvedCount,
-    dailyCompleted:  player.stats.dailyWon,
-  };
-  const playerScore    = getPlayerScore(player.earnedBadges, rankActivityStats);
-  const currentRank    = getRank(playerScore);
-  const nextRank       = getNextRank(playerScore);
-  const rankLabel      = player.language === 'en' ? (currentRank.labelEn ?? currentRank.label) : currentRank.label;
+  // ── Rang forestier = chapitre en cours (Progression v2, C3 / D4) ─────────────
+  const currentRank    = getRankForLevel(player.currentLevel);
+  const rankLabel      = getRankLabel(currentRank, player.language);
+  const rankChapter    = getChapter(currentRank.chapterId);
+  const rankChapterProg = getChapterProgress(currentRank.chapterId, player.challengeStars);
 
   // ── Section STATS ─────────────────────────────────────────────────────────────
   if (activeSection === 'stats') {
@@ -463,50 +401,7 @@ export default function ProfileScreen() {
         <BgImage overlay={0.52} />
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>{t('profile_section_stats')}</Text>
-          <View style={styles.statsGrid}>
-            <StatCard
-              label={t('profile_stat_challenges')}
-              value={String(totalAllModes)}
-              emoji="🏆"
-              hint={t('profile_stat_challenges_hint')}
-            />
-            <StatCard
-              label={t('profile_stat_streak')}
-              value={
-                player.longestDailyChallengeStreak > 0
-                  ? t('profile_stat_streak_value', { current: String(player.dailyChallengeStreak), record: String(player.longestDailyChallengeStreak) })
-                  : String(player.dailyChallengeStreak)
-              }
-              emoji="🔥"
-              hint={t('profile_stat_streak_hint', { current: String(player.dailyChallengeStreak), record: String(player.longestDailyChallengeStreak) })}
-            />
-            <StatCard
-              label={t('profile_stat_daily_accuracy')}
-              value={
-                dailyPct !== null
-                  ? `${dailyPct}%`
-                  : '—'
-              }
-              emoji="📅"
-              hint={t('profile_stat_daily_accuracy_hint', { won: String(player.stats.dailyWon), played: String(player.stats.dailyPlayed) })}
-            />
-            <StatCard
-              label={t('profile_stat_friend_accuracy')}
-              value={
-                friendPct !== null
-                  ? `${friendPct}%`
-                  : '—'
-              }
-              emoji="🤝"
-              hint={t('profile_stat_friend_accuracy_hint', { won: String(player.stats.friendWins), played: String(player.stats.friendPlayed) })}
-            />
-            <StatCard
-              label={t('profile_stat_avg_time')}
-              value={avgBestTime !== null ? formatTime(avgBestTime) : '—'}
-              emoji="⏱"
-              hint={t('profile_stat_avg_time_hint')}
-            />
-          </View>
+          <StatsScreen />
         </ScrollView>
       </View>
     );
@@ -520,53 +415,15 @@ export default function ProfileScreen() {
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>{t('profile_section_badges')}</Text>
 
-          {/* ── Objectifs actifs ──────────────────────────────────────────── */}
+          {/* ── Prochains trophées (les 3 plus proches, sans objectif à choisir) ── */}
           <View style={goalStyles.goalSection}>
-            <View style={goalStyles.goalHeader}>
-              <Text style={goalStyles.goalTitle}>{t('profile_goals_title')}</Text>
-            </View>
-
-            <View style={goalStyles.goalList}>
-              {/* 3 slots fixes : actif ou vide */}
-              {[0, 1, 2].map(slotIdx => {
-                const badgeId = player.activeBadgeGoals[slotIdx];
-                if (badgeId) {
-                  const progress = getBadgeProgress(badgeId, partialGameCtx as any);
-                  const isObtained = player.earnedBadges.includes(badgeId);
-                  // Pour les badges de rejeu, passer le challengeId verrouillé.
-                  // Fallback sur lastPlayedChallengeId si le verrou n'a pas encore été posé
-                  // (compatibilité descendante : badge déjà actif avant la mise à jour).
-                  const targetChallengeId =
-                    badgeId === 'amelioration_cycle'
-                      ? (player.retryStreak.challengeId ?? player.lastPlayedChallengeId)
-                    : badgeId === 'amelioration_fusee'
-                      ? (player.retryStreakFusee.challengeId ?? player.lastPlayedChallengeId)
-                    : null;
-                  const handleReplay = targetChallengeId
-                    ? () => router.push(`/game/${targetChallengeId}` as any)
-                    : undefined;
-                  return (
-                    <ActiveGoalCard
-                      key={badgeId}
-                      progress={progress ?? { badgeId, currentValue: 1, targetValue: 1, percentage: 1 }}
-                      obtained={isObtained}
-                      targetChallengeId={targetChallengeId}
-                      onReplay={handleReplay}
-                    />
-                  );
-                }
-                // Slot vide
-                return (
-                  <View
-                    key={`empty-${slotIdx}`}
-                    style={goalStyles.emptySlot}
-                  >
-                    <Text style={goalStyles.emptySlotEmoji}>🎯</Text>
-                    <Text style={goalStyles.emptySlotText}>{t('profile_goal_empty_slot')}</Text>
-                  </View>
-                );
-              })}
-            </View>
+            <BadgeProgressInline
+              trophies={nextTrophies}
+              seedAnimDone={false}
+            />
+            {nextTrophies.length === 0 && (
+              <Text style={goalStyles.emptySlotText}>{t('trophy_next_empty')}</Text>
+            )}
           </View>
 
           {/* ── Rang forestier (complet avec paliers) ────────────────────── */}
@@ -583,7 +440,7 @@ export default function ProfileScreen() {
           />
 
           {/* ── Bouton dev Ramoni uniquement ── */}
-          {player.username === 'Ramoni' && (
+          {isAdminAccount(player.username) && (
             <TouchableOpacity
               style={devStyles.resetBadgesBtn}
               onPress={handleResetBadges}
@@ -658,7 +515,7 @@ export default function ProfileScreen() {
           </View>
 
           {/* Nettoyer la base + Séquence badges — Ramoni uniquement */}
-          {player.username === 'Ramoni' && (
+          {isAdminAccount(player.username) && (
             <>
               <TouchableOpacity
                 style={devStyles.adminCleanBtn}
@@ -671,13 +528,20 @@ export default function ProfileScreen() {
                 visible={showAdminClean}
                 onClose={() => setShowAdminClean(false)}
               />
+
               <TouchableOpacity
                 style={[devStyles.adminCleanBtn, { marginTop: 8 }]}
-                onPress={() => router.push('/admin/badge-sequence')}
+                onPress={() => setShowAdminPurge(true)}
                 activeOpacity={0.8}
+                accessibilityRole="button"
               >
-                <Text style={devStyles.adminCleanBtnText}>Sequence des badges</Text>
+                <Text style={devStyles.adminCleanBtnText}>{t('admin_purge_btn')}</Text>
               </TouchableOpacity>
+              <AdminPurgeModal
+                visible={showAdminPurge}
+                onClose={() => setShowAdminPurge(false)}
+              />
+
               <TouchableOpacity
                 style={[devStyles.adminCleanBtn, { marginTop: 8 }]}
                 onPress={() => router.push('/admin/metrics')}
@@ -688,10 +552,24 @@ export default function ProfileScreen() {
             </>
           )}
 
+          {/* Informations légales : confidentialité, CGU, mentions légales, contact */}
+          <LegalLinksPanel />
+
           {/* Déconnexion */}
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
             <Text style={styles.logoutBtnText}>{t('profile_btn_logout')}</Text>
           </TouchableOpacity>
+
+          {/* Suppression définitive du compte (Apple 5.1.1(v), Google Play, RGPD art. 17) */}
+          <TouchableOpacity
+            style={styles.deleteAccountBtn}
+            onPress={() => setShowDeleteAccount(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+          >
+            <Text style={styles.deleteAccountBtnText}>{t('account_delete_btn')}</Text>
+          </TouchableOpacity>
+          <DeleteAccountModal visible={showDeleteAccount} onClose={() => setShowDeleteAccount(false)} />
 
 
         </ScrollView>
@@ -776,8 +654,11 @@ export default function ProfileScreen() {
           <Text style={styles.usernameText}>{displayName}</Text>
           <View style={styles.rankBadge}>
             <Text style={styles.rankBadgeText}>{rankLabel}</Text>
-            {nextRank && (
-              <Text style={styles.rankScoreText}>{playerScore} / {nextRank.minScore} pts</Text>
+            {rankChapter && (
+              <Text style={styles.rankScoreText}>
+                {t('levels_chapter_header', { n: String(currentRank.chapterId), name: t(rankChapter.nameKey) })}
+                {PROGRESSION_V2 ? ` · ${rankChapterProg.levelsDone}/${rankChapterProg.levelsTotal}` : ''}
+              </Text>
             )}
           </View>
         </View>
@@ -793,7 +674,7 @@ export default function ProfileScreen() {
           >
             <Text style={styles.tileEmoji}>📊</Text>
             <Text style={styles.tileLabel}>{t('profile_tile_stats')}</Text>
-            <Text style={styles.tileSub}>{t('profile_tile_stats_sub', { count: String(player.stats.totalSolved) })}</Text>
+            <Text style={styles.tileSub}>{t('profile_tile_stats_sub', { count: String(Math.max(player.stats.totalSolved, Object.keys(player.challengeStars).length)) })}</Text>
           </TouchableOpacity>
 
           {/* Badges */}
@@ -802,19 +683,12 @@ export default function ProfileScreen() {
             onPress={() => setActiveSection('badges')}
             activeOpacity={0.8}
           >
-            {hasGoalSlotFree && (
-              <View style={goalDotStyles.badge}>
-                <Text style={goalDotStyles.badgeText}>{goalSlotsToFill}</Text>
-              </View>
-            )}
             <Text style={styles.tileEmoji}>🏅</Text>
             <Text style={styles.tileLabel}>{t('profile_tile_badges')}</Text>
             <Text style={styles.tileSub}>
-              {hasGoalSlotFree
-                ? t('profile_tile_badges_sub_goals', { active: String(3 - goalSlotsToFill) })
-                : player.earnedBadges.length > 0
-                  ? t('profile_tile_badges_sub_earned', { count: String(player.earnedBadges.length) })
-                  : t('profile_tile_badges_sub_none')}
+              {player.earnedBadges.length > 0
+                ? t('profile_tile_badges_sub_earned', { count: String(player.earnedBadges.length) })
+                : t('profile_tile_badges_sub_none')}
             </Text>
           </TouchableOpacity>
 
@@ -861,156 +735,6 @@ export default function ProfileScreen() {
     </View>
   );
 }
-
-// ── Modale d'explication d'une StatCard ───────────────────────────────────────
-const native = Platform.OS !== 'web';
-
-function StatHintModal({ visible, label, emoji, hint, onClose }: {
-  visible: boolean;
-  label: string;
-  emoji: string;
-  hint: string;
-  onClose: () => void;
-}) {
-  const t = useT();
-  const scaleAnim   = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      scaleAnim.setValue(0.85);
-      opacityAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(scaleAnim, { toValue: 1, damping: 14, stiffness: 220, useNativeDriver: native }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 160, useNativeDriver: native }),
-      ]).start();
-    } else {
-      scaleAnim.setValue(0.85);
-      opacityAnim.setValue(0);
-    }
-  }, [visible]);
-
-  return (
-    <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
-      <Animated.View style={[statStyles.modalBackdrop, { opacity: opacityAnim }]}>
-        <Animated.View style={[statStyles.modalCard, { transform: [{ scale: scaleAnim }] }]}>
-          <Text style={statStyles.modalEmoji}>{emoji}</Text>
-          <Text style={statStyles.modalTitle}>{label}</Text>
-          <Text style={statStyles.modalBody}>{hint}</Text>
-          <TouchableOpacity style={statStyles.modalBtn} onPress={onClose} activeOpacity={0.8}>
-            <Text style={statStyles.modalBtnText}>{t('profile_understood')}</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
-  );
-}
-
-// ── Composant StatCard ────────────────────────────────────────────────────────
-function StatCard({ label, value, emoji, hint }: { label: string; value: string; emoji: string; hint?: string }) {
-  const [modalVisible, setModalVisible] = useState(false);
-
-  return (
-    <>
-      <TouchableOpacity
-        style={statStyles.card}
-        onPress={hint != null ? () => setModalVisible(true) : undefined}
-        activeOpacity={hint != null ? 0.7 : 1}
-      >
-        <Text style={statStyles.emoji}>{emoji}</Text>
-        <Text style={statStyles.value}>{value}</Text>
-        <View style={statStyles.labelRow}>
-          <Text style={statStyles.label}>{label}</Text>
-          {hint != null && (
-            <View style={statStyles.hintBadge}>
-              <Text style={statStyles.hintIcon}>?</Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-
-      {hint != null && (
-        <StatHintModal
-          visible={modalVisible}
-          label={label}
-          emoji={emoji}
-          hint={hint}
-          onClose={() => setModalVisible(false)}
-        />
-      )}
-    </>
-  );
-}
-
-const statStyles = StyleSheet.create({
-  card: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: Colors.ui.card,
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.ui.border,
-    gap: 4,
-  },
-  emoji: { fontSize: 24 },
-  value: { fontSize: 22, fontWeight: '800', color: Colors.forest.dark },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  label: { fontSize: 11, color: Colors.ui.textLight, textAlign: 'center' },
-  hintBadge: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.ui.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hintIcon: { fontSize: 9, fontWeight: '700', color: Colors.ui.textLight, lineHeight: 13 },
-  // Modale
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.60)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 28,
-  },
-  modalCard: {
-    backgroundColor: Colors.ui.card,
-    borderRadius: 24,
-    padding: 28,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 340,
-    borderWidth: 2,
-    borderColor: Colors.ui.border,
-    elevation: 16,
-    gap: 10,
-  },
-  modalEmoji: { fontSize: 40 },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.forest.dark,
-    textAlign: 'center',
-  },
-  modalBody: {
-    fontSize: 14,
-    color: Colors.ui.textLight,
-    textAlign: 'center',
-    lineHeight: 21,
-  },
-  modalBtn: {
-    marginTop: 6,
-    backgroundColor: Colors.forest.medium,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 36,
-    alignItems: 'center',
-    width: '100%',
-  },
-  modalBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-});
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
@@ -1197,6 +921,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.ui.card,
   },
   logoutBtnText: { fontSize: 14, color: '#F44336', fontWeight: '600' },
+  deleteAccountBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingVertical: 10,
+  },
+  deleteAccountBtnText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
   resetBtn: {
     alignItems: 'center',
     paddingVertical: 14,

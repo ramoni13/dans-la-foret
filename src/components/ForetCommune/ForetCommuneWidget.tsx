@@ -4,7 +4,7 @@
 // Données temps réel depuis Firestore /foret_commune/global.
 // Positionné en absolute-bottom par index.tsx — ne pas mettre
 // position:absolute ici.
-// TODO : brancher AdMob rewarded video sur le bouton "Pub".
+// Le bouton « Contribuer » passe par `useRewardedAd('foret_commune')` (Lot B) ; le SDK AdMob réel arrive au Lot E.
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
@@ -19,9 +19,10 @@ import { usePlayerStore } from '../../store/playerStore';
 import { subscribeForetCommune, addForetCommunePoints, addTreeDirect } from '../../services/foretCommuneService';
 import { FORET_COMMUNE_POINTS_PER_VIDEO, FORET_COMMUNE_POINTS_PER_TREE } from '../../constants/foretCommune';
 import { PremiumCard } from '../Premium/PremiumCard';
+import { useRewardedAd } from '../../hooks/useRewardedAd';
 import { useT } from '../../i18n';
 
-const LOGO_ONF = require('../../../assets/elements/design_app/planete-urgence.png');
+const LOGO_ONF = require('../../../assets/elements/design_app/planete-urgence-blanc.png');
 
 export function ForetCommuneWidget() {
   const t = useT();
@@ -41,12 +42,18 @@ export function ForetCommuneWidget() {
     return () => unsub();
   }, []);
 
+  // Contribution = pub regardée en entier (service `rewardedAdService`), plafonnée par jour (Lot B). Avant ce lot, le
+  // bouton versait les points SANS aucune pub et sans limite.
+  const foretAd = useRewardedAd('foret_commune');
+
   const handlePub = async () => {
-    // TODO AdMob rewarded video — pour l'instant contribution directe en dev
-    if (contributing) return;
+    if (contributing || !foretAd.available) return;
     setContributing(true);
     try {
-      await addForetCommunePoints(FORET_COMMUNE_POINTS_PER_VIDEO);
+      // `watch()` montre la pub, compte le visionnage (plafond du jour) et renvoie true si méritée
+      if (await foretAd.watch()) {
+        await addForetCommunePoints(FORET_COMMUNE_POINTS_PER_VIDEO);
+      }
     } catch {
       // silencieux
     } finally {
@@ -93,13 +100,19 @@ export function ForetCommuneWidget() {
 
           {/* Bouton 2 — Regarder une pub + progression cagnotte */}
           <TouchableOpacity
-            style={[styles.btn, styles.btnPub, contributing && styles.btnDisabled]}
+            style={[styles.btn, styles.btnPub, (contributing || !foretAd.available) && styles.btnDisabled]}
             onPress={handlePub}
             activeOpacity={0.8}
-            disabled={contributing}
+            disabled={contributing || !foretAd.available}
           >
             <Text style={styles.btnPubText}>{t('foret_commune_contribute')}</Text>
-            <Text style={styles.btnPubSub}>{contributing ? '...' : t('foret_commune_watch_ad')}</Text>
+            <Text style={styles.btnPubSub}>
+              {contributing
+                ? '...'
+                : foretAd.remaining <= 0
+                  ? t('foret_commune_ad_limit')
+                  : t('foret_commune_watch_ad')}
+            </Text>
 
             {/* Barre de progression intégrée */}
             <View style={styles.progressBarBg}>

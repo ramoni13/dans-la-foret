@@ -6,18 +6,18 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/drawer": "^7.3.9",
     "@react-navigation/native": "^7.3.18",
-    "expo": "~57.0.31",
+    "expo": "~57.0.32",
     "expo-asset": "~57.0.18",
     "expo-audio": "~57.0.5",
     "expo-constants": "~57.0.17",
     "expo-haptics": "~57.0.2",
-    "expo-linking": "~57.0.12",
+    "expo-linking": "~57.0.9",
     "expo-navigation-bar": "~57.0.2",
-    "expo-router": "~57.0.25",
+    "expo-router": "~57.0.30",
     "expo-status-bar": "~57.0.1",
     "firebase": "12.19.0",
     "lottie-react-native": "~7.3.8",
-    "query-string": "^7.1.3",
+    "query-string": "^9.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -49,7 +49,8 @@
     "generate": "npx ts-node --project tsconfig.scripts.json scripts/generateChallenges.ts",
     "generate:levels": "npx ts-node --project tsconfig.scripts.json scripts/generateChallenges.ts",
     "generate:viewer": "npx ts-node --project tsconfig.scripts.json scripts/generateViewerData.ts",
-    "regenerate": "npx ts-node --project tsconfig.scripts.json scripts/regenerateChallenges.ts"
+    "regenerate": "npx ts-node --project tsconfig.scripts.json scripts/regenerateChallenges.ts",
+    "generate:onf": "npx ts-node --project tsconfig.scripts.json scripts/generateOnfChallenges.ts"
   },
   "jest": {
     "preset": "ts-jest",
@@ -62,7 +63,10 @@
     ],
     "testMatch": [
       "**/__tests__/**/*.test.ts"
-    ]
+    ],
+    "moduleNameMapper": {
+      "\\.(jpg|jpeg|png|gif|webp|svg|mp3|wav|ttf)$": "<rootDir>/__mocks__/fileMock.js"
+    }
   },
   "private": true,
   "overrides": {

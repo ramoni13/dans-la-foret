@@ -172,18 +172,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
-    lineHeight: 26,
+    lineHeight: 30,
   },
   body: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.72)',
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
-    lineHeight: 21,
+    lineHeight: 24,
   },
   cell: {
     position: 'absolute',

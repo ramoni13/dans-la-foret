@@ -1,6 +1,7 @@
 // ============================================================
-// BADGECOLLECTION — Vue grille complète de tous les badges
-// Filtres par rareté, groupement par catégorie
+// BADGECOLLECTION — collection des trophées (Progression v2, C8 / Lot 8)
+// Filtres par rareté, groupement par famille (Solo, Journalier, Forestier, Duel, Herbier, Fidélité,
+// Surprises, Trophée final). Les séries sont affichées par palier : bois, pierre, or, cristal.
 // ============================================================
 
 import React, { useState } from 'react';
@@ -19,24 +20,26 @@ import {
   BadgeRarity,
   TOTAL_NON_SECRET_BADGES,
   TOTAL_SECRET_BADGES,
-  getBadgeTexts,
-  RANK_DEFINITIONS,
-  RARITY_POINTS,
-  MAX_BADGE_SCORE,
-  getPlayerScore,
-  getRank,
-  getNextRank,
-  PlayerActivityStats,
-  ACTIVITY_POINTS,
+  getTrophyTexts,
 } from '../../constants/badges';
-import { BADGE_MUSIC_UNLOCK_MAP } from '../../constants/music';
+import { PROGRESSION_V2 } from '../../constants/featureFlags';
+import {
+  CHAPTERS,
+  computeLevelProgress,
+  getChapter,
+  getChapterProgress,
+  getChapterSeeds,
+  getRankForLevel,
+  getRankLabel,
+} from '../../constants/progression';
+import { TROPHY_MUSIC_UNLOCK_MAP } from '../../constants/music';
 import { Colors } from '../../constants/colors';
 import { BadgeCard } from './BadgeCard';
 import { BadgeDetailModal } from './BadgeDetailModal';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
 
-type FilterOption = 'all' | BadgeRarity | 'secret' | 'saisonnier';
+type FilterOption = 'all' | BadgeRarity | 'surprise';
 
 interface BadgeCollectionProps {
   earnedBadges: string[];
@@ -52,42 +55,34 @@ interface BadgeCollectionProps {
   hideRankPanel?: boolean;
 }
 
-// Clés i18n pour les filtres de rareté
+// Clés i18n pour les filtres
 const FILTER_KEYS: Record<FilterOption, string> = {
-  all:        'badge_filter_all',
-  bois:       'rarity_bois',
-  pierre:     'rarity_pierre',
-  or:         'rarity_or',
-  cristal:    'rarity_cristal',
-  secret:     'badge_filter_secret',
-  saisonnier: 'badge_filter_seasonal',
+  all:      'badge_filter_all',
+  bois:     'rarity_bois',
+  pierre:   'rarity_pierre',
+  or:       'rarity_or',
+  cristal:  'rarity_cristal',
+  surprise: 'badge_filter_surprise',
 };
 
-// Clés i18n pour les catégories
+// Clés i18n pour les familles de trophées
 const CATEGORY_KEYS: Record<BadgeCategory, string> = {
-  vitesse:      'cat_vitesse',
-  precision:    'cat_precision',
-  regularite:   'cat_regularite',
-  social:       'cat_social',
-  amelioration: 'cat_amelioration',
-  exploration:  'cat_exploration',
-  secret:       'cat_secret',
-  saisonnier:   'cat_saisonnier',
+  solo:     'trophy_family_solo',
+  daily:    'trophy_family_daily',
+  onf:      'trophy_family_onf',
+  duel:     'trophy_family_duel',
+  herbier:  'trophy_family_herbier',
+  fidelite: 'trophy_family_fidelite',
+  surprise: 'trophy_family_surprise',
+  final:    'trophy_family_final',
 };
 
 const CATEGORY_ORDER: BadgeCategory[] = [
-  'vitesse', 'precision', 'regularite', 'social',
-  'amelioration', 'exploration', 'saisonnier', 'secret',
+  'solo', 'daily', 'onf', 'duel', 'herbier', 'fidelite', 'surprise', 'final',
 ];
 
-// ── Panneau des rangs forestiers ─────────────────────────────────────────────
-
-const RARITY_ROWS: { key: BadgeRarity; color: string; labelKey: string }[] = [
-  { key: 'bois',    color: '#8B5E3C', labelKey: 'rank_points_bois'    },
-  { key: 'pierre',  color: '#78909C', labelKey: 'rank_points_pierre'  },
-  { key: 'or',      color: '#F9A825', labelKey: 'rank_points_or'      },
-  { key: 'cristal', color: '#00BCD4', labelKey: 'rank_points_cristal' },
-];
+// ── Panneau « Rang et chapitres » (Progression v2, C3 / D4) ──────────────────
+// Le rang est le CHAPITRE en cours : plus de score de badges ni de points d'activité.
 
 export interface RankPanelProps {
   earnedBadges: string[];
@@ -95,120 +90,91 @@ export interface RankPanelProps {
   t: (key: string, vars?: Record<string, string>) => string;
 }
 
-export const RankPanel: React.FC<RankPanelProps> = ({ earnedBadges, language, t }) => {
-  const stats = usePlayerStore(s => s.stats);
-  const onfSolvedCount = usePlayerStore(s => s.onfSolvedCount);
-  const completedChallenges = usePlayerStore(s => s.completedChallenges);
+export const RankPanel: React.FC<RankPanelProps> = ({ language, t }) => {
+  const challengeStars = usePlayerStore(s => s.challengeStars);
+  const currentLevel = usePlayerStore(s => s.currentLevel);
 
-  const activityStats: PlayerActivityStats = {
-    soloCompleted:   completedChallenges.length,
-    friendCompleted: stats.friendPlayed,
-    onfCompleted:    onfSolvedCount,
-    dailyCompleted:  stats.dailyWon,
-  };
-
-  const score    = getPlayerScore(earnedBadges, activityStats);
-  const rank     = getRank(score);
-  const nextRank = getNextRank(score);
-
-  const rankLabel = language === 'en' ? rank.labelEn : rank.label;
+  const progress = React.useMemo(() => computeLevelProgress(challengeStars), [challengeStars]);
+  // PROGRESSION_V2 : niveau issu des étoiles ; sinon le niveau du joueur (ancien calcul).
+  const level = PROGRESSION_V2 ? progress.currentLevel : currentLevel;
+  const rank = getRankForLevel(level);
+  const rankLabel = getRankLabel(rank, language);
+  const chapter = getChapter(rank.chapterId);
+  const chapterName = chapter ? t(chapter.nameKey) : '';
+  const chapterProg = getChapterProgress(rank.chapterId, challengeStars, progress);
+  const nextChapter = getChapter(rank.chapterId + 1);
+  const nextRank = nextChapter ? getRankLabel(getRankForLevel(nextChapter.levels[0]), language) : null;
+  const ratio = chapterProg.levelsTotal > 0 ? chapterProg.levelsDone / chapterProg.levelsTotal : 0;
 
   return (
     <View style={rankStyles.container}>
-      {/* Titre section */}
       <Text style={rankStyles.sectionTitle}>{t('rank_section_title')}</Text>
 
-      {/* Bloc score joueur */}
-      <View style={rankStyles.scoreBox}>
+      {/* Rang courant = chapitre en cours */}
+      <View
+        style={rankStyles.scoreBox}
+        accessible
+        accessibilityLabel={t('rank_a11y_current', { rank: rankLabel, chapter: chapterName })}
+      >
+        <Text style={rankStyles.rankText}>{rank.emoji} {rankLabel}</Text>
         <Text style={rankStyles.scoreText}>
-          {t('rank_your_score', { score: String(score) })}
-        </Text>
-        <Text style={rankStyles.rankText}>
-          {rank.emoji} {rankLabel}
+          {t('levels_chapter_header', { n: String(rank.chapterId), name: chapterName })}
         </Text>
         {nextRank ? (
-          <Text style={rankStyles.nextText}>
-            {t('rank_next_rank', {
-              emoji: nextRank.emoji,
-              label: language === 'en' ? nextRank.labelEn : nextRank.label,
-              pts: String(nextRank.minScore),
-            })}
-          </Text>
+          <>
+            <Text style={rankStyles.nextText}>
+              {t('rank_next_chapter', {
+                done: String(chapterProg.levelsDone),
+                total: String(chapterProg.levelsTotal),
+                rank: nextRank,
+              })}
+            </Text>
+            <View style={rankStyles.progressBar}>
+              <View style={[rankStyles.progressFill, { width: `${Math.round(ratio * 100)}%` }]} />
+            </View>
+          </>
         ) : (
           <Text style={rankStyles.maxText}>{t('rank_max_reached')}</Text>
         )}
-        {/* Barre de progression vers le rang suivant */}
-        {nextRank && (
-          <View style={rankStyles.progressBar}>
-            <View style={[rankStyles.progressFill, {
-              width: `${Math.min(100, (score / nextRank.minScore) * 100)}%`,
-            }]} />
-          </View>
-        )}
       </View>
 
-      {/* Barème des points — badges */}
-      <Text style={rankStyles.pointsTitle}>{t('rank_points_title')}</Text>
-      <View style={rankStyles.pointsGrid}>
-        {RARITY_ROWS.map(row => (
-          <View key={row.key} style={rankStyles.pointsRow}>
-            <View style={[rankStyles.rarityDot, { backgroundColor: row.color }]} />
-            <Text style={rankStyles.pointsLabel}>{t(row.labelKey)}</Text>
-            <Text style={rankStyles.pointsValue}>+{RARITY_POINTS[row.key]}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Barème des points — activité */}
-      <Text style={rankStyles.pointsTitle}>{t('rank_activity_title')}</Text>
-      <View style={rankStyles.pointsGrid}>
-        <View style={rankStyles.pointsRow}>
-          <Text style={rankStyles.activityIcon}>🌲</Text>
-          <Text style={rankStyles.pointsLabel}>{t('rank_activity_solo')}</Text>
-          <Text style={rankStyles.pointsValue}>+{ACTIVITY_POINTS.solo}</Text>
-        </View>
-        <View style={rankStyles.pointsRow}>
-          <Text style={rankStyles.activityIcon}>🤝</Text>
-          <Text style={rankStyles.pointsLabel}>{t('rank_activity_friend')}</Text>
-          <Text style={rankStyles.pointsValue}>+{ACTIVITY_POINTS.friend}</Text>
-        </View>
-        <View style={rankStyles.pointsRow}>
-          <Text style={rankStyles.activityIcon}>🗺️</Text>
-          <Text style={rankStyles.pointsLabel}>{t('rank_activity_onf')}</Text>
-          <Text style={rankStyles.pointsValue}>+{ACTIVITY_POINTS.onf}</Text>
-        </View>
-        <View style={rankStyles.pointsRow}>
-          <Text style={rankStyles.activityIcon}>📅</Text>
-          <Text style={rankStyles.pointsLabel}>{t('rank_activity_daily')}</Text>
-          <Text style={rankStyles.pointsValue}>+{ACTIVITY_POINTS.daily}</Text>
-        </View>
-      </View>
-
-      {/* Liste de tous les rangs */}
+      {/* Les 7 chapitres : rang, état, récompense de graines */}
+      <Text style={rankStyles.pointsTitle}>{t('rank_chapters_title')}</Text>
       <View style={rankStyles.rankList}>
-        {RANK_DEFINITIONS.map((r, idx) => {
-          const isCurrentRank = r.id === rank.id;
-          const isUnlocked    = score >= r.minScore;
-          const label         = language === 'en' ? r.labelEn : r.label;
+        {CHAPTERS.map((c, idx) => {
+          const cp = getChapterProgress(c.id, challengeStars, progress);
+          const isCurrent = cp.status === 'current';
+          const isDone = cp.status === 'completed';
+          const isLocked = cp.status === 'locked';
+          const cRank = getRankForLevel(c.levels[0]);
+          const seeds = getChapterSeeds(c);
           return (
             <View
-              key={r.id}
+              key={c.id}
               style={[
                 rankStyles.rankRow,
-                isCurrentRank && rankStyles.rankRowCurrent,
-                idx < RANK_DEFINITIONS.length - 1 && rankStyles.rankRowBorder,
+                isCurrent && rankStyles.rankRowCurrent,
+                idx < CHAPTERS.length - 1 && rankStyles.rankRowBorder,
               ]}
+              accessible
+              accessibilityLabel={`${getRankLabel(cRank, language)}, ${t(c.nameKey)}, ${t(
+                isDone ? 'rank_chapter_done' : isCurrent ? 'rank_chapter_current' : 'rank_chapter_locked',
+              )}`}
             >
-              <Text style={[rankStyles.rankEmoji, !isUnlocked && rankStyles.rankLocked]}>
-                {isUnlocked ? r.emoji : '🔒'}
+              <Text style={[rankStyles.rankEmoji, isLocked && rankStyles.rankLocked]}>
+                {isLocked ? '🔒' : c.emoji}
               </Text>
               <View style={rankStyles.rankInfo}>
-                <Text style={[rankStyles.rankName, isCurrentRank && rankStyles.rankNameCurrent, !isUnlocked && rankStyles.rankLocked]}>
-                  {label}
+                <Text style={[rankStyles.rankName, isCurrent && rankStyles.rankNameCurrent, isLocked && rankStyles.rankLocked]}>
+                  {getRankLabel(cRank, language)}
                 </Text>
-                <Text style={rankStyles.rankMin}>{r.minScore} pts</Text>
+                <Text style={rankStyles.rankMin}>
+                  {t('levels_chapter_header', { n: String(c.id), name: t(c.nameKey) })}
+                  {seeds > 0 ? `  ·  +${seeds} 🌱` : ''}
+                </Text>
               </View>
-              {isCurrentRank && (
+              {isDone && <Text style={rankStyles.chapterDone}>✓</Text>}
+              {isCurrent && (
                 <View style={rankStyles.currentBadge}>
                   <Text style={rankStyles.currentBadgeText}>{t('badge_rank_label')}</Text>
                 </View>
@@ -261,6 +227,7 @@ const rankStyles = StyleSheet.create({
     color: Colors.ui.textLight,
     fontStyle: 'italic',
     marginTop: 2,
+    textAlign: 'center',
   },
   maxText: {
     fontSize: 12,
@@ -288,35 +255,6 @@ const rankStyles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 4,
-  },
-  pointsGrid: {
-    gap: 6,
-  },
-  pointsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  rarityDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  activityIcon: {
-    fontSize: 14,
-    width: 22,
-    textAlign: 'center',
-  },
-  pointsLabel: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.ui.text,
-    fontWeight: '500',
-  },
-  pointsValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.forest.dark,
   },
   rankList: {
     gap: 0,
@@ -364,6 +302,11 @@ const rankStyles = StyleSheet.create({
     fontSize: 11,
     color: Colors.ui.textLight,
   },
+  chapterDone: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.forest.accent,
+  },
   currentBadge: {
     backgroundColor: Colors.forest.medium,
     borderRadius: 8,
@@ -376,7 +319,6 @@ const rankStyles = StyleSheet.create({
     color: '#fff',
   },
 });
-
 export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
   earnedBadges,
   onBadgePress,
@@ -403,9 +345,8 @@ export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
   // Filtrage
   const filteredBadges = BADGE_DEFINITIONS.filter(badge => {
     if (activeFilter === 'all') return true;
-    if (activeFilter === 'secret') return badge.isSecret;
-    if (activeFilter === 'saisonnier') return badge.isSeasonal;
-    // Filtrer par rareté (hors secrets et saisonniers dans les autres onglets)
+    if (activeFilter === 'surprise') return badge.category === 'surprise';
+    // Filtrer par rareté (le palier d'une série détermine sa rareté)
     return badge.rarity === activeFilter && !badge.isSecret;
   });
 
@@ -428,7 +369,7 @@ export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
         progress={selectedBadge ? (progressMap[selectedBadge.id] ?? 0) : 0}
         progressLabel={selectedBadge ? progressLabelMap[selectedBadge.id] : undefined}
         onClose={() => setSelectedBadge(null)}
-        musicUnlockTrack={selectedBadge ? BADGE_MUSIC_UNLOCK_MAP[selectedBadge.id] : undefined}
+        musicUnlockTrack={selectedBadge ? TROPHY_MUSIC_UNLOCK_MAP[selectedBadge.id] : undefined}
       />
       {/* Header stats */}
       <View style={styles.header}>
@@ -474,7 +415,7 @@ export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
             <View style={styles.badgeRow}>
               {byCategory[cat]!.map(badge => {
                 const isEarned = earnedSet.has(badge.id);
-                const texts    = getBadgeTexts(badge, language);
+                const texts    = getTrophyTexts(badge, language, t);
                 return (
                   <BadgeCard
                     key={badge.id}
@@ -486,7 +427,7 @@ export const BadgeCollection: React.FC<BadgeCollectionProps> = ({
                     size="normal"
                     label={texts.label}
                     onPress={() => handleBadgePress(badge)}
-                    musicUnlockTrackTitle={BADGE_MUSIC_UNLOCK_MAP[badge.id]?.title}
+                    musicUnlockTrackTitle={TROPHY_MUSIC_UNLOCK_MAP[badge.id]?.title}
                   />
                 );
               })}

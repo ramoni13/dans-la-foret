@@ -20,7 +20,9 @@ import {
 } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { usePlayerStore } from '../../store/playerStore';
-import { SeedFlyAnimation, useCounterPulse } from './SeedFlyAnimation';
+import { isAdminAccount } from '../../constants/devAccess';
+import ReAnimated from 'react-native-reanimated';
+import { RewardFly, useCounterPulse } from './RewardFly';
 import { useConfetti, Confetti } from './Confetti';
 import { auth } from '../../services/firebase';
 import { useT } from '../../i18n';
@@ -31,8 +33,6 @@ import {
   JackpotData,
 } from '../../services/jackpotService';
 
-// Compte de test — peut toujours rejouer la roulette
-const DEV_USERNAMES = ['Ramoni'];
 
 const native = Platform.OS !== 'web';
 
@@ -311,7 +311,7 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
   const [showTable,    setShowTable]   = useState(false);
   const [isJackpotWin, setIsJackpotWin] = useState(false);
 
-  const isDevAccount = DEV_USERNAMES.includes(auth.currentUser?.displayName ?? '');
+  const isDevAccount = isAdminAccount(auth.currentUser?.displayName);
 
   // Confetti jackpot
   const confettiPieces = useConfetti(isJackpotWin);
@@ -345,7 +345,7 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
     setFromX(x + width / 2);
   }, []);
 
-  const { scale: counterScale, haloOpacity, haloScale, pulse } = useCounterPulse();
+  const { counterStyle, haloStyle, pulse } = useCounterPulse();
 
   // Animations : scale de la carte + résultat
   const scaleAnim   = useRef(new Animated.Value(0)).current;
@@ -528,11 +528,11 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
 
           {/* ── Compteur de graines (cible des animations) ──────────────── */}
           <View style={styles.counterWrapper} onLayout={onCounterLayout}>
-            <Animated.View
-              style={[styles.halo, { opacity: haloOpacity, transform: [{ scale: haloScale }] }]}
+            <ReAnimated.View
+              style={[styles.halo, haloStyle]}
               pointerEvents="none"
             />
-            <Animated.View style={[styles.seedCounterBadge, { transform: [{ scale: counterScale }] }]}>
+            <ReAnimated.View style={[styles.seedCounterBadge, counterStyle]}>
               <Text style={styles.seedCounterValue}>{displayedSeeds}</Text>
               <Text style={styles.seedCounterEmoji}>🌱</Text>
               {displayedGain > 0 && (
@@ -540,7 +540,7 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
                   <Text style={styles.seedGainText}>+{displayedGain}</Text>
                 </View>
               )}
-            </Animated.View>
+            </ReAnimated.View>
           </View>
 
           {/* ── Titre ──────────────────────────────────────────────────── */}
@@ -715,14 +715,15 @@ export const DailyRouletteModal: React.FC<DailyRouletteModalProps> = ({
 
           {/* ── Graines volantes vers le compteur ───────────────────────── */}
           {flyActive && fromY !== null && counterY !== null && (
-            <SeedFlyAnimation
+            <RewardFly
               key={flyKey}
+              target="seeds"
               count={launchedCount.current}
               fromX={fromX}
               fromY={fromY}
               targetX={counterX}
               targetY={counterY}
-              onSeedArrived={onSeedArrived}
+              onArrived={onSeedArrived}
             />
           )}
 

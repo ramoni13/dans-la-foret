@@ -88,9 +88,16 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width, animHeig
       </View>
 
       {/* Texte explicatif */}
-      <Text style={styles.a11yText} numberOfLines={2}>
+      <Text style={styles.a11yText} numberOfLines={3}>
         {a11yLabel}
       </Text>
+
+      {/* « Tu l'as déjà croisé dans … » : l'élément a déjà été présenté ailleurs (Défi du Jour) */}
+      {isNew && rule.seenElsewhereKey && (
+        <Text style={styles.seenText} accessibilityLiveRegion="polite">
+          {t(rule.seenElsewhereKey)}
+        </Text>
+      )}
     </View>
   );
 };
@@ -112,7 +119,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   newBadgeText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: Colors.forest.dark,
   },
@@ -126,8 +133,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
-  a11yText: {
+  seenText: {
     fontSize: 16,
+    fontWeight: '700',
+    color: Colors.forest.accent,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingHorizontal: 12,
+  },
+  a11yText: {
+    fontSize: 19,
+    lineHeight: 26,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',

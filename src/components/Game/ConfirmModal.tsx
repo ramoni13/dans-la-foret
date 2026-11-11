@@ -27,6 +27,7 @@ interface ConfirmModalProps {
   confirmLabel: string;         // bouton principal (action)
   confirmDestructive?: boolean; // rouge si vrai
   cancelLabel?: string;         // bouton annuler (optionnel)
+  hideCancel?: boolean;         // vrai : un seul bouton (alerte d'information)
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -42,6 +43,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   confirmLabel,
   confirmDestructive = false,
   cancelLabel = 'Annuler',
+  hideCancel = false,
   onConfirm,
   onCancel,
 }) => {
@@ -77,6 +79,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       transparent
       animationType="none"
       statusBarTranslucent
+      onRequestClose={hideCancel ? onConfirm : onCancel}
     >
       <Animated.View style={[styles.backdrop, { opacity: opacityAnim }]}>
         <Animated.View
@@ -87,9 +90,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <Text style={styles.iconText}>{icon}</Text>
           </Animated.View>
 
-          <Text style={[styles.title, { color: borderColor === '#FF9800' ? '#E65100' : borderColor }]}>
-            {title}
-          </Text>
+          {!!title && (
+            <Text style={[styles.title, { color: borderColor === '#FF9800' ? '#E65100' : borderColor }]}>
+              {title}
+            </Text>
+          )}
           <Text style={styles.message}>{message}</Text>
 
           {/* Bouton principal */}
@@ -105,13 +110,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </TouchableOpacity>
 
           {/* Bouton annuler */}
-          <TouchableOpacity
-            style={styles.btnCancel}
-            onPress={onCancel}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.btnCancelText}>{cancelLabel}</Text>
-          </TouchableOpacity>
+          {!hideCancel && (
+            <TouchableOpacity
+              style={styles.btnCancel}
+              onPress={onCancel}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.btnCancelText}>{cancelLabel}</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </Animated.View>
     </Modal>

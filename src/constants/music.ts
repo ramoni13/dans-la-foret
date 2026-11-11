@@ -2,14 +2,17 @@
 // CATALOGUE DE MUSIQUES
 // 2 types : "Ambiance Défi" (ingame) et "Ambiance Forêt" (hors défi)
 //
-// Déblocage :
-//   - unlockBadgeId absent → gratuit, disponible dès le début
-//   - unlockBadgeId: 'vitesse_Loup' → débloqué quand le joueur obtient ce badge
+// Déblocage (Progression v2, C8 / D11) — voir src/constants/musicUnlocks.ts :
+//   - `unlock` absent → gratuit, disponible dès le début (2 titres) ;
+//   - { type: 'chapter', chapter: N } → débloqué à la fin du chapitre N (7 titres) ;
+//   - { type: 'trophy', id }          → débloqué par un trophée précis (palier « pierre » de 5 séries) ;
+//   - { type: 'seeds', cost }         → prévu pour plus tard, non utilisé.
 //
-// Convention : 1 badge spécifique = 1 titre. Pas d'ambiguïté possible.
-// Pour ajouter un titre : créer une entrée avec le badge narrativement cohérent.
+// Convention : 1 déblocage précis = 1 titre. Pour ajouter un titre : créer une entrée ici ET son déblocage
+// dans `MUSIC_UNLOCKS` (musicUnlocks.ts).
 // ============================================================
 
+import { MUSIC_UNLOCKS, FREE_MUSIC_IDS, MusicUnlock } from './musicUnlocks';
 export type MusicType = 'ingame' | 'menu';
 
 export interface MusicTrack {
@@ -18,15 +21,14 @@ export interface MusicTrack {
   type: MusicType;
   file: any;              // require() du fichier audio
   /**
-   * ID d'un badge SPÉCIFIQUE (BADGE_DEFINITIONS[].id) requis pour débloquer ce titre.
-   * undefined = gratuit (libre d'accès dès le début).
-   * Le titre est débloqué dès que playerStore.earnedBadges contient cet ID.
+   * Déblocage du titre (`MUSIC_UNLOCKS`). undefined = gratuit (libre d'accès dès le début).
+   * Renseigné automatiquement depuis `musicUnlocks.ts` : ne pas l'écrire à la main dans le catalogue.
    */
-  unlockBadgeId?: string;
+  unlock?: MusicUnlock;
   description?: string;
 }
 
-export const MUSIC_CATALOG: MusicTrack[] = [
+const RAW_CATALOG: MusicTrack[] = [
   // ── Ambiance Forêt (menu) — gratuits ──────────────────────────────────────
   {
     id: 'manor_cocktail',
@@ -42,7 +44,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Jardin Japonais',
     type: 'menu',
     file: require('../../assets/musics/Jardin Japonais_F.mp3'),
-    unlockBadgeId: 'exploration_graine', // 🌱 Premiers pas — niveaux 1 à 3 complétés
     description: 'Sérénité zen pour accompagner vos explorations',
   },
   {
@@ -50,7 +51,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Swaying Groove',
     type: 'menu',
     file: require('../../assets/musics/Swaying Groove_F.mp3'),
-    unlockBadgeId: 'regularite_aube',    // 🌅 L'Aube du Joueur — 3 jours de suite
     description: 'Un groove doux pour les habitués de la forêt',
   },
   {
@@ -58,7 +58,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Woodland Pulse',
     type: 'menu',
     file: require('../../assets/musics/Woodland Pulse_F.mp3'),
-    unlockBadgeId: 'daily_first',        // 🌅 Premier Pas Quotidien — 1er défi du jour réussi
     description: 'Les pulsations naturelles de la forêt',
   },
   {
@@ -66,7 +65,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Lilting Swing',
     type: 'menu',
     file: require('../../assets/musics/Lilting Swing_F.mp3'),
-    unlockBadgeId: 'social_lion',        // 🦁 Chasseur solitaire — 5 victoires contre des amis
     description: 'Mélodie légère et balancée pour les esprits sociaux',
   },
   {
@@ -74,7 +72,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Sun-Warmed Groove',
     type: 'menu',
     file: require('../../assets/musics/Sun-Warmed Groove_F.mp3'),
-    unlockBadgeId: 'saisonnier_hiver',   // ❄️ Flocon de neige — 5 défis en hiver
     description: 'Chaleur dorée d\'un groove ensoleillé, baume contre le froid',
   },
 
@@ -93,7 +90,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Forest Breath',
     type: 'ingame',
     file: require('../../assets/musics/Forest Breath_D.mp3'),
-    unlockBadgeId: 'precision_pousse',   // 🌱 Première pousse — 1er défi sans erreur
     description: 'Le souffle apaisant de la forêt pour rester concentré',
   },
   {
@@ -101,7 +97,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Pulsation Douce',
     type: 'ingame',
     file: require('../../assets/musics/Pulsation Douce_D.mp3'),
-    unlockBadgeId: 'vitesse_tortue',     // 🐢 Patience de la tortue — défi en < 30 s
     description: 'Un rythme doux pour les esprits méthodiques',
   },
   {
@@ -109,7 +104,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Deep Sub Pulse',
     type: 'ingame',
     file: require('../../assets/musics/Deep Sub Pulse_D.mp3'),
-    unlockBadgeId: 'exploration_herbe',  // 🌿 Explorateur confirmé — niveaux 1 à 5 complétés
     description: 'Basses profondes pour les explorateurs aguerris',
   },
   {
@@ -117,7 +111,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Elek',
     type: 'ingame',
     file: require('../../assets/musics/elek.mp3'),
-    unlockBadgeId: 'vitesse_loup',       // 🦊 Ruse du Loup — défi en < 20 s
     description: 'Rythme électro pour les défis intenses',
   },
   {
@@ -125,7 +118,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Boucle Hypnotique',
     type: 'ingame',
     file: require('../../assets/musics/Boucle Hypnotique_D.mp3'),
-    unlockBadgeId: 'social_poignee',     // 🤝 Première rencontre — 1er défi ami
     description: 'Boucle hypnotique pour entrer dans la zone de concentration',
   },
   {
@@ -133,7 +125,6 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Neo Classical Motivation',
     type: 'ingame',
     file: require('../../assets/musics/Neo Classical Motivation_D.mp3'),
-    unlockBadgeId: 'amelioration_cycle', // 🔄 Persévérant — rejoue le même défi 3 fois
     description: 'Orchestrations néo-classiques pour booster la motivation',
   },
   {
@@ -141,22 +132,32 @@ export const MUSIC_CATALOG: MusicTrack[] = [
     title: 'Moonlit Beach Shuffle',
     type: 'menu',
     file: require('../../assets/musics/Moonlit Beach Shuffle_F.mp3'),
-    unlockBadgeId: 'amelioration_graphe', // 📈 En progression — améliore ton meilleur temps
     description: 'Shuffle nocturne au clair de lune pour les esprits en quête de progression',
   },
 ];
 
-/** IDs des titres gratuits (pas de badge requis) */
+/** Catalogue complet : les fichiers de `RAW_CATALOG` + le déblocage de `MUSIC_UNLOCKS`. */
+export const MUSIC_CATALOG: MusicTrack[] = RAW_CATALOG.map(track => {
+  const unlock = MUSIC_UNLOCKS[track.id];
+  return unlock ? { ...track, unlock } : track;
+});
+
+/** IDs des titres gratuits (pas de déblocage requis) */
 export const FREE_TRACK_IDS = MUSIC_CATALOG
-  .filter(t => !t.unlockBadgeId)
+  .filter(t => !t.unlock)
   .map(t => t.id);
 
 /**
- * Map : badgeId → MusicTrack qu'il débloque.
- * Utilisé par BadgeCard et BadgeDetailModal pour afficher l'indicateur musical.
+ * Titre offert par un TROPHÉE précis (le palier « pierre » de 5 séries) : identifiant du trophée → titre.
+ * Remplace l'ancien `BADGE_MUSIC_UNLOCK_MAP` (badge → titre), construit depuis `MUSIC_UNLOCKS`.
  */
-export const BADGE_MUSIC_UNLOCK_MAP: Record<string, MusicTrack> = Object.fromEntries(
+export const TROPHY_MUSIC_UNLOCK_MAP: Record<string, MusicTrack> = Object.fromEntries(
   MUSIC_CATALOG
-    .filter(t => t.unlockBadgeId)
-    .map(t => [t.unlockBadgeId!, t])
+    .filter((t): t is MusicTrack & { unlock: { type: 'trophy'; id: string } } => t.unlock?.type === 'trophy')
+    .map(t => [t.unlock.id, t]),
 );
+
+/** Tous les identifiants du catalogue (pour `computeOwnedMusic`). */
+export const MUSIC_TRACK_IDS: string[] = MUSIC_CATALOG.map(t => t.id);
+
+export { FREE_MUSIC_IDS, MUSIC_UNLOCKS };

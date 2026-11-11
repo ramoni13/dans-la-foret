@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { usePlayerStore } from '../../src/store/playerStore';
+import { isAdminAccount } from '../../src/constants/devAccess';
 import { getMetrics, GlobalMetrics, PlayerMetrics, TrackMetrics } from '../../src/services/adminService';
 import { Colors } from '../../src/constants/colors';
 
@@ -162,7 +163,7 @@ export default function MetricsScreen() {
   const [sortKey, setSortKey] = useState<'completed' | 'badges' | 'seeds' | 'onf' | 'daily'>('completed');
 
   // Garde admin
-  if (username !== 'Ramoni') {
+  if (!isAdminAccount(username)) {
     return (
       <View style={styles.center}>
         <Text style={styles.forbidden}>Accès réservé à Ramoni.</Text>

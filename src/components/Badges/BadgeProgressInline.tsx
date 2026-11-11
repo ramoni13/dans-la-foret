@@ -1,64 +1,34 @@
 // ============================================================
-// BADGEPROGRESS INLINE — 3 lignes de badges typées (Track system)
-// Affichée dans la VictoryModal après une victoire.
-// Chaque ligne correspond à une track : Performance / Persévérance / Exploration.
-// Animation "+N" séquentielle après la fin de l'animation des graines.
+// BADGEPROGRESS INLINE — « Prochains trophées » (Progression v2, C8 / Lot 8)
+// Affichée dans la VictoryModal après une victoire : les 3 trophées de série LES PLUS PROCHES, avec leur
+// barre de progression. Il n'y a plus d'« objectif actif » à choisir : la liste est calculée toute seule
+// (`getClosestTrophies`). Un trophée tout juste obtenu ce tour s'affiche avec ✓ et une barre verte.
+// Animation « +N » séquentielle après la fin de l'animation des graines.
 // ============================================================
 
-import React, { useRef, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { BADGE_MAP, BadgeRarity, getBadgeTexts } from '../../constants/badges';
-import { BadgeProgress } from '../../core/engine/badgeEngine';
+import { BADGE_MAP, BadgeRarity } from '../../constants/badges';
 import { Colors } from '../../constants/colors';
+import { TrophyProgress, getSeries } from '../../constants/trophies';
 import { useT } from '../../i18n';
-import { usePlayerStore } from '../../store/playerStore';
-
-/**
- * Décompose un challengeId du type "niveau_3_007" en "Niveau 3 · Défi 7".
- * Retourne null si le format n'est pas reconnu.
- */
-function formatChallengeTarget(challengeId: string | null | undefined): string | null {
-  if (!challengeId) return null;
-  const match = challengeId.match(/^niveau_(\d+)_(\d+)$/);
-  if (!match) return null;
-  return `Niv. ${match[1]} · Défi ${parseInt(match[2], 10)}`;
-}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export interface TrackBadgeProgressMap {
-  performance:  BadgeProgress | null;
-  perseverance: BadgeProgress | null;
-  exploration:  BadgeProgress | null;
+/** Un trophée proposé : progression actuelle + valeur AVANT la partie (pour l'animation +N). */
+export interface NextTrophyItem extends TrophyProgress {
+  /** Valeur avant la partie ; sert au « +N ». */
+  previousValue: number;
 }
 
 interface BadgeProgressInlineProps {
-  /**
-   * Progressions par track — structure typée à 3 slots.
-   * Remplace l'ancien closestBadges[].
-   */
-  trackBadges?: TrackBadgeProgressMap;
-  /**
-   * Compat descendante : ancien tableau closestBadges[].
-   * Utilisé si trackBadges n'est pas fourni.
-   */
-  closestBadges?: BadgeProgress[];
-  /** IDs des badges obtenus ce tour — affichés avec ✓, barre verte et animation +N */
+  /** Les prochains trophées (3 au plus), calculés par `getClosestTrophies`. */
+  trophies: NextTrophyItem[];
+  /** Identifiants des trophées obtenus ce tour — affichés avec ✓ et barre verte. */
   obtainedBadgeIds?: string[];
-  /** IDs des nouveaux objectifs injectés par l'auto-avance — affichés avec badge "Nouveau" */
-  newGoalBadgeIds?: string[];
   onPress?: () => void;
-  /**
-   * Signal de fin de l'animation des graines (SeedFlyAnimation terminée).
-   * Quand passe à true, déclenche les +N séquentiels sur chaque track.
-   */
+  /** Signal de fin de l'animation des graines : déclenche les +N séquentiels. */
   seedAnimDone?: boolean;
 }
 
@@ -69,22 +39,15 @@ const RARITY_COLORS: Record<BadgeRarity, string> = {
   cristal: Colors.badges.cristal,
 };
 
-// Délai entre chaque +N de track (ms)
-const TRACK_STAGGER_MS = 550;
+// Délai entre chaque +N (ms)
+const STAGGER_MS = 550;
 
-// ── Composant animation +N ─────────────────────────────────────────────────────
+// ── Animation +N ───────────────────────────────────────────────────────────────
 
-interface BadgePlusOneProps {
-  /** Déclenche l'animation quand passe à true */
-  trigger: boolean;
-  /** Delta à afficher (ex: +2, +3). Défaut = 1 */
-  delta?: number;
-}
-
-const BadgePlusOne: React.FC<BadgePlusOneProps> = ({ trigger, delta = 1 }) => {
-  const scaleAnim   = useRef(new Animated.Value(0)).current;
+const BadgePlusOne: React.FC<{ trigger: boolean; delta: number }> = ({ trigger, delta }) => {
+  const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const playedRef   = useRef(false);
+  const playedRef = useRef(false);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -93,286 +56,97 @@ const BadgePlusOne: React.FC<BadgePlusOneProps> = ({ trigger, delta = 1 }) => {
     setVisible(true);
     opacityAnim.setValue(1);
     scaleAnim.setValue(0);
-
-    // Pop : 0 → 1.4 (overshoot) → 1.1 (settle), puis fade après 1600ms
     Animated.sequence([
-      Animated.spring(scaleAnim, {
-        toValue: 1.4,
-        damping: 4,
-        stiffness: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1.1,
-        damping: 12,
-        stiffness: 180,
-        useNativeDriver: true,
-      }),
+      Animated.spring(scaleAnim, { toValue: 1.4, damping: 4, stiffness: 300, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1.1, damping: 12, stiffness: 180, useNativeDriver: true }),
     ]).start();
-
-    // Fade out après 1600ms, sur 500ms
-    setTimeout(() => {
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }).start(() => setVisible(false));
+    const tm = setTimeout(() => {
+      Animated.timing(opacityAnim, { toValue: 0, duration: 500, useNativeDriver: true }).start(() => setVisible(false));
     }, 1600);
+    return () => clearTimeout(tm);
   }, [trigger]);
 
   if (!visible) return null;
-
   return (
-    <Animated.View
-      style={[
-        styles.plusOne,
-        { transform: [{ scale: scaleAnim }], opacity: opacityAnim },
-      ]}
-      pointerEvents="none"
-    >
+    <Animated.View style={[styles.plusOne, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]} pointerEvents="none">
       <Text style={styles.plusOneText}>+{delta}</Text>
     </Animated.View>
   );
 };
 
-// ── Ligne de badge ─────────────────────────────────────────────────────────────
-
-interface TrackRowProps {
-  trackLabel: string;
-  item: BadgeProgress;
-  isObtained: boolean;
-  isNew: boolean;
-  language: string;
-  /** true = l'animation +N doit se déclencher sur cette ligne */
-  triggerAnim: boolean;
-}
-
-const TrackRow: React.FC<TrackRowProps> = ({
-  trackLabel, item, isObtained, isNew, language, triggerAnim,
-}) => {
-  const t = useT();
-  const badge = BADGE_MAP[item.badgeId];
-  if (!badge) return null;
-  const badgeTexts  = getBadgeTexts(badge, language as any);
-  const rarityColor = RARITY_COLORS[badge.rarity] ?? Colors.ui.textLight;
-  const relCurrent  = isNew ? 0 : item.currentValue;
-  const relTarget   = Math.max(1, item.targetValue);
-  const pct         = isObtained ? 1 : isNew ? 0 : Math.min(relCurrent / relTarget, 1);
-
-  // Delta pour +N :
-  // - badge obtenu ce tour : delta = étapes restantes depuis previousValue jusqu'à target
-  // - progression ordinaire : delta = current - previousValue
-  const prevValue = item.previousValue ?? item.currentValue;
-  const delta = isObtained
-    ? Math.max(1, item.targetValue - prevValue)
-    : Math.max(0, item.currentValue - prevValue);
-
-  // Le +N s'affiche uniquement s'il y a un delta réel ou si c'est une obtention
-  const hasDelta = isObtained || delta > 0;
-
-  return (
-    <View>
-      {/* Header de track */}
-      <Text style={styles.trackLabel}>{trackLabel}</Text>
-      <View style={styles.header}>
-        {/* Emoji */}
-        <View style={styles.emojiWrapper}>
-          <Text style={styles.emoji}>{badge.emoji}</Text>
-        </View>
-        {/* Bulle +N positionnée au niveau du compteur 2/5 */}
-        {hasDelta && (
-          <BadgePlusOne
-            trigger={triggerAnim}
-            delta={delta > 0 ? delta : 1}
-          />
-        )}
-        <View style={styles.labelBlock}>
-          <View style={styles.titleRow}>
-            <Text style={styles.title} numberOfLines={1}>{badgeTexts.label}</Text>
-            {isNew && (
-              <View style={styles.newBadge}>
-                <Text style={styles.newBadgeText}>{t('label_new')}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.desc} numberOfLines={1}>{badgeTexts.description}</Text>
-        </View>
-        {isObtained
-          ? <Text style={styles.obtained}>✓</Text>
-          : <Text style={styles.counter}>{relCurrent}/{relTarget}</Text>
-        }
-      </View>
-      {/* Défi cible pour amelioration_cycle / amelioration_fusee */}
-      {(() => {
-        const label = formatChallengeTarget(item.targetChallengeId);
-        if (!label || isObtained) return null;
-        return <Text style={styles.challengeTarget}>{label}</Text>;
-      })()}
-      <View style={styles.bar}>
-        <View
-          style={[
-            styles.barFill,
-            { width: `${pct * 100}%`, backgroundColor: isObtained ? '#4CAF50' : rarityColor },
-          ]}
-        />
-      </View>
-    </View>
-  );
-};
-
-// ── Composant principal ────────────────────────────────────────────────────────
+// ── Composant ──────────────────────────────────────────────────────────────────
 
 export const BadgeProgressInline: React.FC<BadgeProgressInlineProps> = ({
-  trackBadges,
-  closestBadges = [],
-  obtainedBadgeIds = [],
-  newGoalBadgeIds = [],
-  onPress,
-  seedAnimDone = false,
+  trophies, obtainedBadgeIds = [], onPress, seedAnimDone = true,
 }) => {
   const t = useT();
-  const language = usePlayerStore(s => s.language);
+  const obtained = new Set(obtainedBadgeIds);
+  const [triggered, setTriggered] = useState(-1);
 
-  const obtainedSet = new Set(obtainedBadgeIds);
-  const newGoalSet  = new Set(newGoalBadgeIds);
+  const deltas = trophies.map(item => Math.max(0, item.current - item.previousValue));
+  const countWithDelta = deltas.filter(d => d > 0).length;
 
-  // Index de la track dont le +N est actif (-1 = aucun déclenché)
-  const [triggeredIndex, setTriggeredIndex] = useState(-1);
-
-  // ── Séquencement des +N après fin animation graines ──────────────────────────
-  // Se déclenche quand seedAnimDone passe à true, OU quand trackBadges arrive
-  // après que seedAnimDone était déjà true (badge complété → nouveau badge injecté).
+  // Déclenche chaque +N avec un décalage, une fois les graines arrivées
   useEffect(() => {
-    if (!seedAnimDone) return;
-
-    setTriggeredIndex(-1);
-
-    // On détermine combien de tracks ont un delta à afficher
-    let count = 0;
-    if (trackBadges) {
-      const keys: Array<'performance' | 'perseverance' | 'exploration'> =
-        ['performance', 'perseverance', 'exploration'];
-      keys.forEach(k => { if (trackBadges[k] !== null) count++; });
-    } else {
-      count = closestBadges.length;
-    }
-
-    // Déclencher chaque track avec TRACK_STAGGER_MS entre elles
+    if (!seedAnimDone || countWithDelta === 0) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < count; i++) {
-      const delay = i * TRACK_STAGGER_MS;
-      timers.push(setTimeout(() => setTriggeredIndex(i), delay));
-    }
+    for (let i = 0; i < trophies.length; i++) timers.push(setTimeout(() => setTriggered(i), i * STAGGER_MS));
     return () => timers.forEach(clearTimeout);
-  }, [seedAnimDone, trackBadges, closestBadges]);
+  }, [seedAnimDone, trophies.length, countWithDelta]);
 
-  // ── Mode tracks typées ───────────────────────────────────────────────────────
-  if (trackBadges) {
-    const trackEntries: Array<{ key: 'performance' | 'perseverance' | 'exploration'; label: string }> = [
-      { key: 'performance',  label: t('track_performance') },
-      { key: 'perseverance', label: t('track_perseverance') },
-      { key: 'exploration',  label: t('track_exploration') },
-    ];
-
-    const visibleRows = trackEntries.filter(e => trackBadges[e.key] !== null);
-    if (visibleRows.length === 0) return null;
-
-    return (
-      <TouchableOpacity
-        style={styles.container}
-        onPress={onPress}
-        activeOpacity={onPress ? 0.75 : 1}
-      >
-        {visibleRows.map((entry, index) => {
-          const item = trackBadges[entry.key]!;
-          return (
-            <View key={entry.key} style={index > 0 ? styles.separator : undefined}>
-              <TrackRow
-                trackLabel={entry.label}
-                item={item}
-                isObtained={obtainedSet.has(item.badgeId)}
-                isNew={newGoalSet.has(item.badgeId)}
-                language={language}
-                triggerAnim={triggeredIndex >= index}
-              />
-            </View>
-          );
-        })}
-        {onPress && (
-          <Text style={styles.cta}>{t('badges_see_all')}</Text>
-        )}
-      </TouchableOpacity>
-    );
-  }
-
-  // ── Mode compat descendante (closestBadges[]) ────────────────────────────────
-  if (closestBadges.length === 0) return null;
+  if (trophies.length === 0) return null;
 
   return (
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
       activeOpacity={onPress ? 0.75 : 1}
+      accessibilityRole={onPress ? 'button' : undefined}
     >
-      {closestBadges.map((item, index) => {
-        const badge = BADGE_MAP[item.badgeId];
-        if (!badge) return null;
-        const badgeTexts  = getBadgeTexts(badge, language);
-        const isObtained  = obtainedSet.has(item.badgeId);
-        const isNew       = newGoalSet.has(item.badgeId);
-        const rarityColor = RARITY_COLORS[badge.rarity] ?? Colors.ui.textLight;
-        const relCurrent  = isNew ? 0 : item.currentValue;
-        const relTarget   = Math.max(1, item.targetValue);
-        const pct         = isObtained ? 1 : isNew ? 0 : Math.min(relCurrent / relTarget, 1);
-        const prevValue   = item.previousValue ?? item.currentValue;
-        const delta       = isObtained
-          ? Math.max(1, item.targetValue - prevValue)
-          : Math.max(0, item.currentValue - prevValue);
-        const hasDelta    = isObtained || delta > 0;
-
+      <Text style={styles.sectionLabel}>{t('trophy_next_title')}</Text>
+      {trophies.map((item, index) => {
+        const series = getSeries(item.seriesId);
+        const def = BADGE_MAP[item.trophyId];
+        if (!series || !def) return null;
+        const isObtained = obtained.has(item.trophyId);
+        const pct = isObtained ? 1 : item.percentage;
+        const delta = deltas[index];
+        const color = RARITY_COLORS[def.rarity] ?? Colors.ui.textLight;
+        const name = t(series.nameKey);
+        const target = String(item.target);
         return (
-          <View key={item.badgeId} style={index > 0 ? styles.separator : undefined}>
+          <View
+            key={item.trophyId}
+            style={index > 0 ? styles.separator : undefined}
+            accessible
+            accessibilityLabel={t('trophy_next_a11y', {
+              name, tier: String(item.tier), current: String(item.current), target,
+            })}
+          >
             <View style={styles.header}>
               <View style={styles.emojiWrapper}>
-                <Text style={styles.emoji}>{badge.emoji}</Text>
-                {hasDelta && (
-                  <BadgePlusOne
-                    trigger={triggeredIndex >= index}
-                    delta={delta > 0 ? delta : 1}
-                  />
-                )}
+                <Text style={styles.emoji}>{series.emoji}</Text>
+                {delta > 0 && <BadgePlusOne trigger={triggered >= index} delta={delta} />}
               </View>
               <View style={styles.labelBlock}>
-                <View style={styles.titleRow}>
-                  <Text style={styles.title} numberOfLines={1}>{badgeTexts.label}</Text>
-                  {isNew && (
-                    <View style={styles.newBadge}>
-                      <Text style={styles.newBadgeText}>{t('label_new')}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.desc} numberOfLines={1}>{badgeTexts.description}</Text>
+                <Text style={styles.title} numberOfLines={1}>{name}</Text>
+                <Text style={styles.desc} numberOfLines={1}>
+                  {series.id === 'podium'
+                    ? t(`trophy_podium_tier_${item.tier}`)
+                    : t(series.descKey, { target })}
+                </Text>
               </View>
               {isObtained
                 ? <Text style={styles.obtained}>✓</Text>
-                : <Text style={styles.counter}>{relCurrent}/{relTarget}</Text>
-              }
+                : <Text style={styles.counter}>{t('trophy_series_progress', { current: String(item.current), target })}</Text>}
             </View>
             <View style={styles.bar}>
-              <View
-                style={[
-                  styles.barFill,
-                  { width: `${pct * 100}%`, backgroundColor: isObtained ? '#4CAF50' : rarityColor },
-                ]}
-              />
+              <View style={[styles.barFill, { width: `${pct * 100}%`, backgroundColor: isObtained ? '#4CAF50' : color }]} />
             </View>
           </View>
         );
       })}
-
-      {onPress && (
-        <Text style={styles.cta}>{t('badges_see_all')}</Text>
-      )}
+      {onPress && <Text style={styles.cta}>{t('badges_see_all')}</Text>}
     </TouchableOpacity>
   );
 };
@@ -386,26 +160,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.ui.border,
   },
-  trackLabel: {
+  sectionLabel: {
     fontSize: 10,
     fontWeight: '700',
     color: Colors.ui.textLight,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    overflow: 'visible',
-  },
-  emojiWrapper: {
-    position: 'relative',
-  },
-  emoji: {
-    fontSize: 22,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8, overflow: 'visible' },
+  emojiWrapper: { position: 'relative' },
+  emoji: { fontSize: 22 },
   plusOne: {
     position: 'absolute',
     top: -14,
@@ -423,81 +187,14 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 5,
   },
-  plusOneText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-  labelBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.forest.dark,
-    flexShrink: 1,
-  },
-  newBadge: {
-    backgroundColor: '#2E7D32',
-    borderRadius: 5,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  newBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 0.3,
-  },
-  desc: {
-    fontSize: 11,
-    color: Colors.ui.textLight,
-  },
-  challengeTarget: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.forest.medium,
-    marginTop: 3,
-    marginBottom: 1,
-  },
-  counter: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.ui.textLight,
-  },
-  obtained: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#4CAF50',
-  },
-  separator: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.ui.border,
-  },
-  bar: {
-    height: 6,
-    backgroundColor: Colors.ui.border,
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginTop: 4,
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  cta: {
-    fontSize: 11,
-    color: Colors.forest.medium,
-    fontWeight: '600',
-    textAlign: 'right',
-  },
+  plusOneText: { fontSize: 14, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
+  labelBlock: { flex: 1, gap: 2 },
+  title: { fontSize: 13, fontWeight: '700', color: Colors.forest.dark },
+  desc: { fontSize: 11, color: Colors.ui.textLight },
+  counter: { fontSize: 12, fontWeight: '700', color: Colors.ui.textLight },
+  obtained: { fontSize: 18, fontWeight: '900', color: '#4CAF50' },
+  bar: { height: 6, borderRadius: 3, backgroundColor: Colors.ui.border, overflow: 'hidden', marginTop: 6 },
+  barFill: { height: '100%', borderRadius: 3 },
+  separator: { borderTopWidth: 1, borderTopColor: Colors.ui.border, paddingTop: 8 },
+  cta: { fontSize: 11, color: Colors.forest.medium, textAlign: 'center', fontWeight: '700', marginTop: 4 },
 });

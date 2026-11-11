@@ -11,22 +11,17 @@
 // N'est affiché qu'une seule fois (hasSeenOnfBriefing dans playerStore).
 // ============================================================
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  ScrollView,
-  Modal,
   useWindowDimensions,
   Image,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
-import { ElementChips } from './ElementChips';
+import { BoardSummary, BriefingNotes } from './BoardSummary';
+import { BriefingLayout, BriefingTheme } from './BriefingLayout';
 import { RuleCard } from './RuleCard';
 import { Challenge } from '../../core/models/Challenge';
 import { RuleCard as RuleCardData } from '../../data/levelMeta';
@@ -201,7 +196,7 @@ const SUDOKU_GRID = [
 
 const SudokuSlide: React.FC = () => {
   const t = useT();
-  const CELL = 46;
+  const CELL = 56;
 
   return (
     <View style={sudokuStyles.container}>
@@ -280,7 +275,7 @@ const sudokuStyles = StyleSheet.create({
     width: '100%',
   },
   title: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
     color: ONF_GREEN_LIGHT,
     textAlign: 'center',
@@ -305,7 +300,7 @@ const sudokuStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   colIndicatorText: {
-    fontSize: 14,
+    fontSize: 18,
     color: '#1565C0',
     fontWeight: '800',
   },
@@ -316,12 +311,12 @@ const sudokuStyles = StyleSheet.create({
   },
   // Cellule d'indicateur à gauche de chaque ligne
   rowIndicatorCell: {
-    width: 20,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rowIndicatorText: {
-    fontSize: 14,
+    fontSize: 18,
     color: '#FF8F00',
     fontWeight: '800',
   },
@@ -351,7 +346,7 @@ const sudokuStyles = StyleSheet.create({
     padding: 12,
     gap: 8,
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 360,
   },
   legendRow: {
     flexDirection: 'row',
@@ -359,16 +354,17 @@ const sudokuStyles = StyleSheet.create({
     gap: 10,
   },
   legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     flexShrink: 0,
   },
   legendText: {
-    fontSize: 13,
+    fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '600',
     flex: 1,
+    lineHeight: 22,
   },
 });
 
@@ -400,6 +396,34 @@ const OnfIntroSlide: React.FC = () => {
   );
 };
 
+// ── Slide d'introduction du Sentier (Progression v2, C4) ─────────────────────
+// Court : la règle ligne/colonne (la seule vraie nouveauté du Forestier) et la règle du loup,
+// sans passer par les règles de chaque habitant déjà apprises en solo.
+const SentierIntroSlide: React.FC = () => {
+  const t = useT();
+  return (
+    <View style={introStyles.container}>
+      <Text style={introStyles.emoji}>🗺️</Text>
+      <Text style={introStyles.title}>{t('onf_intro_title')}</Text>
+      <Text style={introStyles.subtitle}>{t('onf_intro_subtitle')}</Text>
+      <View style={introStyles.rulesBox}>
+        <View style={introStyles.ruleRow}>
+          <Text style={introStyles.ruleIcon}>↔️</Text>
+          <Text style={introStyles.ruleText}>{t('onf_intro_rule_line')}</Text>
+        </View>
+        <View style={introStyles.ruleRow}>
+          <Text style={introStyles.ruleIcon}>↕️</Text>
+          <Text style={introStyles.ruleText}>{t('onf_intro_rule_col')}</Text>
+        </View>
+        <View style={introStyles.ruleRow}>
+          <Text style={introStyles.ruleIcon}>🐺</Text>
+          <Text style={introStyles.ruleText}>{t('onf_intro_rule_wolf')}</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+
 const introStyles = StyleSheet.create({
   container: {
     alignItems: 'center',
@@ -408,7 +432,7 @@ const introStyles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   emoji: {
-    fontSize: 56,
+    fontSize: 64,
   },
   title: {
     fontSize: 22,
@@ -417,10 +441,10 @@ const introStyles = StyleSheet.create({
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: 17,
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
   },
   rulesBox: {
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -437,120 +461,26 @@ const introStyles = StyleSheet.create({
     gap: 10,
   },
   ruleIcon: {
-    fontSize: 18,
-    width: 28,
+    fontSize: 24,
+    width: 36,
     textAlign: 'center',
     marginTop: 1,
   },
   ruleText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
     flex: 1,
-    lineHeight: 20,
+    lineHeight: 22,
   },
 });
 
-// ── Slide récap final ─────────────────────────────────────────────────────────
-
-interface RecapSlideProps {
-  elementIds: string[];
-}
-
-const RecapSlide: React.FC<RecapSlideProps> = ({ elementIds }) => {
-  const t = useT();
-  return (
-    <ScrollView
-      contentContainerStyle={recapStyles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={recapStyles.title}>{t('onf_briefing_recap_title')}</Text>
-      <Text style={recapStyles.subtitle}>{t('onf_briefing_recap_subtitle')}</Text>
-
-      <Text style={recapStyles.sectionLabel}>{t('onf_briefing_recap_elements')}</Text>
-      <ElementChips elementIds={elementIds} size={40} style={recapStyles.chips} />
-
-      <View style={recapStyles.remindersBox}>
-        <View style={recapStyles.reminderRow}>
-          <Text style={recapStyles.reminderIcon}>🐾</Text>
-          <Text style={recapStyles.reminderText}>{t('onf_briefing_recap_forest_rules')}</Text>
-        </View>
-        <View style={recapStyles.reminderRow}>
-          <Text style={recapStyles.reminderIcon}>📊</Text>
-          <Text style={recapStyles.reminderText}>{t('onf_briefing_recap_sudoku_rule')}</Text>
-        </View>
-        <View style={recapStyles.reminderRow}>
-          <Text style={recapStyles.reminderIcon}>✅</Text>
-          <Text style={recapStyles.reminderText}>{t('onf_briefing_recap_validate')}</Text>
-        </View>
-      </View>
-    </ScrollView>
-  );
-};
-
-const recapStyles = StyleSheet.create({
-  content: {
-    alignItems: 'center',
-    gap: 16,
-    paddingVertical: 8,
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: ONF_GREEN_LIGHT,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.6)',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  chips: {
-    paddingHorizontal: 8,
-  },
-  remindersBox: {
-    gap: 12,
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  reminderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  reminderIcon: {
-    fontSize: 18,
-    width: 28,
-    textAlign: 'center',
-    marginTop: 1,
-  },
-  reminderText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    flex: 1,
-    lineHeight: 20,
-  },
-});
 
 // ── Types de pages ────────────────────────────────────────────────────────────
 
 type PageKind =
   | { kind: 'intro' }
+  | { kind: 'sentier' }
   | { kind: 'rule'; elementId: string; ruleIndex: number; rule: RuleCardData }
   | { kind: 'sudoku' }
   | { kind: 'recap' };
@@ -560,17 +490,28 @@ type PageKind =
 interface OnfBriefingModalProps {
   challenge: Challenge;
   onClose: () => void;
+  /**
+   * Palier de la grille. `sentier` → briefing COURT (intro du Sentier + règle ligne/colonne), puisque les
+   * règles des habitants sont déjà connues du solo ; sinon briefing complet.
+   */
+  tier?: 'sentier' | 'clairiere' | 'profonde';
 }
+
+const THEME: BriefingTheme = {
+  overlay: 'rgba(11, 36, 11, 0.97)',
+  accent: ONF_GREEN_LIGHT,
+  cta: ONF_GREEN,
+  ctaText: '#FFFFFF',
+  ctaBorder: ONF_GREEN_LIGHT,
+};
 
 export const OnfBriefingModal: React.FC<OnfBriefingModalProps> = ({
   challenge,
   onClose,
+  tier,
 }) => {
   const t = useT();
-  const insets = useSafeAreaInsets();
-  const { width: SCREEN_WIDTH } = useWindowDimensions();
-  const flatListRef = useRef<FlatList>(null);
-  const [currentPage, setCurrentPage] = useState(0);
+  const { width } = useWindowDimensions();
 
   // Éléments présents dans le défi (uniques)
   const elementIds = useMemo(() => {
@@ -582,6 +523,10 @@ export const OnfBriefingModal: React.FC<OnfBriefingModalProps> = ({
 
   // Construction des pages
   const pages: PageKind[] = useMemo(() => {
+    // Sentier : 3 écrans seulement — intro, règle ligne/colonne (SudokuSlide), prêt à jouer.
+    if (tier === 'sentier') {
+      return [{ kind: 'sentier' }, { kind: 'sudoku' }, { kind: 'recap' }];
+    }
     const result: PageKind[] = [{ kind: 'intro' }];
 
     // Règles des éléments présents dans le défi, dans l'ordre d'affichage
@@ -602,40 +547,16 @@ export const OnfBriefingModal: React.FC<OnfBriefingModalProps> = ({
     result.push({ kind: 'sudoku' });
     result.push({ kind: 'recap' });
     return result;
-  }, [elementIds]);
+  }, [elementIds, tier]);
 
-  const totalPages = pages.length;
-  const isLastPage = currentPage === totalPages - 1;
-
-  const handleScroll = useCallback((e: any) => {
-    const offsetX = e.nativeEvent.contentOffset.x;
-    const page = Math.round(offsetX / SCREEN_WIDTH);
-    setCurrentPage(Math.min(Math.max(page, 0), totalPages - 1));
-  }, [totalPages, SCREEN_WIDTH]);
-
-  const goNext = useCallback(() => {
-    if (isLastPage) {
-      onClose();
-    } else {
-      const next = currentPage + 1;
-      flatListRef.current?.scrollToIndex({ index: next, animated: true });
-      setCurrentPage(next);
-    }
-  }, [isLastPage, currentPage, onClose]);
-
-  const renderPage = ({ item }: { item: PageKind }) => {
-    if (item.kind === 'intro') {
-      return (
-        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
-          <OnfIntroSlide />
-        </View>
-      );
-    }
+  const renderPage = (item: PageKind) => {
+    if (item.kind === 'intro') return <OnfIntroSlide />;
+    if (item.kind === 'sentier') return <SentierIntroSlide />;
 
     if (item.kind === 'rule') {
       const def = ElementRegistry[item.elementId];
       return (
-        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+        <>
           {/* Badge avec nom de l'élément */}
           {item.ruleIndex === 0 && def && (
             <View style={styles.elementBadgeRow}>
@@ -647,297 +568,89 @@ export const OnfBriefingModal: React.FC<OnfBriefingModalProps> = ({
               <Text style={styles.elementBadgeName}>{t(`rules_element_${item.elementId}`)}</Text>
             </View>
           )}
-          <RuleCard
-            rule={item.rule}
-            isNew={false}
-            width={SCREEN_WIDTH - 32}
-          />
-        </View>
+          <RuleCard rule={item.rule} isNew={false} width={width - 32} />
+        </>
       );
     }
 
     if (item.kind === 'sudoku') {
       return (
-        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
-          <View style={styles.newBadgeRow}>
-            <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>{t('onf_briefing_new_rule')}</Text>
-            </View>
+        <>
+          <View style={styles.newBadge}>
+            <Text style={styles.newBadgeText}>{t('onf_briefing_new_rule')}</Text>
           </View>
           <SudokuSlide />
-        </View>
+        </>
       );
     }
 
-    // Récap
+    // Récap : résumé commun à tous les modes + rappels du Forestier
     return (
-      <View style={[styles.page, { width: SCREEN_WIDTH }]}>
-        <RecapSlide elementIds={elementIds} />
-      </View>
+      <BoardSummary
+        challenge={challenge}
+        title={t('onf_briefing_recap_title')}
+        subtitle={t('onf_briefing_recap_subtitle')}
+        accent={ONF_GREEN_LIGHT}
+        titleColor={ONF_GREEN_LIGHT}
+      >
+        <BriefingNotes
+          items={[
+            { icon: '🐾', text: t('onf_briefing_recap_forest_rules') },
+            { icon: '📊', text: t('onf_briefing_recap_sudoku_rule') },
+            { icon: '✅', text: t('onf_briefing_recap_validate') },
+          ]}
+        />
+      </BoardSummary>
     );
   };
 
   return (
-    <Modal
-      visible
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <View
-        style={[
-          styles.overlay,
-          {
-            paddingTop: insets.top + 8,
-            paddingBottom: insets.bottom + 16,
-          },
-        ]}
-      >
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t('onf_briefing_header_title')}</Text>
-          <View style={styles.headerRight}>
-            {/* Dots de pagination */}
-            <View style={styles.dots}>
-              {pages.map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.dot,
-                    i === currentPage && styles.dotActive,
-                  ]}
-                />
-              ))}
-            </View>
-            {/* Bouton fermer */}
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={onClose}
-              activeOpacity={0.7}
-              accessibilityLabel="Fermer"
-            >
-              <Text style={styles.closeBtnText}>{'×'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ── Séparateur ── */}
-        <View style={styles.divider} />
-
-        {/* ── Contenu paginé ── */}
-        <View style={styles.content}>
-          <FlatList
-            ref={flatListRef}
-            data={pages}
-            keyExtractor={(_, i) => String(i)}
-            renderItem={renderPage}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={handleScroll}
-            snapToInterval={SCREEN_WIDTH}
-            decelerationRate="fast"
-            bounces={false}
-            getItemLayout={(_, index) => ({
-              length: SCREEN_WIDTH,
-              offset: SCREEN_WIDTH * index,
-              index,
-            })}
-          />
-        </View>
-
-        {/* ── Séparateur ── */}
-        <View style={styles.divider} />
-
-        {/* ── Footer ── */}
-        <View style={styles.footer}>
-          {!isLastPage && (
-            <Text style={styles.swipeHint}>
-              {'← '}{t('onf_briefing_swipe_hint')}{' →'}
-            </Text>
-          )}
-
-          {isLastPage && (
-            <TouchableOpacity
-              style={styles.playBtn}
-              onPress={onClose}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.playBtnText}>{t('btn_play')} {'▶'}</Text>
-            </TouchableOpacity>
-          )}
-
-          {!isLastPage && (
-            <TouchableOpacity
-              style={styles.nextBtn}
-              onPress={goNext}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.nextBtnText}>{'→'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    </Modal>
+    <BriefingLayout
+      title={t('onf_briefing_header_title')}
+      theme={THEME}
+      pages={pages}
+      renderPage={renderPage}
+      onClose={onClose}
+    />
   );
 };
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(11, 36, 11, 0.97)',
-    flexDirection: 'column',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: ONF_GREEN_LIGHT,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    fontSize: 22,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    lineHeight: 24,
-  },
-  dots: {
-    flexDirection: 'row',
-    gap: 5,
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    maxWidth: 140,
-    justifyContent: 'flex-end',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  dotActive: {
-    backgroundColor: ONF_GREEN_LIGHT,
-    width: 12,
-    borderRadius: 3,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginHorizontal: 16,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  page: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    gap: 8,
-  },
   // Badge élément
   elementBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
+    borderRadius: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
   elementBadgeIcon: {
-    width: 28,
-    height: 28,
+    width: 36,
+    height: 36,
   },
   elementBadgeName: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   // Badge "Nouvelle règle"
-  newBadgeRow: {
-    alignItems: 'center',
-    marginBottom: 4,
-  },
   newBadge: {
     backgroundColor: ONF_GREEN,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: ONF_GREEN_LIGHT,
   },
   newBadgeText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: '#fff',
-  },
-  // Footer
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  swipeHint: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.45)',
-    fontStyle: 'italic',
-    flex: 1,
-    textAlign: 'center',
-  },
-  playBtn: {
-    flex: 1,
-    backgroundColor: ONF_GREEN,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: ONF_GREEN_LIGHT,
-  },
-  playBtnText: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  nextBtn: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 14,
-    width: 52,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-end',
-  },
-  nextBtnText: {
-    fontSize: 22,
-    color: '#FFFFFF',
-    fontWeight: '700',
   },
 });

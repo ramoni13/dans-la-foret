@@ -20,6 +20,7 @@ import React from 'react';
 import {
   View,
   Image,
+  ImageSourcePropType,
   Text,
   TouchableOpacity,
   StyleSheet,
@@ -29,6 +30,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useSegments } from 'expo-router';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAudioStore } from '../../store/audioStore';
+import { useRewardFlyStore } from '../../store/rewardFlyStore';
+import { countTotalStars } from '../../constants/progression';
+import { hasNewBadge } from '../../constants/ceremonies';
+import { computeCountersGeometry } from '../../constants/counterLayout';
+import { PROGRESSION_V2 } from '../../constants/featureFlags';
+import ReAnimated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useNavStore } from '../../store/navStore';
 import { useT } from '../../i18n';
 import {
@@ -40,12 +55,11 @@ import {
 const COIN_IMG      = require('../../../assets/cadre/coin.png');
 const MENU_IMG      = require('../../../assets/cadre/menu_bas.png');
 const BLOC_GRAINES  = require('../../../assets/elements/design_app/bloc_graines.png');
+// Les blocs portent déjà leur icône (pomme de pin / graine) : le texte n'affiche que le nombre.
+const BLOC_PP      = require('../../../assets/elements/design_app/bloc_pp.png');
 
 // URI du SVG bordure — react-native-svg l'affiche sans bundler
 const BORDURE_IMG = require('../../../assets/cadre/bordure.jpg');
-
-// ── Ratio natif bloc_graines : 264×85 ─────────────────────────────────────────
-const SEEDS_RATIO = 264 / 85;
 
 // ── Définition des 4 boutons nav ──────────────────────────────────────────────
 const BUTTONS = [
@@ -73,31 +87,62 @@ function ActiveDot() {
   );
 }
 
-// ── Compteur de graines sur la barre haute ─────────────────────────────────────
-function SeedsOverlay({ seeds, screenW, topBarCenterY }: {
-  seeds: number;
-  screenW: number;
-  topBarCenterY: number;
+// ── Pulsation d'un compteur quand une récompense arrive ────────────────────────
+// Écoute pulses[target] du rewardFlyStore. Avec « réduire les animations » : pas de rebond.
+function usePulseOnReward(target: 'seeds' | 'stars') {
+  const pulses = useRewardFlyStore(s => s.pulses[target]);
+  const reduceMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+  const first = React.useRef(true);
+
+  React.useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    if (reduceMotion) return;
+    cancelAnimation(scale);
+    scale.value = withSequence(
+      withSpring(1.25, { damping: 5, stiffness: 450 }),
+      withSpring(1, { damping: 7, stiffness: 280 }),
+    );
+  }, [pulses]);
+
+  return useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+}
+
+// ── Un compteur du bandeau (pommes de pin ou graines) ──────────────────────────
+// Chaque bloc porte déjà sa propre icône (bloc_pp.png : pomme de pin, bloc_graines.png : graine) :
+// le texte n'affiche que le nombre, dans la couleur d'origine du bloc (pas de voile, pas d'icône en plus).
+function CounterBlock({
+  kind, value, geometry, source, a11yLabel, label,
+}: {
+  kind: 'seeds' | 'stars';
+  value: number;
+  geometry: { left: number; top: number; width: number; height: number; centerX: number; centerY: number };
+  /** Image du bloc (cadre + icône). */
+  source: ImageSourcePropType;
+  a11yLabel: string;
+  label: string;
 }) {
-  const t = useT();
-  const w = Math.min(200, Math.round(screenW * 0.45));
-  const h = Math.round(w / SEEDS_RATIO);
+  const pulseStyle = usePulseOnReward(kind);
+  const setCounterPosition = useRewardFlyStore(s => s.setCounterPosition);
+  const { left, top, width: w, height: h, centerX, centerY } = geometry;
   const textOffsetLeft = Math.round(w * 0.28);
   const textW          = Math.round(w * 0.62);
 
+  // Centre absolu du compteur (le bandeau occupe l'écran entier : repère écran).
+  React.useEffect(() => {
+    setCounterPosition(kind, centerX, centerY);
+  }, [kind, centerX, centerY]);
+
   return (
-    <View
+    <ReAnimated.View
       pointerEvents="none"
-      style={{
-        position: 'absolute',
-        left:     (screenW - w) / 2,
-        top:      topBarCenterY - h / 2,
-        width:    w,
-        height:   h,
-      }}
+      accessible
+      accessibilityLabel={a11yLabel}
+      accessibilityLiveRegion="polite"
+      style={[{ position: 'absolute', left, top, width: w, height: h }, pulseStyle]}
     >
       <Image
-        source={BLOC_GRAINES}
+        source={source}
         style={{ width: w, height: h, position: 'absolute' }}
         resizeMode="contain"
       />
@@ -111,12 +156,47 @@ function SeedsOverlay({ seeds, screenW, topBarCenterY }: {
           alignItems:     'center',
         }}
       >
-        <Text style={styles.seedsText}>{t('forest_frame_seeds', { count: String(seeds) })}</Text>
+        <Text style={styles.seedsText} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
       </View>
-    </View>
+    </ReAnimated.View>
   );
 }
 
+// ── Compteurs pommes de pin (à gauche) + graines (à droite) sur la barre haute ─
+function CountersOverlay({ stars, seeds, screenW, topBarCenterY, coinW }: {
+  stars: number;
+  seeds: number;
+  screenW: number;
+  topBarCenterY: number;
+  coinW: number;
+}) {
+  const t = useT();
+  // Pommes de pin uniquement quand l'interface de progression est active ; sinon graines seules, comme avant.
+  const g = computeCountersGeometry(screenW, topBarCenterY, coinW, PROGRESSION_V2);
+  return (
+    <>
+      {g.stars && (
+        <CounterBlock
+          kind="stars"
+          value={stars}
+          geometry={g.stars}
+          source={BLOC_PP}
+          a11yLabel={t('frame_stars_a11y', { count: String(stars) })}
+          label={String(stars)}
+        />
+      )}
+      <CounterBlock
+        kind="seeds"
+        value={seeds}
+        geometry={g.seeds}
+        source={BLOC_GRAINES}
+        a11yLabel={t('frame_seeds_a11y', { count: String(seeds) })}
+        // Sans pommes de pin : libellé historique « N graines » ; avec : le nombre seul (deux compteurs).
+        label={PROGRESSION_V2 ? String(seeds) : t('forest_frame_seeds', { count: String(seeds) })}
+      />
+    </>
+  );
+}
 // ── Bouton son ─────────────────────────────────────────────────────────────────
 // iconTopY : position Y du bord supérieur de l'icône (chantier 2 — aligné avec le bas du coin)
 function SoundButton({ iconTopY }: { iconTopY: number }) {
@@ -146,7 +226,11 @@ export default function ForestFrame() {
   const segments  = useSegments() as string[];
   const activeTab = getActiveTab(segments);
   const seeds     = usePlayerStore(s => s.seeds);
-  const { backLabel, onBack, hideBack, pendingFriendChallenges, goalSlotsToFill } = useNavStore();
+  const challengeStars = usePlayerStore(s => s.challengeStars);
+  const totalStars = React.useMemo(() => countTotalStars(challengeStars), [challengeStars]);
+  // Duel tout juste débloqué : pastille « Nouveau » sur l'onglet Défis jusqu'à la 1re partie (Lot 4)
+  const duelIsNew = usePlayerStore(s => hasNewBadge('duel', s.newFeatureBadges));
+  const { backLabel, onBack, hideBack, pendingFriendChallenges } = useNavStore();
 
   const {
     coinW, coinH,
@@ -316,7 +400,7 @@ export default function ForestFrame() {
       />
 
       {/* ── OVERLAYS (graines) ───────────────────────────────────────────── */}
-      <SeedsOverlay seeds={seeds} screenW={screenW} topBarCenterY={topBarCenterY} />
+      <CountersOverlay stars={totalStars} seeds={seeds} screenW={screenW} topBarCenterY={topBarCenterY} coinW={coinW} />
 
       {/* ── Zones de tap + voyant actif ──────────────────────────────────── */}
       {BUTTONS.map((btn) => {
@@ -324,11 +408,9 @@ export default function ForestFrame() {
         const btnX     = menuLeft + btn.xC * menuW70;
         const isActive = activeTab === btn.key;
 
-        const hasBadge =
-          (btn.key === 'challenge' && pendingFriendChallenges > 0) ||
-          (btn.key === 'profile'   && goalSlotsToFill > 0);
-        const badgeCount =
-          btn.key === 'challenge' ? pendingFriendChallenges : goalSlotsToFill;
+        // Compteur rouge : défis d'amis en attente (le point « objectifs libres » du profil n'existe plus, Lot 8)
+        const hasBadge = btn.key === 'challenge' && pendingFriendChallenges > 0;
+        const badgeCount = pendingFriendChallenges;
 
         return (
           <View
@@ -348,6 +430,11 @@ export default function ForestFrame() {
             {isActive && (
               <View pointerEvents="none" style={styles.activeDotWrapper}>
                 <ActiveDot />
+              </View>
+            )}
+            {btn.key === 'challenge' && duelIsNew && (
+              <View pointerEvents="none" style={styles.newDot} accessible={false} importantForAccessibility="no">
+                <Text style={styles.newDotText}>✦</Text>
               </View>
             )}
             {hasBadge && (
@@ -373,6 +460,7 @@ export default function ForestFrame() {
               activeOpacity={0.75}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
+              accessibilityLabel={btn.key === 'challenge' && duelIsNew ? t('ceremony_new_badge_a11y') : undefined}
             />
           </View>
         );
@@ -425,6 +513,20 @@ const styles = StyleSheet.create({
     color:      '#FFF',
     lineHeight: 12,
   },
+  newDot: {
+    position:        'absolute',
+    top:             0,
+    left:            0,
+    minWidth:        16,
+    height:          16,
+    borderRadius:    8,
+    backgroundColor: '#FFC107',
+    borderWidth:     1.5,
+    borderColor:     '#FFF',
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  newDotText: { fontSize: 9, fontWeight: '900', color: '#3E2F00', lineHeight: 12 },
   seedsText: {
     fontSize:         14,
     fontWeight:       '800',

@@ -7,6 +7,63 @@ import { create } from 'zustand';
 import { PlayerProfile, computePlayerLevel } from '../services/playerService';
 import { Lang, getSystemLocale } from '../i18n/locale';
 import { BonusId } from '../constants/bonus';
+import { PROGRESSION_V2 } from '../constants/featureFlags';
+import {
+  CURRENT_PROGRESSION_VERSION,
+  StarRating,
+  StarResult,
+  applyStarResult,
+  computeLevelProgress,
+  mergeChallengeStars,
+  mergeRewardedChapters,
+  getChaptersToReward,
+  sumChapterSeeds,
+  Chapter,
+  computeStars,
+  resolvePlayerLevel,
+} from '../constants/progression';
+import { createDefaultProgressionFields, createDefaultStats } from '../constants/profileDefaults';
+import { CompletedDuel, StatsLike, mergeStats, tallyNewDuels } from '../constants/playerStats';
+import type { DailyLeague } from '../constants/dailyLeagues';
+import {
+  checkPlant,
+  crossedOnfCardThreshold,
+  getChapterCardRegion,
+  getOpenRegions,
+  getRegionFeature,
+  markCardsSeen,
+  mergeCollectedIds,
+  pickChapterCard,
+  PlantRefusal,
+} from '../constants/herbier';
+import { ALL_TREE_CARDS } from '../utils/onfCards';
+import { EMPTY_PODIUM, PodiumStats, recordPodium } from '../constants/trophies';
+import { computeOwnedMusic, isFreeMusic, mergeUnlockedMusic } from '../constants/musicUnlocks';
+import { MUSIC_TRACK_IDS } from '../constants/music';
+import { isFeatureUnlocked } from '../constants/progression';
+import {
+  BONUS_USES_PER_DAY,
+  FRIEND_TOKENS_PER_DAY,
+  createFreshDailyLimits,
+  getOnfRemaining,
+  isLimitsOfDay,
+  mergeDailyLimits,
+  sanitizeDailyLimits,
+  todayLocalISO,
+} from '../constants/dailyLimits';
+import {
+  AdPlacement,
+  AdViews,
+  addAdView,
+  getAdViews,
+  isPlacementAvailableToPremium,
+} from '../constants/adRewards';
+import {
+  clearNewBadges,
+  getCeremoniesToEnqueue,
+  getNewBadgesForCeremonies,
+  mergeCeremonyIds,
+} from '../constants/ceremonies';
 
 /** Type d'effet visuel en jeu (particules en arrière-plan) */
 export type VisualEffect = 'leaves' | 'butterflies' | 'birds' | 'none';
@@ -14,30 +71,8 @@ import {
   BADGE_MAP,
   BADGE_SEED_REWARDS,
 } from '../constants/badges';
-import {
-  DEFAULT_BADGE_GOALS,
-  pickNextAutoGoal,
-  isBadgeEligibleAsGoal,
-  TRACK_PERFORMANCE,
-  TRACK_PERSEVERANCE,
-  TRACK_EXPLORATION,
-  getTrackForBadge,
-  pickNextTrackGoal,
-  TrackName,
-} from '../core/engine/badgeEngine';
-
-// ── Type des objectifs de track ───────────────────────────────────────────────
-export interface TrackGoals {
-  performance:  string | null;
-  perseverance: string | null;
-  exploration:  string | null;
-}
-
-/** Calcule activeBadgeGoals depuis trackGoals (tableau plat des goals non-null). */
-function deriveActiveBadgeGoals(trackGoals: TrackGoals): string[] {
-  return [trackGoals.performance, trackGoals.perseverance, trackGoals.exploration]
-    .filter((id): id is string => id !== null);
-}
+// Les trophées n'ont plus d'« objectif actif » (Progression v2, C8) : plus de pistes, de `trackGoals`,
+// de `activeBadgeGoals` ni de `goalCounters`. Tout trophée dont la condition est remplie est décerné.
 
 // ── Helpers de date ────────────────────────────────────────────────────────────
 
@@ -76,18 +111,25 @@ interface PlayerStats {
   friendPlayed: number;         // nb de défis amis joués en tant que participant
   avgResolutionMs: number;      // moyenne glissante du temps de résolution solo
   totalResolutionCount: number; // nb de parties solo comptées dans la moyenne
-  /**
-   * Nb de victoires sous le seuil vitesse par badge.
-   * Clés : 'vitesse_tortue' | 'vitesse_loup' | 'vitesse_oiseau' | 'vitesse_eclair' | 'vitesse_tornade'
-   * Le seuil est celui du niveau courant au moment de la partie.
-   * Un badge est décerné quand le compteur atteint SPEED_BADGE_TARGET (5).
-   */
-  speedBadgeHits: Record<string, number>;
   // ── Compteurs ONF et daily (refonte badges) ──────────────────
   onfPerfectCount: number;    // grilles ONF validées sans erreur
   onfSpeedCount: number;      // grilles ONF résolues en < 120s
   dailyPerfectCount: number;  // défis daily gagnés sans erreur
   dailySpeedCount: number;    // défis daily gagnés en < 180s
+  // ── Statistiques du Lot D (tous cumulatifs, fusionnés par maximum au restoreFromCloud) ──
+  friendLosses: number;           // défis entre amis perdus (résultat connu : l'adversaire a joué)
+  friendBestWinStreak: number;    // record de victoires de Duel d'affilée
+  dailyPlayedPousse: number;      // parties du Journalier jouées dans la ligue Pousse
+  dailyWonPousse: number;
+  dailyPlayedGrandChene: number;  // … dans la ligue Grand Chêne
+  dailyWonGrandChene: number;
+  bestDailyTimeMsPousse: number;      // meilleur temps du Journalier par ligue (0 = aucun)
+  bestDailyTimeMsGrandChene: number;
+  bestOnfTimeMs: number;          // meilleur temps d'une grille du Forestier (0 = aucun)
+  seedsEarned: number;            // graines gagnées au total (jamais décrémenté : dépenser n'en retire pas)
+  seedsSpent: number;             // graines dépensées (plantation dans l'Herbier)
+  adsWatched: number;             // pubs récompensées regardées (cumul, toutes les emplacements)
+  daysPlayed: number;             // jours distincts où le joueur s'est connecté
 }
 
 interface PlayerState {
@@ -107,8 +149,40 @@ interface PlayerState {
 
   language: Lang;
 
-  // Niveau courant du joueur (calculé depuis completedChallenges.length)
+  // Niveau courant du joueur.
+  // PROGRESSION_V2 : dérivé de challengeStars (computeLevelProgress). Sinon : completedChallenges.length / 10.
   currentLevel: number;
+
+  // ── Progression v2 (docs/progression-v2.md, section D) ──────────────────────
+  /** Version du modèle de progression. < 2 → remise à zéro unique (C9). */
+  progressionVersion: number;
+  /** Meilleure note (1 à 3) par défi solo. Ne baisse jamais, ne se dépense jamais. */
+  challengeStars: Record<string, StarRating>;
+  /** Niveaux consécutifs validés depuis le niveau 1 (0 à 21). Dérivé de challengeStars. */
+  levelsCompleted: number;
+  /** Cérémonies à rejouer (Lot 4). */
+  pendingCeremonies: string[];
+  /** Cérémonies déjà vues (Lot 4). */
+  seenCeremonies: string[];
+  /** Chapitres (1 à 7) dont la récompense de fin de chapitre a déjà été versée. Jamais versée deux fois. */
+  rewardedChapters: number[];
+  /** Chapitres dont la carte d'Herbier de fin de chapitre a déjà été offerte (anti-doublon, Lot 7). */
+  chapterCardsGranted: number[];
+  /** Fonctionnalités débloquées jamais ouvertes (pastille « Nouveau », Lot 4). */
+  newFeatureBadges: string[];
+  /** Titres musicaux débloqués (source de vérité à partir du Lot 8). */
+  unlockedMusicIds: string[];
+  // Compteurs de trophées (Lot 8)
+  starStreak: number;
+  quickFirstWins: number;
+  improvedStarChallengeIds: string[];
+  loyaltyStreak: number;
+  /** Meilleure série de jours joués d'affilée : record qui ne baisse jamais (Habitué, Lot 8). */
+  loyaltyBest: number;
+  /** Meilleure série de victoires ⭐⭐+ d'affilée : record qui ne baisse jamais (Œil de lynx, Lot 8). */
+  bestStarStreak: number;
+  /** Podium du Journalier (inclusif), enregistré au moment de la partie (Lot 8). */
+  dailyPodium: PodiumStats;
 
   // ── Badges ──────────────────────────────────────────────────────────────────
   earnedBadges: string[];                   // IDs des badges obtenus
@@ -150,56 +224,27 @@ interface PlayerState {
   // ── Herbier de la Forêt — cartes à collectionner ─────────────────────────
   /** IDs (1-indexés) des cartes arbre débloquées. 1 carte tous les ONF_CARD_UNLOCK_EVERY défis. */
   collectedTreeCardIds: number[];
-
-  // ── Badges : objectifs actifs par track (chantier 3 — système de lignes) ─────
   /**
-   * Un objectif actif par ligne de badges. Auto-avance séquentielle après obtention.
-   * null = la track est épuisée (tous les badges de la ligne ont été obtenus).
+   * Cartes de l'Herbier déjà vues dans la collection. Le badge rouge de « Ma collection » compte les cartes
+   * possédées qui n'y figurent pas (`countUnseenCards`). Une carte vue ne redevient jamais « nouvelle ».
    */
-  trackGoals: TrackGoals;
-  /**
-   * Champ dérivé maintenu en sync avec trackGoals.
-   * = Object.values(trackGoals).filter(Boolean)
-   * Passé à evaluateBadges() comme activeBadgeGoals pour contrôler quels badges
-   * sont décernables. Ne jamais écrire directement — toujours passer par trackGoals.
-   */
-  activeBadgeGoals: string[];
-  /**
-   * Compteurs dédiés par badge objectif actif.
-   * Remis à 0 à chaque activation (sélection ou auto-avance).
-   * Incrémenté dans markChallengeCompleted si la condition du badge est remplie ce défi.
-   * Utilisé par evaluateBadges pour décider si le badge est obtenu.
-   * Clé = badgeId (uniquement précision_* et vitesse_* — les badges à condition par défi).
-   */
-  goalCounters: Record<string, number>;
-
-  // ── Persévérant (amelioration_cycle) — rejouer le même défi ─────────────────
-  /**
-   * Défi verrouillé à l'activation de l'objectif "Persévérant" + compteur de victoires.
-   * challengeId = null → objectif pas encore activé ou badge déjà obtenu.
-   * count s'incrémente uniquement si la victoire est sur exactement ce challengeId.
-   * Ni les échecs ni les abandons ne touchent ce compteur.
-   */
-  retryStreak: { challengeId: string | null; count: number };
-
-  // ── Sur orbite (amelioration_fusee) — rejouer le même défi ──────────────────
-  /**
-   * Même mécanique que retryStreak mais pour le badge "Sur orbite" (seuil 5).
-   */
-  retryStreakFusee: { challengeId: string | null; count: number };
-
+  seenTreeCardIds: number[];
 
   // ── Défis amis : amis uniques défiés (pour badge social_poignee / social_cirque) ──
   /** UIDs des amis à qui le joueur a envoyé au moins un défi. Jamais de doublons. */
   challengedFriendIds: string[];
+  /** Défis entre amis terminés déjà comptés dans les statistiques (Lot D). */
+  countedDuelIds: string[];
+  /** Série de victoires de Duel en cours. */
+  duelWinStreak: number;
 
   // ── Bonus journaliers (chantier 4) ───────────────────────────────────────────
   dailyBonusUses: Record<BonusId, number>; // utilisations restantes aujourd'hui
   lastBonusResetDate: string | null;        // "YYYY-MM-DD" du dernier reset
 
   // ── Publicité : recharge des bonus (1 fois/jour, mode free uniquement) ───────
-  watchAdUsedToday: boolean;      // true = la recharge pub a déjà été utilisée aujourd'hui
-  lastWatchAdDate: string | null; // "YYYY-MM-DD" du dernier visionnage
+  /** Pubs récompensées regardées aujourd'hui, par emplacement (Lot B) ; plafonds dans `adRewards.ts`. */
+  adViews: AdViews;
 
   // ── Actions de base ─────────────────────────────────────────────────────────
   setAuthState: (ready: boolean, authenticated: boolean) => void;
@@ -217,6 +262,52 @@ interface PlayerState {
     elementChangeCount?: number,
     bonusUsedCount?: number
   ) => void;
+  /**
+   * Enregistre les étoiles d'une victoire SOLO (Progression v2, C1).
+   * À appeler AVANT markChallengeCompleted (qui ajoute le défi à completedChallenges :
+   * isFirstWin se lit sur l'état d'avant). Garde la MEILLEURE note, met à jour
+   * levelsCompleted / currentLevel et les compteurs de trophées. Ne touche pas aux graines.
+   */
+  recordSoloStars: (input: {
+    challengeId: string;
+    failCount: number;
+    bonusUsedCount: number;
+    elementChangeCount: number;
+    elapsedMs: number;
+    estimatedDurationMs: number;
+  }) => StarResult;
+  /**
+   * Remise à zéro unique du profil de progression (C9) : valeurs par défaut, seeds = 3,
+   * isPremium = false (voir profileDefaults.ts), progressionVersion = 2.
+   * Conserve identité, langue et préférences audio. Idempotente.
+   */
+  resetProgression: () => void;
+  /**
+   * Verse les graines de fin de chapitre pour tous les chapitres terminés et pas encore récompensés
+   * (Progression v2, C3). IDEMPOTENTE : un chapitre n'est jamais versé deux fois, même si on la rappelle,
+   * si on resynchronise, ou si plusieurs chapitres se terminent d'un coup. Ne fait rien si le drapeau
+   * PROGRESSION_V2 est désactivé. Retourne les chapitres versés (vide si rien) et le total de graines.
+   */
+  grantChapterRewards: () => { chapters: Chapter[]; seeds: number };
+  /**
+   * Met en file les cérémonies de fin de chapitre (et les pastilles « Nouveau » de leurs modes) pour
+   * tous les chapitres terminés dont la cérémonie n'est ni déjà en attente ni déjà vue (Lot 4, C7).
+   * IDEMPOTENTE. Ne fait rien si PROGRESSION_V2 est désactivé. Retourne les cérémonies ajoutées.
+   */
+  enqueueCeremonies: () => string[];
+  /**
+   * Mémorise les titres de musique débloqués (fin de chapitre + trophées) dans `unlockedMusicIds` : un titre
+   * débloqué ne se perd jamais, même si la progression est resynchronisée. IDEMPOTENTE ; retourne les titres
+   * NOUVEAUX (pour annoncer le déblocage). Les 2 titres gratuits ne sont pas mémorisés (toujours possédés).
+   */
+  syncUnlockedMusic: () => string[];
+  /**
+   * Marque une cérémonie comme VUE : elle sort de la file d'attente et ne sera plus jamais rejouée.
+   * À appeler dès que le joueur a atteint la fin (ou quitté) la cérémonie.
+   */
+  markCeremonySeen: (ceremonyId: string) => void;
+  /** Efface la pastille « Nouveau » d'une tuile (`duel` | `onf` | `daily`) : 1re partie jouée dans ce mode. */
+  clearNewFeatureBadge: (tile: 'duel' | 'onf' | 'daily') => void;
   recordChallengeFailure: (challengeId: string) => void;
   setLastPlayed: (challengeId: string) => void;
   unlockPremium: () => void;
@@ -227,42 +318,33 @@ interface PlayerState {
   /** Attribue plusieurs badges en UN SEUL set() — évite la cascade de re-renders */
   awardBadges: (badgeIds: string[]) => void;
   setBadgeShowcase: (badges: [string?, string?, string?]) => void;
-  /**
-   * Définit les objectifs actifs et remet à 0 les compteurs des nouveaux objectifs.
-   * @param ids   IDs des badges à mettre en objectif
-   */
-  setActiveBadgeGoals: (ids: string[]) => void;
-  /**
-   * Appelé après awardBadges().
-   * Pour chaque badge complété dans les objectifs actifs, tente de le remplacer
-   * par le prochain badge éligible de la même catégorie.
-   * Remet à 0 le goalCounter du nouveau badge injecté.
-   * @param completedGoalIds IDs des badges qui viennent d'être obtenus ET qui étaient en objectif actif
-   * @param updatedEarnedBadges Liste earnedBadges APRÈS awardBadges() — évite le stale state Zustand batché
-   */
-  advanceGoalAuto: (completedGoalIds: string[], updatedEarnedBadges: string[]) => void;
-  /**
-   * Nouvelle version typée de l'auto-avance : remplace advanceGoalAuto.
-   * Pour chaque badge complété qui appartient à une track, avance cette track
-   * vers le prochain badge éligible.
-   * @param completedBadgeIds IDs des badges qui viennent d'être obtenus
-   * @param updatedEarnedBadges earnedBadges APRÈS awardBadges()
-   * @returns IDs des nouveaux buts injectés (pour affichage "Nouveau" dans l'UI)
-   */
-  advanceTrackGoals: (completedBadgeIds: string[], updatedEarnedBadges: string[]) => string[];
 
   // ── Actions bonus journaliers (chantier 4) ───────────────────────────────────
   spendBonus: (bonusId: BonusId) => boolean;
-  /** Recharge tous les bonus après visionnage d'une pub (1 fois/jour, free seulement).
-   *  Retourne false si déjà utilisé aujourd'hui ou si premium. */
-  refillBonusWithAd: () => boolean;
+  /**
+   * Crédite la récompense d'une pub REGARDÉE jusqu'au bout (Lot B) : recharge un bonus, +1 grille Forestier, +1 jeton
+   * de Duel, ou compte la visite de la Forêt commune / des graines ×2. Refuse (false) si le joueur est premium (sauf
+   * Forêt commune) ou si le plafond quotidien de l'emplacement est atteint. Un seul `set()`.
+   */
+  claimAdReward: (placement: AdPlacement) => boolean;
+  /** Passe les limites quotidiennes au jour courant (remise à neuf si périmées). Retourne true si un reset a eu lieu. */
+  rolloverDailyLimits: () => boolean;
 
   // ── Actions social ───────────────────────────────────────────────────────────
-  recordFriendWin: () => void;
+  /**
+   * Compte les défis entre amis TERMINÉS pas encore comptés (liste du plus ancien au plus récent) : victoires, défaites,
+   * série. Idempotent (`countedDuelIds`). Retourne les victoires et défaites NOUVELLES.
+   */
+  recordDuelResults: (uid: string, duels: readonly CompletedDuel[]) => { wins: number; losses: number };
   /** Enregistre un défi envoyé à un ami (uniquement si c'est un nouvel ami).
    *  Met à jour challengedFriendIds et totalFriendsInvited. */
   recordFriendChallenged: (friendUid: string) => void;
-  recordTopDEJ: () => void;
+  /**
+   * Enregistre le classement d'une victoire au Journalier dans le podium (inclusif : un n° 1 compte aussi
+   * comme top 3 et top 10 %). `rank` / `total` : rang et participants DANS LA LIGUE du joueur. À appeler une
+   * seule fois par victoire (le Journalier n'autorise qu'une partie par jour).
+   */
+  recordDailyPodium: (rank: number, total: number) => void;
 
   // ── Actions tutoriels bonus ──────────────────────────────────────────────────
   dismissBonusTutorial: (bonusId: BonusId) => void;
@@ -275,7 +357,7 @@ interface PlayerState {
   checkDailyLogin: () => boolean; // Retourne true si c'est la première connexion du jour
 
   // ── Actions défi journalier ─────────────────────────────────────────────────
-  submitDailyResult: (date: string, success: boolean, timeMs?: number) => void;
+  submitDailyResult: (date: string, success: boolean, timeMs?: number, league?: DailyLeague) => void;
   resetDailyStatus: () => void;
 
   // ── Actions anti-triche ───────────────────────────────────────────────────
@@ -288,6 +370,30 @@ interface PlayerState {
   // ── Actions Herbier de la Forêt ──────────────────────────────────────────
   /** Ajoute une carte à la collection (idempotent — pas de doublon). */
   collectTreeCard: (cardId: number) => void;
+  /**
+   * Le joueur vient d'afficher sa collection : toutes les cartes possédées sont marquées « vues » et le badge
+   * rouge disparaît. Sans effet (même référence, aucun rendu) s'il n'y a rien de nouveau.
+   */
+  markTreeCardsSeen: () => void;
+  /**
+   * Plante une carte de l'Herbier en dépensant des graines (Progression v2, C6). Coût :
+   * `30 + 5 × floor(nbCartesPossédées / 10)`. Refuse (sans dépenser) si la carte est inconnue, déjà
+   * possédée, d'une région fermée, ou si les graines manquent. Retourne le résultat et le coût.
+   */
+  plantTreeCard: (cardId: number) => { ok: true; cost: number } | { ok: false; reason: PlantRefusal; cost: number };
+  /**
+   * Offre la carte gratuite de FIN DE CHAPITRE pour chaque chapitre récompensé qui n'a pas encore
+   * donné sa carte (la suivante de la région, ou une légendaire au chapitre 7). IDEMPOTENTE : une
+   * carte par chapitre au plus, mémorisée dans `chapterCardsGranted`. Sans effet si PROGRESSION_V2
+   * est désactivé. Retourne les cartes offertes.
+   */
+  grantChapterCards: () => number[];
+  /**
+   * Offre la carte gratuite du Forestier si la grille qui vient d'être résolue franchit un palier de
+   * `ONF_CARD_UNLOCK_EVERY`. Retourne la carte offerte, ou null. À appeler avec les compteurs d'AVANT
+   * et d'APRÈS `recordOnfVictory`.
+   */
+  grantOnfCard: (countBefore: number, countAfter: number) => number | null;
 
   // ── Actions mode ONF ─────────────────────────────────────────────────────
   incrementOnfSolved: () => void;
@@ -301,13 +407,15 @@ interface PlayerState {
   /** Incrémente le compteur de grilles ONF jouées aujourd'hui (limite free = 3). */
   incrementOnfDaily: () => void;
 
-  // ── Actions statistiques génériques (chantier 5) ──────────────────────────
-  incrementStat: (key: keyof PlayerStats, amount?: number) => void;
-
   // ── Action victoire daily (refonte badges) ─────────────────
   /** Enregistre les compteurs de victoire daily (elapsedMs pour dailySpeedCount). */
   recordDailyVictory: (elapsedMs: number) => void;
 
+}
+
+/** Étoiles d'une partie (wrapper local pour garder l'import de computeStars hors du store). */
+function computeStarsFromInput(i: { failCount: number; bonusUsedCount: number; elementChangeCount: number }): StarRating {
+  return computeStars(i);
 }
 
 // ── Fonctions utilitaires anti-triche (hors store pour éviter stale closures) ─
@@ -340,31 +448,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   currentLevel: computePlayerLevel(0),
 
-  stats: {
-    totalSolved: 0,
-    bestTimes: {},
-    currentStreak: 0,
-    longestStreak: 0,
-    noErrorStreak: 0,
-    friendWins: 0,
-    totalFriendsInvited: 0,
-    topDEJCount: 0,
-    sameChallengePlays: {},
-    failCount: {},
-    improvedChallengesCount: 0,
-    seasonalChallengesPlayed: 0,
-    abandonCount: {},
-    dailyPlayed: 0,
-    dailyWon: 0,
-    friendPlayed: 0,
-    avgResolutionMs: 0,
-    totalResolutionCount: 0,
-    speedBadgeHits: {},
-    onfPerfectCount: 0,
-    onfSpeedCount: 0,
-    dailyPerfectCount: 0,
-    dailySpeedCount: 0,
-  },
+  progressionVersion: CURRENT_PROGRESSION_VERSION,
+  challengeStars: {},
+  levelsCompleted: 0,
+  pendingCeremonies: [],
+  seenCeremonies: [],
+  rewardedChapters: [],
+  chapterCardsGranted: [],
+  newFeatureBadges: [],
+  unlockedMusicIds: [],
+  starStreak: 0,
+  quickFirstWins: 0,
+  improvedStarChallengeIds: [],
+  loyaltyStreak: 0,
+  loyaltyBest: 0,
+  bestStarStreak: 0,
+  dailyPodium: { ...EMPTY_PODIUM },
+
+  stats: createDefaultStats(),
 
   earnedBadges: [],
   badgeShowcase: [undefined, undefined, undefined],
@@ -392,25 +493,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   onfDailyCount: 0,
   lastOnfDailyDate: '',
   collectedTreeCardIds: [],
-
-  trackGoals: {
-    performance:  TRACK_PERFORMANCE[0],   // 'precision_pousse'
-    perseverance: TRACK_PERSEVERANCE[0],  // 'regularite_aube'
-    exploration:  TRACK_EXPLORATION[0],   // 'exploration_graine'
-  },
-  activeBadgeGoals: [TRACK_PERFORMANCE[0], TRACK_PERSEVERANCE[0], TRACK_EXPLORATION[0]],
-  goalCounters: {},
-
-  retryStreak: { challengeId: null, count: 0 },
-  retryStreakFusee: { challengeId: null, count: 0 },
+  seenTreeCardIds: [],
 
   challengedFriendIds: [],
+  countedDuelIds: [],
+  duelWinStreak: 0,
 
   dailyBonusUses: { reveal_cell: 3, instinct: 3 },
   lastBonusResetDate: null,
 
-  watchAdUsedToday: false,
-  lastWatchAdDate: null,
+  adViews: {},
 
   // ── setAuthState ──────────────────────────────────────────
   setAuthState: (ready, authenticated) => set({ authReady: ready, isAuthenticated: authenticated }),
@@ -422,11 +514,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setLanguage: (lang) => set({ language: lang }),
 
   // ── Jetons ami ────────────────────────────────────────────
+  // Remboursement : jamais au-delà du plafond quotidien (FRIEND_TOKENS_PER_DAY). Un premium ou un compte démo
+  // ne paie pas de jeton : rien à rembourser, le compteur ne bouge pas.
   addFriendChallengeToken: () => set(state => ({
-    friendChallengeTokens: state.friendChallengeTokens + 1,
+    friendChallengeTokens: Math.min(FRIEND_TOKENS_PER_DAY, state.friendChallengeTokens + 1),
   })),
 
   spendFriendChallengeToken: () => {
+    get().rolloverDailyLimits();
     const { isPremium, friendChallengeTokens } = get();
     if (isPremium) return true; // Illimité en premium
     if (friendChallengeTokens <= 0) return false;
@@ -476,49 +571,71 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           ? Math.max(localDailyStreak, cloudDailyStreak)
           : cloudDailyStreak);
 
+    // Progression v2 : les étoiles ne baissent jamais → max par défi entre local et cloud.
+    const mergedStars = mergeChallengeStars(get().challengeStars, profile.challengeStars);
+    const mergedProgress = computeLevelProgress(mergedStars);
+
+    // Limites quotidiennes (Lot A) : le plus restrictif entre le local et le cloud, pour aujourd'hui seulement.
+    // Se reconnecter ou changer d'appareil ne rend donc jamais des parties du jour.
+    const mergedLimits = mergeDailyLimits(
+      sanitizeDailyLimits(get()),
+      sanitizeDailyLimits(profile.dailyLimits),
+      todayLocalISO(),
+    );
+
     set({
       userId: profile.userId,
       username: profile.username,
       seeds: profile.seeds,
       completedChallenges: profile.completedChallenges,
-      isPremium: profile.isPremium,
-      currentLevel: computePlayerLevel(profile.completedChallenges?.length ?? 0),
-      stats: {
-        totalSolved:              profile.stats.totalSolved,
-        bestTimes:                profile.stats.bestTimes,
-        currentStreak:            profile.stats.currentStreak,
-        longestStreak:            profile.stats.longestStreak,
-        // Compteurs : prendre le max local/cloud pour ne pas écraser les données offline
-        noErrorStreak:            Math.max(get().stats.noErrorStreak, profile.stats.noErrorStreak ?? 0),
-        improvedChallengesCount:  Math.max(get().stats.improvedChallengesCount, profile.stats.improvedChallengesCount ?? 0),
-        friendWins:               Math.max(get().stats.friendWins, profile.stats.friendWins ?? 0),
-        totalFriendsInvited:      Math.max(get().stats.totalFriendsInvited, profile.stats.totalFriendsInvited ?? 0),
-        topDEJCount:              Math.max(get().stats.topDEJCount, profile.stats.topDEJCount ?? 0),
-        sameChallengePlays:       profile.stats.sameChallengePlays ?? {},
-        failCount:                profile.stats.failCount ?? {},
-        seasonalChallengesPlayed: profile.stats.seasonalChallengesPlayed ?? 0,
-        abandonCount:             (profile.stats as any).abandonCount ?? {},
-        dailyPlayed:              (profile.stats as any).dailyPlayed ?? 0,
-        dailyWon:                 (profile.stats as any).dailyWon ?? 0,
-        friendPlayed:             (profile.stats as any).friendPlayed ?? 0,
-        avgResolutionMs:          (profile.stats as any).avgResolutionMs ?? 0,
-        totalResolutionCount:     (profile.stats as any).totalResolutionCount ?? 0,
-        // speedBadgeHits : merger (max par badge) pour ne pas perdre les hits offline
-        speedBadgeHits: (() => {
-          const localHits = get().stats.speedBadgeHits ?? {};
-          const cloudHits = (profile.stats as any).speedBadgeHits ?? {};
-          const merged: Record<string, number> = { ...localHits };
-          for (const [k, v] of Object.entries(cloudHits)) {
-            merged[k] = Math.max(merged[k] ?? 0, v as number);
-          }
-          return merged;
-        })(),
-        // Compteurs ONF et daily : prendre le max local/cloud
-        onfPerfectCount:   Math.max(get().stats.onfPerfectCount ?? 0,   (profile.stats as any).onfPerfectCount   ?? 0),
-        onfSpeedCount:     Math.max(get().stats.onfSpeedCount   ?? 0,   (profile.stats as any).onfSpeedCount     ?? 0),
-        dailyPerfectCount: Math.max(get().stats.dailyPerfectCount ?? 0, (profile.stats as any).dailyPerfectCount ?? 0),
-        dailySpeedCount:   Math.max(get().stats.dailySpeedCount  ?? 0,  (profile.stats as any).dailySpeedCount   ?? 0),
+      // Premium : un achat n'est jamais perdu. Si le cloud n'a pas (encore) l'achat fait localement, on le
+      // garde ; l'appelant (_layout.tsx) le réécrit dans Firestore.
+      isPremium: profile.isPremium || get().isPremium,
+      ...mergedLimits,
+      dailyBonusUses: mergedLimits.dailyBonusUses as Record<BonusId, number>,
+      progressionVersion: profile.progressionVersion ?? CURRENT_PROGRESSION_VERSION,
+      challengeStars: mergedStars,
+      levelsCompleted: mergedProgress.levelsCompleted,
+      ...(() => {
+        // Une cérémonie vue (ici OU sur un autre appareil) ne doit jamais revenir en attente :
+        // on fusionne les « vues », puis on retire de la file tout ce qui a été vu.
+        const seen = mergeCeremonyIds(get().seenCeremonies, profile.seenCeremonies);
+        const pending = mergeCeremonyIds(get().pendingCeremonies, profile.pendingCeremonies)
+          .filter(id => !seen.includes(id));
+        return { pendingCeremonies: pending, seenCeremonies: seen };
+      })(),
+      rewardedChapters: mergeRewardedChapters(get().rewardedChapters, profile.rewardedChapters),
+      chapterCardsGranted: mergeRewardedChapters(get().chapterCardsGranted, profile.chapterCardsGranted),
+      newFeatureBadges: Array.from(new Set([...(get().newFeatureBadges ?? []), ...(profile.newFeatureBadges ?? [])])),
+      unlockedMusicIds: mergeUnlockedMusic(get().unlockedMusicIds, profile.unlockedMusicIds),
+      starStreak: Math.max(get().starStreak ?? 0, profile.starStreak ?? 0),
+      quickFirstWins: Math.max(get().quickFirstWins ?? 0, profile.quickFirstWins ?? 0),
+      improvedStarChallengeIds: Array.from(new Set([...(get().improvedStarChallengeIds ?? []), ...(profile.improvedStarChallengeIds ?? [])])),
+      loyaltyStreak: Math.max(get().loyaltyStreak ?? 0, profile.loyaltyStreak ?? 0),
+      loyaltyBest: Math.max(get().loyaltyBest ?? 0, profile.loyaltyBest ?? 0, profile.loyaltyStreak ?? 0),
+      bestStarStreak: Math.max(get().bestStarStreak ?? 0, profile.bestStarStreak ?? 0, profile.starStreak ?? 0),
+      dailyPodium: {
+        top10Percent: Math.max(get().dailyPodium?.top10Percent ?? 0, profile.dailyPodium?.top10Percent ?? 0),
+        top3: Math.max(get().dailyPodium?.top3 ?? 0, profile.dailyPodium?.top3 ?? 0),
+        first: Math.max(get().dailyPodium?.first ?? 0, profile.dailyPodium?.first ?? 0),
       },
+      currentLevel: resolvePlayerLevel(PROGRESSION_V2, mergedStars, profile.completedChallenges?.length ?? 0),
+      // Statistiques (Lot D) : fusion `mergeStats` — les compteurs cumulatifs ne baissent JAMAIS (max local/cloud),
+      // `bestTimes` garde le meilleur temps par défi, les dictionnaires fusionnent clé par clé. Avant : dailyPlayed,
+      // dailyWon, friendPlayed, failCount… étaient ÉCRASÉS par le cloud (0 si le Journalier ou le Duel n'y avaient jamais
+      // écrit leurs stats), ce qui faisait régresser le trophée Rendez-vous à chaque reconnexion.
+      // Profil cloud vierge (nouveau compte) : pas de contamination par les stats d'une session précédente.
+      stats: isNewCloudProfile
+        ? mergeStats(createDefaultStats(), profile.stats as StatsLike)
+        : mergeStats(get().stats, profile.stats as StatsLike),
+      // Duel : union des défis déjà comptés (un défi compté sur un appareil ne se recompte pas sur l'autre) ; la série
+      // en cours prend la plus grande des deux (elle ne dépasse jamais le record fusionné ci-dessus).
+      countedDuelIds: isNewCloudProfile
+        ? Array.from(new Set(profile.countedDuelIds ?? []))
+        : Array.from(new Set([...get().countedDuelIds, ...(profile.countedDuelIds ?? [])])),
+      duelWinStreak: isNewCloudProfile
+        ? (profile.duelWinStreak ?? 0)
+        : Math.max(get().duelWinStreak, profile.duelWinStreak ?? 0),
       earnedBadges:    mergedEarned,
       badgeShowcase:   (profile.badgeShowcase as [string?, string?, string?]) ?? [undefined, undefined, undefined],
       dailyStreak:       mergedDailyStreak,
@@ -538,175 +655,187 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         ...(get().collectedTreeCardIds ?? []),
         ...((profile as any).collectedTreeCardIds ?? []),
       ])).sort((a, b) => a - b),
-      // trackGoals : merger local vs cloud.
-      // Stratégie par track : prendre le goal le plus avancé dans la séquence
-      // (le plus loin = le local ou le cloud ayant le plus progressé).
-      // Un goal null signifie que la track est épuisée — on le respecte.
-      trackGoals: (() => {
-        const cloudTrack: TrackGoals = (profile as any).trackGoals ?? {
-          performance:  null,
-          perseverance: null,
-          exploration:  null,
-        };
-        const localTrack: TrackGoals = get().trackGoals;
-        const allEarned = new Set([
-          ...get().earnedBadges,
-          ...(profile.earnedBadges ?? []),
-        ]);
-        const allEarnedArray = [...allEarned];
-
-        function mergeTrack(track: TrackName): string | null {
-          const sequence = track === 'performance' ? TRACK_PERFORMANCE
-            : track === 'perseverance' ? TRACK_PERSEVERANCE
-            : TRACK_EXPLORATION;
-          const localGoal = localTrack[track];
-          const cloudGoal = cloudTrack[track];
-
-          // Choisir le goal le plus avancé dans la séquence (index le plus élevé)
-          const localIdx = localGoal ? sequence.indexOf(localGoal) : -1;
-          const cloudIdx = cloudGoal ? sequence.indexOf(cloudGoal) : -1;
-
-          let candidate = localIdx >= cloudIdx ? localGoal : cloudGoal;
-
-          // Si le candidat est déjà obtenu, avancer dans la séquence
-          if (candidate && allEarned.has(candidate)) {
-            candidate = pickNextTrackGoal(track, allEarnedArray, null);
-          }
-          // Si null (pas encore de track goals) → prendre le premier non-obtenu
-          if (candidate === null || candidate === undefined) {
-            candidate = pickNextTrackGoal(track, allEarnedArray, null);
-          }
-          // Vérifier que le candidat a ses prérequis satisfaits
-          if (candidate && !isBadgeEligibleAsGoal(candidate, allEarnedArray)) {
-            candidate = pickNextTrackGoal(track, allEarnedArray, null);
-          }
-          return candidate ?? null;
-        }
-
-        const merged: TrackGoals = {
-          performance:  mergeTrack('performance'),
-          perseverance: mergeTrack('perseverance'),
-          exploration:  mergeTrack('exploration'),
-        };
-        return merged;
-      })(),
-      // activeBadgeGoals est dérivé de trackGoals (champ en sync)
-      activeBadgeGoals: (() => {
-        // Recalculé après trackGoals merge — utilise une logique locale pour éviter
-        // la dépendance sur le set() précédent (Zustand batch).
-        const cloudTrack: TrackGoals = (profile as any).trackGoals ?? {
-          performance:  null, perseverance: null, exploration: null,
-        };
-        const localTrack: TrackGoals = get().trackGoals;
-        const allEarned = new Set([
-          ...get().earnedBadges,
-          ...(profile.earnedBadges ?? []),
-        ]);
-        const allEarnedArray = [...allEarned];
-        const tracks: TrackName[] = ['performance', 'perseverance', 'exploration'];
-        const goals: string[] = [];
-        for (const track of tracks) {
-          const sequence = track === 'performance' ? TRACK_PERFORMANCE
-            : track === 'perseverance' ? TRACK_PERSEVERANCE
-            : TRACK_EXPLORATION;
-          const localGoal = localTrack[track];
-          const cloudGoal = cloudTrack[track];
-          const localIdx = localGoal ? sequence.indexOf(localGoal) : -1;
-          const cloudIdx = cloudGoal ? sequence.indexOf(cloudGoal) : -1;
-          let candidate = localIdx >= cloudIdx ? localGoal : cloudGoal;
-          if (candidate && allEarned.has(candidate)) {
-            candidate = pickNextTrackGoal(track, allEarnedArray, null);
-          }
-          if (!candidate) {
-            candidate = pickNextTrackGoal(track, allEarnedArray, null);
-          }
-          if (candidate && !isBadgeEligibleAsGoal(candidate, allEarnedArray)) {
-            candidate = pickNextTrackGoal(track, allEarnedArray, null);
-          }
-          if (candidate) goals.push(candidate);
-        }
-        return goals;
-      })(),
-      // goalCounters : merger local + cloud — prendre le max par badge
-      // pour ne pas perdre les progrès offline (offline peut être plus avancé que cloud)
-      goalCounters: (() => {
-        const cloudCounters: Record<string, number> = (profile as any).goalCounters ?? {};
-        const localCounters: Record<string, number> = get().goalCounters ?? {};
-        const merged: Record<string, number> = { ...cloudCounters };
-        for (const [k, v] of Object.entries(localCounters)) {
-          merged[k] = Math.max(merged[k] ?? 0, v);
-        }
-        return merged;
-      })(),
-      // retryStreak : si même challengeId → prendre le count le plus élevé (offline peut être + avancé)
-      // sinon → prendre celui avec le count le plus élevé.
-      // Compat descendante : si le badge est actif mais challengeId null après merge,
-      // verrouiller sur le dernier défi solo complété.
-      retryStreak: (() => {
-        const cloud: { challengeId: string | null; count: number } =
-          (profile as any).retryStreak ?? { challengeId: null, count: 0 };
-        const local = get().retryStreak;
-        let merged: { challengeId: string | null; count: number };
-        if (local.challengeId === cloud.challengeId) {
-          merged = { challengeId: cloud.challengeId, count: Math.max(local.count, cloud.count) };
-        } else {
-          merged = local.count >= cloud.count ? local : cloud;
-        }
-        // Compat descendante : verrouiller si challengeId encore null
-        if (!merged.challengeId) {
-          const localTG = get().trackGoals;
-          const cloudTG: TrackGoals = (profile as any).trackGoals ?? { performance: null, perseverance: null, exploration: null };
-          const explorationGoals = [localTG.exploration, cloudTG.exploration].filter(Boolean);
-          if (explorationGoals.includes('amelioration_cycle')) {
-            const lastSolo = (profile.completedChallenges ?? []).filter((id: string) => id.startsWith('niveau_')).slice(-1)[0] ?? null;
-            merged = { challengeId: lastSolo, count: merged.count };
-          }
-        }
-        return merged;
-      })(),
-      retryStreakFusee: (() => {
-        const cloud: { challengeId: string | null; count: number } =
-          (profile as any).retryStreakFusee ?? { challengeId: null, count: 0 };
-        const local = get().retryStreakFusee;
-        let merged: { challengeId: string | null; count: number };
-        if (local.challengeId === cloud.challengeId) {
-          merged = { challengeId: cloud.challengeId, count: Math.max(local.count, cloud.count) };
-        } else {
-          merged = local.count >= cloud.count ? local : cloud;
-        }
-        // Compat descendante : verrouiller si challengeId encore null
-        if (!merged.challengeId) {
-          const localTG = get().trackGoals;
-          const cloudTG: TrackGoals = (profile as any).trackGoals ?? { performance: null, perseverance: null, exploration: null };
-          const explorationGoals = [localTG.exploration, cloudTG.exploration].filter(Boolean);
-          if (explorationGoals.includes('amelioration_fusee')) {
-            const lastSolo = (profile.completedChallenges ?? []).filter((id: string) => id.startsWith('niveau_')).slice(-1)[0] ?? null;
-            merged = { challengeId: lastSolo, count: merged.count };
-          }
-        }
-        return merged;
-      })(),
+      // Cartes déjà vues : union (une carte vue ici OU sur un autre appareil ne redevient jamais « nouvelle »)
+      seenTreeCardIds: mergeCollectedIds(get().seenTreeCardIds, (profile as any).seenTreeCardIds),
     });
 
   },
 
   // ── Graines ───────────────────────────────────────────────
-  addSeeds: (amount) => set(state => ({ seeds: state.seeds + amount })),
+  addSeeds: (amount) => set(state => ({
+    seeds: state.seeds + amount,
+    // Lot D : cumul des graines gagnées (un montant négatif ou invalide ne compte pas comme un gain)
+    stats: amount > 0 ? { ...state.stats, seedsEarned: state.stats.seedsEarned + Math.floor(amount) } : state.stats,
+  })),
 
   spendSeeds: (amount) => {
     const { seeds } = get();
     if (seeds < amount) return false;
-    set(state => ({ seeds: state.seeds - amount }));
+    set(state => ({
+      seeds: state.seeds - amount,
+      stats: amount > 0 ? { ...state.stats, seedsSpent: state.stats.seedsSpent + Math.floor(amount) } : state.stats,
+    }));
     return true;
   },
 
+  // ── recordSoloStars (Progression v2, C1) ────────────────────
+  recordSoloStars: (input) => {
+    const state = get();
+    // Étoiles de cette partie (aucune validation ratée / aucun bonus / aucun jeton déplacé)
+    const stars = computeStarsFromInput(input);
+    const result = applyStarResult({
+      challengeStars: state.challengeStars,
+      challengeId: input.challengeId,
+      stars,
+      alreadyCompleted: state.completedChallenges.includes(input.challengeId),
+      elapsedMs: input.elapsedMs,
+      estimatedDurationMs: input.estimatedDurationMs,
+      starStreak: state.starStreak,
+      quickFirstWins: state.quickFirstWins,
+      improvedStarChallengeIds: state.improvedStarChallengeIds,
+    });
+    set({
+      challengeStars: result.challengeStars,
+      levelsCompleted: result.progressAfter.levelsCompleted,
+      starStreak: result.starStreak,
+      // Œil de lynx : on décerne sur le RECORD de la série (la série en cours retombe à 0 sur une victoire à ⭐)
+      bestStarStreak: Math.max(state.bestStarStreak, result.starStreak),
+      quickFirstWins: result.quickFirstWins,
+      improvedStarChallengeIds: result.improvedStarChallengeIds,
+      // Le niveau suit les étoiles seulement si PROGRESSION_V2 ; sinon markChallengeCompleted le recalcule.
+      ...(PROGRESSION_V2 ? { currentLevel: result.progressAfter.currentLevel } : {}),
+    });
+    return result;
+  },
+
+  // ── grantChapterRewards (Progression v2, C3) ────────────────
+  grantChapterRewards: () => {
+    if (!PROGRESSION_V2) return { chapters: [], seeds: 0 };
+    const state = get();
+    const chapters = getChaptersToReward(state.levelsCompleted, state.rewardedChapters);
+    if (chapters.length === 0) return { chapters: [], seeds: 0 };
+    const seeds = sumChapterSeeds(chapters);
+    // Un seul set() : graines ET marquage « récompensé » ensemble. Si l'appel est rejoué juste après,
+    // getChaptersToReward ne renvoie plus rien : aucun double versement possible.
+    set({
+      seeds: state.seeds + seeds,
+      stats: seeds > 0 ? { ...state.stats, seedsEarned: state.stats.seedsEarned + seeds } : state.stats,
+      rewardedChapters: mergeRewardedChapters(state.rewardedChapters, chapters.map(c => c.id)),
+    });
+    // Le titre de musique de chaque chapitre terminé est mémorisé (Lot 8, D11) : il ne se perd jamais.
+    get().syncUnlockedMusic();
+    return { chapters, seeds };
+  },
+
+  // ── enqueueCeremonies (Progression v2, C7) ──────────────────
+  enqueueCeremonies: () => {
+    if (!PROGRESSION_V2) return [];
+    const state = get();
+    const toAdd = getCeremoniesToEnqueue(state.levelsCompleted, state.pendingCeremonies, state.seenCeremonies);
+    if (toAdd.length === 0) return [];
+    // Un seul set() : file ET pastilles ensemble (cohérent, un seul rendu).
+    set({
+      pendingCeremonies: mergeCeremonyIds(state.pendingCeremonies, toAdd),
+      newFeatureBadges: [
+        ...state.newFeatureBadges,
+        ...getNewBadgesForCeremonies(toAdd, state.newFeatureBadges),
+      ],
+    });
+    return toAdd;
+  },
+
+  syncUnlockedMusic: () => {
+    const state = get();
+    // Seuls les titres DÉBLOQUÉS par la progression sont mémorisés : les gratuits sont toujours possédés.
+    const owned = computeOwnedMusic(state.levelsCompleted, state.earnedBadges, state.unlockedMusicIds, MUSIC_TRACK_IDS)
+      .filter(id => !isFreeMusic(id));
+    // Ordre du catalogue (déterministe), sans doublon ; les titres déjà mémorisés sont conservés.
+    const keep = new Set([...state.unlockedMusicIds, ...owned]);
+    const next = MUSIC_TRACK_IDS.filter(id => keep.has(id) && !isFreeMusic(id));
+    const fresh = next.filter(id => !state.unlockedMusicIds.includes(id));
+    if (fresh.length === 0) return [];
+    set({ unlockedMusicIds: next });
+    return fresh;
+  },
+
+  markCeremonySeen: (ceremonyId) => {
+    const state = get();
+    set({
+      pendingCeremonies: state.pendingCeremonies.filter(id => id !== ceremonyId),
+      seenCeremonies: state.seenCeremonies.includes(ceremonyId)
+        ? state.seenCeremonies
+        : mergeCeremonyIds(state.seenCeremonies, [ceremonyId]),
+    });
+  },
+
+  clearNewFeatureBadge: (tile) => {
+    const state = get();
+    const next = clearNewBadges(tile, state.newFeatureBadges);
+    if (next.length === state.newFeatureBadges.length) return; // rien à effacer : aucun rendu
+    set({ newFeatureBadges: next });
+  },
+
+  // ── resetProgression (C9) ───────────────────────────────────
+  // Remise à zéro unique. Le chargement AsyncStorage et la restauration cloud sont
+  // pilotés par l'appelant (_layout.tsx / useStorage) ; ici : état local seulement.
+  resetProgression: () => {
+    const d = createDefaultProgressionFields();
+    set({
+      progressionVersion: d.progressionVersion,
+      seeds: d.seeds,
+      isPremium: d.isPremium,
+      friendChallengeTokens: d.friendChallengeTokens,
+      completedChallenges: d.completedChallenges,
+      challengeStars: d.challengeStars,
+      levelsCompleted: d.levelsCompleted,
+      currentLevel: d.currentLevel,
+      lastPlayedChallengeId: d.lastPlayedChallengeId,
+      challengeStartedAt: d.challengeStartedAt,
+      pendingCeremonies: d.pendingCeremonies,
+      seenCeremonies: d.seenCeremonies,
+      rewardedChapters: d.rewardedChapters,
+      chapterCardsGranted: d.chapterCardsGranted,
+      newFeatureBadges: d.newFeatureBadges,
+      unlockedMusicIds: d.unlockedMusicIds,
+      starStreak: d.starStreak,
+      quickFirstWins: d.quickFirstWins,
+      improvedStarChallengeIds: d.improvedStarChallengeIds,
+      loyaltyStreak: d.loyaltyStreak,
+      loyaltyBest: d.loyaltyBest,
+      bestStarStreak: d.bestStarStreak,
+      dailyPodium: { ...d.dailyPodium },
+      earnedBadges: d.earnedBadges,
+      badgeShowcase: [undefined, undefined, undefined],
+      stats: createDefaultStats(),
+      dailyStreak: d.dailyStreak,
+      lastPlayedDate: d.lastPlayedDate,
+      dailyChallengeStreak: d.dailyChallengeStreak,
+      longestDailyChallengeStreak: d.longestDailyChallengeStreak,
+      lastDailyChallengeDate: d.lastDailyChallengeDate,
+      dailyChallengeStatus: d.dailyChallengeStatus,
+      dailyChallengeTimeMs: d.dailyChallengeTimeMs,
+      onfSolvedCount: d.onfSolvedCount,
+      completedOnfChallengeIds: d.completedOnfChallengeIds,
+      hasSeenOnfBriefing: d.hasSeenOnfBriefing,
+      onfDailyCount: d.onfDailyCount,
+      lastOnfDailyDate: d.lastOnfDailyDate,
+      lastOnfCompoKey: d.lastOnfCompoKey,
+      collectedTreeCardIds: d.collectedTreeCardIds,
+      seenTreeCardIds: d.seenTreeCardIds,
+      challengedFriendIds: d.challengedFriendIds,
+      countedDuelIds: d.countedDuelIds,
+      duelWinStreak: d.duelWinStreak,
+      dailyBonusUses: { ...d.dailyBonusUses },
+      lastBonusResetDate: d.lastBonusResetDate,
+      bonusTutorialDismissed: [],
+      adViews: { ...d.adViews },
+    });
+  },
   // ── markChallengeCompleted ─────────────────────────────────
   // failCountForThisGame = nb de fois où le joueur a tapé "Valider" et échoué
   // pendant CETTE partie (avant la victoire finale).
   // noErrorStreak s'incrémente seulement si failCountForThisGame === 0.
   markChallengeCompleted: (challengeId, timeMs, errorCount, elementChangeCount = 0, bonusUsedCount = 0) => {
-    // Nombre de victoires sous seuil requis pour obtenir un badge vitesse
-    const SPEED_BADGE_TARGET = 5;
     set(state => {
       const alreadyCompleted = state.completedChallenges.includes(challengeId);
       const prevBest = state.stats.bestTimes[challengeId];
@@ -754,111 +883,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         ? timeMs
         : Math.round((state.stats.avgResolutionMs * prevResCount + timeMs) / newResolutionCount);
 
-      // speedBadgeHits : incrémenter le compteur de chaque badge vitesse si le seuil est battu
-      const lvl = Math.max(1, state.currentLevel);
-      const elapsedSec = timeMs / 1000;
-      const speedThresholds: Array<[string, number]> = [
-        ['vitesse_tortue',  30 + (lvl - 1) * 5],
-        ['vitesse_loup',    20 + (lvl - 1) * 3],
-        ['vitesse_oiseau',  12 + (lvl - 1) * 2],
-        ['vitesse_eclair',   7 + (lvl - 1) * 1],
-        ['vitesse_tornade',  4 + (lvl - 1) * 0.5],
-      ];
-      const prevHits = state.stats.speedBadgeHits ?? {};
-      const newSpeedHits = { ...prevHits };
-      for (const [badgeId, threshold] of speedThresholds) {
-        // N'incrémenter que si pas encore obtenu ET sous le seuil
-        if (!state.earnedBadges.includes(badgeId) && elapsedSec < threshold) {
-          const prev = prevHits[badgeId] ?? 0;
-          if (prev < SPEED_BADGE_TARGET) {
-            newSpeedHits[badgeId] = prev + 1;
-          }
-        }
-      }
-
-      // ── goalCounters : compteurs dédiés par badge objectif actif ──────────────
-      // Incrémenter uniquement si le badge est en objectif actif et que la condition
-      // propre à ce badge est remplie pour CE défi. Indépendant des métriques globales.
-      const newGoalCounters = { ...state.goalCounters };
-      for (const badgeId of state.activeBadgeGoals) {
-        if (state.earnedBadges.includes(badgeId)) continue; // déjà obtenu
-        // Vitesse : condition = finir sous le seuil du niveau courant
-        const speedEntry = speedThresholds.find(([id]) => id === badgeId);
-        if (speedEntry) {
-          if (elapsedSec < speedEntry[1]) {
-            newGoalCounters[badgeId] = (newGoalCounters[badgeId] ?? 0) + 1;
-          }
-          continue;
-        }
-        // precision_parfaite : streak de poses parfaites (sans déplacement, sans erreur, sans abandon, sans bonus)
-        if (badgeId === 'precision_parfaite') {
-          const abandonedBefore = (state.stats.abandonCount[challengeId] ?? 0);
-          const isPerfect = elementChangeCount === 0
-            && errorCount === 0
-            && abandonedBefore === 0
-            && bonusUsedCount === 0;
-          if (isPerfect) {
-            newGoalCounters['precision_parfaite'] = (newGoalCounters['precision_parfaite'] ?? 0) + 1;
-          } else {
-            newGoalCounters['precision_parfaite'] = 0;
-          }
-          continue;
-        }
-        // Précision : condition = pas d'erreur pendant cette partie
-        if (badgeId.startsWith('precision_')) {
-          if (errorCount === 0) {
-            newGoalCounters[badgeId] = (newGoalCounters[badgeId] ?? 0) + 1;
-          } else {
-            // Échec → reset du compteur précision dédié
-            newGoalCounters[badgeId] = 0;
-          }
-          continue;
-        }
-        // Les autres catégories (régularité, social, amélioration, exploration) utilisent
-        // leurs métriques globales directement — pas besoin de goalCounters.
-      }
-
-      // ── retryStreak (amelioration_cycle, seuil 3) ──────────────────────────────
-      // S'incrémente uniquement si la victoire est sur le défi verrouillé à l'activation
-      // et que l'objectif est encore actif et non obtenu.
-      // Auto-verrouillage : si challengeId est null (badge activé avant que le joueur
-      // ait joué un défi), on verrouille sur le défi courant et on compte cette victoire.
-      const cycleActive = state.activeBadgeGoals.includes('amelioration_cycle')
-        && !state.earnedBadges.includes('amelioration_cycle');
-      const newRetryStreak = (() => {
-        if (!cycleActive) return state.retryStreak;
-        if (state.retryStreak.challengeId === challengeId) {
-          return { challengeId, count: state.retryStreak.count + 1 };
-        }
-        if (state.retryStreak.challengeId === null) {
-          // Auto-verrouillage sur le premier défi joué avec l'objectif actif
-          return { challengeId, count: 1 };
-        }
-        return state.retryStreak;
-      })();
-
-      // ── retryStreakFusee (amelioration_fusee, seuil 5) ─────────────────────────
-      const fuseeActive = state.activeBadgeGoals.includes('amelioration_fusee')
-        && !state.earnedBadges.includes('amelioration_fusee');
-      const newRetryStreakFusee = (() => {
-        if (!fuseeActive) return state.retryStreakFusee;
-        if (state.retryStreakFusee.challengeId === challengeId) {
-          return { challengeId, count: state.retryStreakFusee.count + 1 };
-        }
-        if (state.retryStreakFusee.challengeId === null) {
-          // Auto-verrouillage sur le premier défi joué avec l'objectif actif
-          return { challengeId, count: 1 };
-        }
-        return state.retryStreakFusee;
-      })();
-
       return {
         completedChallenges: newCompleted,
-        currentLevel: computePlayerLevel(newCompleted.length),
+        // PROGRESSION_V2 : le niveau vient des étoiles (recordSoloStars, appelé avant) ; sinon ancien calcul.
+        currentLevel: PROGRESSION_V2
+          ? computeLevelProgress(state.challengeStars).currentLevel
+          : computePlayerLevel(newCompleted.length),
         challengeStartedAt: restStarted,
-        goalCounters: newGoalCounters,
-        retryStreak: newRetryStreak,
-        retryStreakFusee: newRetryStreakFusee,
         stats: {
           ...state.stats,
           totalSolved: alreadyCompleted ? state.stats.totalSolved : state.stats.totalSolved + 1,
@@ -872,7 +903,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           seasonalChallengesPlayed: newSeasonalCount,
           avgResolutionMs: newAvgResolutionMs,
           totalResolutionCount: newResolutionCount,
-          speedBadgeHits: newSpeedHits,
         },
       };
     });
@@ -897,8 +927,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   // ── unlockPremium ─────────────────────────────────────────
   unlockPremium: () => {
+    const wasPremium = usePlayerStore.getState().isPremium;
     set({ isPremium: true });
     usePlayerStore.getState().awardBadges(['ami_de_la_foret']);
+    // Modale de félicitations (montée à la racine) : une seule fois, au passage à premium
+    if (!wasPremium) {
+      import('./premiumCelebrationStore').then(({ usePremiumCelebrationStore }) => {
+        // Léger délai : la carte d'achat (Modal native) se ferme au même moment
+        setTimeout(() => usePremiumCelebrationStore.getState().show(), 350);
+      });
+    }
     // Plante 1 arbre immédiatement dans la cagnotte partagée (1 € = 1 arbre)
     import('../services/foretCommuneService').then(({ addTreeDirect }) => {
       addTreeDirect().catch(() => {});
@@ -915,33 +953,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     completedChallenges: [],
     isPremium: false,
     lastPlayedChallengeId: null,
-    friendChallengeTokens: 0,
     currentLevel: 1,
-    stats: {
-      totalSolved: 0,
-      bestTimes: {},
-      currentStreak: 0,
-      longestStreak: 0,
-      noErrorStreak: 0,
-      friendWins: 0,
-      totalFriendsInvited: 0,
-      topDEJCount: 0,
-      sameChallengePlays: {},
-      failCount: {},
-      improvedChallengesCount: 0,
-      seasonalChallengesPlayed: 0,
-      abandonCount: {},
-      dailyPlayed: 0,
-      dailyWon: 0,
-      friendPlayed: 0,
-      avgResolutionMs: 0,
-      totalResolutionCount: 0,
-      speedBadgeHits: {},
-      onfPerfectCount: 0,
-      onfSpeedCount: 0,
-      dailyPerfectCount: 0,
-      dailySpeedCount: 0,
-    },
+    progressionVersion: CURRENT_PROGRESSION_VERSION,
+    challengeStars: {},
+    levelsCompleted: 0,
+    pendingCeremonies: [],
+    seenCeremonies: [],
+    rewardedChapters: [],
+    chapterCardsGranted: [],
+    newFeatureBadges: [],
+    unlockedMusicIds: [],
+    starStreak: 0,
+    quickFirstWins: 0,
+    improvedStarChallengeIds: [],
+    loyaltyStreak: 0,
+    loyaltyBest: 0,
+    bestStarStreak: 0,
+    dailyPodium: { ...EMPTY_PODIUM },
+    stats: createDefaultStats(),
     earnedBadges: [],
     badgeShowcase: [undefined, undefined, undefined],
     dailyStreak: 0,
@@ -959,17 +988,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     onfDailyCount: 0,
     lastOnfDailyDate: '',
     collectedTreeCardIds: [],
-    trackGoals: {
-      performance:  TRACK_PERFORMANCE[0],
-      perseverance: TRACK_PERSEVERANCE[0],
-      exploration:  TRACK_EXPLORATION[0],
-    },
-    activeBadgeGoals: [TRACK_PERFORMANCE[0], TRACK_PERSEVERANCE[0], TRACK_EXPLORATION[0]],
-    goalCounters: {},
-    retryStreak: { challengeId: null, count: 0 },
-    retryStreakFusee: { challengeId: null, count: 0 },
+    seenTreeCardIds: [],
+    // Duel : les défis comptés appartiennent à UN compte (le suivant ne doit pas hériter de la liste)
+    challengedFriendIds: [],
+    countedDuelIds: [],
+    duelWinStreak: 0,
+    // Limites quotidiennes : la sauvegarde locale appartient à UN compte ; à la déconnexion elle est remise à neuf
+    // (le compte suivant ne doit pas hériter des parties du précédent). La vraie valeur est dans Firestore
+    // (`dailyLimits`) et revient à la connexion via `mergeDailyLimits` : se déconnecter ne rend rien.
     dailyBonusUses: { reveal_cell: 3, instinct: 3 },
     lastBonusResetDate: null,
+    friendChallengeTokens: FRIEND_TOKENS_PER_DAY,
+    adViews: {},
   }),
 
   // ── awardBadge ────────────────────────────────────────────
@@ -991,16 +1021,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         : state.earnedBadges;
       const newEarnedSet = new Set(newEarned);
 
-      // Retirer des objectifs actifs TOUS les badges désormais obtenus —
-      // y compris ceux déjà dans earnedBadges qui traîneraient encore dans activeBadgeGoals.
-      // Ce nettoyage doit toujours s'exécuter, même quand toAdd est vide.
-      const newActiveBadgeGoals = state.activeBadgeGoals.filter(
-        id => !newEarned.includes(id)
-      );
-      const goalsUnchanged = newActiveBadgeGoals.length === state.activeBadgeGoals.length;
-
-      // Rien à faire du tout : no-op pour éviter un re-render inutile
-      if (toAdd.length === 0 && goalsUnchanged) return state;
+      // Rien à faire : no-op pour éviter un re-render inutile
+      if (toAdd.length === 0) return state;
 
       // Cumuler les graines des nouveaux badges seulement
       const totalSeeds = toAdd.reduce((acc, id) => {
@@ -1008,22 +1030,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         return acc + (def ? BADGE_SEED_REWARDS[def.rarity] : 0);
       }, 0);
 
-      // Nettoyer trackGoals : si le goal actif d'une track vient d'être obtenu,
-      // mettre ce slot à null (advanceTrackGoals le replacera plus tard avec le suivant).
-      const newTrackGoals: TrackGoals = {
-        performance: (state.trackGoals.performance && newEarnedSet.has(state.trackGoals.performance))
-          ? null : state.trackGoals.performance,
-        perseverance: (state.trackGoals.perseverance && newEarnedSet.has(state.trackGoals.perseverance))
-          ? null : state.trackGoals.perseverance,
-        exploration: (state.trackGoals.exploration && newEarnedSet.has(state.trackGoals.exploration))
-          ? null : state.trackGoals.exploration,
-      };
-
       return {
         earnedBadges:    newEarned,
         seeds:           state.seeds + totalSeeds,
-        trackGoals:      newTrackGoals,
-        activeBadgeGoals: newActiveBadgeGoals,
+        stats:           totalSeeds > 0 ? { ...state.stats, seedsEarned: state.stats.seedsEarned + totalSeeds } : state.stats,
       };
     });
   },
@@ -1032,9 +1042,30 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setBadgeShowcase: (badges) => set({ badgeShowcase: badges }),
 
   // ── Social ────────────────────────────────────────────────
-  recordFriendWin: () => set(state => ({
-    stats: { ...state.stats, friendWins: state.stats.friendWins + 1 },
-  })),
+  // Duel (Lot D) : le résultat est connu seulement quand l'adversaire a joué. `recordDuelResults` compte les défis
+  // TERMINÉS pas encore comptés (liste lue dans Firestore, du plus ancien au plus récent) : victoires, défaites, série.
+  // Idempotent : un défi déjà dans `countedDuelIds` est ignoré. Remplace `recordFriendWin` (le challenger était compté
+  // gagnant dès l'envoi, avant tout résultat).
+  recordDuelResults: (uid, duels) => {
+    const s = get();
+    const tally = tallyNewDuels(uid, duels, s.countedDuelIds, { winStreak: s.duelWinStreak, bestWinStreak: s.stats.friendBestWinStreak });
+    if (tally.played === 0) return { wins: 0, losses: 0 };
+    set({
+      countedDuelIds: tally.countedIds,
+      duelWinStreak: tally.winStreak,
+      stats: {
+        ...s.stats,
+        friendWins: s.stats.friendWins + tally.wins,
+        friendLosses: s.stats.friendLosses + tally.losses,
+        friendPlayed: s.stats.friendPlayed + tally.played,
+        friendBestWinStreak: tally.bestWinStreak,
+      },
+    });
+    return { wins: tally.wins, losses: tally.losses };
+  },
+
+  // Graines (Lot D) : `seedsEarned` ne baisse jamais (dépenser dans l'Herbier n'en retire pas) ; `seedsSpent` cumule les
+  // dépenses. Les deux sont tenus à la source (addSeeds, grantChapterRewards, awardBadges, spendSeeds, plantTreeCard).
 
   recordFriendChallenged: (friendUid) => set(state => {
     // Ignorer si cet ami a déjà été défié (on ne compte que les nouveaux)
@@ -1046,75 +1077,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     };
   }),
 
-  recordTopDEJ: () => set(state => ({
-    stats: { ...state.stats, topDEJCount: state.stats.topDEJCount + 1 },
-  })),
+  recordDailyPodium: (rank, total) => set(state => {
+    const next = recordPodium(state.dailyPodium, rank, total);
+    return next === state.dailyPodium ? state : { dailyPodium: next };
+  }),
 
   // ── checkDailyLogin ───────────────────────────────────────
   // Appelé au montage de l'app. Retourne true si c'est une nouvelle journée.
   checkDailyLogin: () => {
-    const { lastPlayedDate, dailyStreak, lastBonusResetDate } = get();
+    const { lastPlayedDate, dailyStreak } = get();
     const today     = todayISO();
     const yesterday = yesterdayISO();
 
-    // Reset quotidien : bonus, jetons amis, compteur ONF et pub (à minuit)
-    if (lastBonusResetDate !== today) {
-      set({
-        dailyBonusUses: { reveal_cell: 3, instinct: 3 },
-        friendChallengeTokens: 3,
-        onfDailyCount: 0,
-        lastOnfDailyDate: today,
-        lastBonusResetDate: today,
-        watchAdUsedToday: false,
-      });
-    }
-
-    // Migration one-shot : réparer les trackGoals si des badges sont déjà obtenus
-    // ou si les prérequis ne sont pas satisfaits. Aussi initialiser trackGoals si absent
-    // (profils créés avant le système de tracks).
-    {
-      const { trackGoals, earnedBadges, goalCounters, activeBadgeGoals } = get();
-      const tracks: TrackName[] = ['performance', 'perseverance', 'exploration'];
-      let changed = false;
-      const newTrackGoals: TrackGoals = { ...trackGoals };
-      const newCounters = { ...goalCounters };
-
-      // Détecter si trackGoals est vide/absent (profil pré-tracks)
-      const tracksMissing = !trackGoals.performance && !trackGoals.perseverance && !trackGoals.exploration;
-
-      for (const track of tracks) {
-        const current = newTrackGoals[track];
-        if (!current || earnedBadges.includes(current) || !isBadgeEligibleAsGoal(current, earnedBadges)) {
-          // Trouver le prochain badge valide pour cette track
-          const next = pickNextTrackGoal(track, earnedBadges, null);
-          if (next !== current) {
-            if (current) delete newCounters[current];
-            newTrackGoals[track] = next;
-            if (next && !(next in newCounters)) newCounters[next] = 0;
-            changed = true;
-          }
-        }
-      }
-
-      // Si le profil avait des activeBadgeGoals de l'ancien système, les mapper aux tracks
-      if (tracksMissing && activeBadgeGoals.length > 0) {
-        for (const goal of activeBadgeGoals) {
-          const track = getTrackForBadge(goal);
-          if (track && !earnedBadges.includes(goal) && isBadgeEligibleAsGoal(goal, earnedBadges)) {
-            if (!newTrackGoals[track]) {
-              newTrackGoals[track] = goal;
-              if (!(goal in newCounters)) newCounters[goal] = 0;
-              changed = true;
-            }
-          }
-        }
-      }
-
-      if (changed) {
-        const newActiveBadgeGoals = deriveActiveBadgeGoals(newTrackGoals);
-        set({ trackGoals: newTrackGoals, activeBadgeGoals: newActiveBadgeGoals, goalCounters: newCounters });
-      }
-    }
+    // Reset quotidien (bonus, jetons amis, grilles Forestier, pub) : voir rolloverDailyLimits.
+    get().rolloverDailyLimits();
 
     if (lastPlayedDate === today) return false; // Déjà compté aujourd'hui
 
@@ -1127,7 +1103,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       newStreak = 1;
     }
 
-    set({ dailyStreak: newStreak, lastPlayedDate: today });
+    // Habitué (Lot 8) : jours joués d'affilée. La série et son RECORD avancent ensemble ; la série retombe à 1
+    // après une rupture, le record ne baisse jamais.
+    set(state => ({
+      // Lot D : un jour de plus où le joueur s'est connecté (checkDailyLogin ne passe ici qu'une fois par jour)
+      stats: { ...state.stats, daysPlayed: state.stats.daysPlayed + 1 },
+      dailyStreak: newStreak,
+      lastPlayedDate: today,
+      loyaltyStreak: newStreak,
+      loyaltyBest: Math.max(state.loyaltyBest, newStreak),
+    }));
     return true; // Première connexion de la journée
   },
 
@@ -1144,11 +1129,29 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setVisualEffect: (effect) => set({ visualEffect: effect }),
 
   // ── Défi journalier ────────────────────────────────────────
-  submitDailyResult: (date, success, timeMs) => {
+  submitDailyResult: (date, success, timeMs, league) => {
     set(state => {
       // Incrémenter les compteurs cumulatifs (chantier 5)
       const newDailyPlayed = state.stats.dailyPlayed + 1;
       const newDailyWon    = success ? state.stats.dailyWon + 1 : state.stats.dailyWon;
+      // Lot D : statistiques PAR LIGUE (parties, victoires, meilleur temps). Sans ligue (ancien appelant) : globaux seuls.
+      const leagueStats = league === 'pousse'
+        ? {
+            dailyPlayedPousse: state.stats.dailyPlayedPousse + 1,
+            dailyWonPousse: state.stats.dailyWonPousse + (success ? 1 : 0),
+            bestDailyTimeMsPousse: success && timeMs != null && timeMs > 0
+              ? (state.stats.bestDailyTimeMsPousse > 0 ? Math.min(state.stats.bestDailyTimeMsPousse, timeMs) : timeMs)
+              : state.stats.bestDailyTimeMsPousse,
+          }
+        : league === 'grand_chene'
+          ? {
+              dailyPlayedGrandChene: state.stats.dailyPlayedGrandChene + 1,
+              dailyWonGrandChene: state.stats.dailyWonGrandChene + (success ? 1 : 0),
+              bestDailyTimeMsGrandChene: success && timeMs != null && timeMs > 0
+                ? (state.stats.bestDailyTimeMsGrandChene > 0 ? Math.min(state.stats.bestDailyTimeMsGrandChene, timeMs) : timeMs)
+                : state.stats.bestDailyTimeMsGrandChene,
+            }
+          : {};
 
       if (success) {
         // Succès : incrémenter le streak si c'est le jour suivant, sinon reset à 1
@@ -1163,15 +1166,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           dailyChallengeStreak: newStreak,
           longestDailyChallengeStreak: newLongest,
           dailyChallengeTimeMs: timeMs ?? null,
-          stats: { ...state.stats, dailyPlayed: newDailyPlayed, dailyWon: newDailyWon },
+          stats: { ...state.stats, ...leagueStats, dailyPlayed: newDailyPlayed, dailyWon: newDailyWon },
         };
       } else {
-        // Échec : reset le streak mais on conserve le record
+        // Échec : reset le streak mais on conserve le record.
+        // `lastDailyChallengeDate` est écrit AUSSI sur un échec (Lot A) : sans lui, `isDailyToday` restait faux
+        // et le Journalier se rejouait après un échec ou un abandon. Une seule partie par jour.
         return {
           dailyChallengeStatus: 'failed' as const,
+          lastDailyChallengeDate: date,
           dailyChallengeStreak: 0,
           dailyChallengeTimeMs: null,
-          stats: { ...state.stats, dailyPlayed: newDailyPlayed, dailyWon: newDailyWon },
+          stats: { ...state.stats, ...leagueStats, dailyPlayed: newDailyPlayed, dailyWon: newDailyWon },
         };
       }
     });
@@ -1215,11 +1221,75 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setFriendNotifBadgeEnabled: (enabled) => set({ friendNotifBadgeEnabled: enabled }),
 
   // ── Herbier de la Forêt ───────────────────────────────────
+  markTreeCardsSeen: () => {
+    const state = get();
+    const next = markCardsSeen(state.collectedTreeCardIds, state.seenTreeCardIds);
+    if (next === state.seenTreeCardIds) return; // rien de nouveau : aucun rendu
+    set({ seenTreeCardIds: [...next] });
+  },
+
   collectTreeCard: (cardId) => set(state => ({
     collectedTreeCardIds: state.collectedTreeCardIds.includes(cardId)
       ? state.collectedTreeCardIds
       : [...state.collectedTreeCardIds, cardId],
   })),
+
+  // ── Herbier : plantation payante et cartes gratuites (Progression v2, C6) ──
+  plantTreeCard: (cardId) => {
+    const state = get();
+    const open = getOpenRegions(
+      region => isFeatureUnlocked(getRegionFeature(region)!, { levelsCompleted: state.levelsCompleted }),
+      false,
+    );
+    const check = checkPlant(cardId, ALL_TREE_CARDS, state.collectedTreeCardIds, open, state.seeds);
+    if (!check.ok) return { ok: false, reason: check.reason as PlantRefusal, cost: check.cost };
+    // Un seul set() : graines ET carte ensemble. Pas de carte sans paiement, pas de paiement sans carte.
+    set({
+      seeds: state.seeds - check.cost,
+      stats: { ...state.stats, seedsSpent: state.stats.seedsSpent + check.cost },
+      collectedTreeCardIds: mergeCollectedIds(state.collectedTreeCardIds, [cardId]),
+    });
+    return { ok: true, cost: check.cost };
+  },
+
+  grantChapterCards: () => {
+    if (!PROGRESSION_V2) return [];
+    const state = get();
+    // Seuls les chapitres RÉCOMPENSÉS (levelsCompleted atteint) qui n'ont pas encore donné leur carte.
+    const due = state.rewardedChapters.filter(id => !state.chapterCardsGranted.includes(id)).sort((a, b) => a - b);
+    if (due.length === 0) return [];
+    let owned = state.collectedTreeCardIds;
+    const granted: number[] = [];
+    const doneChapters: number[] = [];
+    for (const chapterId of due) {
+      const open = getOpenRegions(
+        region => isFeatureUnlocked(getRegionFeature(region)!, { levelsCompleted: state.levelsCompleted }),
+        false,
+      );
+      const card = pickChapterCard(ALL_TREE_CARDS, owned, getChapterCardRegion(chapterId), open);
+      // Même sans carte à offrir (collection épuisée), le chapitre est marqué : on ne réessaie pas.
+      doneChapters.push(chapterId);
+      if (card) { owned = mergeCollectedIds(owned, [card.id]); granted.push(card.id); }
+    }
+    set({
+      collectedTreeCardIds: owned,
+      chapterCardsGranted: mergeRewardedChapters(state.chapterCardsGranted, doneChapters),
+    });
+    return granted;
+  },
+
+  grantOnfCard: (countBefore, countAfter) => {
+    if (!crossedOnfCardThreshold(countBefore, countAfter)) return null;
+    const state = get();
+    const open = getOpenRegions(
+      region => isFeatureUnlocked(getRegionFeature(region)!, { levelsCompleted: state.levelsCompleted }),
+      false,
+    );
+    const card = pickChapterCard(ALL_TREE_CARDS, state.collectedTreeCardIds, 'france', open);
+    if (!card) return null;
+    set({ collectedTreeCardIds: mergeCollectedIds(state.collectedTreeCardIds, [card.id]) });
+    return card.id;
+  },
 
   // ── Mode ONF ──────────────────────────────────────────────
   incrementOnfSolved: () => set(state => ({
@@ -1254,6 +1324,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         ...state.stats,
         onfPerfectCount: newPerfectCount,
         onfSpeedCount:   newSpeedCount,
+        // Lot D : meilleur temps du Forestier (toute grille, y compris un rejeu ; 0 = aucun)
+        bestOnfTimeMs: elapsedMs > 0
+          ? (state.stats.bestOnfTimeMs > 0 ? Math.min(state.stats.bestOnfTimeMs, elapsedMs) : elapsedMs)
+          : state.stats.bestOnfTimeMs,
       },
     };
   }),
@@ -1276,167 +1350,27 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   markOnfBriefingSeen: () => set({ hasSeenOnfBriefing: true }),
 
   // ── Compteur quotidien ONF ────────────────────────────────
-  incrementOnfDaily: () => set(state => ({
-    onfDailyCount: state.onfDailyCount + 1,
-  })),
-
-  // ── Objectifs de badges actifs (chantier 3) ───────────────
-  setActiveBadgeGoals: (ids) => set(state => {
-    // Filtrer les badges dont le prérequis n'est pas encore obtenu
-    const eligible = ids.filter(id => isBadgeEligibleAsGoal(id, state.earnedBadges));
-    const deduped = eligible.slice(0, 3).filter((id, i, arr) => arr.indexOf(id) === i);
-    // Remettre à 0 le compteur de chaque badge nouvellement ajouté comme objectif.
-    // Les badges déjà actifs conservent leur compteur (reprise sans perte).
-    const newCounters = { ...state.goalCounters };
-    for (const id of deduped) {
-      if (!state.activeBadgeGoals.includes(id)) {
-        // Nouveau badge → compteur à zéro
-        newCounters[id] = 0;
-      }
-    }
-    // Nettoyer les compteurs des objectifs qui ne sont plus actifs
-    for (const id of Object.keys(newCounters)) {
-      if (!deduped.includes(id) && !state.earnedBadges.includes(id)) {
-        delete newCounters[id];
-      }
-    }
-    // Verrouiller le défi cible si amelioration_cycle ou amelioration_fusee
-    // vient d'être ajouté manuellement comme objectif actif.
-    let newRetryStreak = state.retryStreak;
-    if (deduped.includes('amelioration_cycle') && !state.activeBadgeGoals.includes('amelioration_cycle')) {
-      newRetryStreak = { challengeId: state.lastPlayedChallengeId, count: 0 };
-    }
-    let newRetryStreakFusee = state.retryStreakFusee;
-    if (deduped.includes('amelioration_fusee') && !state.activeBadgeGoals.includes('amelioration_fusee')) {
-      newRetryStreakFusee = { challengeId: state.lastPlayedChallengeId, count: 0 };
-    }
-    // Mettre à jour trackGoals en sync avec les ids demandés
-    const newTrackGoals: TrackGoals = { ...state.trackGoals };
-    const tracks: TrackName[] = ['performance', 'perseverance', 'exploration'];
-    for (const track of tracks) {
-      const seq = track === 'performance' ? TRACK_PERFORMANCE
-        : track === 'perseverance' ? TRACK_PERSEVERANCE
-        : TRACK_EXPLORATION;
-      const trackBadge = deduped.find(id => seq.includes(id)) ?? null;
-      newTrackGoals[track] = trackBadge;
-    }
-    return {
-      trackGoals: newTrackGoals,
-      activeBadgeGoals: deduped,
-      goalCounters: newCounters,
-      retryStreak: newRetryStreak,
-      retryStreakFusee: newRetryStreakFusee,
-    };
-  }),
-
-  // ── Auto-avance des objectifs après badge obtenu ──────────
-  advanceGoalAuto: (completedGoalIds, updatedEarnedBadges) => {
-    if (completedGoalIds.length === 0) return;
-    // updatedEarnedBadges est passé depuis l'appelant APRÈS awardBadges() pour éviter
-    // le stale state causé par le batching React 18 des set() Zustand successifs.
-
-    set(state => {
-      let goals = [...state.activeBadgeGoals];
-      const newCounters = { ...state.goalCounters };
-      let newRetryStreak = state.retryStreak;
-      let newRetryStreakFusee = state.retryStreakFusee;
-
-      for (const completedId of completedGoalIds) {
-        // Retirer le badge complété des objectifs actifs et nettoyer son compteur
-        goals = goals.filter(id => id !== completedId);
-        delete newCounters[completedId];
-
-        // Trouver le prochain badge éligible et l'ajouter
-        const nextId = pickNextAutoGoal(completedId, updatedEarnedBadges, goals);
-        if (nextId) {
-          goals = [...goals, nextId];
-          // Nouveau badge → compteur à zéro (repart de 0 quoi qu'il arrive)
-          newCounters[nextId] = 0;
-
-          // Verrouiller le défi cible si le nouveau badge est cycle ou fusee.
-          // count: 1 car la victoire courante (sur ce même défi) compte déjà pour l'objectif.
-          if (nextId === 'amelioration_cycle') {
-            newRetryStreak = { challengeId: state.lastPlayedChallengeId, count: 1 };
-          }
-          if (nextId === 'amelioration_fusee') {
-            newRetryStreakFusee = { challengeId: state.lastPlayedChallengeId, count: 1 };
-          }
-        }
-      }
-
-      return {
-        activeBadgeGoals: goals.slice(0, 3),
-        goalCounters: newCounters,
-        retryStreak: newRetryStreak,
-        retryStreakFusee: newRetryStreakFusee,
-      };
-    });
+  incrementOnfDaily: () => {
+    // Passe d'abord au jour courant : une partie jouée après minuit (app restée ouverte) ne compte pas dans la veille.
+    get().rolloverDailyLimits();
+    set(state => ({ onfDailyCount: state.onfDailyCount + 1 }));
   },
 
-  // ── Nouvelle auto-avance typée par track ──────────────────
-  advanceTrackGoals: (completedBadgeIds, updatedEarnedBadges) => {
-    if (completedBadgeIds.length === 0) return [];
-
-    let injectedIds: string[] = [];
-
-    set(state => {
-      const newTrackGoals: TrackGoals = { ...state.trackGoals };
-      const newCounters = { ...state.goalCounters };
-      let newRetryStreak = state.retryStreak;
-      let newRetryStreakFusee = state.retryStreakFusee;
-      const localInjected: string[] = [];
-
-      for (const completedId of completedBadgeIds) {
-        // Identifier la track du badge complété
-        const track = getTrackForBadge(completedId);
-        if (!track) continue; // badge hors séquence, ignoré
-
-        // Ne traiter que si ce badge était bien le goal actif de cette track,
-        // OU si le slot est déjà null (awardBadges l'a déjà nettoyé avant nous).
-        if (newTrackGoals[track] !== completedId && newTrackGoals[track] !== null) continue;
-
-        // Nettoyer le compteur du badge complété
-        delete newCounters[completedId];
-
-        // Trouver le prochain badge de la track
-        const nextId = pickNextTrackGoal(track, updatedEarnedBadges, completedId);
-        newTrackGoals[track] = nextId;
-
-        if (nextId) {
-          // Nouveau goal → compteur à zéro
-          newCounters[nextId] = 0;
-          localInjected.push(nextId);
-
-          // Verrouiller le défi si c'est amelioration_cycle ou amelioration_fusee.
-          // count: 1 car la victoire courante (sur ce même défi) compte déjà pour l'objectif.
-          if (nextId === 'amelioration_cycle') {
-            newRetryStreak = { challengeId: state.lastPlayedChallengeId, count: 1 };
-          }
-          if (nextId === 'amelioration_fusee') {
-            newRetryStreakFusee = { challengeId: state.lastPlayedChallengeId, count: 1 };
-          }
-        }
-      }
-
-      // Recalculer activeBadgeGoals depuis trackGoals mis à jour
-      const newActiveBadgeGoals = deriveActiveBadgeGoals(newTrackGoals);
-
-      injectedIds = localInjected;
-
-      return {
-        trackGoals: newTrackGoals,
-        activeBadgeGoals: newActiveBadgeGoals,
-        goalCounters: newCounters,
-        retryStreak: newRetryStreak,
-        retryStreakFusee: newRetryStreakFusee,
-      };
-    });
-
-    return injectedIds;
+  // ── Passage au jour courant des limites quotidiennes (Lot A) ─
+  // Si les compteurs sont d'un autre jour : remise à neuf (bonus, jetons Duel, grilles Forestier, pub).
+  // Appelée à l'ouverture (checkDailyLogin), puis avant chaque lecture/écriture sensible, de sorte que
+  // l'app restée ouverte à minuit change de jour sans redémarrage. Sans effet si les compteurs sont du jour.
+  rolloverDailyLimits: () => {
+    const today = todayLocalISO();
+    if (isLimitsOfDay(get(), today)) return false;
+    const fresh = createFreshDailyLimits(today);
+    set({ ...fresh, dailyBonusUses: fresh.dailyBonusUses as Record<BonusId, number> });
+    return true;
   },
 
   // ── Dépense de bonus journalier (chantier 4) ──────────────
   spendBonus: (bonusId) => {
+    get().rolloverDailyLimits();
     const { isPremium, dailyBonusUses } = get();
     if (isPremium) return true; // Illimité en premium
     const remaining = dailyBonusUses[bonusId] ?? 0;
@@ -1450,31 +1384,48 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     return true;
   },
 
-  // ── Recharge des bonus via pub (1 fois/jour, free seulement) ──
-  refillBonusWithAd: () => {
-    const { isPremium, watchAdUsedToday } = get();
-    if (isPremium) return false;       // Premium = bonus illimités, pas de pub
-    if (watchAdUsedToday) return false; // Déjà utilisé aujourd'hui
-    set({
-      dailyBonusUses: { reveal_cell: 3, instinct: 3 },
-      watchAdUsedToday: true,
-      lastWatchAdDate: todayISO(),
-    });
-    return true;
-  },
+  // ── Pub volontaire regardée ───────────────────────────────
+  // Appelée APRÈS le visionnage complet. Le plafond quotidien de chaque emplacement est dans `adRewards.ts`.
+  //  - bonus_* : le bonus doit être épuisé (sinon la pub ne servirait à rien : refus, plafond non consommé) ;
+  //    il repasse à BONUS_USES_PER_DAY. Refusé aux premium (bonus déjà illimités) ;
+  
+  // Aucune pub ne donne de graines, de grille du Forestier ni de jeton de Duel.
+  claimAdReward: (placement) => {
+    get().rolloverDailyLimits();
+    const s = get();
+    if (s.isPremium && !isPlacementAvailableToPremium(placement)) return false;
 
-  // ── Incrément générique de stat (chantier 5) ─────────────
-  incrementStat: (key, amount = 1) => {
-    set(state => ({
-      stats: {
-        ...state.stats,
-        [key]: typeof state.stats[key] === 'number'
-          ? (state.stats[key] as number) + amount
-          : state.stats[key],
-      },
-    }));
-  },
-}));
+    const nextViews = addAdView(s.adViews, placement);
+    if (nextViews === s.adViews) return false; // plafond du jour atteint
+    // Lot D : cumul des pubs regardées, tous emplacements confondus
+    const watched = { ...s.stats, adsWatched: s.stats.adsWatched + 1 };
+
+    switch (placement) {
+      case 'bonus_reveal_cell':
+      case 'bonus_instinct': {
+        const bonusId: BonusId = placement === 'bonus_reveal_cell' ? 'reveal_cell' : 'instinct';
+        if ((s.dailyBonusUses[bonusId] ?? 0) > 0) return false;
+        set({ adViews: nextViews, stats: watched, dailyBonusUses: { ...s.dailyBonusUses, [bonusId]: BONUS_USES_PER_DAY } });
+        return true;
+      }
+      case 'onf_recharge': {
+        // Le quota du jour doit être épuisé (sinon la vidéo ne servirait à rien : refus, plafond non consommé).
+        // La recharge s'inscrit dans `adViews.onf_recharge` (1 par jour) : `getOnfRemaining` y ajoute +3 défis.
+        // `onfDailyCount` ne change pas (cumul qui ne baisse jamais, sûr à la fusion local / cloud).
+        const remaining = getOnfRemaining({
+          onfDailyCount: s.onfDailyCount,
+          exempt: false,
+          onfRecharges: getAdViews(s.adViews, 'onf_recharge'),
+        });
+        if (remaining > 0) return false;
+        set({ adViews: nextViews, stats: watched });
+        return true;
+      }
+      default:
+        set({ adViews: nextViews, stats: watched });
+        return true;
+    }
+  },}));
 
 // ── Helpers privés ────────────────────────────────────────────────────────────
 

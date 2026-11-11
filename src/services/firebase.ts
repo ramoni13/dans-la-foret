@@ -24,7 +24,9 @@ const firebaseConfig = {
   storageBucket: 'danslaforet-c9f83.firebasestorage.app',
   messagingSenderId: '351028267373',
   appId: '1:351028267373:web:929a44dd218cb42feb3264',
-  measurementId: 'G-68JW1F6C07',
+  // Pas de `measurementId` : Google Analytics (GA4) n'est volontairement PAS utilisé.
+  // L'activer exigerait un consentement préalable (CNIL) et une mise à jour de la
+  // politique de confidentialité et des déclarations des stores.
 };
 
 // Évite la double initialisation en mode hot-reload

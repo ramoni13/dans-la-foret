@@ -1,51 +1,65 @@
 // ============================================================
-// HELPERS CARTES À COLLECTIONNER ONF — Herbier de la Forêt
-// Calcul de la progression et des cartes débloquées.
+// HELPERS HERBIER — catalogue des cartes et accès (Progression v2, Lot 7)
+//
+// SOURCE DE VÉRITÉ des cartes possédées : `playerStore.collectedTreeCardIds` (et NON plus
+// `onfSolvedCount`, dont l'ancien calcul `floor(n / 5)` débloquait les cartes dans l'ordre du fichier).
+//
+// Ce fichier fait le lien entre le catalogue de 143 cartes et la logique pure
+// de `src/constants/herbier.ts`. Les cartes sont offertes de trois façons (voir herbier.ts) :
+// plantation payante, carte de fin de chapitre, carte gratuite toutes les 5 grilles du Forestier.
 // ============================================================
 
 import { TREES_DATA, TreeCard } from '../data/treesData';
-import { ONF_CARD_UNLOCK_EVERY } from '../constants/onf';
+import {
+  HerbierProgress,
+  getHerbierProgress,
+  getNextSilhouette,
+  getOnfCardProgress,
+} from '../constants/herbier';
+import type { HerbierRegion } from '../constants/progression';
 
-/**
- * Nombre de cartes débloquées en fonction du nombre de défis ONF réussis.
- * Plafonné à TREES_DATA.length (100).
- */
-export function getUnlockedCardCount(onfSolvedCount: number): number {
-  return Math.min(TREES_DATA.length, Math.floor(onfSolvedCount / ONF_CARD_UNLOCK_EVERY));
+/** Les 143 cartes de l'Herbier, classées par région dans `TREES_DATA`. */
+export const ALL_TREE_CARDS: readonly TreeCard[] = TREES_DATA;
+
+/** Nombre total de cartes de l'Herbier. */
+export const TOTAL_TREE_CARDS = ALL_TREE_CARDS.length;
+
+/** Une carte par identifiant, ou null. */
+export function getTreeCard(id: number): TreeCard | null {
+  return ALL_TREE_CARDS.find(c => c.id === id) ?? null;
+}
+
+/** Cartes possédées, dans l'ordre de leur identifiant. Ignore les identifiants inconnus. */
+export function getOwnedCards(collectedIds: readonly number[] | null | undefined): TreeCard[] {
+  const owned = new Set(collectedIds ?? []);
+  return ALL_TREE_CARDS.filter(c => owned.has(c.id));
+}
+
+/** Nombre de cartes possédées (cartes valides, sans doublon). */
+export function getOwnedCardCount(collectedIds: readonly number[] | null | undefined): number {
+  return getHerbierProgress(ALL_TREE_CARDS, collectedIds).owned;
+}
+
+/** Progression de la collection. */
+export function getCollectionProgress(collectedIds: readonly number[] | null | undefined): HerbierProgress {
+  return getHerbierProgress(ALL_TREE_CARDS, collectedIds);
 }
 
 /**
- * Liste des cartes débloquées (tranche 0..unlockedCount).
+ * Prochaine carte « à découvrir » (silhouette) : la première carte non possédée d'une région ouverte.
+ * null quand toutes les cartes des régions ouvertes sont possédées.
  */
-export function getUnlockedCards(onfSolvedCount: number): TreeCard[] {
-  return TREES_DATA.slice(0, getUnlockedCardCount(onfSolvedCount));
+export function getNextCard(
+  collectedIds: readonly number[] | null | undefined,
+  openRegions: readonly HerbierRegion[],
+): TreeCard | null {
+  return getNextSilhouette(ALL_TREE_CARDS, collectedIds, openRegions);
 }
 
 /**
- * Prochaine carte à débloquer (null si collection complète).
- */
-export function getNextCard(onfSolvedCount: number): TreeCard | null {
-  return TREES_DATA[getUnlockedCardCount(onfSolvedCount)] ?? null;
-}
-
-/**
- * Retourne la carte nouvellement débloquée si un palier vient d'être franchi,
- * null sinon (pas de palier franchi ou collection déjà complète).
- */
-export function getJustUnlockedCard(countBefore: number, countAfter: number): TreeCard | null {
-  const cardsBefore = getUnlockedCardCount(countBefore);
-  const cardsAfter  = getUnlockedCardCount(countAfter);
-  if (cardsAfter > cardsBefore) return TREES_DATA[cardsAfter - 1] ?? null;
-  return null;
-}
-
-/**
- * Progression vers la prochaine carte.
- * { current: défis effectués depuis le dernier palier, total: ONF_CARD_UNLOCK_EVERY }
+ * Progression vers la prochaine carte gratuite du Forestier (1 toutes les ONF_CARD_UNLOCK_EVERY grilles).
+ * { current: grilles depuis le dernier palier, total: ONF_CARD_UNLOCK_EVERY }
  */
 export function getCardProgress(onfSolvedCount: number): { current: number; total: number } {
-  return {
-    current: onfSolvedCount % ONF_CARD_UNLOCK_EVERY,
-    total:   ONF_CARD_UNLOCK_EVERY,
-  };
+  return getOnfCardProgress(onfSolvedCount);
 }

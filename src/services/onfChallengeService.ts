@@ -1,54 +1,71 @@
 // ============================================================
 // SERVICE MODE ONF — Grille Forestière 4×4 (Sudoku Forestier)
 //
-// Les 100 défis sont pré-générés (scripts/generateOnfChallenges.ts)
-// et stockés dans src/data/onf_challenges.json.
+// Les grilles sont pré-générées (scripts/generateOnfChallenges.ts) et stockées dans
+// src/data/onf_challenges.json. Chacune porte un palier (`tier`) : sentier, clairiere, profonde
+// (Progression v2, C4). La logique de sélection est pure et testée : src/constants/onfTiers.ts.
 //
-// Sélection : un défi est tiré au hasard parmi ceux que le joueur
-// n'a pas encore terminés (completedOnfChallengeIds).
-//
-// Quand tous les défis sont terminés : retourne null avec
-// allCompleted=true — l'écran affiche un message de félicitations.
+// Sélection : parmi les grilles non terminées des paliers OUVERTS, on joue dans le palier ouvert le
+// plus élevé qui en a encore (Sentier : dans l'ordre de difficulté ; autres : au hasard).
+// Quand les paliers ouverts sont épuisés mais que d'autres restent verrouillés, `tierExhausted`
+// invite à avancer en solo ; quand tout est terminé, `allCompleted`.
 // ============================================================
 
 import { Challenge } from '../core/models/Challenge';
 import onfChallengesData from '../data/onf_challenges.json';
+import {
+  OnfTier,
+  ONF_TIER_ORDER,
+  TieredChallenge,
+  countChallengesInTiers,
+  selectOnfChallenge,
+} from '../constants/onfTiers';
 
-// Cast du JSON vers Challenge[]
-const ONF_CHALLENGES: Challenge[] = onfChallengesData as unknown as Challenge[];
+/** Une grille ONF : un défi + son palier. */
+export type OnfChallenge = Challenge & { tier: OnfTier };
 
-// ── Sélection aléatoire ───────────────────────────────────────────────────────
+// Cast du JSON vers OnfChallenge[]
+const ONF_CHALLENGES: OnfChallenge[] = onfChallengesData as unknown as OnfChallenge[];
+
+// ── Sélection ─────────────────────────────────────────────────────────────────
 
 export interface OnfPickResult {
-  /** Le défi sélectionné, ou null si tous sont terminés. */
-  challenge: Challenge | null;
-  /** true quand le joueur a terminé tous les défis disponibles. */
+  /** Le défi sélectionné, ou null s'il n'y en a pas à proposer. */
+  challenge: OnfChallenge | null;
+  /** true quand le joueur a terminé TOUTES les grilles, tous paliers confondus. */
   allCompleted: boolean;
+  /** true quand les paliers ouverts sont épuisés alors que d'autres restent à débloquer. */
+  tierExhausted: boolean;
 }
 
 /**
- * Sélectionne un défi ONF aléatoire parmi les défis non encore complétés.
+ * Sélectionne la prochaine grille ONF.
  *
  * @param completedIds  IDs des défis déjà terminés par ce joueur.
- * @returns             OnfPickResult — le défi ou allCompleted=true.
+ * @param unlockedTiers Paliers ouverts (voir `getOpenOnfTiers`). Par défaut : tous (anciens appelants,
+ *                      scripts) — un écran de jeu doit TOUJOURS passer les paliers réellement ouverts.
  */
-export function pickOnfChallenge(completedIds: string[]): OnfPickResult {
-  const completedSet = new Set(completedIds);
-  const available = ONF_CHALLENGES.filter(c => !completedSet.has(c.id));
-
-  if (available.length === 0) {
-    return { challenge: null, allCompleted: true };
-  }
-
-  const index = Math.floor(Math.random() * available.length);
-  return { challenge: available[index], allCompleted: false };
+export function pickOnfChallenge(
+  completedIds: string[],
+  unlockedTiers: readonly OnfTier[] = ONF_TIER_ORDER,
+): OnfPickResult {
+  const r = selectOnfChallenge<OnfChallenge>(ONF_CHALLENGES, completedIds, unlockedTiers);
+  return { challenge: r.challenge, allCompleted: r.allCompleted, tierExhausted: r.tierExhausted };
 }
 
-/**
- * Nombre total de défis ONF disponibles.
- */
+/** Nombre total de grilles ONF disponibles (tous paliers). */
 export function getTotalOnfChallenges(): number {
   return ONF_CHALLENGES.length;
+}
+
+/** Nombre de grilles des paliers ouverts (dénominateur de la progression affichée). */
+export function getOnfChallengeCount(tiers: readonly OnfTier[] = ONF_TIER_ORDER): number {
+  return countChallengesInTiers<TieredChallenge>(ONF_CHALLENGES, tiers);
+}
+
+/** Toutes les grilles (lecture seule) — pour les tests et les écrans de statistiques. */
+export function getAllOnfChallenges(): readonly OnfChallenge[] {
+  return ONF_CHALLENGES;
 }
 
 // ── Récompense ────────────────────────────────────────────────────────────────

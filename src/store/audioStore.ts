@@ -7,14 +7,15 @@
 // - Toggles on/off par type
 // - Volume global
 //
-// Source de vérité des musiques débloquées :
-//   audioStore.ownedTrackIds est calculé depuis FREE_TRACK_IDS + les pistes
-//   dont le badge associé (BADGE_MUSIC_UNLOCK_MAP) figure dans earnedBadges.
-//   → Appeler syncOwnedFromBadges(earnedBadges) à chaque changement de badges.
+// Source de vérité des musiques débloquées (Progression v2, C8 / D11) :
+//   audioStore.ownedTrackIds est calculé par `computeOwnedMusic` (musicUnlocks.ts) depuis les titres gratuits,
+//   la FIN DES CHAPITRES (niveaux validés), les TROPHÉES obtenus, et les titres déjà débloqués (jamais perdus).
+//   → Appeler syncOwnedMusic(progress) à chaque changement de niveaux validés, de trophées ou de titres.
 // ============================================================
 
 import { create } from 'zustand';
-import { FREE_TRACK_IDS, MusicType, MUSIC_CATALOG } from '../constants/music';
+import { FREE_TRACK_IDS, MusicType, MUSIC_TRACK_IDS } from '../constants/music';
+import { computeOwnedMusic } from '../constants/musicUnlocks';
 
 interface AudioState {
   // Préférences
@@ -56,12 +57,12 @@ interface AudioState {
   isTrackOwned: (trackId: string) => boolean;
 
   /**
-   * Met à jour ownedTrackIds depuis les badges obtenus du joueur.
-   * À appeler dès que playerStore.earnedBadges change (subscribe dans useStorage).
-   * Logique : FREE_TRACK_IDS + pistes dont unlockBadgeId est dans earnedBadges.
+   * Met à jour ownedTrackIds depuis la progression du joueur (Progression v2, C8).
+   * À appeler dès que les niveaux validés, les trophées ou `unlockedMusicIds` changent (subscribe dans useStorage).
+   * Logique : titres gratuits + fin de chapitre + trophée + titres déjà débloqués.
    * @param silent  Si true, ne déclenche pas la modale (utilisé au chargement initial)
    */
-  syncOwnedFromBadges: (earnedBadges: string[], silent?: boolean) => void;
+  syncOwnedMusic: (progress: MusicProgress, silent?: boolean) => void;
 
   /**
    * Charge l'état audio persisté depuis AsyncStorage.
@@ -77,15 +78,19 @@ interface AudioState {
 const DEFAULT_INGAME_TRACK = 'foret_mystique';
 const DEFAULT_MENU_TRACK = 'manor_cocktail';
 
-/** Calcule les IDs possédés depuis les badges obtenus du joueur */
-function computeOwnedFromBadges(earnedBadges: string[]): string[] {
-  const owned = new Set(FREE_TRACK_IDS);
-  for (const track of MUSIC_CATALOG) {
-    if (track.unlockBadgeId && earnedBadges.includes(track.unlockBadgeId)) {
-      owned.add(track.id);
-    }
-  }
-  return Array.from(owned);
+/** Progression lue pour débloquer les musiques. */
+export interface MusicProgress {
+  /** Niveaux validés (0 à 21) : la fin du chapitre N = 3 × N niveaux. */
+  levelsCompleted: number;
+  /** Trophées obtenus (`earnedBadges`). */
+  earnedTrophies: readonly string[];
+  /** Titres déjà débloqués et mémorisés (`unlockedMusicIds`) : ne se perdent jamais. */
+  unlockedIds: readonly string[];
+}
+
+/** Calcule les IDs possédés depuis la progression du joueur */
+function computeOwnedFromProgress(p: MusicProgress): string[] {
+  return computeOwnedMusic(p.levelsCompleted, p.earnedTrophies, p.unlockedIds, MUSIC_TRACK_IDS);
 }
 
 export const useAudioStore = create<AudioState>((set, get) => ({
@@ -125,8 +130,8 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     return get().ownedTrackIds.includes(trackId);
   },
 
-  syncOwnedFromBadges: (earnedBadges, silent = false) => {
-    const newOwned = computeOwnedFromBadges(earnedBadges);
+  syncOwnedMusic: (progress, silent = false) => {
+    const newOwned = computeOwnedFromProgress(progress);
     const current = get().ownedTrackIds;
     // Éviter un set() inutile si le contenu est identique
     if (
@@ -157,7 +162,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
   hydrate: (data) => {
     set(s => {
       // Ne PAS toucher ownedTrackIds ici : il est calculé exclusivement depuis
-      // earnedBadges via syncOwnedFromBadges(), appelé après hydrate() dans useStorage.
+      // la progression via syncOwnedMusic(), appelé après hydrate() dans useStorage.
       // L'écraser ici provoquerait une race condition si audio se charge après player.
       return {
         ...s,

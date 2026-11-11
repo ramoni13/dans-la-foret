@@ -14,7 +14,6 @@ import {
   ActivityIndicator,
   StyleSheet,
   Platform,
-  Alert,
   Animated,
 } from 'react-native';
 import { Colors } from '../../constants/colors';
@@ -166,6 +165,7 @@ export function AdminCleanModal({ visible, onClose }: AdminCleanModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState>({ action: null, player: null });
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // ── Chargement de la liste ─────────────────────────────────────────────────
   const loadPlayers = useCallback(async () => {
@@ -186,6 +186,7 @@ export function AdminCleanModal({ visible, onClose }: AdminCleanModalProps) {
     if (visible) {
       setSearch('');
       setSuccessMsg(null);
+      setActionError(null);
       setError(null);
       loadPlayers();
     }
@@ -228,9 +229,9 @@ export function AdminCleanModal({ visible, onClose }: AdminCleanModalProps) {
         setPlayers((prev) => prev.filter((p) => p.userId !== confirm.player!.userId));
       }
     } catch (e: any) {
-      const msg = `Erreur : ${e?.message ?? 'action impossible'}`;
-      if (Platform.OS === 'web') window.alert(msg);
-      else Alert.alert('Erreur', msg);
+      // Dans une Modal native : l'erreur s'affiche dans la carte (bandeau), pas dans un dialogue global
+      setSuccessMsg(null);
+      setActionError(`Erreur : ${e?.message ?? 'action impossible'}`);
     } finally {
       setActionLoading(false);
       setConfirm({ action: null, player: null });
@@ -281,6 +282,13 @@ export function AdminCleanModal({ visible, onClose }: AdminCleanModalProps) {
             {successMsg ? (
               <View style={styles.successBanner}>
                 <Text style={styles.successText}>✅ {successMsg}</Text>
+              </View>
+            ) : null}
+
+            {/* Erreur d'une action (réinitialiser / supprimer) */}
+            {actionError ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>⚠️ {actionError}</Text>
               </View>
             ) : null}
 
@@ -375,6 +383,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.forest.dark,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  refreshBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.ui.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refreshBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.ui.textLight,
+  },
   closeBtn: {
     width: 32,
     height: 32,
@@ -405,6 +431,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#2E7D32',
     fontWeight: '600',
+  },
+  errorBanner: {
+    backgroundColor: '#FDECEA',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F5C6CB',
   },
   searchInput: {
     backgroundColor: Colors.ui.card,

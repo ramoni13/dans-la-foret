@@ -75,6 +75,8 @@ export interface WoodButtonProps {
   disabled?: boolean;
   animated?: boolean;
   animatedStyle?: any;
+  /** Pastille « Nouveau » en haut à droite (mode tout juste débloqué, Progression v2). Texte déjà traduit. */
+  newBadge?: string;
 }
 
 export function WoodButton({
@@ -88,6 +90,7 @@ export function WoodButton({
   disabled,
   animated: useAnimated = false,
   animatedStyle,
+  newBadge,
 }: WoodButtonProps) {
   const { width: screenWidth } = useWindowDimensions();
   // Aligné sur WoodSign : 70% écran, plafonné à 280
@@ -115,6 +118,8 @@ export function WoodButton({
       activeOpacity={0.80}
       disabled={disabled}
       style={{ width: btnWidth, alignSelf: 'center' }}
+      accessibilityRole="button"
+      accessibilityLabel={newBadge ? `${label}${sublabel ? `, ${sublabel}` : ''}, ${newBadge}` : undefined}
     >
       {/* Couche SVG — fond + cadre */}
       <Svg width={btnWidth} height={height} style={StyleSheet.absoluteFill}>
@@ -167,6 +172,12 @@ export function WoodButton({
           <Image source={FLECHE} style={styles.arrow} resizeMode="contain" />
         )}
       </View>
+
+      {newBadge ? (
+        <View pointerEvents="none" style={styles.newBadge} accessible={false} importantForAccessibility="no">
+          <Text style={styles.newBadgeText}>{newBadge}</Text>
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 
@@ -212,4 +223,21 @@ const styles = StyleSheet.create({
     height: ARROW_SIZE,
   },
   lockIcon: { fontSize: 20 },
+  newBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -4,
+    backgroundColor: '#FFC107',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.35,
+    shadowRadius: 2,
+    elevation: 4,
+  },
+  newBadgeText: { fontSize: 10, fontWeight: '900', color: '#3E2F00', textTransform: 'uppercase', letterSpacing: 0.4 },
 });

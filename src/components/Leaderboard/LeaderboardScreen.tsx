@@ -1,12 +1,15 @@
 // ============================================================
-// LEADERBOARD SCREEN
-// Classement mondial temps-réel avec 3 onglets :
-//   1. Global  (score composite : niveau > badges > graines)
-//   2. Badges  (trié par badgeCount desc)
-//   3. Graines (trié par seeds desc)
+// LEADERBOARD SCREEN (Lot C)
+// Classement mondial temps réel, 3 onglets :
+//   1. ⭐ Étoiles   — étoiles → ⭐⭐⭐ → trophées → le premier arrivé (vitrine principale)
+//   2. 🌅 Journalier — victoires du jour dans UNE ligue (sélecteur Pousse / Grand Chêne) → le premier arrivé
+//   3. 🏆 Records   — records mondiaux détenus → le dernier record le plus ancien
+//
+// Chaque classement vient d'UNE requête serveur déjà triée (voir leaderboardService / constants/leaderboardRank) :
+// aucun re-tri côté client. Le joueur hors du top affiché voit sa position réelle (comptage serveur).
 // ============================================================
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,99 +17,74 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
 } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { useFrameLayout } from '../../constants/frameLayout';
-import { getRank, RANK_DEFINITIONS } from '../../constants/badges';
+import { getRankLabel } from '../../constants/progression';
 import { usePlayerStore } from '../../store/playerStore';
 
-import { LeaderboardEntry, DailyWinsEntry, subscribeLeaderboard, subscribeDailyWinsLeaderboard } from '../../services/leaderboardService';
-import { RecordHolderEntry, subscribeRecordHolders } from '../../services/worldRecordService';
+import {
+  getStarsPosition,
+  subscribeDailyWinsLeaderboard,
+  subscribeStarsLeaderboard,
+} from '../../services/leaderboardService';
+import { subscribeRecordHolders } from '../../services/worldRecordService';
 import { DailyResult, subscribeDailyLeaderboard, getDailyDateString } from '../../services/dailyChallengeService';
-import { computePlayerLevel } from '../../services/playerService';
+import {
+  DailyWinsEntry,
+  LEADERBOARD_TOP,
+  LeaderboardEntry,
+  RecordHolderEntry,
+  STAR_TOTAL,
+  computeStarsRank,
+  entryForestRank,
+  positionOf,
+} from '../../constants/leaderboardRank';
+import { DAILY_LEAGUE_ORDER, DailyLeague, getPlayerLeague } from '../../constants/dailyLeagues';
+import { useFeatureAccess } from '../../hooks/useFeatureAccess';
 import { formatTime } from '../../utils/boardUtils';
 import { auth } from '../../services/firebase';
 import { useT } from '../../i18n';
+import { PineconeText } from '../Game/PineconeIcon';
+import { PINECONE_TOKEN } from '../../constants/pinecone';
 
 // ── Onglets ──────────────────────────────────────────────────────────────────
 
-type Tab = 'daily' | 'badges' | 'seeds' | 'records';
+type Tab = 'stars' | 'daily' | 'records';
 
-// ── Médailles podium ─────────────────────────────────────────────────────────
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
-// ── Composant ligne de classement ────────────────────────────────────────────
+// ── Ligne générique ──────────────────────────────────────────────────────────
 
 interface RowProps {
-  entry: LeaderboardEntry;
   rank: number;
-  tab: Tab;
   isMe: boolean;
+  username: string;
+  /** Sous-titre (rang forestier, détail) */
+  sub?: string;
+  detail?: string;
+  value: string;
 }
 
-const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
+const Row: React.FC<RowProps> = ({ rank, isMe, username, sub, detail, value }) => {
   const t = useT();
   const medal = MEDAL[rank];
-  const language = usePlayerStore(state => state.language);
-
-  // Calcul du rang forestier depuis badgeScore (présent si la synchro est récente)
-  const badgeScore = (entry as any).badgeScore ?? 0;
-  const forestRank = getRank(badgeScore);
-  const forestRankLabel = language === 'en' ? forestRank.labelEn : forestRank.label;
-  // N'afficher le rang que si le joueur a au moins un badge (score > 0)
-  const showForestRank = badgeScore > 0 || entry.badgeCount > 0;
-
   return (
     <View style={[styles.row, isMe && styles.rowMe]}>
-      {/* Rang */}
       <View style={styles.rankCol}>
-        {medal ? (
-          <Text style={styles.medal}>{medal}</Text>
-        ) : (
-          <Text style={[styles.rankText, rank <= 10 && styles.rankTopTen]}>
-            {rank}
-          </Text>
-        )}
+        {medal
+          ? <Text style={styles.medal}>{medal}</Text>
+          : <Text style={[styles.rankText, rank <= 10 && styles.rankTopTen]}>{rank}</Text>}
       </View>
-
-      {/* Info joueur */}
       <View style={styles.playerCol}>
         <Text style={[styles.username, isMe && styles.usernameMe]} numberOfLines={1}>
-          {entry.username}{isMe ? t('leaderboard_me') : ''}
+          {username}{isMe ? t('leaderboard_me') : ''}
         </Text>
-        {showForestRank && tab !== 'records' && tab !== 'daily' && (
-          <Text style={styles.forestRank} numberOfLines={1}>
-            {forestRank.emoji} {forestRankLabel}
-          </Text>
-        )}
-        <Text style={styles.subinfo}>
-          {tab === 'records'
-            ? t('leaderboard_records_world', { count: String((entry as any).recordCount ?? 0) })
-            : tab === 'daily'
-            ? ((entry as any).dailyWins ?? 0) > 1
-              ? t('leaderboard_daily_wins_other', { count: String((entry as any).dailyWins ?? 0) })
-              : t('leaderboard_daily_wins_one', { count: String((entry as any).dailyWins ?? 0) })
-            : t('leaderboard_subinfo_row', { level: String(entry.level), count: String(entry.completedCount) })}
-        </Text>
+        {sub ? <Text style={styles.forestRank} numberOfLines={1}>{sub}</Text> : null}
+        {detail ? <PineconeText style={styles.subinfo} numberOfLines={1} text={detail} /> : null}
       </View>
-
-      {/* Valeur mise en avant selon l'onglet */}
       <View style={styles.valueCol}>
-        {tab === 'daily' && (
-          <View style={styles.globalBadge}>
-            <Text style={styles.levelValue}>🌅 {(entry as any).dailyWins ?? 0}</Text>
-          </View>
-        )}
-        {tab === 'badges' && (
-          <Text style={styles.valueText}>🏅 {entry.badgeCount}</Text>
-        )}
-        {tab === 'seeds' && (
-          <Text style={styles.valueText}>🌱 {entry.seeds}</Text>
-        )}
-        {tab === 'records' && (
-          <Text style={styles.valueText}>🏆 {(entry as any).recordCount ?? 0}</Text>
-        )}
+        <PineconeText style={styles.valueText} text={value} />
       </View>
     </View>
   );
@@ -117,162 +95,152 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, rank, tab, isMe }) => {
 export const LeaderboardScreen: React.FC = () => {
   const t = useT();
   const { frameBottom, innerPadH } = useFrameLayout();
-  const [tab, setTab]               = useState<Tab>('daily');
+  const language = usePlayerStore(s => s.language);
+  const [tab, setTab] = useState<Tab>('stars');
 
-  const TABS: { key: Tab; label: string; emoji: string }[] = [
-    { key: 'daily',   label: t('leaderboard_daily_tab'), emoji: '🌅' },
-    { key: 'badges',  label: t('leaderboard_tab_badges'), emoji: '🏅' },
-    { key: 'seeds',   label: t('leaderboard_tab_seeds'),  emoji: '🌱' },
-    { key: 'records', label: t('leaderboard_tab_records'), emoji: '🏆' },
-  ];
-  const [entries, setEntries]       = useState<LeaderboardEntry[]>([]);
-  const [recordHolders, setRecordHolders]   = useState<RecordHolderEntry[]>([]);
-  const [dailyWinners, setDailyWinners]     = useState<DailyWinsEntry[]>([]);
-  const [todayLeader, setTodayLeader]       = useState<DailyResult | null>(null);
-  const [loading, setLoading]       = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const myUid    = auth.currentUser?.uid ?? null;
+  const myUid = auth.currentUser?.uid ?? null;
   const todayStr = getDailyDateString(new Date());
 
-  // Tri selon l'onglet actif
-  const sorted = useMemo((): LeaderboardEntry[] => {
-    if (tab === 'records' || tab === 'daily') return [];
-    const copy = [...entries];
-    if (tab === 'badges') {
-      copy.sort((a, b) => b.badgeCount - a.badgeCount || b.seeds - a.seeds || b.level - a.level);
-    } else if (tab === 'seeds') {
-      copy.sort((a, b) => b.seeds - a.seeds || b.badgeCount - a.badgeCount || b.level - a.level);
-    }
-    return copy;
-  }, [entries, tab]);
+  // Ligue du joueur (Pousse avant l'ouverture du Journalier) ; le sélecteur permet de consulter l'autre.
+  const leagueAccess = useFeatureAccess('dev');
+  const myLeague: DailyLeague = getPlayerLeague(leagueAccess.dailyLeagues) ?? 'pousse';
+  const [league, setLeague] = useState<DailyLeague>(myLeague);
+  useEffect(() => { setLeague(myLeague); }, [myLeague]);
 
-  // Ma position dans le classement courant
-  const myRank = useMemo(() => {
-    if (!myUid) return null;
-    if (tab === 'records') {
-      const idx = recordHolders.findIndex(e => e.userId === myUid);
-      return idx === -1 ? null : idx + 1;
-    }
-    if (tab === 'daily') {
-      const idx = dailyWinners.findIndex(e => e.userId === myUid);
-      return idx === -1 ? null : idx + 1;
-    }
-    const idx = sorted.findIndex(e => e.userId === myUid);
-    return idx === -1 ? null : idx + 1;
-  }, [sorted, recordHolders, dailyWinners, tab, myUid]);
+  const [stars, setStars] = useState<LeaderboardEntry[] | null>(null);
+  const [daily, setDaily] = useState<DailyWinsEntry[] | null>(null);
+  const [records, setRecords] = useState<RecordHolderEntry[] | null>(null);
+  const [todayLeader, setTodayLeader] = useState<DailyResult | null>(null);
+  // Position réelle quand le joueur est hors du top affiché
+  const [farStars, setFarStars] = useState<number | null>(null);
 
-  // Abonnement Firestore temps-réel
+  // Mon score étoiles courant (pour situer un joueur hors du top).
+  // Un sélecteur par champ : Zustand 5 compare par référence, un sélecteur qui renvoie un objet NEUF à chaque lecture
+  // provoque une boucle de rendu infinie.
+  const myChallengeStars = usePlayerStore(s => s.challengeStars);
+  const myTrophyCount = usePlayerStore(s => s.earnedBadges.length);
+
+  // Abonnements : seul l'onglet visible est écouté (une requête serveur par classement)
   useEffect(() => {
-    setLoading(true);
-    const unsubLeaderboard = subscribeLeaderboard(100, data => {
-      const normalized = data.map(e => ({
-        ...e,
-        level: computePlayerLevel(e.completedCount),
-      }));
-      setEntries(normalized);
-      setLoading(false);
-      setRefreshing(false);
-    });
-    const unsubRecords = subscribeRecordHolders(data => {
-      setRecordHolders(data);
-    });
-    // Classement cumulatif des victoires daily (jamais décrémenté)
-    const unsubDailyWins = subscribeDailyWinsLeaderboard(100, data => {
-      setDailyWinners(data);
-    });
-    // Record du jour courant (top 1, pour le bandeau)
-    const unsubTodayLeader = subscribeDailyLeaderboard(todayStr, 1, data => {
-      setTodayLeader(data.length > 0 ? data[0] : null);
-    });
-    return () => { unsubLeaderboard(); unsubRecords(); unsubDailyWins(); unsubTodayLeader(); };
-  }, []);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
-  };
-
-  // Données affichées dans la FlatList
-  const displayData = useMemo((): LeaderboardEntry[] => {
+    if (tab === 'stars') {
+      setStars(null);
+      return subscribeStarsLeaderboard(setStars);
+    }
     if (tab === 'records') {
-      return recordHolders.map(rh => ({
-        userId: rh.userId, username: rh.username,
-        level: 0, badgeCount: 0, seeds: 0, completedCount: 0, score: 0,
-        recordCount: rh.recordCount,
-      } as LeaderboardEntry & { recordCount: number }));
+      setRecords(null);
+      return subscribeRecordHolders(setRecords);
     }
-    if (tab === 'daily') {
-      // dailyWinners est déjà trié par dailyWins desc (Firestore orderBy)
-      return dailyWinners.map(dw => ({
-        userId: dw.userId, username: dw.username,
-        level: 0, badgeCount: 0, seeds: 0, completedCount: 0, score: 0,
-        dailyWins: dw.dailyWins,
-      } as LeaderboardEntry & { dailyWins: number }));
-    }
-    return sorted;
-  }, [tab, sorted, recordHolders, dailyWinners]);
+    setDaily(null);
+    const unsubWins = subscribeDailyWinsLeaderboard(league, setDaily);
+    const unsubToday = subscribeDailyLeaderboard(todayStr, league, 1, data => setTodayLeader(data.length > 0 ? data[0] : null));
+    return () => { unsubWins(); unsubToday(); };
+  }, [tab, league]);
 
-  // ── Rendu header fixe (ma position) ──────────────────────────────────────
-  const myEntry        = myUid ? entries.find(e => e.userId === myUid) : null;
-  const myRecordEntry  = myUid ? recordHolders.find(e => e.userId === myUid) : null;
-  const myDailyWins    = myUid ? dailyWinners.find(e => e.userId === myUid) : null;
+  // Position hors du top 100 : comptage serveur du nombre de joueurs strictement devant
+  const myStarsEntry = stars && myUid ? stars.find(e => e.userId === myUid) ?? null : null;
+  useEffect(() => {
+    setFarStars(null);
+    if (tab !== 'stars' || !stars || !myUid || myStarsEntry || stars.length < LEADERBOARD_TOP) return;
+    // Le joueur est hors du top : on compare son score local (sans « premier arrivé » : approximation à égalité)
+    const rankNow = computeStarsRank(
+      { stars: countStars(myChallengeStars), threeStars: countThree(myChallengeStars), trophies: myTrophyCount },
+      Number.MAX_SAFE_INTEGER,
+    );
+    if (rankNow <= 0) return;
+    getStarsPosition(rankNow).then(setFarStars);
+  }, [tab, stars, myUid]);
+
+  // Journalier : hors du top affiché on ne montre aucun rang (le score d'un joueur n'est connu que de Firestore ;
+  // inventer un chiffre serait pire que rien). Le joueur du top voit sa ligne mise en évidence.
+  const myDailyEntry = daily && myUid ? daily.find(e => e.userId === myUid) ?? null : null;
+
+  const data = tab === 'stars' ? stars : tab === 'daily' ? daily : records;
+  const loading = data === null;
+
+  const myRank = useMemo(() => {
+    if (tab === 'stars') return positionOf(stars ?? [], myUid) ?? farStars;
+    if (tab === 'daily') return positionOf(daily ?? [], myUid);
+    return positionOf(records ?? [], myUid);
+  }, [tab, stars, daily, records, myUid, farStars]);
+
+  const TABS: { key: Tab; label: string; emoji: string }[] = [
+    { key: 'stars', label: t('leaderboard_tab_stars'), emoji: PINECONE_TOKEN },
+    { key: 'daily', label: t('leaderboard_daily_tab'), emoji: '🌅' },
+    { key: 'records', label: t('leaderboard_tab_records'), emoji: '🏆' },
+  ];
+
+  // ── Texte de « ma position » ──────────────────────────────────────────────
+  const mySummary = (() => {
+    if (tab === 'stars' && myStarsEntry) return `${PINECONE_TOKEN} ${myStarsEntry.stars}/${STAR_TOTAL}  ·  🏅 ${myStarsEntry.trophies}`;
+    if (tab === 'daily' && myDailyEntry) return winsLabel(t, myDailyEntry.wins);
+    if (tab === 'records') {
+      const me = (records ?? []).find(e => e.userId === myUid);
+      if (me) return t('leaderboard_records_world', { count: String(me.recordCount) });
+    }
+    return null;
+  })();
+
+  const rows = (data ?? []).slice(0, LEADERBOARD_TOP);
 
   return (
     <View style={styles.container}>
       {/* Onglets */}
       <View style={[styles.tabs, { paddingHorizontal: innerPadH }]}>
-        {TABS.map(t => (
+        {TABS.map(tb => (
           <TouchableOpacity
-            key={t.key}
-            style={[styles.tab, tab === t.key && styles.tabActive]}
-            onPress={() => setTab(t.key)}
+            key={tb.key}
+            style={[styles.tab, tab === tb.key && styles.tabActive]}
+            onPress={() => setTab(tb.key)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>
-              {t.emoji} {t.label}
-            </Text>
+            <PineconeText style={[styles.tabText, tab === tb.key && styles.tabTextActive]} text={`${tb.emoji} ${tb.label}`} />
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Bandeau record du jour courant — visible uniquement sur l'onglet daily */}
+      {/* Journalier : sélecteur de ligue + record du jour de la ligue affichée */}
       {tab === 'daily' && (
-        <View style={styles.todayBanner}>
-          <Text style={styles.todayBannerLabel}>{t('leaderboard_today_record')}</Text>
-          {todayLeader ? (
-            <Text style={styles.todayBannerValue}>
-              {'\uD83C\uDFC6'} {todayLeader.username}
-              {'  ·  '}
-              {formatTime(todayLeader.timeMs)}
-              {todayLeader.userId === myUid ? t('leaderboard_me_today') : ''}
-            </Text>
-          ) : (
-            <Text style={styles.todayBannerEmpty}>{t('leaderboard_today_empty')}</Text>
-          )}
-        </View>
+        <>
+          <View style={styles.leagueRow}>
+            {DAILY_LEAGUE_ORDER.map(l => (
+              <TouchableOpacity
+                key={l}
+                style={[styles.leagueBtn, league === l && styles.leagueBtnActive]}
+                onPress={() => setLeague(l)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ selected: league === l }}
+              >
+                <Text style={[styles.leagueText, league === l && styles.leagueTextActive]}>{t(`daily_league_${l}`)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.todayBanner}>
+            <Text style={styles.todayBannerLabel}>{t('daily_league_today_record', { league: t(`daily_league_${league}`) })}</Text>
+            {todayLeader ? (
+              <Text style={styles.todayBannerValue}>
+                🏆 {todayLeader.username}{'  ·  '}{formatTime(todayLeader.timeMs)}
+                {todayLeader.userId === myUid ? t('leaderboard_me_today') : ''}
+              </Text>
+            ) : (
+              <Text style={styles.todayBannerEmpty}>{t('leaderboard_today_empty')}</Text>
+            )}
+          </View>
+        </>
       )}
 
+      {/* Règle de départage de l'onglet : le joueur sait comment il est classé */}
+      <View style={styles.ruleBar}>
+        <PineconeText style={styles.ruleText} text={t(`leaderboard_rule_${tab}`)} />
+      </View>
+
       {/* Ma position */}
-      {myRank != null && (
-        tab === 'records' ? myRecordEntry :
-        tab === 'daily'   ? myDailyWins   :
-        myEntry
-      ) && (
+      {myRank != null && (mySummary != null || tab === 'stars') && (
         <View style={styles.myRankBar}>
-          <Text style={styles.myRankText}>
-            {t('leaderboard_my_position', { rank: String(myRank) })}
-            {'  '}·{'  '}
-            {tab === 'records' ? (
-              t('leaderboard_records_world', { count: String(myRecordEntry?.recordCount ?? 0) })
-            ) : tab === 'daily' ? (
-              (myDailyWins?.dailyWins ?? 0) > 1
-                ? t('leaderboard_daily_wins_other', { count: String(myDailyWins?.dailyWins ?? 0) })
-                : t('leaderboard_daily_wins_one', { count: String(myDailyWins?.dailyWins ?? 0) })
-            ) : (
-              `🏅 ${myEntry!.badgeCount}  🌱 ${myEntry!.seeds}`
-            )}
-          </Text>
+          <PineconeText
+            style={styles.myRankText}
+            text={`${t('leaderboard_my_position', { rank: String(myRank) })}${mySummary ? `  ·  ${mySummary}` : ''}`}
+          />
         </View>
       )}
 
@@ -282,58 +250,76 @@ export const LeaderboardScreen: React.FC = () => {
           <ActivityIndicator size="large" color={Colors.forest.medium} />
           <Text style={styles.loadingText}>{t('leaderboard_loading')}</Text>
         </View>
-      ) : displayData.length === 0 ? (
+      ) : rows.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyEmoji}>{tab === 'daily' ? '🌅' : '🌲'}</Text>
           <Text style={styles.emptyText}>{t('leaderboard_empty')}</Text>
-          <Text style={styles.emptySubtext}>
-            {tab === 'daily'
-              ? t('leaderboard_daily_empty')
-              : t('leaderboard_empty_sub')}
-          </Text>
+          <Text style={styles.emptySubtext}>{t(tab === 'daily' ? 'leaderboard_daily_empty' : 'leaderboard_empty_sub')}</Text>
         </View>
       ) : (
         <FlatList
-          data={displayData}
-          keyExtractor={item => item.userId}
-          renderItem={({ item, index }) => (
-            <LeaderboardRow
-              entry={item}
-              rank={index + 1}
-              tab={tab}
-              isMe={item.userId === myUid}
-            />
-          )}
+          data={rows as any[]}
+          keyExtractor={(item: { userId: string }) => item.userId}
+          renderItem={({ item, index }) => {
+            if (tab === 'stars') {
+              const e = item as LeaderboardEntry;
+              const fr = entryForestRank(e);
+              return (
+                <Row
+                  rank={index + 1}
+                  isMe={e.userId === myUid}
+                  username={e.username}
+                  sub={`${fr.emoji} ${getRankLabel(fr, language)}`}
+                  detail={t('leaderboard_stars_detail', { three: String(e.threeStars), trophies: String(e.trophies), herbier: String(e.herbier) })}
+                  value={`${PINECONE_TOKEN} ${e.stars}`}
+                />
+              );
+            }
+            if (tab === 'daily') {
+              const e = item as DailyWinsEntry;
+              return <Row rank={index + 1} isMe={e.userId === myUid} username={e.username} detail={winsLabel(t, e.wins)} value={`🌅 ${e.wins}`} />;
+            }
+            const e = item as RecordHolderEntry;
+            return (
+              <Row
+                rank={index + 1}
+                isMe={e.userId === myUid}
+                username={e.username}
+                detail={t('leaderboard_records_world', { count: String(e.recordCount) })}
+                value={`🏆 ${e.recordCount}`}
+              />
+            );
+          }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={Colors.forest.medium}
-            />
-          }
-          // Met en évidence la ligne "moi" si hors du viewport
-          getItemLayout={(_, index) => ({
-            length: ROW_HEIGHT,
-            offset: ROW_HEIGHT * index,
-            index,
-          })}
+          getItemLayout={(_, index) => ({ length: ROW_HEIGHT, offset: (ROW_HEIGHT + 6) * index, index })}
         />
       )}
     </View>
   );
 };
 
+// ── Aides locales ────────────────────────────────────────────────────────────
+
+function winsLabel(t: (k: string, v?: Record<string, string>) => string, wins: number): string {
+  return t(wins > 1 ? 'leaderboard_daily_wins_other' : 'leaderboard_daily_wins_one', { count: String(wins) });
+}
+
+function countStars(cs: Record<string, number>): number {
+  let n = 0;
+  for (const v of Object.values(cs)) n += v === 1 || v === 2 || v === 3 ? v : 0;
+  return n;
+}
+function countThree(cs: Record<string, number>): number {
+  return Object.values(cs).filter(v => v === 3).length;
+}
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const ROW_HEIGHT = 76;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.ui.background,
-  },
+  container: { flex: 1, backgroundColor: Colors.ui.background },
   tabs: {
     flexDirection: 'row',
     backgroundColor: Colors.ui.card,
@@ -343,175 +329,54 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     gap: 4,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 9,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+  tab: { flex: 1, paddingVertical: 9, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabActive: { borderBottomColor: Colors.forest.medium },
+  tabText: { fontSize: 13, fontWeight: '600', color: Colors.ui.textLight },
+  tabTextActive: { color: Colors.forest.dark, fontWeight: '700' },
+  leagueRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: Colors.ui.card },
+  leagueBtn: {
+    flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 10,
+    borderWidth: 1, borderColor: Colors.ui.border, backgroundColor: Colors.ui.background,
   },
-  tabActive: {
-    borderBottomColor: Colors.forest.medium,
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.ui.textLight,
-  },
-  tabTextActive: {
-    color: Colors.forest.dark,
-    fontWeight: '700',
-  },
+  leagueBtnActive: { backgroundColor: Colors.forest.dark, borderColor: Colors.forest.dark },
+  leagueText: { fontSize: 12, fontWeight: '700', color: Colors.ui.textLight },
+  leagueTextActive: { color: '#FFFFFF' },
   todayBanner: {
-    backgroundColor: '#2C1A00',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#8B6914',
-    alignItems: 'center',
-    gap: 2,
+    backgroundColor: '#2C1A00', paddingVertical: 10, paddingHorizontal: 16,
+    borderBottomWidth: 1, borderBottomColor: '#8B6914', alignItems: 'center', gap: 2,
   },
-  todayBannerLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#D4A017',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  todayBannerValue: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#FFD54F',
-  },
-  todayBannerEmpty: {
-    fontSize: 12,
-    color: '#A07830',
-    fontStyle: 'italic',
-  },
+  todayBannerLabel: { fontSize: 10, fontWeight: '700', color: '#D4A017', textTransform: 'uppercase', letterSpacing: 0.8 },
+  todayBannerValue: { fontSize: 15, fontWeight: '800', color: '#FFD54F' },
+  todayBannerEmpty: { fontSize: 12, color: '#A07830', fontStyle: 'italic' },
+  ruleBar: { paddingVertical: 6, paddingHorizontal: 16, backgroundColor: Colors.ui.card },
+  ruleText: { fontSize: 11, color: Colors.ui.textLight, textAlign: 'center' },
   myRankBar: {
-    backgroundColor: Colors.forest.dark + '12',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
+    backgroundColor: Colors.forest.dark + '12', paddingVertical: 8, paddingHorizontal: 16,
+    borderBottomWidth: 1, borderBottomColor: Colors.ui.border,
   },
-  myRankText: {
-    fontSize: 12,
-    color: Colors.forest.dark,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  myRankValue: {
-    fontWeight: '800',
-    color: Colors.forest.medium,
-  },
-  list: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
+  myRankText: { fontSize: 12, color: Colors.forest.dark, fontWeight: '600', textAlign: 'center' },
+  list: { paddingVertical: 8, paddingHorizontal: 12 },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.ui.card,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: ROW_HEIGHT,
-    shadowColor: Colors.ui.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 1,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.ui.card, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 10, minHeight: ROW_HEIGHT,
+    shadowColor: Colors.ui.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
   },
-  rowMe: {
-    borderWidth: 1.5,
-    borderColor: Colors.forest.medium,
-    backgroundColor: Colors.forest.dark + '08',
-  },
-  separator: {
-    height: 6,
-  },
-  rankCol: {
-    width: 36,
-    alignItems: 'center',
-  },
-  medal: {
-    fontSize: 22,
-  },
-  rankText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.ui.textLight,
-  },
-  rankTopTen: {
-    color: Colors.forest.dark,
-  },
-  playerCol: {
-    flex: 1,
-    paddingHorizontal: 10,
-  },
-  username: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.ui.text,
-  },
-  usernameMe: {
-    color: Colors.forest.medium,
-  },
-  forestRank: {
-    fontSize: 11,
-    color: Colors.forest.medium,
-    fontWeight: '600',
-    marginTop: 1,
-  },
-  subinfo: {
-    fontSize: 11,
-    color: Colors.ui.textLight,
-    marginTop: 1,
-  },
-  valueCol: {
-    alignItems: 'flex-end',
-    minWidth: 70,
-  },
-  globalBadge: {
-    backgroundColor: Colors.forest.dark + '15',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  levelValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.forest.dark,
-  },
-  valueText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: Colors.forest.dark,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  loadingText: {
-    marginTop: 12,
-    color: Colors.ui.textLight,
-    fontSize: 14,
-  },
-  emptyEmoji: {
-    fontSize: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.forest.dark,
-  },
-  emptySubtext: {
-    fontSize: 13,
-    color: Colors.ui.textLight,
-    textAlign: 'center',
-    maxWidth: 240,
-  },
+  rowMe: { borderWidth: 1.5, borderColor: Colors.forest.medium, backgroundColor: Colors.forest.dark + '08' },
+  separator: { height: 6 },
+  rankCol: { width: 36, alignItems: 'center' },
+  medal: { fontSize: 22 },
+  rankText: { fontSize: 15, fontWeight: '700', color: Colors.ui.textLight },
+  rankTopTen: { color: Colors.forest.dark },
+  playerCol: { flex: 1, paddingHorizontal: 10 },
+  username: { fontSize: 14, fontWeight: '700', color: Colors.ui.text },
+  usernameMe: { color: Colors.forest.medium },
+  forestRank: { fontSize: 11, color: Colors.forest.medium, fontWeight: '600', marginTop: 1 },
+  subinfo: { fontSize: 11, color: Colors.ui.textLight, marginTop: 1 },
+  valueCol: { alignItems: 'flex-end', minWidth: 70 },
+  valueText: { fontSize: 15, fontWeight: '800', color: Colors.forest.dark },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  loadingText: { marginTop: 12, color: Colors.ui.textLight, fontSize: 14 },
+  emptyEmoji: { fontSize: 40 },
+  emptyText: { fontSize: 16, fontWeight: '700', color: Colors.forest.dark },
+  emptySubtext: { fontSize: 13, color: Colors.ui.textLight, textAlign: 'center', maxWidth: 240 },
 });

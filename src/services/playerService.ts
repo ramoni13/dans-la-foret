@@ -17,6 +17,19 @@ import {
   increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import {
+  computeLegacyLevel,
+  computeLevelProgress,
+  mergeChallengeStars,
+  mergeRewardedChapters,
+} from '../constants/progression';
+import {
+  buildFirestoreResetPayload,
+  createDefaultProgressionFields,
+  readLotDStats,
+} from '../constants/profileDefaults';
+import { mergeCeremonyIds } from '../constants/ceremonies';
+import { DailyLimits, extractDailyLimits, sanitizeDailyLimits } from '../constants/dailyLimits';
 
 export interface PlayerProfile {
   userId: string;
@@ -43,17 +56,74 @@ export interface PlayerProfile {
     friendPlayed: number;
     avgResolutionMs: number;
     totalResolutionCount: number;
-    // ── Badges vitesse ──────────────────────────────────
-    speedBadgeHits?: Record<string, number>;
     // ── Compteurs ONF et daily (refonte badges) ─────────
     abandonCount?: Record<string, number>;
     onfPerfectCount?: number;
     onfSpeedCount?: number;
     dailyPerfectCount?: number;
     dailySpeedCount?: number;
+    // ── Statistiques du Lot D (cumulatifs ; fusionnés par maximum à la connexion) ──
+    friendLosses?: number;
+    friendBestWinStreak?: number;
+    dailyPlayedPousse?: number;
+    dailyWonPousse?: number;
+    dailyPlayedGrandChene?: number;
+    dailyWonGrandChene?: number;
+    bestDailyTimeMsPousse?: number;
+    bestDailyTimeMsGrandChene?: number;
+    bestOnfTimeMs?: number;
+    seedsEarned?: number;
+    seedsSpent?: number;
+    adsWatched?: number;
+    daysPlayed?: number;
   };
+  /** Défis entre amis déjà comptés dans les statistiques (un défi ne se compte qu'une fois, Lot D). */
+  countedDuelIds?: string[];
+  /** Série de victoires de Duel en cours (Lot D). */
+  duelWinStreak?: number;
   isPremium: boolean;
+  /**
+   * Limites quotidiennes du joueur gratuit (Lot A) : grilles du Forestier jouées, jetons de Duel, bonus, recharge pub.
+   * Stockées dans le profil pour qu'elles survivent à une déconnexion, une réinstallation ou un autre appareil.
+   * `null` = jamais écrites (ancien profil) : le jour est alors considéré comme neuf.
+   */
+  dailyLimits?: DailyLimits | null;
   createdAt?: any;
+  // ── Progression v2 (docs/progression-v2.md, section D) ──
+  /** Version du modèle de progression. Absente ou < 2 → remise à zéro au prochain chargement (C9). */
+  progressionVersion?: number;
+  /** Meilleure note (1 à 3) par défi solo. Les étoiles ne baissent jamais. */
+  challengeStars?: Record<string, 1 | 2 | 3>;
+  /** Niveaux consécutifs validés depuis le niveau 1 (0 à 21). Dérivé de challengeStars, persisté pour l'affichage. */
+  levelsCompleted?: number;
+  /** File des cérémonies à rejouer (Lot 4). Ex. : chapter_1. */
+  pendingCeremonies?: string[];
+  /** Cérémonies déjà vues (Lot 4). */
+  seenCeremonies?: string[];
+  /** Chapitres dont la récompense de fin de chapitre a été versée (anti-doublon, Lot 3). */
+  rewardedChapters?: number[];
+  /** Chapitres dont la carte d'Herbier de fin de chapitre a été offerte (anti-doublon, Lot 7). */
+  chapterCardsGranted?: number[];
+  /** Fonctionnalités débloquées jamais ouvertes : pastille « Nouveau » (Lot 4). */
+  newFeatureBadges?: string[];
+  /** Titres musicaux débloqués. Source de vérité des musiques à partir du Lot 8. */
+  unlockedMusicIds?: string[];
+  // ── Compteurs de trophées (Lot 8) ──
+  /** Victoires consécutives à ⭐⭐ ou plus (1re victoire seulement) — Œil de lynx. */
+  starStreak?: number;
+  /** Défis gagnés pour la 1re fois en moins de 50 % du temps estimé — Vif comme le vent. */
+  quickFirstWins?: number;
+  /** Défis distincts dont la note a été améliorée — Persévérant. */
+  improvedStarChallengeIds?: string[];
+  /** Jours joués d'affilée (hors défi du jour) — Habitué. Réservé au Lot 8. */
+  loyaltyStreak?: number;
+  /** Meilleure série de jours joués d'affilée (record, Habitué — Lot 8). */
+  loyaltyBest?: number;
+  /** Meilleure série de victoires ⭐⭐+ d'affilée (record, Œil de lynx — Lot 8). */
+  bestStarStreak?: number;
+  /** Podium du Journalier (inclusif), enregistré au moment de la partie (Lot 8). */
+  dailyPodium?: { top10Percent: number; top3: number; first: number };
+
   updatedAt?: any;
   // ── Champs badges ────────────────────────────────────
   earnedBadges: string[];
@@ -64,20 +134,10 @@ export interface PlayerProfile {
   // ── Mode ONF — Grille Forestière 4×4 ────────────────
   onfSolvedCount: number;              // nb de grilles 4×4 résolues
   completedOnfChallengeIds: string[]; // IDs des défis ONF terminés (pour ne pas reproposer)
-  // ── Badges : objectifs par track (système de 3 lignes) ──
-  trackGoals?: {
-    performance:  string | null;
-    perseverance: string | null;
-    exploration:  string | null;
-  };
-  // ── Badges : objectifs actifs + compteurs dédiés (compat descendante) ────
-  activeBadgeGoals?: string[];
-  goalCounters?: Record<string, number>;
-  // ── Streaks de rejeu (amelioration_cycle + amelioration_fusee) ──
-  retryStreak?: { challengeId: string | null; count: number };
-  retryStreakFusee?: { challengeId: string | null; count: number };
   // ── Herbier de la Forêt ──────────────────────────────
   collectedTreeCardIds?: number[];
+  /** Cartes de l'Herbier déjà vues dans la collection (badge rouge « nouvelles cartes »). */
+  seenTreeCardIds?: number[];
   // ── Sélection musicale personnalisée ────────────────
   selectedIngameTrackId?: string;
   selectedMenuTrackId?: string;
@@ -99,7 +159,7 @@ export interface PlayerProfile {
 //   → formule : Math.floor(count / 10) + 1, plafonné à 21.
 // Exemples : 0 défis → Niv. 1, 10 défis → Niv. 2, 42 défis → Niv. 5, 150 défis → Niv. 16, 210 défis → Niv. 21.
 export function computePlayerLevel(completedCount: number): number {
-  return Math.min(21, Math.floor(completedCount / 10) + 1);
+  return computeLegacyLevel(completedCount);
 }
 
 // ── Résultat de recherche d'ami ───────────────────────────────────────────────
@@ -111,24 +171,8 @@ export interface PlayerSearchResult {
 
 // ── Migration silencieuse : garantit que tous les champs existent ─────────────
 function migrateProfile(raw: any): PlayerProfile {
-  // ── Migration vitesse_Loup → vitesse_loup ──────────────────────────────────
-  let earnedBadges: string[] = raw.earnedBadges ?? [];
-  let activeBadgeGoals: string[] = raw.activeBadgeGoals ?? [];
-  let goalCounters: Record<string, number> = raw.goalCounters ?? {};
-  let speedBadgeHits: Record<string, number> = raw.stats?.speedBadgeHits ?? {};
-
-  if (earnedBadges.includes('vitesse_Loup')) {
-    earnedBadges = earnedBadges.map((id: string) => id === 'vitesse_Loup' ? 'vitesse_loup' : id);
-  }
-  activeBadgeGoals = activeBadgeGoals.map((id: string) => id === 'vitesse_Loup' ? 'vitesse_loup' : id);
-  if (goalCounters['vitesse_Loup'] !== undefined) {
-    goalCounters = { ...goalCounters, vitesse_loup: goalCounters['vitesse_Loup'] };
-    delete goalCounters['vitesse_Loup'];
-  }
-  if (speedBadgeHits['vitesse_Loup'] !== undefined) {
-    speedBadgeHits = { ...speedBadgeHits, vitesse_loup: speedBadgeHits['vitesse_Loup'] };
-    delete speedBadgeHits['vitesse_Loup'];
-  }
+  // Les trophées remplacent les badges (Progression v2, C8). Le champ de stockage `earnedBadges` est conservé.
+  const earnedBadges: string[] = raw.earnedBadges ?? [];
 
   return {
     userId:             raw.userId ?? '',
@@ -136,6 +180,25 @@ function migrateProfile(raw: any): PlayerProfile {
     seeds:              raw.seeds ?? 0,
     completedChallenges: raw.completedChallenges ?? [],
     isPremium:          raw.isPremium ?? false,
+    dailyLimits:        sanitizeDailyLimits(raw.dailyLimits),
+    // ── Progression v2 : 0 = absent = profil pré-v2 (remis à zéro au chargement, C9).
+    // Jamais undefined : Firestore refuse les valeurs undefined dans setDoc.
+    progressionVersion:       typeof raw.progressionVersion === 'number' ? raw.progressionVersion : 0,
+    challengeStars:           mergeChallengeStars(raw.challengeStars, undefined),
+    levelsCompleted:          computeLevelProgress(raw.challengeStars).levelsCompleted,
+    pendingCeremonies:        mergeCeremonyIds(raw.pendingCeremonies, undefined),
+    seenCeremonies:           mergeCeremonyIds(raw.seenCeremonies, undefined),
+    rewardedChapters:         mergeRewardedChapters(raw.rewardedChapters, undefined),
+    chapterCardsGranted:      mergeRewardedChapters(raw.chapterCardsGranted, undefined),
+    newFeatureBadges:         raw.newFeatureBadges ?? [],
+    unlockedMusicIds:         raw.unlockedMusicIds ?? [],
+    starStreak:               raw.starStreak ?? 0,
+    quickFirstWins:           raw.quickFirstWins ?? 0,
+    improvedStarChallengeIds: raw.improvedStarChallengeIds ?? [],
+    loyaltyStreak:            raw.loyaltyStreak ?? 0,
+    loyaltyBest:              Math.max(raw.loyaltyBest ?? 0, raw.loyaltyStreak ?? 0),
+    bestStarStreak:           Math.max(raw.bestStarStreak ?? 0, raw.starStreak ?? 0),
+    dailyPodium:              { top10Percent: raw.dailyPodium?.top10Percent ?? 0, top3: raw.dailyPodium?.top3 ?? 0, first: raw.dailyPodium?.first ?? 0 },
     createdAt:          raw.createdAt,
     updatedAt:          raw.updatedAt,
     stats: {
@@ -157,25 +220,25 @@ function migrateProfile(raw: any): PlayerProfile {
       friendPlayed:             raw.stats?.friendPlayed ?? 0,
       avgResolutionMs:          raw.stats?.avgResolutionMs ?? 0,
       totalResolutionCount:     raw.stats?.totalResolutionCount ?? 0,
-      speedBadgeHits,
       // Nouveaux compteurs ONF et daily (refonte badges)
       onfPerfectCount:          raw.stats?.onfPerfectCount   ?? 0,
       onfSpeedCount:            raw.stats?.onfSpeedCount     ?? 0,
       dailyPerfectCount:        raw.stats?.dailyPerfectCount ?? 0,
       dailySpeedCount:          raw.stats?.dailySpeedCount   ?? 0,
+      // Lot D : compteurs ajoutés ; un profil antérieur n'a pas ces champs : 0 (jamais undefined, Firestore le refuse)
+      ...readLotDStats(raw.stats),
     },
+    countedDuelIds: Array.isArray(raw.countedDuelIds) ? raw.countedDuelIds : [],
+    duelWinStreak:  typeof raw.duelWinStreak === 'number' && raw.duelWinStreak > 0 ? Math.floor(raw.duelWinStreak) : 0,
     earnedBadges,
     badgeShowcase:   raw.badgeShowcase ?? [],
     dailyStreak:       raw.dailyStreak ?? 0,
     lastPlayedDate:    raw.lastPlayedDate ?? '',
     onfSolvedCount: raw.onfSolvedCount ?? raw.onf4x4SolvedCount ?? 0,
     completedOnfChallengeIds: raw.completedOnfChallengeIds ?? [],
-    trackGoals: raw.trackGoals ?? undefined,
-    activeBadgeGoals,
-    goalCounters,
-    retryStreak: raw.retryStreak ?? { challengeId: null, count: 0 },
-    retryStreakFusee: raw.retryStreakFusee ?? { challengeId: null, count: 0 },
     collectedTreeCardIds: raw.collectedTreeCardIds ?? [],
+    // Profil sans ce champ (avant le badge) : les cartes déjà possédées sont considérées comme vues
+    seenTreeCardIds: raw.seenTreeCardIds ?? raw.collectedTreeCardIds ?? [],
     selectedIngameTrackId: raw.selectedIngameTrackId,
     selectedMenuTrackId:   raw.selectedMenuTrackId,
     trackPlayCounts:       raw.trackPlayCounts ?? {},
@@ -217,10 +280,28 @@ export async function isUsernameTaken(username: string): Promise<boolean> {
 
 // ── Créer un nouveau profil (premier lancement) ───────────────────────────────
 export async function createPlayer(userId: string, username: string): Promise<PlayerProfile> {
+  const defaults = createDefaultProgressionFields();
   const profile: PlayerProfile = {
     userId,
     username,
-    seeds: 0,
+    // Progression v2 : un profil neuf naît directement à la version courante (pas de remise à zéro)
+    progressionVersion: defaults.progressionVersion,
+    challengeStars: {},
+    levelsCompleted: 0,
+    pendingCeremonies: [],
+    seenCeremonies: [],
+    rewardedChapters: [],
+    chapterCardsGranted: [],
+    newFeatureBadges: [],
+    unlockedMusicIds: [],
+    starStreak: 0,
+    quickFirstWins: 0,
+    improvedStarChallengeIds: [],
+    loyaltyStreak: 0,
+    loyaltyBest: 0,
+    bestStarStreak: 0,
+    dailyPodium: { top10Percent: 0, top3: 0, first: 0 },
+    seeds: defaults.seeds,
     completedChallenges: [],
     stats: {
       totalSolved: 0,
@@ -241,6 +322,7 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
       friendPlayed: 0,
       avgResolutionMs: 0,
       totalResolutionCount: 0,
+      ...readLotDStats(undefined),
     },
     isPremium: false,
     createdAt: serverTimestamp(),
@@ -252,8 +334,7 @@ export async function createPlayer(userId: string, username: string): Promise<Pl
     onfSolvedCount: 0,
     completedOnfChallengeIds: [],
     collectedTreeCardIds: [],
-    retryStreak: { challengeId: null, count: 0 },
-    retryStreakFusee: { challengeId: null, count: 0 },
+    seenTreeCardIds: [],
   };
   // usernameLower permet la recherche d'unicité insensible à la casse
   await setDoc(doc(db, 'players', userId), {
@@ -276,6 +357,43 @@ export async function markOnfChallengeCompleted(
     onfSolvedCount,
     updatedAt: serverTimestamp(),
   });
+}
+
+// ── Limites quotidiennes (Lot A) ──────────────────────────────────────────────
+// Écrit les compteurs du jour dans le profil. `merge: true` : un document absent est créé, rien d'autre n'est touché.
+export async function updateDailyLimits(userId: string, limits: DailyLimits): Promise<void> {
+  await setDoc(doc(db, 'players', userId), {
+    dailyLimits: extractDailyLimits(limits),
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
+
+// ── Statistiques (Lot D) ──────────────────────────────────────────────────────
+// Écrit TOUTES les statistiques du joueur (Journalier et Duel y compris : avant le Lot D, seuls `totalSolved` et
+// `bestTimes` étaient écrits après une victoire Solo, et une victoire Forestier réécrivait l'objet entier). `merge: true` :
+// rien d'autre n'est touché. Les compteurs sont cumulatifs et fusionnés par maximum à la connexion (`mergeStats`), donc
+// une écriture en retard d'un autre appareil ne peut pas les faire baisser.
+export async function updateStats(
+  userId: string,
+  stats: PlayerProfile['stats'],
+  extra: { countedDuelIds: string[]; duelWinStreak: number },
+): Promise<void> {
+  await setDoc(doc(db, 'players', userId), {
+    stats,
+    countedDuelIds: extra.countedDuelIds,
+    duelWinStreak: extra.duelWinStreak,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
+
+// ── Premium (Lot A) ───────────────────────────────────────────────────────────
+// À appeler après un achat : sans cette écriture, `restoreFromCloud` aurait renvoyé le joueur en gratuit.
+// (Le branchement RevenueCat — Lot E — devra faire confirmer l'achat côté serveur.)
+export async function updatePremium(userId: string, isPremium: boolean): Promise<void> {
+  await setDoc(doc(db, 'players', userId), {
+    isPremium,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
 }
 
 // ── Mettre à jour les graines ─────────────────────────────────────────────────
@@ -426,4 +544,106 @@ export async function markCompleted(
     [`stats.bestTimes.${challengeId}`]: newBest,
     updatedAt: serverTimestamp(),
   });
+}
+
+// ── Remise à zéro Progression v2 (C9) ────────────────────────────────────────
+// Remet TOUT le profil de progression aux valeurs par défaut (voir
+// uildFirestoreResetPayload) et pose progressionVersion: 2.
+// Conserve l'identité du compte (userId, username, usernameLower, email, createdAt)
+// et les préférences (langue, audio) : merge: true ne touche pas aux champs absents.
+// Appelée UNE SEULE FOIS par profil, à la connexion, si progressionVersion < 2.
+// Ne touche PAS aux classements, records du monde, résultats du Défi du Jour ni à la
+// Forêt commune : voir docs/purge-progression-v2.md (purge proposée, non exécutée).
+export async function resetPlayerProgression(userId: string): Promise<void> {
+  const { deleteField } = await import('firebase/firestore');
+  const payload: Record<string, unknown> = {
+    ...buildFirestoreResetPayload(),
+    // Anciens objectifs de badges : supprimés du profil (les trophées n'ont plus d'objectif actif, Lot 8)
+    trackGoals: deleteField(),
+    activeBadgeGoals: deleteField(),
+    goalCounters: deleteField(),
+    retryStreak: deleteField(),
+    retryStreakFusee: deleteField(),
+    updatedAt: serverTimestamp(),
+  };
+  await setDoc(doc(db, 'players', userId), payload, { merge: true });
+}
+
+// ── Synchroniser la progression Solo (étoiles) ───────────────────────────────
+export async function updateSoloProgression(
+  userId: string,
+  data: {
+    challengeStars: Record<string, number>;
+    levelsCompleted: number;
+    starStreak: number;
+    quickFirstWins: number;
+    improvedStarChallengeIds: string[];
+    bestStarStreak?: number;
+    loyaltyBest?: number;
+    dailyPodium?: { top10Percent: number; top3: number; first: number };
+    rewardedChapters?: number[];
+    chapterCardsGranted?: number[];
+    collectedTreeCardIds?: number[];
+    seenTreeCardIds?: number[];
+    pendingCeremonies?: string[];
+    seenCeremonies?: string[];
+    newFeatureBadges?: string[];
+  },
+): Promise<void> {
+  await updateDoc(doc(db, 'players', userId), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Écrit seulement les pastilles « Nouveau » (effacées à la 1re partie d'un mode).
+ * Sans cette écriture, le cloud garde la pastille et `restoreFromCloud` (union local + cloud) la fait revenir.
+ */
+export async function updateNewFeatureBadges(userId: string, newFeatureBadges: string[]): Promise<void> {
+  await updateDoc(doc(db, 'players', userId), {
+    newFeatureBadges,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Charge utile `updateSoloProgression` construite depuis l'état du store.
+ * Point d'entrée UNIQUE : toute synchronisation de la progression (victoire, connexion, cérémonie)
+ * l'utilise, pour qu'aucun champ (chapitres, cérémonies, pastilles) ne soit oublié quelque part.
+ */
+export function buildSoloProgressionPayload(s: {
+  challengeStars: Record<string, number>;
+  levelsCompleted: number;
+  starStreak: number;
+  quickFirstWins: number;
+  improvedStarChallengeIds: string[];
+  bestStarStreak: number;
+  loyaltyBest: number;
+  dailyPodium: { top10Percent: number; top3: number; first: number };
+  rewardedChapters: number[];
+  chapterCardsGranted: number[];
+  collectedTreeCardIds: number[];
+  seenTreeCardIds: number[];
+  pendingCeremonies: string[];
+  seenCeremonies: string[];
+  newFeatureBadges: string[];
+}) {
+  return {
+    challengeStars: s.challengeStars,
+    levelsCompleted: s.levelsCompleted,
+    starStreak: s.starStreak,
+    quickFirstWins: s.quickFirstWins,
+    improvedStarChallengeIds: s.improvedStarChallengeIds,
+    bestStarStreak: s.bestStarStreak,
+    loyaltyBest: s.loyaltyBest,
+    dailyPodium: s.dailyPodium,
+    rewardedChapters: s.rewardedChapters,
+    chapterCardsGranted: s.chapterCardsGranted,
+    collectedTreeCardIds: s.collectedTreeCardIds,
+    seenTreeCardIds: s.seenTreeCardIds,
+    pendingCeremonies: s.pendingCeremonies,
+    seenCeremonies: s.seenCeremonies,
+    newFeatureBadges: s.newFeatureBadges,
+  };
 }

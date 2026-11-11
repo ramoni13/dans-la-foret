@@ -1,151 +1,152 @@
 // ============================================================
-// LEADERBOARD SERVICE
+// LEADERBOARD SERVICE (Lot C)
 // Collection Firestore : /leaderboard/{userId}
 //
-// Score composite pour tri global :
-//   score = level * 10000000 + badgeCount * 10000 + seeds
+// Un SEUL document par joueur, écrit par UN SEUL point d'entrée (`publishLeaderboardEntry`), appelé depuis
+// `(tabs)/_layout.tsx` à chaque changement de progression, quel que soit le mode de jeu (Solo, Journalier, Forestier,
+// Duel, Herbier, trophées). Avant : seule une victoire Solo mettait le classement à jour.
 //
-// Priorité : niveau → badges → graines
-// Mise à jour à chaque victoire (upsert avec merge).
+// Champs publiés (voir constants/leaderboardRank.ts) :
+//   starsRank        — score empaqueté du classement « Étoiles » (étoiles > ⭐⭐⭐ > trophées > premier arrivé)
+//   stars, threeStars, trophies, levelsCompleted, level, herbier — affichage
+//   dailyRankPousse / dailyRankGrandChene — score empaqueté du Journalier de CHAQUE ligue (écrit par sealDailyRecord)
+//
+// Chaque classement = UNE requête `orderBy(champ, 'desc').limit(100)` : aucun re-tri côté client, aucun index composite
+// (les index mono-champ sont automatiques). Les anciennes entrées (sans `starsRank`) sont ignorées par Firestore.
 // ============================================================
 
 import {
-  doc,
-  setDoc,
-  getDoc,
   collection,
-  query,
-  orderBy,
+  deleteField,
+  doc,
+  getCountFromServer,
+  getDoc,
   limit,
-  getDocs,
   onSnapshot,
-  Unsubscribe,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
   where,
+  Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { computePlayerLevel } from './playerService';
-
-export interface LeaderboardEntry {
-  userId: string;
-  username: string;
-  level: number;               // 1-15
-  badgeCount: number;          // badges non-secrets
-  badgeScore: number;          // score pondéré par rareté (bois=1, pierre=3, or=6, cristal=12)
-  seeds: number;
-  completedCount: number;      // total défis complétés
-  score: number;               // score composite pour tri
-  dailyWins?: number;          // nb de records du jour détenus (cumulatif, jamais décrémenté)
-  updatedAt?: any;
-}
-
-export interface DailyWinsEntry {
-  userId: string;
-  username: string;
-  dailyWins: number;
-}
+import type { DailyLeague } from '../constants/dailyLeagues';
+import {
+  DailyWinsEntry,
+  LEADERBOARD_TOP,
+  LeaderboardEntry,
+  LeaderboardInput,
+  StarsStanding,
+  buildLeaderboardEntry,
+  dailyRankField,
+  parseDailyWinsEntry,
+  parseLeaderboardEntry,
+  unpackStarsRank,
+} from '../constants/leaderboardRank';
 
 const COLLECTION = 'leaderboard';
 
-// ── Calculer le score composite ───────────────────────────────────────────────
-export function computeLeaderboardScore(level: number, badgeCount: number, seeds: number): number {
-  return level * 10000000 + badgeCount * 10000 + seeds;
+// ── Publication unique ────────────────────────────────────────────────────────
+
+type Prev = (StarsStanding & { reachedAtMin: number }) | null;
+interface Cache { uid: string; sig: string; prev: Prev }
+let cache: Cache | null = null;
+
+/** À appeler à la déconnexion : le prochain compte relit sa position publiée. */
+export function resetLeaderboardCache(): void {
+  cache = null;
 }
 
-// ── Mettre à jour l'entrée du joueur courant ──────────────────────────────────
-// Appelée à chaque victoire depuis [challengeId].tsx
-export async function upsertLeaderboardEntry(
-  userId: string,
-  username: string,
-  completedCount: number,
-  badgeCount: number,
-  seeds: number,
-  badgeScore = 0,
-): Promise<void> {
+/**
+ * Publie la position du joueur. Idempotent : rien n'est écrit si l'entrée n'a pas changé depuis la dernière publication.
+ * « Le premier arrivé » (`reachedAt`) est conservé tant que le résultat ne change pas : republier ne fait jamais reculer.
+ * Un joueur sans étoile (profil remis à zéro) est retiré du classement des étoiles.
+ * Silencieux en cas d'erreur réseau : ne bloque jamais la progression locale. Retourne `true` si une écriture a eu lieu.
+ */
+export async function publishLeaderboardEntry(input: LeaderboardInput): Promise<boolean> {
   try {
-    const level = computePlayerLevel(completedCount);
-    const score = computeLeaderboardScore(level, badgeCount, seeds);
-    const ref   = doc(db, COLLECTION, userId);
-    await setDoc(ref, {
-      userId,
-      username,
-      level,
-      badgeCount,
-      badgeScore,
-      seeds,
-      completedCount,
-      score,
-      updatedAt: new Date(),
-    }, { merge: true });
+    if (!input.userId) return false;
+    const ref = doc(db, COLLECTION, input.userId);
+
+    if (!cache || cache.uid !== input.userId) {
+      const snap = await getDoc(ref);
+      const existing = snap.exists() ? parseLeaderboardEntry(snap.data()) : null;
+      cache = {
+        uid: input.userId,
+        sig: '',
+        prev: existing ? { ...unpackStarsRank(existing.starsRank) } : null,
+      };
+    }
+
+    const entry = buildLeaderboardEntry(input, cache.prev, Date.now());
+
+    if (!entry) {
+      // Plus aucune étoile : retirer l'ancienne position (une seule fois)
+      if (!cache.prev) return false;
+      await setDoc(ref, { starsRank: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
+      cache.prev = null;
+      cache.sig = '';
+      return true;
+    }
+
+    const sig = JSON.stringify(entry);
+    if (sig === cache.sig) return false;
+    await setDoc(ref, { ...entry, updatedAt: serverTimestamp() }, { merge: true });
+    cache.sig = sig;
+    cache.prev = { ...unpackStarsRank(entry.starsRank) };
+    return true;
   } catch {
-    // Silencieux : ne bloque pas la progression locale
+    return false;
   }
 }
 
-// ── Lire le top N du classement ───────────────────────────────────────────────
-export async function getTopLeaderboard(maxCount = 50): Promise<LeaderboardEntry[]> {
-  try {
-    const ref  = collection(db, COLLECTION);
-    const q    = query(ref, orderBy('score', 'desc'), limit(maxCount));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => d.data() as LeaderboardEntry);
-  } catch {
-    return [];
-  }
-}
+// ── Classement « Étoiles » ────────────────────────────────────────────────────
 
-// ── Écouter le classement en temps réel ──────────────────────────────────────
-export function subscribeLeaderboard(
-  maxCount = 50,
+/** Top N des étoiles en temps réel (une requête serveur triée sur `starsRank`). */
+export function subscribeStarsLeaderboard(
   onChange: (entries: LeaderboardEntry[]) => void,
+  maxCount: number = LEADERBOARD_TOP,
 ): Unsubscribe {
-  const ref = collection(db, COLLECTION);
-  const q   = query(ref, orderBy('score', 'desc'), limit(maxCount));
+  const q = query(collection(db, COLLECTION), orderBy('starsRank', 'desc'), limit(maxCount));
   return onSnapshot(q, snap => {
-    onChange(snap.docs.map(d => d.data() as LeaderboardEntry));
-  }, () => onChange([]));
-}
-
-// ── Classement "Défis du Jour" par nombre de victoires daily cumulées ─────────
-// Basé sur le champ dailyWins dans /leaderboard/{userId},
-// incrémenté par sealDailyRecord() chaque matin.
-export function subscribeDailyWinsLeaderboard(
-  maxCount = 100,
-  onChange: (entries: DailyWinsEntry[]) => void,
-): Unsubscribe {
-  const ref = collection(db, COLLECTION);
-  const q   = query(ref, orderBy('dailyWins', 'desc'), limit(maxCount));
-  return onSnapshot(q, snap => {
-    const entries: DailyWinsEntry[] = snap.docs
-      .map(d => {
-        const data = d.data() as LeaderboardEntry;
-        return {
-          userId:    data.userId,
-          username:  data.username,
-          dailyWins: data.dailyWins ?? 0,
-        };
-      })
-      .filter(e => e.dailyWins > 0); // n'affiche que ceux qui ont au moins 1 victoire
+    const entries: LeaderboardEntry[] = [];
+    for (const d of snap.docs) {
+      const e = parseLeaderboardEntry(d.data());
+      if (e) entries.push(e);
+    }
     onChange(entries);
   }, () => onChange([]));
 }
 
-// ── Lire la position d'un joueur dans le classement ──────────────────────────
-export async function getPlayerRank(userId: string): Promise<{ rank: number; total: number } | null> {
+/** Position d'un joueur hors du top affiché : nombre de joueurs strictement devant lui + 1. `null` si indisponible. */
+export async function getStarsPosition(starsRank: number): Promise<number | null> {
   try {
-    const myRef  = doc(db, COLLECTION, userId);
-    const mySnap = await getDoc(myRef);
-    if (!mySnap.exists()) return null;
-
-    const myScore  = (mySnap.data() as LeaderboardEntry).score;
-    const colRef   = collection(db, COLLECTION);
-    // Compte combien de joueurs ont un score strictement supérieur
-    const aboveQ   = query(colRef, where('score', '>', myScore));
-    const aboveSnap = await getDocs(aboveQ);
-    const rank      = aboveSnap.size + 1;
-
-    const totalSnap = await getDocs(collection(db, COLLECTION));
-    return { rank, total: totalSnap.size };
+    const q = query(collection(db, COLLECTION), where('starsRank', '>', starsRank));
+    const snap = await getCountFromServer(q);
+    return snap.data().count + 1;
   } catch {
     return null;
   }
+}
+
+// ── Classement « Journalier » (une ligue à la fois) ──────────────────────────
+// Pas de comptage de position hors du top : le score d'un joueur dans une ligue n'est connu que de Firestore.
+
+/** Top N du Journalier d'UNE ligue en temps réel. Les deux ligues ne sont jamais mélangées. */
+export function subscribeDailyWinsLeaderboard(
+  league: DailyLeague,
+  onChange: (entries: DailyWinsEntry[]) => void,
+  maxCount: number = LEADERBOARD_TOP,
+): Unsubscribe {
+  const field = dailyRankField(league);
+  const q = query(collection(db, COLLECTION), orderBy(field, 'desc'), limit(maxCount));
+  return onSnapshot(q, snap => {
+    const entries: DailyWinsEntry[] = [];
+    for (const d of snap.docs) {
+      const e = parseDailyWinsEntry(d.data(), league);
+      if (e) entries.push(e);
+    }
+    onChange(entries);
+  }, () => onChange([]));
 }
