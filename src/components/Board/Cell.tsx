@@ -44,6 +44,7 @@ interface CellProps {
   cellIndex: number;
   elementId: string | null;
   isFixed: boolean;
+  isMushroomEligible: boolean;
   backgroundColor: string;
   hasSelection: boolean;    // un jeton est sélectionné dans la palette
   positionStyle: ViewStyle;
@@ -58,6 +59,7 @@ const CellComponent: React.FC<CellProps> = ({
   cellIndex,
   elementId,
   isFixed,
+  isMushroomEligible,
   backgroundColor,
   hasSelection,
   positionStyle,
@@ -293,6 +295,49 @@ const CellComponent: React.FC<CellProps> = ({
   // ── Contenu du jeton (animé) + badges ──────────────────────
   const cellContent = (
     <>
+      {isMushroomEligible && (
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            styles.mushroomEligibleOverlay,
+            { borderRadius: cs / 2 },
+          ]}
+        >
+          {[
+            [0.50, 0.12],
+            [0.69, 0.17],
+            [0.83, 0.31],
+            [0.88, 0.50],
+            [0.83, 0.69],
+            [0.69, 0.83],
+            [0.50, 0.88],
+            [0.31, 0.83],
+            [0.17, 0.69],
+            [0.12, 0.50],
+            [0.17, 0.31],
+            [0.31, 0.17],
+          ].map(([x, y], index) => {
+            const dotSize = cs * 0.08;
+            return (
+              <View
+                key={index}
+                style={[
+                  styles.mushroomDot,
+                  {
+                    left: cs * x - dotSize / 2,
+                    top: cs * y - dotSize / 2,
+                    width: dotSize,
+                    height: dotSize,
+                    borderRadius: dotSize / 2,
+                  },
+                ]}
+              />
+            );
+          })}
+        </View>
+      )}
+
       {/* Overlay pulsation bonus (valide OU erreur) */}
       {(isHighlighted || isErrorCell) && (
         <Animated.View
@@ -433,6 +478,15 @@ const styles = StyleSheet.create({
     borderRadius: CELL_SIZE / 2,
     backgroundColor: 'rgba(0, 0, 0, 0.08)', // voile sombre subtil
   },
+  mushroomEligibleOverlay: {
+    borderRadius: CELL_SIZE / 2,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+  },
+  mushroomDot: {
+    position: 'absolute',
+    backgroundColor: '#C83B3B',
+  },
   icon: {
     width: CELL_SIZE * 0.72,
     height: CELL_SIZE * 0.72,
@@ -511,6 +565,7 @@ export const Cell = React.memo(CellComponent, (prev, next) =>
   prev.cellIndex       === next.cellIndex       &&
   prev.elementId       === next.elementId       &&
   prev.isFixed         === next.isFixed         &&
+  prev.isMushroomEligible === next.isMushroomEligible &&
   prev.backgroundColor === next.backgroundColor &&
   prev.hasSelection    === next.hasSelection    &&
   prev.positionStyle   === next.positionStyle   &&

@@ -110,6 +110,10 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
           cellIndex={idx}
           elementId={playerBoard[idx] ?? null}
           isFixed={fixedCells.has(idx)}
+          isMushroomEligible={
+            selectedElement === 'champignon' &&
+            (boardDef.specialCells?.center ?? []).includes(idx)
+          }
           backgroundColor={getCellColor(idx)}
           hasSelection={hasSelection}
           onPress={onCellPress}
