@@ -225,7 +225,7 @@ export default function TabsLayout() {
   }, [user, segments]);
 
   // ── Limites quotidiennes et premium → Firestore (Lot A) ───────────────────
-  // Les compteurs du jour (grilles Forestier, jetons Duel, bonus, pub) et `isPremium` sont écrits dans le profil
+  // Le quota global, les anciens compteurs migrés, les bonus, les pubs et `isPremium` sont écrits dans le profil
   // dès qu'ils changent (debounce 1 s). Sans cela, se déconnecter ou changer d'appareil les remettait à neuf.
   // On n'écrit que lorsque le store appartient bien à ce compte (`userId`, posé par `restoreFromCloud`) : avant la
   // restauration cloud, on écraserait sinon le cloud avec l'état local de départ.
@@ -243,6 +243,7 @@ export default function TabsLayout() {
     const unsub = usePlayerStore.subscribe((n, p) => {
       if (n.userId !== uid) return;
       const limitsChanged =
+        n.challengeCountToday    !== p.challengeCountToday ||
         n.onfDailyCount         !== p.onfDailyCount ||
         n.friendChallengeTokens !== p.friendChallengeTokens ||
         n.adViews               !== p.adViews ||

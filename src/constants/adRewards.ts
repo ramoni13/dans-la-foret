@@ -5,11 +5,10 @@
 //  - `foret_commune` : contribuer à la plantation de vrais arbres (accueil), pour tous (free et premium) ;
 //  - `bonus_reveal_cell` / `bonus_instinct` : recharger UN bonus épuisé (joueur gratuit uniquement : le premium a
 //    déjà des bonus illimités, donc aucune pub ne lui est proposée pour cela) ;
-//  - `onf_recharge` : recharger le quota du Défi de la forêt (joueur gratuit uniquement, UNE fois par jour, et
-//    seulement quand le quota du jour est épuisé : +ONF_AD_RECHARGE_GRIDS défis). Le premium n'a pas de quota.
+//  - `onf_recharge` : recharger le quota global de défis (joueur gratuit uniquement, UNE fois par jour,
+//    et seulement quand le quota du jour est épuisé : +CHALLENGE_AD_RECHARGE_COUNT défis). Le premium n'a pas de quota.
 // Aucune pub ne donne de graines ni de jeton de Duel : aucun déséquilibre free / premium sur la progression ni sur
-// les classements. Le Défi de la forêt rapporte des graines et des cartes comme avant, mais le quota de 3 par jour ne
-// peut être rechargé qu'UNE fois (6 défis par jour au plus pour un joueur gratuit, sans payer).
+// les classements.
 //
 // Aucune dépendance React / Zustand / Firebase : testé dans __tests__/adRewards.test.ts.
 //
@@ -21,7 +20,7 @@ export type AdPlacement =
   | 'bonus_reveal_cell' // recharge du bonus « Révéler une case » (retour à 3 utilisations)
   | 'bonus_instinct'    // recharge du bonus « Instinct » (retour à 3 utilisations)
   | 'foret_commune'     // contribution à la Forêt commune
-  | 'onf_recharge';     // recharge du quota du Défi de la forêt (+3 défis, 1 fois par jour)
+  | 'onf_recharge';     // identifiant historique : recharge du quota global (+3 défis, 1 fois par jour)
 
 export const AD_PLACEMENTS: readonly AdPlacement[] = [
   'bonus_reveal_cell',
@@ -30,14 +29,14 @@ export const AD_PLACEMENTS: readonly AdPlacement[] = [
   'onf_recharge',
 ] as const;
 
-/** Défis du Défi de la forêt rendus par UNE vidéo (quota du jour épuisé). */
-export const ONF_AD_RECHARGE_GRIDS = 3;
+/** Défis tous modes ajoutés par UNE vidéo quand le quota quotidien est épuisé. */
+export const CHALLENGE_AD_RECHARGE_COUNT = 3;
 
 /**
  * Visionnages maximum par jour et par emplacement.
  *  - bonus : 3 recharges par bonus (donc 6 pubs par jour au plus pour les deux bonus) ;
  *  - Forêt commune : 5 ;
- *  - recharge du Défi de la forêt : 1.
+ *  - recharge du quota global de défis : 1.
  * Valeurs à ajuster après mesure (taux de visionnage, rétention) : elles ne sont lues qu'ici.
  */
 export const AD_DAILY_CAPS: Record<AdPlacement, number> = {

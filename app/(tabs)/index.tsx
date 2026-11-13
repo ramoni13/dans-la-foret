@@ -40,8 +40,14 @@ import {
   getRecommendedChallengeId,
 } from '../../src/constants/progression';
 import { isAdminAccount, isDemoAccount } from '../../src/constants/devAccess';
-import { getOnfRemaining, isLimitsOfDay, todayLocalISO } from '../../src/constants/dailyLimits';
-import { getAdViews } from '../../src/constants/adRewards';
+import {
+  FREE_DAILY_CHALLENGE_LIMIT,
+  getDailyChallengesRemaining,
+  getDailyChallengeQuota,
+  isLimitsOfDay,
+  todayLocalISO,
+} from '../../src/constants/dailyLimits';
+import { getAdViews, CHALLENGE_AD_RECHARGE_COUNT } from '../../src/constants/adRewards';
 import { getOwnedCardCount } from '../../src/utils/onfCards';
 import { HerbierEntry } from '../../src/components/ONF/HerbierEntry';
 import { usePlayerStore } from '../../src/store/playerStore';
@@ -57,6 +63,7 @@ import { WoodButton } from '../../src/components/UI/WoodButton';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { ForetCommuneWidget } from '../../src/components/ForetCommune/ForetCommuneWidget';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
+import { useRewardedAd } from '../../src/hooks/useRewardedAd';
 import { useT } from '../../src/i18n';
 
 
@@ -719,6 +726,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { frameBottom, innerTop } = useFrameLayout();
   const player = usePlayerStore();
+  const challengeRechargeAd = useRewardedAd('onf_recharge');
   const { authReady, isAuthenticated } = player;
   // Déblocages des modes (Progression v2, C3) : dev = Ramoni/Cedric/planete, demo = planete.
   const devAccess  = useFeatureAccess('dev');
@@ -728,6 +736,17 @@ export default function HomeScreen() {
   const [showLevels, setShowLevels]       = useState(false);
   const [showPremium, setShowPremium]     = useState(false);
   const { showBack, hideBack } = useNavStore();
+  const isFreePlayer = !player.isPremium && !isDemoAccount(player.username);
+  const challengeCountToday = isLimitsOfDay(player, todayLocalISO()) ? player.challengeCountToday : 0;
+  const challengeRecharges = isLimitsOfDay(player, todayLocalISO())
+    ? getAdViews(player.adViews, 'onf_recharge')
+    : 0;
+  const challengeQuota = getDailyChallengeQuota(challengeRecharges);
+  const challengeRemaining = getDailyChallengesRemaining({
+    challengeCountToday,
+    exempt: !isFreePlayer,
+    recharges: challengeRecharges,
+  });
 
   // Cérémonies de fin de chapitre (Progression v2, C7) : jouées au retour sur l'accueil, jamais
   // pendant une partie. Pas pendant l'écran des niveaux, la modale solo ou la carte premium.
@@ -818,6 +837,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!authReady || !isAuthenticated) return;
+      usePlayerStore.getState().rolloverDailyLimits();
 
       // Remise aux valeurs initiales avant chaque lancement
       scaleSolo.setValue(0.92);
@@ -927,6 +947,40 @@ export default function HomeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.challengeQuotaCard}>
+          <Text style={styles.challengeQuotaText}>
+            {isFreePlayer
+              ? t('challenge_quota_counter', {
+                  remaining: String(challengeRemaining),
+                  quota: String(challengeQuota),
+                })
+              : t('challenge_quota_unlimited')}
+          </Text>
+          {isFreePlayer && challengeRemaining === 0 && (
+            <View style={styles.challengeQuotaActions}>
+              <TouchableOpacity
+                style={styles.challengeQuotaPremium}
+                onPress={() => setShowPremium(true)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.challengeQuotaActionText}>{t('challenge_quota_premium_btn')}</Text>
+              </TouchableOpacity>
+              {challengeRechargeAd.available && (
+                <TouchableOpacity
+                  style={[styles.challengeQuotaAd, challengeRechargeAd.busy && styles.challengeQuotaActionBusy]}
+                  onPress={() => { void challengeRechargeAd.watch(); }}
+                  disabled={challengeRechargeAd.busy}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.challengeQuotaActionText}>
+                    {t('challenge_quota_ad_btn', { count: String(CHALLENGE_AD_RECHARGE_COUNT) })}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* ── Défi Solo ── */}
         <Animated.View style={{ opacity: opaSolo, transform: [{ scale: scaleSolo }] }}>
           <WoodButton
@@ -956,31 +1010,14 @@ export default function HomeScreen() {
           const isOnfUnlocked = demoAccess.isOpen('onf_sentier');
           const onfSolved = player.onfSolvedCount;
           const cards     = getOwnedCardCount(player.collectedTreeCardIds);
-          const isFreePlayer = !player.isPremium && !isDemoAccount(player.username);
-          // Compteur d'un autre jour (app restée ouverte à minuit) : périmé, donc 0 grille jouée aujourd'hui
-          const onfPlayedToday = isLimitsOfDay(player, todayLocalISO()) ? player.onfDailyCount : 0;
-          const onfRecharges = isLimitsOfDay(player, todayLocalISO()) ? getAdViews(player.adViews, 'onf_recharge') : 0;
-          const onfRemaining = getOnfRemaining({ onfDailyCount: onfPlayedToday, exempt: false, onfRecharges });
 
-          // Sous-titre : pour les joueurs gratuits, affiche les parties restantes
-          let sublabelOnf: string;
-          if (isFreePlayer) {
-            if (onfRemaining === 0) {
-              sublabelOnf = t('onf_btn_remaining_none');
-            } else if (onfRemaining === 1) {
-              sublabelOnf = t('onf_btn_remaining_one', { remaining: String(onfRemaining) });
-            } else {
-              sublabelOnf = t('onf_btn_remaining_other', { remaining: String(onfRemaining) });
-            }
-          } else {
-            sublabelOnf = onfSolved === 0
-              ? t('onf_btn_first_win')
-              : cards === 1
-                ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
-                : cards > 1
-                  ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
-                  : t('onf_btn_stats_no_card', { count: String(onfSolved) });
-          }
+          const sublabelOnf = onfSolved === 0
+            ? t('onf_btn_first_win')
+            : cards === 1
+              ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
+              : cards > 1
+                ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
+                : t('onf_btn_stats_no_card', { count: String(onfSolved) });
 
           if (!isOnfUnlocked) {
             const lock = getLockMessageKey(demoAccess.lockHint('onf_sentier'));
@@ -1235,6 +1272,50 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     gap: 24,
+  },
+  challengeQuotaCard: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(24, 55, 33, 0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  challengeQuotaText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  challengeQuotaActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  challengeQuotaPremium: {
+    backgroundColor: Colors.forest.medium,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  challengeQuotaAd: {
+    backgroundColor: '#7A5A24',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  challengeQuotaActionBusy: {
+    opacity: 0.55,
+  },
+  challengeQuotaActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 
   // Défi du Jour — états non interactifs

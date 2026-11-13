@@ -101,6 +101,7 @@ export function createDefaultProgressionFields() {
     // ── Bonus ──────────────────────────────────────────────
     dailyBonusUses: { reveal_cell: 3, instinct: 3 },
     lastBonusResetDate: null as string | null,
+    challengeCountToday: 0,
     bonusTutorialDismissed: [] as string[],
     /** Pubs récompensées regardées aujourd'hui, par emplacement (Lot B). Remplace `watchAdUsedToday`. */
     adViews: {} as AdViews,

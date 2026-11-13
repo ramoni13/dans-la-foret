@@ -9,7 +9,7 @@
 //   5. Le vainqueur gagne 15 graines
 //
 // Expiration : 1 semaine
-// Jetons : 1 tous les 5 défis solo, ou 15 graines
+// Chaque manche jouée consomme un défi du quota commun ; le vainqueur reçoit 15 graines.
 // ============================================================
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -28,7 +28,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 
 import { Colors } from '../../src/constants/colors';
@@ -36,7 +36,8 @@ import { useFrameLayout } from '../../src/constants/frameLayout';
 import { useFeatureAccess } from '../../src/hooks/useFeatureAccess';
 import { getFeatureLockHint } from '../../src/constants/unlocks';
 import { isDemoAccount } from '../../src/constants/devAccess';
-import { FRIEND_TOKENS_PER_DAY } from '../../src/constants/dailyLimits';
+import { getDailyChallengesRemaining } from '../../src/constants/dailyLimits';
+import { getAdViews } from '../../src/constants/adRewards';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { awardEarnedTrophies } from '../../src/services/trophyService';
@@ -45,6 +46,7 @@ import { auth } from '../../src/services/firebase';
 import {
   FriendChallengeDoc,
   createFriendChallenge,
+  claimFriendChallengeReward,
   getReceivedChallenges,
   getSentChallenges,
   getCompletedChallenges,
@@ -59,10 +61,9 @@ import { LEVEL_PARAMS } from '../../src/constants/difficulty';
 import { formatTime } from '../../src/utils/boardUtils';
 import { ConfirmModal } from '../../src/components/Game/ConfirmModal';
 import { showAlert as showDialogAlert, showConfirm } from '../../src/store/dialogStore';
-import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 import { useT } from '../../src/i18n';
 
-// Jetons : 3 par jour (reset quotidien), illimités en premium
+// Le quota de parties est partagé avec les autres modes de défi.
 
 const IMG_HACHES = require('../../assets/elements/design_app/Haches.png');
 
@@ -365,7 +366,7 @@ export default function ChallengeScreen() {
   const player  = usePlayerStore();
   const duelAccess = useFeatureAccess('demo'); // compte démo exempté
   const insets  = useSafeAreaInsets();
-  const { frameBottom, innerTop, innerPadH, topBarCenterY, screenW } = useFrameLayout();
+  const { frameBottom, innerTop, innerPadH, topBarCenterY } = useFrameLayout();
   const uid     = auth.currentUser?.uid ?? null;
   const isAnon  = auth.currentUser?.isAnonymous ?? true;
 
@@ -377,15 +378,21 @@ export default function ChallengeScreen() {
   const [refreshing, setRefreshing]       = useState(false);
   const [generating, setGenerating]       = useState(false);
   const [showSearch, setShowSearch]       = useState(false);
-  // Vrai seulement si UN JETON A RÉELLEMENT ÉTÉ DÉBITÉ pour la recherche en cours (Lot A) : un premium ou un compte
-  // démo ne paie rien, donc rien à rembourser. Le remboursement passe par refundToken(), une seule fois.
-  const tokenPaidRef = useRef(false);
-  const refundToken = () => {
-    if (!tokenPaidRef.current) return;
-    tokenPaidRef.current = false;
-    player.addFriendChallengeToken();
+  const canStartChallenge = () => {
+    const state = usePlayerStore.getState();
+    state.rolloverDailyLimits();
+    const current = usePlayerStore.getState();
+    return getDailyChallengesRemaining({
+      challengeCountToday: current.challengeCountToday,
+      exempt: current.isPremium || isDemoAccount(current.username),
+      recharges: getAdViews(current.adViews, 'onf_recharge'),
+    }) > 0;
   };
-  const [showPremium, setShowPremium]     = useState(false);
+
+  const showQuotaReached = () => {
+    showAlert(t('challenge_quota_reached_title'), t('challenge_quota_reached_msg'));
+    router.replace('/(tabs)');
+  };
 
   // ── Chargement des défis ──────────────────────────────────
   const loadChallenges = useCallback(async (silent = false) => {
@@ -397,6 +404,17 @@ export default function ChallengeScreen() {
         getSentChallenges(uid),
         getCompletedChallenges(uid),
       ]);
+      await Promise.all(c.map(async d => {
+        const hasUnclaimedReward = d.rewardStatus === 'pending' ||
+          (d.rewardStatus === undefined && d.winnerId === d.challengerUid);
+        if (!d.id || d.winnerId !== uid || !hasUnclaimedReward) return;
+        try {
+          const claim = await claimFriendChallengeReward(d.id, uid);
+          if (claim.claimed) usePlayerStore.getState().addSeeds(CHALLENGE_WINNER_SEEDS);
+        } catch (error) {
+          console.error(`[Défi] Impossible de réclamer le gain du duel ${d.id}.`, error);
+        }
+      }));
       setReceived(r);
       setSent(s.filter(x => x.status !== 'completed'));
       setCompleted(c);
@@ -421,36 +439,27 @@ export default function ChallengeScreen() {
     }
   }, [uid, isAnon]);
 
-  useEffect(() => { loadChallenges(); }, [loadChallenges]);
+  useFocusEffect(useCallback(() => {
+    loadChallenges();
+  }, [loadChallenges]));
 
   const onRefresh = () => {
     setRefreshing(true);
     loadChallenges(true);
   };
 
-  // ── Vérifier jetons (avant d'ouvrir la recherche) ─────────
-  // Achat de jeton via graines supprimé (chantier 4).
-  // Si pas de jeton → informer le joueur (pas d'alternative graines).
+  // ── Vérifier le quota global avant d'ouvrir la recherche ───
   const handleOpenSearch = () => {
     if (!uid || isAnon) {
       showAlert(t('challenge_alert_login_title'), t('challenge_alert_login_required'));
       return;
     }
 
-    const isDemoUser = isDemoAccount(player.username);
-    const hasToken = player.isPremium || player.friendChallengeTokens > 0 || isDemoUser;
-
-    if (!hasToken) {
-      showAlert(
-        t('challenge_alert_no_tokens_title'),
-        t('challenge_alert_no_tokens_msg'),
-      );
+    if (!canStartChallenge()) {
+      showQuotaReached();
       return;
     }
 
-    // Jeton disponible → on le dépense directement (sauf démo et premium, qui ne paient rien)
-    tokenPaidRef.current = false;
-    if (!isDemoUser && !player.isPremium) tokenPaidRef.current = player.spendFriendChallengeToken();
     // 1re utilisation du Duel : la pastille « Nouveau » disparaît
     player.clearNewFeatureBadge('duel');
     setShowSearch(true);
@@ -531,11 +540,14 @@ export default function ChallengeScreen() {
       if (!challenge) {
         console.error('[Défi] Impossible de générer un défi — tous les niveaux ont échoué');
         showAlert(t('challenge_alert_error'), t('challenge_alert_gen_failed'));
-        refundToken();
         return;
       }
 
       console.log('[Défi] Défi généré :', { challengeLevel, boardId: challenge.boardId, fixedCount: challenge.fixedPlacements.length });
+      if (!usePlayerStore.getState().consumeChallengeQuota()) {
+        showQuotaReached();
+        return;
+      }
 
       // Encoder les données du défi + infos ami pour la navigation
       const challengeDataStr = encodeURIComponent(JSON.stringify({
@@ -552,15 +564,12 @@ export default function ChallengeScreen() {
         level:    friend.level,
       }));
 
-      // Défi généré : le jeton est consommé pour de bon (plus aucun remboursement possible)
-      tokenPaidRef.current = false;
       router.push(
         `/game/friend-challenge?data=${challengeDataStr}&challengerUid=${uid}&challengerName=${encodeURIComponent(player.username)}&challengerLevel=${myLevel}&friendData=${friendStr}`,
       );
     } catch (err) {
       console.error('[Défi] Exception inattendue:', err);
       showAlert(t('challenge_alert_error'), err instanceof Error ? err.message : String(err));
-      refundToken();
     } finally {
       setGenerating(false);
     }
@@ -569,6 +578,10 @@ export default function ChallengeScreen() {
   // ── Accepter un défi (Joueur B) ───────────────────────────
   const handleAcceptChallenge = (item: FriendChallengeDoc) => {
     if (!uid) return;
+    if (!usePlayerStore.getState().consumeChallengeQuota()) {
+      showQuotaReached();
+      return;
+    }
     player.clearNewFeatureBadge('duel');
     const challengeDataStr = encodeURIComponent(JSON.stringify(item.challengeData));
     router.push(
@@ -665,22 +678,6 @@ export default function ChallengeScreen() {
         </View>
       </View>
 
-      {/* ── Badge jetons — positionné en absolu dans la barre bois haute ── */}
-      <View
-        pointerEvents="box-none"
-        style={{
-          position: 'absolute',
-          top:      Math.max(insets.top + 8, innerTop + 28),
-          right:    screenW * 0.12,
-        }}
-      >
-        <View style={styles.tokenBadge}>
-          <Text style={styles.tokenText}>
-            🎟️ {player.isPremium ? '∞' : `${player.friendChallengeTokens} / ${FRIEND_TOKENS_PER_DAY}`}
-          </Text>
-        </View>
-      </View>
-
       {/* ── Bouton Défier un ami ── */}
       <View style={[styles.launchSection, { paddingHorizontal: innerPadH + 4 }]}>
         <TouchableOpacity
@@ -695,22 +692,8 @@ export default function ChallengeScreen() {
           }
         </TouchableOpacity>
         <Text style={styles.launchHint}>
-          {player.isPremium
-            ? t('challenge_tokens_unlimited', { seeds: String(CHALLENGE_WINNER_SEEDS) })
-            : player.friendChallengeTokens > 0
-              ? t(player.friendChallengeTokens > 1 ? 'challenge_tokens_available_other' : 'challenge_tokens_available_one', { count: String(player.friendChallengeTokens), seeds: String(CHALLENGE_WINNER_SEEDS) })
-              : t('challenge_tokens_none')
-          }
+          {t('challenge_duel_reward_hint', { seeds: String(CHALLENGE_WINNER_SEEDS) })}
         </Text>
-        {!player.isPremium && player.friendChallengeTokens === 0 && (
-          <TouchableOpacity
-            style={styles.btnPremium}
-            onPress={() => setShowPremium(true)}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.btnPremiumText}>{t('challenge_btn_premium')}</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* ── Onglets ── */}
@@ -801,21 +784,9 @@ export default function ChallengeScreen() {
         onSelectFriend={handleSelectFriend}
         onClose={() => {
           setShowSearch(false);
-          // Rembourser le jeton si on ferme sans choisir (seulement s'il a été payé)
-          refundToken();
         }}
       />
 
-      {/* Popup achat jeton supprimée (chantier 4) */}
-
-      <PremiumCard
-        visible={showPremium}
-        onClose={() => setShowPremium(false)}
-        onPurchase={() => {
-          player.unlockPremium();
-          setShowPremium(false);
-        }}
-      />
     </View>
   );
 }
@@ -1084,20 +1055,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.65)',
     marginTop: 2,
   },
-  tokenBadge: {
-    backgroundColor: '#5C3010',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderWidth: 1.5,
-    borderColor: '#3B1E08',
-    marginLeft: 12,
-  },
-  tokenText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFF8E7',
-  },
   launchSection: {
     padding: 16,
     gap: 8,
@@ -1123,20 +1080,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.75)',
     textAlign: 'center',
-  },
-  btnPremium: {
-    marginTop: 10,
-    backgroundColor: 'rgba(139,195,74,0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(139,195,74,0.6)',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  btnPremiumText: {
-    color: Colors.forest.accent,
-    fontSize: 13,
-    fontWeight: '700',
   },
   tabBar: {
     flexDirection: 'row',

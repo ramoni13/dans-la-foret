@@ -67,6 +67,7 @@ import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { useT } from '../../src/i18n';
+import { showAlert } from '../../src/store/dialogStore';
 
 // Donnees de defis embarquees (offline) — 10 niveaux
 import niveau1  from '../../src/data/challenges/niveau_1.json';
@@ -177,6 +178,7 @@ export default function GameScreen() {
   const [newGoalBadgeIds, setNewGoalBadgeIds] = useState<string[]>([]);
   // Ref pour éviter le double-appel du useEffect isVictory
   const badgesEvaluatedRef = useRef(false);
+  const countedChallengeIdRef = useRef<string | null>(null);
   // Compteur d'échecs de validation pendant la partie en cours
   const failCountForGameRef = useRef(0);
   // Total de graines AVANT le gain — capturé au moment de la validation (state pour être
@@ -277,6 +279,19 @@ export default function GameScreen() {
       if (found) break;
     }
     if (found) {
+      if (countedChallengeIdRef.current !== challengeId) {
+        countedChallengeIdRef.current = challengeId;
+        if (!usePlayerStore.getState().consumeChallengeQuota()) {
+          showAlert({
+            title: t('challenge_quota_reached_title'),
+            message: t('challenge_quota_reached_msg'),
+            icon: '⏰',
+          });
+          router.replace('/(tabs)');
+          return;
+        }
+      }
+
       const priorElapsed = getChallengeElapsed(pState.challengeStartedAt, challengeId);
 
       game.loadChallenge(found);

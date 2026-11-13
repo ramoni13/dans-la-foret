@@ -20,6 +20,7 @@ import {
   countChallengesInTiers,
   selectOnfChallenge,
 } from '../constants/onfTiers';
+export { calculateOnfReward } from '../constants/onfRewards';
 
 /** Une grille ONF : un défi + son palier. */
 export type OnfChallenge = Challenge & { tier: OnfTier };
@@ -69,10 +70,3 @@ export function getAllOnfChallenges(): readonly OnfChallenge[] {
 }
 
 // ── Récompense ────────────────────────────────────────────────────────────────
-
-/**
- * 4×4 : 5 graines de base + 2 bonus si résolu en moins de 120 s.
- */
-export function calculateOnfReward(elapsedMs: number): number {
-  return 5 + (elapsedMs < 120_000 ? 2 : 0);
-}

@@ -112,6 +112,7 @@ interface PersistedPlayerState {
   // Limites quotidiennes (Lot A) : persistées pour survivre à un redémarrage
   onfDailyCount?: number;
   lastOnfDailyDate?: string;
+  challengeCountToday?: number;
   friendChallengeTokens?: number;
   /** Pubs récompensées regardées aujourd'hui, par emplacement (Lot B). */
   adViews?: Record<string, number>;
@@ -164,6 +165,7 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     duelWinStreak:             state.duelWinStreak,
     dailyBonusUses:            state.dailyBonusUses,
     lastBonusResetDate:        state.lastBonusResetDate,
+    challengeCountToday:       state.challengeCountToday,
     onfDailyCount:             state.onfDailyCount,
     lastOnfDailyDate:          state.lastOnfDailyDate,
     friendChallengeTokens:     state.friendChallengeTokens,
@@ -409,6 +411,7 @@ export function useStorage() {
         JSON.stringify(newState.dailyBonusUses) !== JSON.stringify(prevState.dailyBonusUses) ||
         newState.lastBonusResetDate             !== prevState.lastBonusResetDate ||
         // Limites quotidiennes (Lot A)
+        newState.challengeCountToday            !== prevState.challengeCountToday ||
         newState.onfDailyCount                  !== prevState.onfDailyCount ||
         newState.friendChallengeTokens          !== prevState.friendChallengeTokens ||
         newState.adViews                        !== prevState.adViews ||

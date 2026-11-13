@@ -275,6 +275,11 @@ export default function DailyGameScreen() {
     let leaderboardUnsub: (() => void) | null = null;
 
     const runGeneration = () => {
+      if (!dailyAccess.isOpen('daily_pousse')) {
+        router.replace('/(tabs)');
+        return;
+      }
+
       const dailyChallenge = generateDailyChallenge(now, league);
       if (!dailyChallenge) {
         setGenerationError(true);
@@ -297,6 +302,10 @@ export default function DailyGameScreen() {
       const priorElapsed = isResuming
         ? (Date.now() - (pState.challengeStartedAt[dailyKey] ?? Date.now()))
         : 0;
+      if (!isResuming && !pState.consumeChallengeQuota()) {
+        router.replace('/(tabs)');
+        return;
+      }
 
       game.loadDailyChallenge(adaptedChallenge);
       badgesEvaluatedRef.current = false;
@@ -864,4 +873,3 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
 });
-

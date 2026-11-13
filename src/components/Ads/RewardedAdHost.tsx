@@ -12,7 +12,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { ONF_AD_RECHARGE_GRIDS, type AdPlacement } from '../../constants/adRewards';
+import { CHALLENGE_AD_RECHARGE_COUNT, type AdPlacement } from '../../constants/adRewards';
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import {
@@ -126,7 +126,7 @@ export const RewardedAdHost: React.FC = () => {
             <Text style={styles.title}>{keys ? t(phase === 'done' ? 'ad_done_title' : keys.title) : ''}</Text>
           </View>
 
-          {phase === 'intro' && keys && <Text style={styles.desc}>{t(keys.desc, { count: String(ONF_AD_RECHARGE_GRIDS) })}</Text>}
+          {phase === 'intro' && keys && <Text style={styles.desc}>{t(keys.desc, { count: String(CHALLENGE_AD_RECHARGE_COUNT) })}</Text>}
           {phase === 'watching' && (
             <View style={styles.watching}>
               <Animated.Text style={[styles.watchingIcon, { opacity: pulse }]}>🎬</Animated.Text>
@@ -134,7 +134,7 @@ export const RewardedAdHost: React.FC = () => {
               <Text style={styles.countdown}>{remaining}</Text>
             </View>
           )}
-          {phase === 'done' && keys && <Text style={styles.desc}>{t(keys.done, { count: String(ONF_AD_RECHARGE_GRIDS) })}</Text>}
+          {phase === 'done' && keys && <Text style={styles.desc}>{t(keys.done, { count: String(CHALLENGE_AD_RECHARGE_COUNT) })}</Text>}
 
           <View style={styles.buttons}>
             {phase !== 'watching' && (

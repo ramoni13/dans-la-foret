@@ -72,6 +72,7 @@ interface VictoryModalProps {
   elapsedTime: number;
   seedsEarned: number;
   seedsBeforeGain?: number;
+  rewardNote?: string;
   difficulty: DifficultyLevel;
   challengeNumber: number;
   onNextChallenge: () => void;
@@ -106,7 +107,7 @@ const DIFFICULTY_EMOJIS: Partial<Record<DifficultyLevel, string>> = {
 };
 
 export const VictoryModal: React.FC<VictoryModalProps> = ({
-  visible, elapsedTime, seedsEarned, seedsBeforeGain, difficulty, challengeNumber,
+  visible, elapsedTime, seedsEarned, seedsBeforeGain, rewardNote, difficulty, challengeNumber,
   onNextChallenge, nextChallengeLabel, onSecondaryAction, secondaryActionLabel, onBackToMenu, confettiPieces,
   nextTrophies = [], obtainedBadgeIds = [], badgeQueue = [], onBadgeQueueEmpty,
   worldRecord = null, isNewWorldRecord = false, previousRecordHolder = null,
@@ -602,6 +603,12 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
                 </View>
               </View>
 
+              {rewardNote ? (
+                <Text style={styles.rewardNote} accessibilityLiveRegion="polite">
+                  {rewardNote}
+                </Text>
+              ) : null}
+
               {/* ── Record mondial ───────────────────────────────────────────── */}
               {isNewWorldRecord ? (
                 <View style={styles.wrBanner}>
@@ -870,6 +877,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 28,
     width: '100%',
+  },
+  rewardNote: {
+    marginTop: -8,
+    marginBottom: 12,
+    fontSize: 12,
+    color: Colors.forest.medium,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   stat: { flex: 1, alignItems: 'center' },
   statValue: { fontSize: 22, fontWeight: '700', color: Colors.forest.dark },

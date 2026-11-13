@@ -26,9 +26,10 @@ import {
   where,
   getDocs,
   serverTimestamp,
+  runTransaction,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { auth, db } from './firebase';
 import { FixedPlacement, TokenCount } from '../core/models/Challenge';
 
 export const CHALLENGE_WINNER_SEEDS = 15; // Graines gagnées par le vainqueur
@@ -66,6 +67,7 @@ export interface FriendChallengeDoc {
   // Résultat
   status: FriendChallengeStatus;
   winnerId?: string;             // UID du gagnant
+  rewardStatus?: 'pending' | 'claimed';
   // Méta
   createdAt?: Timestamp;
   expiresAt?: Timestamp;
@@ -115,19 +117,104 @@ export async function answerFriendChallenge(
   friendChallengeId: string,
   opponentUid: string,
   opponentTime: number,
-  challengerUid: string,
-  challengerTime: number,
 ): Promise<{ winnerId: string }> {
-  const winnerId = opponentTime <= challengerTime ? opponentUid : challengerUid;
+  if (!auth.currentUser || auth.currentUser.isAnonymous || auth.currentUser.uid !== opponentUid) {
+    throw new Error('Only the authenticated opponent can answer this challenge');
+  }
+  if (!Number.isFinite(opponentTime) || opponentTime < 0) {
+    throw new Error('Opponent time is invalid');
+  }
 
-  await updateDoc(doc(db, 'friendChallenges', friendChallengeId), {
-    opponentTime,
-    status: 'completed',
-    winnerId,
-    updatedAt: serverTimestamp(),
+  const challengeRef = doc(db, 'friendChallenges', friendChallengeId);
+
+  return runTransaction(db, async tx => {
+    const challengeSnap = await tx.get(challengeRef);
+    if (!challengeSnap.exists()) throw new Error('Friend challenge not found');
+
+    const challenge = challengeSnap.data() as FriendChallengeDoc;
+    if (challenge.opponentUid !== opponentUid) {
+      throw new Error('Only the assigned opponent can answer this challenge');
+    }
+    if (challenge.status === 'completed' && challenge.winnerId) {
+      return { winnerId: challenge.winnerId };
+    }
+    if (
+      challenge.status !== 'pending' ||
+      challenge.challengerUid === opponentUid ||
+      !Number.isFinite(challenge.challengerTime) ||
+      challenge.challengerTime < 0
+    ) {
+      throw new Error('Friend challenge cannot be settled by this player');
+    }
+
+    const winnerId = opponentTime <= challenge.challengerTime
+      ? opponentUid
+      : challenge.challengerUid;
+
+    tx.update(challengeRef, {
+      opponentTime,
+      status: 'completed',
+      winnerId,
+      rewardStatus: 'pending',
+      updatedAt: serverTimestamp(),
+    });
+    return { winnerId };
   });
+}
 
-  return { winnerId };
+/**
+ * Le vainqueur réclame les graines depuis son propre compte. Le statut de réclamation et le solde
+ * sont mis à jour dans la même transaction, ce qui empêche le double versement entre appareils.
+ */
+export async function claimFriendChallengeReward(
+  friendChallengeId: string,
+  winnerUid: string,
+): Promise<{ claimed: boolean }> {
+  if (!auth.currentUser || auth.currentUser.isAnonymous || auth.currentUser.uid !== winnerUid) {
+    throw new Error('Only the authenticated winner can claim this reward');
+  }
+
+  const challengeRef = doc(db, 'friendChallenges', friendChallengeId);
+  const winnerRef = doc(db, 'players', winnerUid);
+
+  return runTransaction(db, async tx => {
+    const challengeSnap = await tx.get(challengeRef);
+    if (!challengeSnap.exists()) throw new Error('Friend challenge not found');
+
+    const challenge = challengeSnap.data() as FriendChallengeDoc;
+    const legacyUnclaimedChallengerWin =
+      challenge.rewardStatus === undefined &&
+      challenge.winnerId === challenge.challengerUid;
+    if (
+      challenge.status !== 'completed' ||
+      challenge.winnerId !== winnerUid ||
+      (challenge.rewardStatus !== 'pending' && !legacyUnclaimedChallengerWin)
+    ) {
+      return { claimed: false };
+    }
+
+    const winnerSnap = await tx.get(winnerRef);
+    if (!winnerSnap.exists()) throw new Error('Winner player profile not found');
+    const currentSeeds: unknown = winnerSnap.data().seeds;
+    if (
+      typeof currentSeeds !== 'number' ||
+      !Number.isSafeInteger(currentSeeds) ||
+      currentSeeds < 0 ||
+      currentSeeds > Number.MAX_SAFE_INTEGER - CHALLENGE_WINNER_SEEDS
+    ) {
+      throw new Error('Winner player seed balance is invalid');
+    }
+
+    tx.update(challengeRef, {
+      rewardStatus: 'claimed',
+      updatedAt: serverTimestamp(),
+    });
+    tx.update(winnerRef, {
+      seeds: currentSeeds + CHALLENGE_WINNER_SEEDS,
+      updatedAt: serverTimestamp(),
+    });
+    return { claimed: true };
+  });
 }
 
 // ── Refuser un défi (Joueur B refuse) ─────────────────────

@@ -6,9 +6,8 @@
 // - En-tête compact : retour, titre, « N grilles réussies » (plus de bloc de stats)
 // - Parcours des 3 paliers (Sentier → Clairière → forêt profonde) + UNE barre « x / n grilles » du palier en cours
 // - Herbier sur une ligne : miniature de la prochaine carte, progression avant la suivante, « Mes cartes (N) »
-// - Pied de page FIXE, toujours visible sans défiler :
-//     · « Jouer » (+ quota du jour pour le joueur gratuit) ;
-//     · quota atteint : « Passer en premium » + vidéo « recharger 3 défis » (1 fois par jour) à la place de « Jouer ».
+// - Pied de page FIXE, toujours visible sans défiler : « Jouer ».
+// Le quota commun et ses options de recharge sont affichés sur l'accueil.
 // Le palier joué est choisi par pickOnfChallenge selon les paliers ouverts.
 // ============================================================
 
@@ -37,10 +36,8 @@ import { getOwnedCardCount, getNextCard, getCardProgress } from '../../src/utils
 import { getOpenRegions, getRegionFeature } from '../../src/constants/herbier';
 import { isFeatureUnlocked } from '../../src/constants/progression';
 import { isDemoAccount } from '../../src/constants/devAccess';
-import { getOnfRemaining, isLimitsOfDay, todayLocalISO } from '../../src/constants/dailyLimits';
-import { ONF_AD_RECHARGE_GRIDS, getAdViews } from '../../src/constants/adRewards';
-import { useRewardedAd } from '../../src/hooks/useRewardedAd';
-import { PremiumCard } from '../../src/components/Premium/PremiumCard';
+import { getDailyChallengesRemaining, isLimitsOfDay, todayLocalISO } from '../../src/constants/dailyLimits';
+import { getAdViews } from '../../src/constants/adRewards';
 import { TreeCardView } from '../../src/components/ONF/TreeCardView';
 import { TreeCardGallery } from '../../src/components/ONF/TreeCardGallery';
 import { useT } from '../../src/i18n';
@@ -56,10 +53,6 @@ export default function ONFLobbyScreen() {
   const insets  = useSafeAreaInsets();
   const player  = usePlayerStore();
   const [galleryVisible, setGalleryVisible] = useState(false);
-  const [showPremium, setShowPremium] = useState(false);
-  // Vidéo « recharger 3 défis » : 1 fois par jour (plafond de l'emplacement `onf_recharge`). Lancée depuis cet écran,
-  // aucune Modal native n'étant ouverte à ce moment (sinon la modale de pub passerait dessous).
-  const rechargeAd = useRewardedAd('onf_recharge');
 
   // Herbier : la source de vérité est `collectedTreeCardIds` (plus onfSolvedCount, Progression v2 C6).
   const onfSolvedCount  = player.onfSolvedCount;
@@ -111,13 +104,21 @@ export default function ONFLobbyScreen() {
 
   // ── Quota quotidien (Lot A) ─────────────────────────────────
   // Un compteur d'un autre jour est périmé : 0 grille jouée aujourd'hui.
-  const isFreePlayer   = !player.isPremium && !isDemoAccount(player.username);
-  const onfPlayedToday = isLimitsOfDay(player, todayLocalISO()) ? player.onfDailyCount : 0;
-  const onfRecharges   = isLimitsOfDay(player, todayLocalISO()) ? getAdViews(player.adViews, 'onf_recharge') : 0;
-  const onfRemaining   = getOnfRemaining({ onfDailyCount: onfPlayedToday, exempt: false, onfRecharges });
-  const limitReached   = isFreePlayer && onfRemaining === 0;
+  const challengeRecharges = isLimitsOfDay(player, todayLocalISO())
+    ? getAdViews(player.adViews, 'onf_recharge')
+    : 0;
+  const canPlayChallenge = player.isPremium || isDemoAccount(player.username) ||
+    getDailyChallengesRemaining({
+      challengeCountToday: isLimitsOfDay(player, todayLocalISO()) ? player.challengeCountToday : 0,
+      exempt: false,
+      recharges: challengeRecharges,
+    }) > 0;
 
   const handlePlay = () => {
+    if (!canPlayChallenge) {
+      router.replace('/(tabs)');
+      return;
+    }
     router.push('/game/onf');
   };
 
@@ -250,52 +251,16 @@ export default function ONFLobbyScreen() {
         </View>
       </ScrollView>
 
-      {/* ── Pied de page FIXE : l'action principale reste visible sans défiler ──
-           Quota atteint : « Jouer » est remplacé par « Passer en premium » + la vidéo « recharger 3 défis ».
-           La vidéo n'existe qu'UNE fois par jour : une fois utilisée (et le quota de nouveau épuisé), il ne reste
-           que le premium. Dès que le quota est rechargé ou le premium acheté, « Jouer » revient. ── */}
+      {/* ── Pied de page FIXE : l'action principale reste visible sans défiler ── */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>
-        {limitReached ? (
-          <>
-            <Text style={styles.footerQuotaReached}>{t('onf_lobby_quota_none')}</Text>
-            <TouchableOpacity
-              style={styles.premiumBtn}
-              onPress={() => setShowPremium(true)}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.premiumBtnText}>{t('onf_daily_limit_premium')}</Text>
-            </TouchableOpacity>
-            {rechargeAd.available && (
-              <TouchableOpacity
-                style={[styles.videoBtn, rechargeAd.busy && styles.videoBtnBusy]}
-                disabled={rechargeAd.busy}
-                onPress={() => { void rechargeAd.watch(); }}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-              >
-                <Text style={styles.videoBtnText}>
-                  {t('onf_daily_limit_video', { count: String(ONF_AD_RECHARGE_GRIDS) })}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </>
-        ) : (
-          <TouchableOpacity
-            style={styles.playBtn}
-            onPress={handlePlay}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-          >
-            <Text style={styles.playBtnText}>{t('onf_lobby_play')}</Text>
-            {isFreePlayer && (
-              <Text style={styles.playBtnSub}>
-                {onfRemaining === 1
-                  ? t('onf_lobby_quota_one')
-                  : t('onf_lobby_quota_other', { remaining: String(onfRemaining) })}
-              </Text>
-            )}
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.playBtn}
+          onPress={handlePlay}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+        >
+          <Text style={styles.playBtnText}>{t('onf_lobby_play')}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Galerie ── */}
@@ -304,15 +269,6 @@ export default function ONFLobbyScreen() {
         onClose={() => setGalleryVisible(false)}
       />
 
-      {/* ── Achat premium (quota atteint) : le quota n'existe plus ensuite, « Jouer » revient ── */}
-      <PremiumCard
-        visible={showPremium}
-        onClose={() => setShowPremium(false)}
-        onPurchase={() => {
-          player.unlockPremium();
-          setShowPremium(false);
-        }}
-      />
     </View>
   );
 }
@@ -487,12 +443,6 @@ const styles = StyleSheet.create({
     borderTopWidth:    1,
     borderTopColor:    '#E0D9C8',
   },
-  footerQuotaReached: {
-    fontSize:   13,
-    fontWeight: '600',
-    color:      '#8D5A00',
-    textAlign:  'center',
-  },
   playBtn: {
     backgroundColor: '#2D6A2D',
     borderRadius:    16,
@@ -510,30 +460,4 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color:      '#FFFFFF',
   },
-  playBtnSub: {
-    fontSize: 13,
-    color:    'rgba(255,255,255,0.8)',
-  },
-
-  // Quota atteint : « Passer en premium » + vidéo, à la place de « Jouer »
-  premiumBtn: {
-    backgroundColor: '#E1EFCB',
-    borderWidth:     1.5,
-    borderColor:     '#8BC34A',
-    borderRadius:    16,
-    paddingVertical: 14,
-    alignItems:      'center',
-  },
-  premiumBtnText: { fontSize: 18, fontWeight: '800', color: '#2D6A2D' },
-  videoBtn: {
-    backgroundColor:   '#E4E0F5',
-    borderWidth:       1.5,
-    borderColor:       '#9C95E0',
-    borderRadius:      16,
-    paddingVertical:   14,
-    paddingHorizontal: 12,
-    alignItems:        'center',
-  },
-  videoBtnBusy: { opacity: 0.5 },
-  videoBtnText: { fontSize: 16, fontWeight: '800', color: '#4F46E5', textAlign: 'center' },
 });

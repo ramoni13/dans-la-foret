@@ -83,11 +83,13 @@ export interface PlayerProfile {
   duelWinStreak?: number;
   isPremium: boolean;
   /**
-   * Limites quotidiennes du joueur gratuit (Lot A) : grilles du Forestier jouées, jetons de Duel, bonus, recharge pub.
+   * Quota global de défis et limites quotidiennes associées. Les anciens compteurs Forestier / Duel restent présents pour la migration.
    * Stockées dans le profil pour qu'elles survivent à une déconnexion, une réinstallation ou un autre appareil.
    * `null` = jamais écrites (ancien profil) : le jour est alors considéré comme neuf.
    */
   dailyLimits?: DailyLimits | null;
+  dailyChallengeStatus?: 'pending' | 'in_progress' | 'success' | 'failed' | null;
+  lastDailyChallengeDate?: string;
   createdAt?: any;
   // ── Progression v2 (docs/progression-v2.md, section D) ──
   /** Version du modèle de progression. Absente ou < 2 → remise à zéro au prochain chargement (C9). */
@@ -180,7 +182,13 @@ function migrateProfile(raw: any): PlayerProfile {
     seeds:              raw.seeds ?? 0,
     completedChallenges: raw.completedChallenges ?? [],
     isPremium:          raw.isPremium ?? false,
-    dailyLimits:        sanitizeDailyLimits(raw.dailyLimits),
+    dailyLimits:        sanitizeDailyLimits({
+      ...raw.dailyLimits,
+      dailyChallengeStatus: raw.dailyChallengeStatus,
+      lastDailyChallengeDate: raw.lastDailyChallengeDate,
+    }),
+    dailyChallengeStatus: raw.dailyChallengeStatus ?? null,
+    lastDailyChallengeDate: raw.lastDailyChallengeDate ?? '',
     // ── Progression v2 : 0 = absent = profil pré-v2 (remis à zéro au chargement, C9).
     // Jamais undefined : Firestore refuse les valeurs undefined dans setDoc.
     progressionVersion:       typeof raw.progressionVersion === 'number' ? raw.progressionVersion : 0,

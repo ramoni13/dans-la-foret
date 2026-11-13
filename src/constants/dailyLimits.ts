@@ -1,7 +1,7 @@
 // ============================================================
 // LIMITES QUOTIDIENNES DES JOUEURS GRATUITS — logique pure
 //
-// Une seule source pour : la limite du Forestier, les jetons du Duel, les bonus du jour et le compteur de pubs de
+// Une seule source pour : le quota global de défis, les bonus du jour et le compteur de pubs de
 // la Forêt commune (`adViews`, voir adRewards.ts). Aucune dépendance React / Zustand / Firebase : testé dans
 // __tests__/dailyLimits.test.ts.
 //
@@ -9,24 +9,23 @@
 // Les compteurs vivent dans l'AsyncStorage ET dans Firestore (`players/{uid}.dailyLimits`) : fermer l'app,
 // se déconnecter ou changer d'appareil ne remet donc pas les limites à zéro.
 //
-// Une pub ne rend que des utilisations de BONUS (recharge d'un bonus épuisé, joueur gratuit) : jamais de grille du
-// Forestier ni de jeton de Duel (voir adRewards.ts). La fusion local/cloud des bonus raisonne donc en « consommé »
+// Une vidéo ajoute 3 défis au quota global, une fois par jour. La fusion local/cloud des bonus raisonne en « consommé »
 // (total offert moins restant) pour ne perdre ni une recharge faite sur un appareil, ni une consommation faite sur
 // l'autre.
 // ============================================================
 
 import {
   AdViews,
-  ONF_AD_RECHARGE_GRIDS,
+  CHALLENGE_AD_RECHARGE_COUNT,
   bonusPlacement,
   getAdViews,
   mergeAdViews,
   sanitizeAdViews,
 } from './adRewards';
 
-/** Grilles du Forestier jouables par jour (joueur gratuit). Illimitées pour un premium. */
-export const ONF_DAILY_LIMIT = 3;
-/** Jetons de Duel offerts par jour (joueur gratuit). Illimités pour un premium. */
+/** Défis de tous les modes jouables par jour (joueur gratuit). Illimités pour un premium. */
+export const FREE_DAILY_CHALLENGE_LIMIT = 10;
+/** Ancien plafond de jetons Duel, conservé uniquement pour migrer les anciennes sauvegardes. */
 export const FRIEND_TOKENS_PER_DAY = 3;
 /** Utilisations offertes de chaque bonus par jour (joueur gratuit) ; une pub les remet à ce niveau. Illimitées pour un premium. */
 export const BONUS_USES_PER_DAY = 3;
@@ -43,6 +42,7 @@ export function todayLocalISO(now: Date = new Date()): string {
 export interface DailyLimits {
   /** Date du dernier remplissage des compteurs : s'ils sont d'un autre jour, ils sont périmés. */
   lastBonusResetDate: string | null;
+  challengeCountToday: number;
   onfDailyCount: number;
   lastOnfDailyDate: string;
   friendChallengeTokens: number;
@@ -55,6 +55,7 @@ export interface DailyLimits {
 export function createFreshDailyLimits(today: string): DailyLimits {
   return {
     lastBonusResetDate: today,
+    challengeCountToday: 0,
     onfDailyCount: 0,
     lastOnfDailyDate: today,
     friendChallengeTokens: FRIEND_TOKENS_PER_DAY,
@@ -72,6 +73,7 @@ export function isLimitsOfDay(limits: Pick<DailyLimits, 'lastBonusResetDate'>, t
 export function extractDailyLimits(s: DailyLimits): DailyLimits {
   return {
     lastBonusResetDate: s.lastBonusResetDate,
+    challengeCountToday: s.challengeCountToday,
     onfDailyCount: s.onfDailyCount,
     lastOnfDailyDate: s.lastOnfDailyDate,
     friendChallengeTokens: s.friendChallengeTokens,
@@ -90,7 +92,9 @@ export function clampFriendTokens(n: unknown, max: number = FRIEND_TOKENS_PER_DA
 }
 
 function toCount(n: unknown): number {
-  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  return typeof n === 'number' && Number.isFinite(n) && n > 0
+    ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(n))
+    : 0;
 }
 
 function toBonusUses(n: unknown): number {
@@ -102,8 +106,8 @@ function toBonusUses(n: unknown): number {
  * Compteurs lus depuis une source non fiable (AsyncStorage, Firestore). Renvoie `null` si la source ne contient
  * aucune date : on ne sait alors rien du jour, elle est ignorée. Les valeurs hors bornes sont ramenées dans les bornes.
  * Une source d'avant les recharges par bonus (champ `watchAdUsedToday`, sans `adViews`) est convertie : recharge unique
- * déjà faite = les deux bonus comptés comme déjà rechargés au maximum (aucune pub en plus). Les anciens emplacements
- * (grille Forestier, jeton de Duel, graines ×2) sont écartés : ils ne redonnent AUCUNE partie.
+ * déjà faite = les deux bonus comptés comme déjà rechargés au maximum (aucune pub en plus). Si le quota global est
+ * absent, les compteurs ONF et Duel historiques servent à initialiser sa consommation.
  */
 export function sanitizeDailyLimits(raw: unknown): DailyLimits | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -111,8 +115,21 @@ export function sanitizeDailyLimits(raw: unknown): DailyLimits | null {
   const date = typeof r.lastBonusResetDate === 'string' && r.lastBonusResetDate ? r.lastBonusResetDate : null;
   if (!date) return null;
   const uses = (r.dailyBonusUses && typeof r.dailyBonusUses === 'object' ? r.dailyBonusUses : {}) as Record<string, unknown>;
+  const legacyDailyPlayed =
+    r.lastDailyChallengeDate === date &&
+    ['in_progress', 'success', 'failed'].includes(String(r.dailyChallengeStatus))
+      ? 1
+      : 0;
+  const legacyChallengeCount = toCount(r.onfDailyCount) +
+    Math.max(0, FRIEND_TOKENS_PER_DAY - clampFriendTokens(r.friendChallengeTokens)) +
+    legacyDailyPlayed;
+  const rawChallengeCount = r.challengeCountToday;
+  const hasChallengeCount = typeof rawChallengeCount === 'number' &&
+    Number.isFinite(rawChallengeCount) &&
+    rawChallengeCount >= 0;
   return {
     lastBonusResetDate: date,
+    challengeCountToday: hasChallengeCount ? toCount(rawChallengeCount) : legacyChallengeCount,
     onfDailyCount: toCount(r.onfDailyCount),
     lastOnfDailyDate: typeof r.lastOnfDailyDate === 'string' ? r.lastOnfDailyDate : date,
     friendChallengeTokens: clampFriendTokens(r.friendChallengeTokens),
@@ -133,7 +150,7 @@ function consumed(views: number, remaining: number): number {
  * Fusion des compteurs locaux et cloud, à la connexion. Règle : **le plus restrictif des deux, pour aujourd'hui**.
  *  - un compteur d'un autre jour est périmé et ignoré ;
  *  - aucune source du jour → jour neuf ; une seule → elle ;
- *  - les deux → grilles jouées : max ; jetons de Duel restants : min ; pubs regardées : max par emplacement ; et pour
+ *  - les deux → défis joués : max ; jetons de Duel restants (migration) : min ; pubs regardées : max par emplacement ; et pour
  *    les bonus on fusionne la CONSOMMATION (max), puis on recompose le restant avec le plus grand nombre de recharges.
  *    Une recharge par pub faite sur un appareil est ainsi conservée, et une partie consommée sur l'autre aussi.
  * Se déconnecter, réinstaller ou changer d'appareil ne permet donc jamais de récupérer des parties du jour.
@@ -164,6 +181,7 @@ export function mergeDailyLimits(local: DailyLimits | null, cloud: DailyLimits |
 
   return {
     lastBonusResetDate: today,
+    challengeCountToday: Math.max(l.challengeCountToday, c.challengeCountToday),
     onfDailyCount: Math.max(l.onfDailyCount, c.onfDailyCount),
     lastOnfDailyDate: today,
     friendChallengeTokens: clampFriendTokens(Math.min(l.friendChallengeTokens, c.friendChallengeTokens)),
@@ -177,33 +195,24 @@ export function dailyLimitsEqual(a: DailyLimits, b: DailyLimits): boolean {
   return JSON.stringify(extractDailyLimits(a)) === JSON.stringify(extractDailyLimits(b));
 }
 
-// ── Forestier ────────────────────────────────────────────────────────────────
+// ── Quota global des défis ────────────────────────────────────────────────────
 
-export interface OnfLimitInput {
-  onfDailyCount: number;
-  /** Premium ou compte de démonstration : aucune limite. */
+/** Quota quotidien gratuit, augmenté de 3 par vidéo de recharge. */
+export function getDailyChallengeQuota(recharges: number = 0): number {
+  const n = Number.isFinite(recharges) && recharges > 0 ? Math.min(1, Math.floor(recharges)) : 0;
+  return FREE_DAILY_CHALLENGE_LIMIT + n * CHALLENGE_AD_RECHARGE_COUNT;
+}
+
+/** Défis tous modes confondus encore jouables aujourd'hui (`Infinity` si le joueur est exempté). */
+export function getDailyChallengesRemaining({
+  challengeCountToday,
+  exempt,
+  recharges = 0,
+}: {
+  challengeCountToday: number;
   exempt: boolean;
-  /**
-   * Recharges par vidéo faites aujourd'hui (`adViews.onf_recharge`, 0 ou 1). Chacune ajoute `ONF_AD_RECHARGE_GRIDS`
-   * défis au quota offert ; `onfDailyCount` reste un cumul qui ne baisse jamais (la fusion local / cloud, au maximum,
-   * ne peut donc pas perdre une recharge). Absent : 0.
-   */
-  onfRecharges?: number;
-}
-
-/** Quota de défis offert aujourd'hui (3 + 3 par recharge par vidéo). */
-export function getOnfQuota(onfRecharges: number = 0): number {
-  const n = Number.isFinite(onfRecharges) && onfRecharges > 0 ? Math.floor(onfRecharges) : 0;
-  return ONF_DAILY_LIMIT + n * ONF_AD_RECHARGE_GRIDS;
-}
-
-/** Grilles du Forestier encore jouables aujourd'hui (`Infinity` si le joueur est exempté). */
-export function getOnfRemaining({ onfDailyCount, exempt, onfRecharges = 0 }: OnfLimitInput): number {
+  recharges?: number;
+}): number {
   if (exempt) return Infinity;
-  return Math.max(0, getOnfQuota(onfRecharges) - onfDailyCount);
-}
-
-/** La limite quotidienne du Forestier est-elle atteinte ? */
-export function isOnfLimitReached(input: OnfLimitInput): boolean {
-  return getOnfRemaining(input) === 0;
+  return Math.max(0, getDailyChallengeQuota(recharges) - toCount(challengeCountToday));
 }

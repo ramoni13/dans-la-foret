@@ -48,9 +48,9 @@ import {
   FriendChallengeData,
   createFriendChallenge,
   answerFriendChallenge,
+  claimFriendChallengeReward,
   CHALLENGE_WINNER_SEEDS,
 } from '../../src/services/challengeService';
-import { updateSeeds } from '../../src/services/playerService';
 import { awardEarnedTrophies } from '../../src/services/trophyService';
 import { awardBadgesFirestore } from '../../src/services/badgeService';
 import { auth } from '../../src/services/firebase';
@@ -153,6 +153,7 @@ function OpponentResultModal({
   myTime,
   challengerTime,
   iWon,
+  rewardGranted,
   seedsBeforeGain,
   onClose,
   confettiPieces: _confetti,
@@ -162,6 +163,7 @@ function OpponentResultModal({
   myTime: number;
   challengerTime: number;
   iWon: boolean;
+  rewardGranted: boolean;
   seedsBeforeGain?: number;
   onClose: () => void;
   confettiPieces: any[];
@@ -174,7 +176,7 @@ function OpponentResultModal({
   // Si seedsBeforeGain est fourni, on l'utilise comme point de départ de l'animation.
   // Sinon, fallback sur totalSeeds - seedsEarned.
   const totalSeeds = usePlayerStore(s => s.seeds);
-  const seedsEarned = iWon ? CHALLENGE_WINNER_SEEDS : 0;
+  const seedsEarned = iWon && rewardGranted ? CHALLENGE_WINNER_SEEDS : 0;
   const startSeeds = iWon && seedsBeforeGain !== undefined ? seedsBeforeGain : (totalSeeds - seedsEarned);
   const [displayedSeeds, setDisplayedSeeds] = useState(startSeeds);
   const [displayedGain, setDisplayedGain]   = useState(seedsEarned);
@@ -266,7 +268,7 @@ function OpponentResultModal({
           <Text style={rs.emoji}>{iWon ? '🏆' : '😤'}</Text>
           <Text style={rs.title}>{iWon ? t('fc_opponent_won') : t('fc_opponent_lost')}</Text>
 
-          {iWon && (
+          {iWon && rewardGranted && (
             <View style={rs.rewardBox} onLayout={onRewardLayout}>
               <Text style={rs.rewardText}>{t('fc_opponent_seeds', { count: String(CHALLENGE_WINNER_SEEDS) })}</Text>
             </View>
@@ -420,6 +422,8 @@ export default function FriendChallengeScreen() {
   const [sent, setSent]               = useState(false);
   const [sendError, setSendError]     = useState(false);
   const [opponentWon, setOpponentWon] = useState<boolean | null>(null);
+  const [rewardGranted, setRewardGranted] = useState(false);
+  const [settlementFailed, setSettlementFailed] = useState(false);
   const [showAbandonModal, setShowAbandonModal] = useState(false);
   const confettiPieces = useConfetti(showResult);
   // Total de graines AVANT le gain — pour l'animation de OpponentResultModal
@@ -453,10 +457,18 @@ export default function FriendChallengeScreen() {
           params.friendChallengeId!,
           params.opponentUid!,
           game.elapsedTime,
-          params.challengerUid!,
-          challengerTime,
         );
         const iWon = winnerId === params.opponentUid;
+        let rewardClaimed = false;
+        if (iWon) {
+          const claim = await claimFriendChallengeReward(params.friendChallengeId!, params.opponentUid!);
+          rewardClaimed = claim.claimed;
+          if (rewardClaimed) {
+            setSeedsBeforeGain(usePlayerStore.getState().seeds);
+            player.addSeeds(CHALLENGE_WINNER_SEEDS);
+          }
+        }
+        setRewardGranted(rewardClaimed);
         setOpponentWon(iWon);
 
         // Statistiques Joueur B : le résultat est connu (la réponse vient d'être enregistrée). Le défi est compté UNE
@@ -472,17 +484,9 @@ export default function FriendChallengeScreen() {
           syncTrophies();
         }
 
-        // Récompense : 15 graines au vainqueur
-        if (iWon) {
-          setSeedsBeforeGain(usePlayerStore.getState().seeds);
-          player.addSeeds(CHALLENGE_WINNER_SEEDS);
-          const currentUser = auth.currentUser;
-          if (currentUser && !currentUser.isAnonymous) {
-            updateSeeds(params.opponentUid!, usePlayerStore.getState().seeds).catch(() => {});
-          }
-        }
-      } catch {
-        // Silencieux
+      } catch (error) {
+        console.error('[Défi] Impossible d’enregistrer le résultat ou de verser les graines.', error);
+        setSettlementFailed(true);
       }
     };
 
@@ -645,6 +649,7 @@ export default function FriendChallengeScreen() {
             myTime={game.elapsedTime}
             challengerTime={challengerTime}
             iWon={opponentWon}
+            rewardGranted={rewardGranted}
             seedsBeforeGain={seedsBeforeGain}
             onClose={handleClose}
             confettiPieces={confettiPieces}
@@ -657,8 +662,21 @@ export default function FriendChallengeScreen() {
           <Modal visible transparent animationType="fade">
             <View style={rs.overlay}>
               <View style={rs.card}>
-                <ActivityIndicator size="large" color={Colors.forest.medium} />
-                <Text style={{ color: Colors.ui.textLight, marginTop: 12 }}>{t('fc_result_recording')}</Text>
+                {settlementFailed ? (
+                  <>
+                    <Text style={{ color: Colors.ui.text, textAlign: 'center', marginBottom: 16 }}>
+                      {t('fc_result_recording_error')}
+                    </Text>
+                    <TouchableOpacity style={rs.btnClose} onPress={handleClose} activeOpacity={0.8}>
+                      <Text style={rs.btnCloseText}>{t('fc_result_back_btn')}</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <ActivityIndicator size="large" color={Colors.forest.medium} />
+                    <Text style={{ color: Colors.ui.textLight, marginTop: 12 }}>{t('fc_result_recording')}</Text>
+                  </>
+                )}
               </View>
             </View>
           </Modal>

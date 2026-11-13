@@ -45,12 +45,13 @@ import {
   BONUS_USES_PER_DAY,
   FRIEND_TOKENS_PER_DAY,
   createFreshDailyLimits,
-  getOnfRemaining,
+  getDailyChallengesRemaining,
   isLimitsOfDay,
   mergeDailyLimits,
   sanitizeDailyLimits,
   todayLocalISO,
 } from '../constants/dailyLimits';
+import { isDemoAccount } from '../constants/devAccess';
 import {
   AdPlacement,
   AdViews,
@@ -241,6 +242,7 @@ interface PlayerState {
   // ── Bonus journaliers (chantier 4) ───────────────────────────────────────────
   dailyBonusUses: Record<BonusId, number>; // utilisations restantes aujourd'hui
   lastBonusResetDate: string | null;        // "YYYY-MM-DD" du dernier reset
+  challengeCountToday: number;
 
   // ── Publicité : recharge des bonus (1 fois/jour, mode free uniquement) ───────
   /** Pubs récompensées regardées aujourd'hui, par emplacement (Lot B) ; plafonds dans `adRewards.ts`. */
@@ -255,6 +257,7 @@ interface PlayerState {
   spendSeeds: (amount: number) => boolean;
   addFriendChallengeToken: () => void;
   spendFriendChallengeToken: () => boolean;
+  consumeChallengeQuota: () => boolean;
   markChallengeCompleted: (
     challengeId: string,
     timeMs: number,
@@ -501,6 +504,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   dailyBonusUses: { reveal_cell: 3, instinct: 3 },
   lastBonusResetDate: null,
+  challengeCountToday: 0,
 
   adViews: {},
 
@@ -526,6 +530,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (isPremium) return true; // Illimité en premium
     if (friendChallengeTokens <= 0) return false;
     set(state => ({ friendChallengeTokens: state.friendChallengeTokens - 1 }));
+    return true;
+  },
+
+  consumeChallengeQuota: () => {
+    get().rolloverDailyLimits();
+    const state = get();
+    if (state.isPremium || isDemoAccount(state.username)) return true;
+    const remaining = getDailyChallengesRemaining({
+      challengeCountToday: state.challengeCountToday,
+      exempt: false,
+      recharges: getAdViews(state.adViews, 'onf_recharge'),
+    });
+    if (remaining <= 0) return false;
+    set(current => ({ challengeCountToday: current.challengeCountToday + 1 }));
     return true;
   },
 
@@ -579,7 +597,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     // Se reconnecter ou changer d'appareil ne rend donc jamais des parties du jour.
     const mergedLimits = mergeDailyLimits(
       sanitizeDailyLimits(get()),
-      sanitizeDailyLimits(profile.dailyLimits),
+      sanitizeDailyLimits({
+        ...profile.dailyLimits,
+        dailyChallengeStatus: profile.dailyChallengeStatus,
+        lastDailyChallengeDate: profile.lastDailyChallengeDate,
+      }),
       todayLocalISO(),
     );
 
@@ -785,6 +807,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       seeds: d.seeds,
       isPremium: d.isPremium,
       friendChallengeTokens: d.friendChallengeTokens,
+      challengeCountToday: d.challengeCountToday,
       completedChallenges: d.completedChallenges,
       challengeStars: d.challengeStars,
       levelsCompleted: d.levelsCompleted,
@@ -1409,13 +1432,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         return true;
       }
       case 'onf_recharge': {
-        // Le quota du jour doit être épuisé (sinon la vidéo ne servirait à rien : refus, plafond non consommé).
-        // La recharge s'inscrit dans `adViews.onf_recharge` (1 par jour) : `getOnfRemaining` y ajoute +3 défis.
-        // `onfDailyCount` ne change pas (cumul qui ne baisse jamais, sûr à la fusion local / cloud).
-        const remaining = getOnfRemaining({
-          onfDailyCount: s.onfDailyCount,
+        // La vidéo recharge le quota global de défis (+3 modes confondus).
+        const remaining = getDailyChallengesRemaining({
+          challengeCountToday: s.challengeCountToday,
           exempt: false,
-          onfRecharges: getAdViews(s.adViews, 'onf_recharge'),
+          recharges: getAdViews(s.adViews, 'onf_recharge'),
         });
         if (remaining > 0) return false;
         set({ adViews: nextViews, stats: watched });

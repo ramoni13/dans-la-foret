@@ -21,7 +21,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { subscribeForetCommune } from '../../services/foretCommuneService';
-import { usePlayerStore } from '../../store/playerStore';
 
 const IMG_1_1 = require('../../../assets/elements/design_app/1-1.jpg');
 
@@ -33,17 +32,14 @@ export interface PremiumCardProps {
 }
 
 const PERKS = [
-  { emoji: '🤝', labelFr: 'Défi entre amis',      labelEn: 'Friend challenges',  free: '3/j', premium: '∞' },
-  { emoji: '🌲', labelFr: 'Défi de la forêt',     labelEn: 'Défi de la forêt',   free: '3/j', premium: '∞' },
-  { emoji: '🎁', labelFr: 'Bonus 1 case offerte', labelEn: 'Free Cell Bonus',     free: '3/j', premium: '∞' },
-  { emoji: '🔴', labelFr: 'Bonus Instinct',        labelEn: 'Instinct Bonus',      free: '3/j', premium: '∞' },
-  { emoji: '🏅', labelFr: 'Badge "Ami de la Forêt"', labelEn: '"Friend of the Forest" badge', free: '—', premium: '✓' },
+  { emoji: '🎁', label: 'premium_perk1', free: 'premium_bonus_limit', premium: '∞' },
+  { emoji: '🔴', label: 'premium_perk2', free: 'premium_bonus_limit', premium: '∞' },
+  { emoji: '🏅', label: 'premium_perk3', free: null, premium: '✓' },
 ] as const;
 
 export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) {
   const t = useT();
   const insets = useSafeAreaInsets();
-  const lang = usePlayerStore(s => s.language);
   const [totalTrees, setTotalTrees] = useState(0);
 
   useEffect(() => {
@@ -96,6 +92,16 @@ export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) 
               </View>
             </View>
 
+            <View style={styles.challengeQuota}>
+              <Text style={styles.challengeQuotaTitle}>{t('premium_challenge_quota_title')}</Text>
+              <Text style={styles.challengeQuotaLine}>{t('premium_challenge_quota_free')}</Text>
+              <Text style={styles.challengeQuotaLine}>{t('premium_challenge_quota_video')}</Text>
+              <Text style={[styles.challengeQuotaLine, styles.challengeQuotaPremium]}>
+                {t('premium_challenge_quota_premium')}
+              </Text>
+              <Text style={styles.challengeQuotaNote}>{t('premium_challenge_quota_note')}</Text>
+            </View>
+
             {/* Séparateur */}
             <View style={styles.separator} />
 
@@ -106,10 +112,10 @@ export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) 
               <View style={[styles.tableRow, styles.tableHeader]}>
                 <View style={styles.colLabel} />
                 <View style={styles.colFree}>
-                  <Text style={styles.headerFree}>Gratuit</Text>
+                  <Text style={styles.headerFree}>{t('premium_free_header')}</Text>
                 </View>
                 <View style={styles.colPremium}>
-                  <Text style={styles.headerPremium}>Premium</Text>
+                  <Text style={styles.headerPremium}>{t('premium_header')}</Text>
                 </View>
               </View>
               {/* Lignes */}
@@ -117,10 +123,10 @@ export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) 
                 <View key={i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
                   <View style={styles.colLabel}>
                     <Text style={styles.perkEmoji}>{perk.emoji}</Text>
-                    <Text style={styles.perkLabel}>{lang === 'en' ? perk.labelEn : perk.labelFr}</Text>
+                    <Text style={styles.perkLabel}>{t(perk.label)}</Text>
                   </View>
                   <View style={styles.colFree}>
-                    <Text style={styles.cellFree}>{perk.free}</Text>
+                    <Text style={styles.cellFree}>{perk.free ? t(perk.free) : '—'}</Text>
                   </View>
                   <View style={styles.colPremium}>
                     <Text style={styles.cellPremium}>{perk.premium}</Text>
@@ -213,6 +219,37 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
+  },
+  challengeQuota: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(139,195,74,0.45)',
+    padding: 14,
+    marginTop: 14,
+    gap: 8,
+  },
+  challengeQuotaTitle: {
+    color: Colors.forest.accent,
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  challengeQuotaLine: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
+  },
+  challengeQuotaPremium: {
+    color: Colors.forest.accent,
+  },
+  challengeQuotaNote: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 2,
   },
   onfText: {
     color: Colors.forest.accent,

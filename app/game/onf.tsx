@@ -34,17 +34,12 @@ import { FailModal } from '../../src/components/Game/FailModal';
 import { OnfBriefingModal } from '../../src/components/LevelBriefing/OnfBriefingModal';
 import { useGame } from '../../src/hooks/useGame';
 import { usePlayerStore } from '../../src/store/playerStore';
-import { isDemoAccount } from '../../src/constants/devAccess';
-import { getOnfQuota, isOnfLimitReached } from '../../src/constants/dailyLimits';
-import { ONF_AD_RECHARGE_GRIDS, getAdViews } from '../../src/constants/adRewards';
-import { useRewardedAd } from '../../src/hooks/useRewardedAd';
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
-import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 import { getRankForLevel } from '../../src/constants/progression';
 import { recordVictory } from '../../src/services/metricsService';
 import { awardEarnedTrophies } from '../../src/services/trophyService';
@@ -55,6 +50,7 @@ import {
   calculateOnfReward,
   getOnfChallengeCount,
 } from '../../src/services/onfChallengeService';
+import { getOnfRewardProgress } from '../../src/constants/onfRewards';
 import { useFeatureAccess } from '../../src/hooks/useFeatureAccess';
 import { getOpenOnfTiers } from '../../src/constants/unlocks';
 import { PROGRESSION_V2 } from '../../src/constants/featureFlags';
@@ -107,27 +103,13 @@ export default function ONFGameScreen() {
   const onfAccess = useFeatureAccess('demo');
   const [seedsEarned, setSeedsEarned] = useState(0);
   const [seedsBeforeGain, setSeedsBeforeGain] = useState(0);
+  const [rewardNote, setRewardNote] = useState('');
   const [badgeQueue, setBadgeQueue] = useState<string[]>([]);
   // AIDE DÉSACTIVÉE : violations ligne/colonne calculées après la validation.
   // Réactiver si les joueurs demandent ce retour visuel.
   // const [rowColViolationCells, setRowColViolationCells] = useState<number[]>([]);
   /** Briefing affiché avant la première partie ONF */
   const [briefingDone, setBriefingDone] = useState(player.hasSeenOnfBriefing);
-  const [showPremium, setShowPremium] = useState(false);
-  /**
-   * Limite quotidienne ONF atteinte (free uniquement). Évaluée UNIQUEMENT quand une grille va être chargée
-   * (`pickAndLoad`), jamais en direct : sinon la 3e victoire faisait passer le compteur à 3 et l'écran de blocage
-   * remplaçait la VictoryModal (Lot A).
-   */
-  const [dailyLimitReached, setDailyLimitReached] = useState(false);
-  /**
-   * Vidéo « recharger 3 défis » : proposée sur l'écran de quota atteint, UNE fois par jour (plafond de l'emplacement
-   * `onf_recharge`). Une fois utilisée, et le quota de nouveau épuisé, il ne reste que « Passer en premium ».
-   * Lancée depuis cet écran (aucune Modal native ouverte : la modale de pub passerait sinon dessous).
-   */
-  const rechargeAd = useRewardedAd('onf_recharge');
-  const onfRecharges = getAdViews(player.adViews, 'onf_recharge');
-
   const [showFailModal, setShowFailModal] = useState(false);
   const badgesEvaluatedRef = useRef(false);
   /** Nombre de validations incorrectes pendant cette partie ONF */
@@ -155,20 +137,9 @@ export default function ONFGameScreen() {
     onfFailCountRef.current = 0;
 
     const run = () => {
-      // Limite quotidienne (free) : vérifiée avant de charger une grille. Passage au jour courant d'abord
-      // (app restée ouverte à minuit), puis lecture de l'état réel du store.
+      // Passage au jour courant avant de lire les compteurs et les paliers ouverts.
       usePlayerStore.getState().rolloverDailyLimits();
       const state = usePlayerStore.getState();
-      if (isOnfLimitReached({
-        onfDailyCount: state.onfDailyCount,
-        exempt: state.isPremium || isDemoAccount(state.username),
-        onfRecharges: getAdViews(state.adViews, 'onf_recharge'),
-      })) {
-        setDailyLimitReached(true);
-        setLoading(false);
-        return;
-      }
-      setDailyLimitReached(false);
       const completedIds = state.completedOnfChallengeIds;
 
       // Paliers ouverts LUS ICI sur l'état courant du store (le callback est mémorisé une seule fois).
@@ -189,6 +160,12 @@ export default function ONFGameScreen() {
       if (result.allCompleted || !result.challenge) {
         setAllCompleted(true);
         setLoading(false);
+        return;
+      }
+
+      if (!usePlayerStore.getState().consumeChallengeQuota()) {
+        setLoading(false);
+        router.replace('/(tabs)');
         return;
       }
 
@@ -314,19 +291,23 @@ export default function ONFGameScreen() {
     if (badgesEvaluatedRef.current) return;
     badgesEvaluatedRef.current = true;
 
-    const earned = calculateOnfReward(game.elapsedTime);
+    const stateBeforeOnf = usePlayerStore.getState();
+    const rewardProgress = getOnfRewardProgress(stateBeforeOnf.onfSolvedCount);
+    const earned = calculateOnfReward(game.elapsedTime, stateBeforeOnf.onfSolvedCount);
+    setRewardNote(t('onf_victory_next_reward', {
+      count: String(rewardProgress.nextMilestone),
+      next: String(rewardProgress.nextBaseSeeds),
+    }));
     // seedsBeforeGain a été capturé dans handleValidate (state React) — déjà disponible
     // dans VictoryModal dès son premier rendu.
     setSeedsEarned(earned);
 
     // État AVANT recordOnfVictory (qui incrémente onfSolvedCount)
-    const stateBeforeOnf = usePlayerStore.getState();
-
     player.addSeeds(earned);
 
     // Marquer le défi comme complété + incrémenter les compteurs badges ONF
     player.recordOnfVictory(challenge.id, onfFailCountRef.current, game.elapsedTime);
-    // Incrémenter le compteur quotidien (limite free = 3/jour)
+    // Conserver l'ancien compteur pour la migration des sauvegardes ; le quota global est débité au chargement.
     player.incrementOnfDaily();
 
     // ── Cartes à collectionner (Herbier de la Forêt) ─────────────
@@ -406,68 +387,6 @@ export default function ONFGameScreen() {
   //   }
   // }, [game.playerBoard]);
 
-  // ── Limite quotidienne atteinte (free) ───────────────────
-  if (dailyLimitReached) {
-    return (
-      <GestureHandlerRootView style={styles.root}>
-        <View style={[styles.loading, { paddingTop: insets.top }]}>
-          <Text style={styles.allCompletedEmoji}>🌲</Text>
-          <Text style={styles.allCompletedTitle}>
-            {t('onf_daily_limit_title')}
-          </Text>
-          <Text style={styles.allCompletedText}>
-            {t('onf_daily_limit_msg', { count: String(getOnfQuota(onfRecharges)) })}
-          </Text>
-          <TouchableOpacity
-            style={styles.errorBtn}
-            onPress={() => router.replace('/(tabs)')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.errorBtnText}>{t('onf_daily_limit_back')}</Text>
-          </TouchableOpacity>
-          <View style={styles.limitActions}>
-            <TouchableOpacity
-              style={[styles.premiumBtn, styles.limitActionBtn]}
-              onPress={() => setShowPremium(true)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.premiumBtnText}>{t('onf_daily_limit_premium')}</Text>
-            </TouchableOpacity>
-            {/* Vidéo récompense : 1 fois par jour. Une fois utilisée, le bouton disparaît (il ne reste que le premium). */}
-            {rechargeAd.available && (
-              <TouchableOpacity
-                style={[styles.videoBtn, styles.limitActionBtn, rechargeAd.busy && styles.videoBtnBusy]}
-                disabled={rechargeAd.busy}
-                onPress={async () => {
-                  const ok = await rechargeAd.watch();
-                  // Le quota est rechargé : on charge une grille maintenant que la limite est levée
-                  if (ok) pickAndLoad(true);
-                }}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel={t('onf_daily_limit_video', { count: String(ONF_AD_RECHARGE_GRIDS) })}
-              >
-                <Text style={styles.videoBtnText}>
-                  {t('onf_daily_limit_video', { count: String(ONF_AD_RECHARGE_GRIDS) })}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <PremiumCard
-            visible={showPremium}
-            onClose={() => setShowPremium(false)}
-            onPurchase={() => {
-              player.unlockPremium();
-              setShowPremium(false);
-              // Le blocage n'est plus calculé en direct : on recharge une grille maintenant que la limite est levée
-              pickAndLoad(true);
-            }}
-          />
-        </View>
-      </GestureHandlerRootView>
-    );
-  }
-
   // ── Chargement ────────────────────────────────────────────
   if (loading) {
     return (
@@ -541,6 +460,7 @@ export default function ONFGameScreen() {
   // car completedOnfChallengeIds ne contient que les IDs uniques (peut être < onfSolvedCount
   // si des défis ont été rejoués après reset ou si les IDs ne correspondent pas 1-pour-1).
   const completedCount = player.onfSolvedCount;
+  const rewardProgress = getOnfRewardProgress(completedCount);
   // Dénominateur = grilles des paliers OUVERTS (le joueur ne voit pas les grilles qu'il n'a pas débloquées)
   const totalCount = getOnfChallengeCount(onfAccess.onfTiers);
   const gridLabel = t('onf_header_progress', { current: String(completedCount + 1), total: String(totalCount) });
@@ -573,6 +493,13 @@ export default function ONFGameScreen() {
           <View style={styles.headerCenter}>
             <Text style={styles.levelLabel}>{t('onf_header_mode')}</Text>
             <Text style={styles.challengeLabel}>{gridLabel}</Text>
+            <Text style={styles.rewardProgressLabel}>
+              {t('onf_reward_progress', {
+                base: String(rewardProgress.baseSeeds),
+                count: String(rewardProgress.nextMilestone),
+                next: String(rewardProgress.nextBaseSeeds),
+              })}
+            </Text>
           </View>
 
           <View style={styles.headerRight}>
@@ -650,6 +577,7 @@ export default function ONFGameScreen() {
           elapsedTime={game.elapsedTime}
           seedsEarned={seedsEarned}
           seedsBeforeGain={seedsBeforeGain}
+          rewardNote={rewardNote}
           difficulty={'niveau_1' as any}
           challengeNumber={0}
           badgeQueue={badgeQueue}
@@ -759,52 +687,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  // Boutons d'action côte à côte : « Passer en premium » + vidéo (la vidéo disparaît une fois utilisée)
-  limitActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 12,
-    paddingHorizontal: 16,
-  },
-  limitActionBtn: {
-    marginTop: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  videoBtn: {
-    backgroundColor: 'rgba(99,102,241,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.6)',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  videoBtnBusy: {
-    opacity: 0.5,
-  },
-  videoBtnText: {
-    color: '#6366F1',
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  premiumBtn: {
-    marginTop: 12,
-    backgroundColor: 'rgba(139,195,74,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(139,195,74,0.6)',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  premiumBtnText: {
-    color: Colors.forest.accent,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
   // Header
   header: {
     flexDirection: 'row',
@@ -835,6 +717,11 @@ const styles = StyleSheet.create({
   challengeLabel: {
     fontSize: 11,
     color: Colors.ui.textLight,
+  },
+  rewardProgressLabel: {
+    fontSize: 9,
+    color: Colors.forest.medium,
+    fontWeight: '600',
   },
   headerRight: {
     flexDirection: 'row',
@@ -908,4 +795,3 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
 });
-

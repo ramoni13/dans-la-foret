@@ -22,12 +22,18 @@ import { useFrameLayout } from '../../src/constants/frameLayout';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { isDemoAccount } from '../../src/constants/devAccess';
-import { AD_DAILY_CAPS, ONF_AD_RECHARGE_GRIDS } from '../../src/constants/adRewards';
+import { AD_DAILY_CAPS, CHALLENGE_AD_RECHARGE_COUNT } from '../../src/constants/adRewards';
 import { FEATURE_UNLOCK_CHAPTER, ProgressionFeature } from '../../src/constants/progression';
 import { ONF_TIER_ORDER, OnfTier } from '../../src/constants/onfTiers';
 import { ONF_CARD_UNLOCK_EVERY } from '../../src/constants/onf';
-import { calculateOnfReward, getOnfChallengeCount } from '../../src/services/onfChallengeService';
-import { BONUS_USES_PER_DAY, FRIEND_TOKENS_PER_DAY, ONF_DAILY_LIMIT } from '../../src/constants/dailyLimits';
+import { getOnfChallengeCount } from '../../src/services/onfChallengeService';
+import {
+  ONF_REWARD_BASE_SEEDS,
+  ONF_REWARD_STEP_EVERY,
+  ONF_REWARD_STEP_SEEDS,
+  ONF_SPEED_BONUS_SEEDS,
+} from '../../src/constants/onfRewards';
+import { BONUS_USES_PER_DAY, FREE_DAILY_CHALLENGE_LIMIT } from '../../src/constants/dailyLimits';
 import { ElementRegistry } from '../../src/elements/ElementRegistry';
 import { useT } from '../../src/i18n';
 import { LEVEL_META, RuleCard as RuleCardData } from '../../src/data/levelMeta';
@@ -149,8 +155,7 @@ function ChallengesTab({ frameBottom, innerPadH }: { frameBottom: number; innerP
       <ChallengeCard icon="🌳" titleKey="challenges_plans_title" color="#00695C">
         <BulletItem text={t('challenges_plans_all')} />
         <BulletItem text={t('challenges_plans_free', {
-          onf: String(ONF_DAILY_LIMIT),
-          tokens: String(FRIEND_TOKENS_PER_DAY),
+          challenges: String(FREE_DAILY_CHALLENGE_LIMIT),
           bonus: String(BONUS_USES_PER_DAY),
         })} />
         <BulletItem text={t('challenges_plans_premium')} />
@@ -158,7 +163,7 @@ function ChallengesTab({ frameBottom, innerPadH }: { frameBottom: number; innerP
         <BulletItem text={t('challenges_plans_videos', {
           videos: String(AD_DAILY_CAPS.foret_commune),
           bonusVideos: String(AD_DAILY_CAPS.bonus_reveal_cell),
-          onfGrids: String(ONF_AD_RECHARGE_GRIDS),
+          extraChallenges: String(CHALLENGE_AD_RECHARGE_COUNT),
         })} />
       </ChallengeCard>
 
@@ -228,8 +233,10 @@ function ChallengesTab({ frameBottom, innerPadH }: { frameBottom: number; innerP
         <Text style={challengeStyles.paraText}>{t('challenges_onf_how')}</Text>
         <Text style={challengeStyles.paraText}>
           {t('challenges_onf_rewards', {
-            base: String(calculateOnfReward(Infinity)),
-            bonus: String(calculateOnfReward(0) - calculateOnfReward(Infinity)),
+            base: String(ONF_REWARD_BASE_SEEDS),
+            increase: String(ONF_REWARD_STEP_SEEDS),
+            step: String(ONF_REWARD_STEP_EVERY),
+            bonus: String(ONF_SPEED_BONUS_SEEDS),
             every: String(ONF_CARD_UNLOCK_EVERY),
           })}
         </Text>
