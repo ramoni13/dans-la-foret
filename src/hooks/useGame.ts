@@ -19,7 +19,7 @@ import {
   getValidCellsForElement,
   getErrorCells,
 } from '../core/engine/hintEngine';
-import { BonusId } from '../constants/bonus';
+import { canUseBonusInAttempt, BonusId } from '../constants/bonus';
 import { Colors } from '../constants/colors';
 
 /** Durée d'affichage du bonus reveal (ms) */
@@ -188,6 +188,7 @@ export function useGame() {
   const activateBonus = (bonusId: BonusId): boolean => {
     if (!game.currentChallenge) return false;
     if (game.bonusDisabled) return false;
+    if (!canUseBonusInAttempt(useGameStore.getState().bonusUsed, bonusId)) return false;
 
     const spent = player.spendBonus(bonusId);
     if (!spent) return false;

@@ -19,8 +19,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from 'firebase/auth';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../../src/services/firebase';
 
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
@@ -199,34 +197,6 @@ export default function ProfileScreen() {
       player.logout();
       await AsyncStorage.removeItem('dlf_player_v1');
     });
-  };
-
-  // ── Réinitialisation badges (Ramoni uniquement) ───────────────────────────────
-  const handleResetBadges = () => {
-    showConfirm(
-      t('profile_confirm_reset_badges'),
-      async () => {
-        // 1. Zustand — réinitialisation locale immédiate (setState direct, un seul re-render)
-        usePlayerStore.setState({
-          earnedBadges:     [],
-          badgeShowcase:    [undefined, undefined, undefined],
-        });
-
-        // 2. Firestore — réinitialisation cloud
-        const uid = auth.currentUser?.uid;
-        if (uid) {
-          try {
-            await updateDoc(doc(db, 'players', uid), {
-              earnedBadges:     [],
-              badgeShowcase:    [],
-              updatedAt:        serverTimestamp(),
-            });
-          } catch (e) {
-            console.warn('[ResetBadges] Firestore error:', e);
-          }
-        }
-      }
-    );
   };
 
   // ── Chargement ───────────────────────────────────────────────────────────────
@@ -439,16 +409,6 @@ export default function ProfileScreen() {
             hideRankPanel
           />
 
-          {/* ── Bouton dev Ramoni uniquement ── */}
-          {isAdminAccount(player.username) && (
-            <TouchableOpacity
-              style={devStyles.resetBadgesBtn}
-              onPress={handleResetBadges}
-              activeOpacity={0.8}
-            >
-              <Text style={devStyles.resetBadgesBtnText}>🔄 Réinitialiser mes badges</Text>
-            </TouchableOpacity>
-          )}
         </ScrollView>
 
 
@@ -1237,22 +1197,6 @@ const aboutStyles = StyleSheet.create({
 
 // ── Styles dev (Ramoni uniquement) ────────────────────────────────────────────
 const devStyles = StyleSheet.create({
-  resetBadgesBtn: {
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#c0392b',
-    backgroundColor: Colors.ui.card,
-  },
-  resetBadgesBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#c0392b',
-  },
   adminCleanBtn: {
     alignItems: 'center',
     paddingVertical: 13,

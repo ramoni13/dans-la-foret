@@ -351,6 +351,7 @@ interface PlayerState {
 
   // ── Actions tutoriels bonus ──────────────────────────────────────────────────
   dismissBonusTutorial: (bonusId: BonusId) => void;
+  setBonusTutorialEnabled: (bonusId: BonusId, enabled: boolean) => void;
   resetBonusTutorials: () => void;
 
   // ── Actions effet visuel ───────────────────────────────────────────────────
@@ -1146,6 +1147,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       : [...state.bonusTutorialDismissed, bonusId],
   })),
 
+  setBonusTutorialEnabled: (bonusId, enabled) => set(state => ({
+    bonusTutorialDismissed: enabled
+      ? state.bonusTutorialDismissed.filter(id => id !== bonusId)
+      : state.bonusTutorialDismissed.includes(bonusId)
+        ? state.bonusTutorialDismissed
+        : [...state.bonusTutorialDismissed, bonusId],
+  })),
+
   resetBonusTutorials: () => set({ bonusTutorialDismissed: [] }),
 
   // ── Effet visuel ─────────────────────────────────────────
@@ -1410,7 +1419,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   // ── Pub volontaire regardée ───────────────────────────────
   // Appelée APRÈS le visionnage complet. Le plafond quotidien de chaque emplacement est dans `adRewards.ts`.
   //  - bonus_* : le bonus doit être épuisé (sinon la pub ne servirait à rien : refus, plafond non consommé) ;
-  //    il repasse à BONUS_USES_PER_DAY. Refusé aux premium (bonus déjà illimités) ;
+  //    il repasse à BONUS_USES_PER_DAY. Refusé aux premium (pas de quota quotidien) ;
   
   // Aucune pub ne donne de graines, de grille du Forestier ni de jeton de Duel.
   claimAdReward: (placement) => {

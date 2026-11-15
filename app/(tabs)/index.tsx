@@ -313,7 +313,7 @@ function LevelsScreen({
             </Text>
             <Text style={[
               styles.levelCardLabel,
-              { color: currentUnlocked ? selectedLevelDef.color : 'rgba(255,255,255,0.4)' },
+              { color: currentUnlocked ? Colors.ui.seed : 'rgba(255,255,255,0.4)' },
             ]}>
               {t('level_prefix') + ' ' + selectedLevelDef.id.replace('niveau_', '')}
             </Text>
@@ -439,7 +439,7 @@ function LevelsScreen({
                         isRecommended ? t('levels_recommended_badge') : '',
                       ].filter(Boolean).join(', ')
                     : undefined}
-                  onPress={() => unlocked && router.push(`/game/${challenge.id}`)}
+                  onPress={() => unlocked && router.push(`/game/${challenge.id}?returnTo=levels`)}
                   activeOpacity={unlocked ? 0.8 : 1}
                 >
                   <View style={[

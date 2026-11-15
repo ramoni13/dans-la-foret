@@ -134,7 +134,7 @@ export default function ONFLobbyScreen() {
         {/* ── En-tête compact : retour, titre, grilles réussies ── */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.replace('/(tabs)')}
             style={styles.backBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >

@@ -19,12 +19,18 @@ import { useT } from '../../i18n';
 
 interface AbandonConfirmModalProps {
   visible: boolean;
+  title?: string;
+  message?: string;
+  warning?: string;
   onContinue: () => void;   // Ferme le modal, le joueur reprend
   onAbandon: () => void;    // Confirme l'abandon
 }
 
 export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
   visible,
+  title,
+  message,
+  warning,
   onContinue,
   onAbandon,
 }) => {
@@ -62,6 +68,7 @@ export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
       transparent
       animationType="none"
       statusBarTranslucent
+      onRequestClose={onContinue}
     >
       <Animated.View style={[styles.backdrop, { opacity: opacityAnim }]}>
         <Animated.View
@@ -72,9 +79,9 @@ export const AbandonConfirmModal: React.FC<AbandonConfirmModalProps> = ({
             <Text style={styles.iconText}>{'\u26A0\uFE0F'}</Text>
           </Animated.View>
 
-          <Text style={styles.title}>{t('abandon_title')}</Text>
-          <Text style={styles.message}>{t('abandon_message')}</Text>
-          <Text style={styles.warning}>{t('abandon_warning')}</Text>
+          <Text style={styles.title}>{title ?? t('abandon_title')}</Text>
+          <Text style={styles.message}>{message ?? t('abandon_message')}</Text>
+          <Text style={styles.warning}>{warning ?? t('abandon_warning')}</Text>
 
           {/* Actions */}
           <TouchableOpacity

@@ -216,6 +216,7 @@ function ChallengesTab({ frameBottom, innerPadH }: { frameBottom: number; innerP
       {/* ── Défi de la forêt : règle, 3 paliers (déblocage, contenu), fonctionnement, récompenses ── */}
       <ChallengeCard icon="🌲" titleKey="challenges_onf_title" color="#6A1B9A">
         <Text style={challengeStyles.paraText}>{t('challenges_onf_desc')}</Text>
+        <BulletItem text={t('challenges_onf_bonuses')} />
 
         <View style={challengeStyles.bonusSectionSep} />
         <Text style={challengeStyles.bonusSectionLabel}>{t('challenges_onf_tiers_label')}</Text>

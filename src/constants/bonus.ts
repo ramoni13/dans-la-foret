@@ -7,8 +7,14 @@ export interface BonusDefinition {
   label: string;
   description: string;
   icon: string;
-  /** Nombre d'utilisations journalières offertes (reset à minuit) — illimité en premium */
+  /** Nombre d'utilisations journalières offertes (reset à minuit) — sans quota quotidien en Premium */
   dailyLimit: number;
+}
+
+export const BONUS_USES_PER_CHALLENGE = 1;
+
+export function canUseBonusInAttempt(bonusUsed: readonly BonusId[], bonusId: BonusId): boolean {
+  return bonusUsed.filter(usedId => usedId === bonusId).length < BONUS_USES_PER_CHALLENGE;
 }
 
 export const BONUS_DEFINITIONS: Record<BonusId, BonusDefinition> = {

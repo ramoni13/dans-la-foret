@@ -32,8 +32,18 @@ export interface PremiumCardProps {
 }
 
 const PERKS = [
-  { emoji: '🎁', label: 'premium_perk1', free: 'premium_bonus_limit', premium: '∞' },
-  { emoji: '🔴', label: 'premium_perk2', free: 'premium_bonus_limit', premium: '∞' },
+  {
+    emoji: '🎁',
+    label: 'premium_perk1',
+    free: 'premium_bonus_limit',
+    premium: 'premium_bonus_limit_per_attempt',
+  },
+  {
+    emoji: '🔴',
+    label: 'premium_perk2',
+    free: 'premium_bonus_limit',
+    premium: 'premium_bonus_limit_per_attempt',
+  },
   { emoji: '🏅', label: 'premium_perk3', free: null, premium: '✓' },
 ] as const;
 
@@ -129,11 +139,16 @@ export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) 
                     <Text style={styles.cellFree}>{perk.free ? t(perk.free) : '—'}</Text>
                   </View>
                   <View style={styles.colPremium}>
-                    <Text style={styles.cellPremium}>{perk.premium}</Text>
+                    <Text style={styles.cellPremium}>
+                      {perk.premium === 'premium_bonus_limit_per_attempt'
+                        ? t(perk.premium)
+                        : perk.premium}
+                    </Text>
                   </View>
                 </View>
               ))}
             </View>
+            <Text style={styles.challengeQuotaNote}>{t('premium_bonus_limit_note')}</Text>
 
             {/* Bouton achat */}
             {/* TODO : remplacer onPurchase par l'appel RevenueCat IAP */}
@@ -322,7 +337,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   colPremium: {
-    width: 56,
+    width: 76,
     alignItems: 'center',
   },
   headerFree: {
@@ -353,7 +368,7 @@ const styles = StyleSheet.create({
   },
   cellPremium: {
     color: '#8BC34A',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '800',
   },
   purchaseBtn: {

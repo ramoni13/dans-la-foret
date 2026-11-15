@@ -128,7 +128,10 @@ function computeCompletedLevels(completed: string[]): string[] {
 
 export default function GameScreen() {
   const t = useT();
-  const { challengeId } = useLocalSearchParams<{ challengeId: string }>();
+  const { challengeId, returnTo } = useLocalSearchParams<{
+    challengeId: string;
+    returnTo?: string;
+  }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -195,7 +198,7 @@ export default function GameScreen() {
 
   // ── Recharge d'UN bonus via pub (joueur gratuit) ──────────
   // Chaque bonus a sa propre pub et son propre plafond quotidien (3 recharges). Un bonus à 0 propose sa pub
-  // tout de suite, sans attendre l'autre ; la pub ne recharge que ce bonus. Premium : bonus illimités, aucune pub.
+  // tout de suite, sans attendre l'autre ; la pub ne recharge que ce bonus. Premium : aucun quota quotidien, aucune pub.
   const revealAd  = useRewardedAd('bonus_reveal_cell');
   const instinctAd = useRewardedAd('bonus_instinct');
   const bonusAdRemaining = {
@@ -221,8 +224,12 @@ export default function GameScreen() {
     }
     setShowAbandonModal(false);
     game.resetGame();
-    router.replace('/(tabs)/');
-  }, [challengeId, player, game, router]);
+    if (returnTo === 'levels' && router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/');
+    }
+  }, [challengeId, player, game, router, returnTo]);
 
   // ── BackHandler Android ────────────────────────────────────
   useEffect(() => {
@@ -233,24 +240,23 @@ export default function GameScreen() {
     return () => sub.remove();
   }, [handleAbandon]);
 
-  // ── AppState : arrêter le chrono si l'app passe en arrière-plan ───────────
-  // Équivalent d'un abandon silencieux : le chrono se fige, l'abandon est enregistré.
+  // ── Retour à l'accueil si l'app passe en arrière-plan pendant une partie ──
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'background' || nextState === 'inactive') {
-        // Ne rien faire si la partie est déjà terminée ou pas encore démarrée
-        const gameState = useGameStore.getState();
-        if (!gameState.startTime || gameState.isVictory) return;
-        // Geler le chrono
-        gameState.stopTimer();
-        // Enregistrer l'abandon pour qu'il compte dans les stats (ne navigue pas)
-        if (challengeId) {
-          usePlayerStore.getState().markChallengeAbandoned(challengeId);
-        }
+      if (nextState !== 'background') return;
+
+      const gameState = useGameStore.getState();
+      if (!gameState.currentChallenge || gameState.isVictory) return;
+
+      gameState.stopTimer();
+      if (gameState.startTime && challengeId) {
+        usePlayerStore.getState().markChallengeAbandoned(challengeId);
       }
+      gameState.resetGame();
+      router.replace('/(tabs)');
     });
     return () => sub.remove();
-  }, [challengeId]);
+  }, [challengeId, router]);
 
   // ── Reset de la garde d'évaluation des badges quand la victoire est annulée ──
   // Permet à la prochaine victoire (rejouer le même défi) d'être réévaluée.
@@ -523,7 +529,7 @@ export default function GameScreen() {
     const username = auth.currentUser?.displayName ?? 'Joueur';
     const isAnonymous = auth.currentUser?.isAnonymous ?? true;
     // Le Record du Monde ne peut être battu que lors du premier essai (défi jamais complété avant) ET sans
-    // aucun bonus : sinon un joueur premium (bonus illimités) ou un joueur gratuit rechargeant ses bonus par
+    // aucun bonus : sinon un joueur premium utilisant un bonus ou un joueur gratuit rechargeant ses bonus par
     // vidéo pourrait s'en servir pour battre un record.
     const isFirstAttempt = !completedChallengesBeforeUpdate.includes(challenge.id);
     const canSetRecord = isFirstAttempt && game.bonusUsed.length === 0;

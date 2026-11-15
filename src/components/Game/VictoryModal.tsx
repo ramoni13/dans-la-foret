@@ -80,6 +80,7 @@ interface VictoryModalProps {
   /** Bouton secondaire optionnel (Solo : « Continuer le niveau N »), affiché entre le principal et « Retour au menu ». */
   onSecondaryAction?: () => void;
   secondaryActionLabel?: string;
+  showBackToMenu?: boolean;
   onBackToMenu: () => void;
   confettiPieces?: ConfettiPiece[];
   /** « Prochains trophées » (3 au plus) avec leur progression (Progression v2, C8). */
@@ -108,7 +109,8 @@ const DIFFICULTY_EMOJIS: Partial<Record<DifficultyLevel, string>> = {
 
 export const VictoryModal: React.FC<VictoryModalProps> = ({
   visible, elapsedTime, seedsEarned, seedsBeforeGain, rewardNote, difficulty, challengeNumber,
-  onNextChallenge, nextChallengeLabel, onSecondaryAction, secondaryActionLabel, onBackToMenu, confettiPieces,
+  onNextChallenge, nextChallengeLabel, onSecondaryAction, secondaryActionLabel,
+  showBackToMenu = true, onBackToMenu, confettiPieces,
   nextTrophies = [], obtainedBadgeIds = [], badgeQueue = [], onBadgeQueueEmpty,
   worldRecord = null, isNewWorldRecord = false, previousRecordHolder = null,
   isPerfectRun = false, perfectSeedsBonus = 0, onPerfectBonusCollected,
@@ -649,9 +651,11 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
                   <Text style={styles.btnOutlineText}>{secondaryActionLabel}</Text>
                 </TouchableOpacity>
               ) : null}
-              <TouchableOpacity style={styles.btnSecondary} onPress={onBackToMenu} activeOpacity={0.8}>
-                <Text style={styles.btnSecondaryText}>{t('victory_back_menu')}</Text>
-              </TouchableOpacity>
+              {showBackToMenu && (
+                <TouchableOpacity style={styles.btnSecondary} onPress={onBackToMenu} activeOpacity={0.8}>
+                  <Text style={styles.btnSecondaryText}>{t('victory_back_menu')}</Text>
+                </TouchableOpacity>
+              )}
 
             </View>
           </TouchableWithoutFeedback>

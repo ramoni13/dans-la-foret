@@ -88,10 +88,13 @@ Expert attendu : React Native / Expo 57 / TypeScript / Zustand / Firebase, et ga
   Le critère « jamais abandonné » est SUPPRIMÉ. Le maximum est toujours 3, sans exception.
 - On stocke la MEILLEURE note par défi (`challengeStars: Record<challengeId, 1|2|3>`).
   Les étoiles ne baissent jamais et ne se dépensent jamais.
-- Seuil pour débloquer le niveau suivant (D1), sur 30 possibles :
-  - 6 ⭐ pour les niveaux qui introduisent une règle : 1, 3, 5, 7, 9, 11, 12, 17, 19 ;
-  - 6 ⭐ pour les épreuves sans bonus : 15, 18, 21 ;
-  - 4 ⭐ pour les autres niveaux : 2, 4, 6, 8, 10, 13, 14, 16, 20.
+- Seuil pour débloquer le niveau suivant (D1), sur 30 possibles. Chaque paire indique
+  le seuil exigeant (niveaux qui introduisent une règle et épreuves sans bonus) puis le
+  seuil standard :
+  - chapitres 1–2 : 6 / 4 ⭐ ;
+  - chapitres 3–4 : 7 / 5 ⭐ ;
+  - chapitres 5–6 : 8 / 6 ⭐ ;
+  - chapitre 7 : 9 / 7 ⭐.
 - Le niveau N+1 est ouvert si étoiles(N) ≥ seuil(N). `currentLevel` = 1 + nombre de
   niveaux consécutifs validés depuis le niveau 1 (maximum 21). `levelsCompleted`
   (0 à 21) sert à savoir si le niveau 21 lui-même est validé.

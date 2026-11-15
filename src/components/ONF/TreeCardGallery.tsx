@@ -15,6 +15,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Modal,
+  PanResponder,
   ScrollView,
   StyleSheet,
   Text,
@@ -146,6 +147,14 @@ export function TreeCardGallery({ visible, onClose, initialCardId, initialTab = 
   }, [slideAnim, screenW]);
   const goLeft = useCallback(() => { if (currentIndex > 0) navigateTo(currentIndex - 1, 'left'); }, [currentIndex, navigateTo]);
   const goRight = useCallback(() => { if (currentIndex < total - 1) navigateTo(currentIndex + 1, 'right'); }, [currentIndex, total, navigateTo]);
+  const swipeResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) =>
+      Math.abs(gesture.dx) > 20 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+    onPanResponderRelease: (_, gesture) => {
+      if (gesture.dx < -40) goRight();
+      else if (gesture.dx > 40) goLeft();
+    },
+  }), [goLeft, goRight]);
   const currentCard = owned[currentIndex] ?? null;
 
   const cardMaxH = screenH * 0.55;
@@ -274,7 +283,10 @@ export function TreeCardGallery({ visible, onClose, initialCardId, initialTab = 
                     <Text style={[styles.arrowText, currentIndex === 0 && styles.arrowTextDisabled]}>‹</Text>
                   </TouchableOpacity>
 
-                  <Animated.View style={[{ width: cardW, height: cardH, transform: [{ translateX: slideAnim }] }]}>
+                  <Animated.View
+                    {...swipeResponder.panHandlers}
+                    style={[{ width: cardW, height: cardH, transform: [{ translateX: slideAnim }] }]}
+                  >
                     {currentCard && (
                       <TreeCardView key={currentCard.id} tree={currentCard} size="normal" cardWidth={cardW} cardHeight={cardH} />
                     )}

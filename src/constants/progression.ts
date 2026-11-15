@@ -54,14 +54,14 @@ export interface LevelProgress {
 
 // ── Seuils d'étoiles (C1 / D1) ────────────────────────────────────────────────
 // Niveau N+1 ouvert si étoiles(N) >= seuil(N), sur 30 possibles.
-//   6 ⭐ : niveaux qui introduisent une règle (1, 3, 5, 7, 9, 11, 12, 17, 19)
-//   6 ⭐ : épreuves sans bonus (15, 18, 21)
-//   4 ⭐ : tous les autres niveaux
+// Seuils exigeant / standard par chapitre : 6/4 (Ch. 1–2), 7/5 (Ch. 3–4),
+// 8/6 (Ch. 5–6), 9/7 (Ch. 7). Le seuil exigeant s'applique aux niveaux qui
+// introduisent une règle et aux épreuves sans bonus.
 
 export const STAR_THRESHOLDS: Readonly<Record<number, number>> = {
-  1: 6,  2: 4,  3: 6,  4: 4,  5: 6,  6: 4,  7: 6,
-  8: 4,  9: 6,  10: 4, 11: 6, 12: 6, 13: 4, 14: 4,
-  15: 6, 16: 4, 17: 6, 18: 6, 19: 6, 20: 4, 21: 6,
+  1: 6,  2: 4,  3: 6,  4: 4,  5: 6,  6: 4,  7: 7,
+  8: 5,  9: 7,  10: 5, 11: 7, 12: 7, 13: 6, 14: 6,
+  15: 8, 16: 6, 17: 8, 18: 8, 19: 9, 20: 7, 21: 9,
 };
 
 /** Seuil d'étoiles du niveau `level` (1 à 21), ou null si le niveau n'existe pas. */

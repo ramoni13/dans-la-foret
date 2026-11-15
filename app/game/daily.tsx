@@ -661,6 +661,7 @@ export default function DailyGameScreen() {
           isNewWorldRecord={isNewDailyRecord}
           previousRecordHolder={isNewDailyRecord ? prevDailyRecordHolder : null}
           nextChallengeLabel={t('daily_next')}
+          showBackToMenu={false}
           onNextChallenge={() => {
             setRouletteVisible(true);
           }}

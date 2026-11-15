@@ -29,8 +29,10 @@ import { useAudioStore } from '../../src/store/audioStore';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
+import { HintOverlay } from '../../src/components/Bonus/HintOverlay';
 import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { FailModal } from '../../src/components/Game/FailModal';
+import { AbandonConfirmModal } from '../../src/components/Game/AbandonConfirmModal';
 import { OnfBriefingModal } from '../../src/components/LevelBriefing/OnfBriefingModal';
 import { useGame } from '../../src/hooks/useGame';
 import { usePlayerStore } from '../../src/store/playerStore';
@@ -72,6 +74,8 @@ import { TreeCard } from '../../src/data/treesData';
 import { ONFCardUnlockBanner } from '../../src/components/ONF/ONFCardUnlockBanner';
 import { TreeCardGallery } from '../../src/components/ONF/TreeCardGallery';
 import { useT } from '../../src/i18n';
+import { useRewardedAd } from '../../src/hooks/useRewardedAd';
+import type { BonusId } from '../../src/constants/bonus';
 
 const native = Platform.OS !== 'web';
 
@@ -111,6 +115,7 @@ export default function ONFGameScreen() {
   /** Briefing affiché avant la première partie ONF */
   const [briefingDone, setBriefingDone] = useState(player.hasSeenOnfBriefing);
   const [showFailModal, setShowFailModal] = useState(false);
+  const [showAbandonModal, setShowAbandonModal] = useState(false);
   const badgesEvaluatedRef = useRef(false);
   /** Nombre de validations incorrectes pendant cette partie ONF */
   const onfFailCountRef = useRef(0);
@@ -118,6 +123,23 @@ export default function ONFGameScreen() {
   const [justUnlockedCard, setJustUnlockedCard] = useState<TreeCard | null>(null);
   const [galleryVisible, setGalleryVisible] = useState(false);
 
+  const revealAd = useRewardedAd('bonus_reveal_cell');
+  const instinctAd = useRewardedAd('bonus_instinct');
+  const bonusAdRemaining = {
+    reveal_cell: revealAd.available ? revealAd.remaining : 0,
+    instinct: instinctAd.available ? instinctAd.remaining : 0,
+  };
+  const handleWatchAd = useCallback((bonusId: BonusId) => {
+    if (bonusId === 'reveal_cell') revealAd.watch();
+    else if (bonusId === 'instinct') instinctAd.watch();
+  }, [revealAd.watch, instinctAd.watch]);
+
+  const handleQuit = useCallback(() => setShowAbandonModal(true), []);
+  const handleQuitConfirm = useCallback(() => {
+    setShowAbandonModal(false);
+    game.resetGame();
+    router.replace('/game/onf-lobby');
+  }, [game, router]);
 
   // ── Sélection et chargement d'un défi ────────────────────
   //
@@ -170,8 +192,7 @@ export default function ONFGameScreen() {
       }
 
       game.loadChallenge(result.challenge);
-      // Mode ONF : aucun bonus disponible
-      game.setBonusDisabled(true);
+      game.setBonusDisabled(false);
       // Le timer démarrera après le countdown (handleCountdownDone)
       // Pas de startTimer ici — le countdown s'en charge
       setLoading(false);
@@ -222,6 +243,15 @@ export default function ONFGameScreen() {
       )
     : false;
 
+  const displayBoard = useMemo(() => {
+    if (game.revealCellIndex === null || game.revealElementId === null) {
+      return game.playerBoard;
+    }
+    const board = [...game.playerBoard];
+    board[game.revealCellIndex] = game.revealElementId;
+    return board;
+  }, [game.playerBoard, game.revealCellIndex, game.revealElementId]);
+
   // ── Couleur des cases ─────────────────────────────────────
   const getCellColorOnf = useCallback((cellIndex: number): string => {
     // AIDE DÉSACTIVÉE : coloration rouge des cases en erreur après validation.
@@ -230,16 +260,27 @@ export default function ONFGameScreen() {
     //   return ROW_COL_VIOLATION_COLOR;
     // }
 
+    if (game.errorHintCells.includes(cellIndex)) {
+      return Colors.cell.wrong;
+    }
+    if (game.revealCellIndex === cellIndex) {
+      return '#F59E0B';
+    }
+
     // Case fixe
     if (fixedCells.has(cellIndex)) {
       return Colors.cell.fixed;
     }
     // Vide
     return Colors.cell.empty;
-  }, [fixedCells]);
+  }, [fixedCells, game.errorHintCells, game.revealCellIndex]);
 
   // ── Tap sur une case ──────────────────────────────────────
   const handleCellPress = useCallback((cellIndex: number) => {
+    if (game.revealActive) {
+      game.handleRevealCellPress(cellIndex);
+      return;
+    }
     if (game.selectedElement) {
       game.placeAndDeselect(cellIndex, game.selectedElement);
     } else if (game.playerBoard[cellIndex] && !fixedCells.has(cellIndex)) {
@@ -372,12 +413,11 @@ export default function ONFGameScreen() {
   // ── BackHandler Android ───────────────────────────────────
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      game.resetGame();
-      router.replace('/(tabs)');
+      handleQuit();
       return true;
     });
     return () => sub.remove();
-  }, []);
+  }, [handleQuit]);
 
   // AIDE DÉSACTIVÉE : effacement des violations rouge au prochain placement.
   // Réactiver si les joueurs demandent ce retour visuel.
@@ -410,7 +450,7 @@ export default function ONFGameScreen() {
           <Text style={styles.allCompletedText}>{t('onf_tier_exhausted_msg')}</Text>
           <TouchableOpacity
             style={styles.errorBtn}
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.replace('/game/onf-lobby')}
             activeOpacity={0.8}
           >
             <Text style={styles.errorBtnText}>{t('onf_tier_exhausted_btn')}</Text>
@@ -435,7 +475,7 @@ export default function ONFGameScreen() {
           </Text>
           <TouchableOpacity
             style={styles.errorBtn}
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.replace('/game/onf-lobby')}
             activeOpacity={0.8}
           >
             <Text style={styles.errorBtnText}>{t('onf_back_home')}</Text>
@@ -483,7 +523,7 @@ export default function ONFGameScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity
-              onPress={() => { game.resetGame(); router.replace('/(tabs)'); }}
+              onPress={handleQuit}
               style={styles.backBtn}
             >
               <Text style={styles.backText}>{t('onf_quit')}</Text>
@@ -523,27 +563,46 @@ export default function ONFGameScreen() {
           <Text style={styles.onfBannerText}>
             {t('onf_sudoku_banner')}
           </Text>
-          <TouchableOpacity
-            style={[
-              styles.validateBtn,
-              !allFilled && styles.validateBtnDisabled,
-            ]}
-            onPress={handleValidate}
-            activeOpacity={0.8}
-            disabled={!allFilled}
-          >
-            <Text style={styles.validateBtnText}>{t('onf_validate')}</Text>
-          </TouchableOpacity>
+          <Text style={styles.onfBonusBannerText}>{t('onf_bonus_banner')}</Text>
         </View>
+
+        <HintOverlay
+          seeds={player.seeds}
+          bonusUsed={game.bonusUsed}
+          selectedElement={game.selectedElement}
+          isPremium={player.isPremium}
+          bonusDisabled={game.bonusDisabled}
+          onActivateBonus={game.activateBonus}
+          dailyBonusUses={player.dailyBonusUses}
+          highlightDeadline={game.revealDeadline}
+          instinctDeadline={game.instinctDeadline}
+          highlightActive={game.revealActive}
+          revealActive={game.revealActive}
+          hasPlacedElements={game.playerBoard.some((element, index) =>
+            element !== null && !fixedCells.has(index)
+          )}
+          adRemaining={bonusAdRemaining}
+          onWatchAd={handleWatchAd}
+          rightSlot={
+            <TouchableOpacity
+              style={[styles.validateBtn, !allFilled && styles.validateBtnDisabled]}
+              onPress={handleValidate}
+              activeOpacity={0.8}
+              disabled={!allFilled}
+            >
+              <Text style={styles.validateBtnText}>{t('onf_validate')}</Text>
+            </TouchableOpacity>
+          }
+        />
 
         {/* ── Plateau ── */}
         <View style={styles.boardArea}>
           <BoardRenderer
             boardDef={boardDef}
-            playerBoard={game.playerBoard}
+            playerBoard={displayBoard}
             fixedCells={fixedCells}
-            selectedElement={game.selectedElement}
-            highlightActive={false}
+            selectedElement={game.revealActive ? null : game.selectedElement}
+            highlightActive={game.errorHintCells.length > 0 || game.revealCellIndex !== null}
             getCellColor={getCellColorOnf}
             onCellPress={handleCellPress}
             challengeKey={challenge?.id}
@@ -567,8 +626,17 @@ export default function ONFGameScreen() {
           onGiveUp={() => {
             setShowFailModal(false);
             game.resetGame();
-            router.replace('/(tabs)');
+            router.replace('/game/onf-lobby');
           }}
+        />
+
+        <AbandonConfirmModal
+          visible={showAbandonModal}
+          title={t('onf_abandon_title')}
+          message={t('onf_abandon_message')}
+          warning={t('onf_abandon_warning')}
+          onContinue={() => setShowAbandonModal(false)}
+          onAbandon={handleQuitConfirm}
         />
 
         {/* ── Modal victoire ── */}
@@ -592,7 +660,7 @@ export default function ONFGameScreen() {
           onBackToMenu={() => {
             setJustUnlockedCard(null);
             game.resetGame();
-            router.replace('/(tabs)');
+            router.replace('/game/onf-lobby');
           }}
         />
       </View>
@@ -754,9 +822,7 @@ const styles = StyleSheet.create({
 
   // Bannière ONF
   onfBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 2,
     backgroundColor: '#E8F5E9',
     paddingVertical: 6,
     paddingHorizontal: 16,
@@ -768,7 +834,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2E7D32',
     flex: 1,
-    marginRight: 12,
+  },
+  onfBonusBannerText: {
+    fontSize: 11,
+    color: '#2E7D32',
   },
   validateBtn: {
     backgroundColor: Colors.forest.medium,

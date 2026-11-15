@@ -13,7 +13,7 @@
 //   sans attendre l'autre : la pub ne recharge que CE bonus (retour à 3 utilisations).
 // - `adRemaining(bonusId)` > 0 : plafond quotidien de recharges de ce bonus non atteint.
 // - Un clic appelle `onWatchAd(bonusId)` ; l'écran montre la pub (service `rewardedAdService`) puis crédite.
-// Premium : bonus illimités, aucune pub.
+// Chaque bonus est utilisable une fois par tentative. Premium n'a pas de quota quotidien ni de pub.
 // ============================================================
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -25,9 +25,16 @@ import {
   Modal,
   Animated,
   Platform,
+  Switch,
 } from 'react-native';
 
-import { BonusId, BONUS_DEFINITIONS, BASE_BONUS_IDS } from '../../constants/bonus';
+import {
+  canUseBonusInAttempt,
+  BONUS_USES_PER_CHALLENGE,
+  BonusId,
+  BONUS_DEFINITIONS,
+  BASE_BONUS_IDS,
+} from '../../constants/bonus';
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
@@ -117,16 +124,20 @@ interface BonusExplainModalProps {
   visible: boolean;
   bonusId: BonusId;
   canActivate: boolean;
+  helpEnabled: boolean;
   onDismiss: () => void;
   onActivate: () => void;
+  onToggleHelp: (enabled: boolean) => void;
 }
 
 const BonusExplainModal: React.FC<BonusExplainModalProps> = ({
   visible,
   bonusId,
   canActivate,
+  helpEnabled,
   onDismiss,
   onActivate,
+  onToggleHelp,
 }) => {
   const t = useT();
   const def = BONUS_DEFINITIONS[bonusId];
@@ -178,6 +189,17 @@ const BonusExplainModal: React.FC<BonusExplainModalProps> = ({
             ))}
           </View>
 
+          <View style={modalStyles.helpToggleRow}>
+            <Text style={modalStyles.helpToggleLabel}>{t('bonus_help_toggle')}</Text>
+            <Switch
+              value={helpEnabled}
+              onValueChange={onToggleHelp}
+              trackColor={{ false: Colors.ui.border, true: Colors.forest.medium }}
+              thumbColor="#fff"
+              accessibilityLabel={t('bonus_help_toggle')}
+            />
+          </View>
+
           {/* Boutons */}
           <View style={modalStyles.buttonsRow}>
             <TouchableOpacity
@@ -224,6 +246,8 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
   onWatchAd,
 }) => {
   const t = useT();
+  const bonusTutorialDismissed = usePlayerStore(s => s.bonusTutorialDismissed);
+  const setBonusTutorialEnabled = usePlayerStore(s => s.setBonusTutorialEnabled);
 
   // Modale d'explication ouverte
   const [explainBonusId, setExplainBonusId] = useState<BonusId | null>(null);
@@ -232,6 +256,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
   const canWatchAdFor = (bonusId: BonusId): boolean =>
     !isPremium &&
     !bonusDisabled &&
+    canUseBonusInAttempt(bonusUsed, bonusId) &&
     (dailyBonusUses?.[bonusId] ?? 1) <= 0 &&
     (adRemaining?.[bonusId] ?? 0) > 0;
 
@@ -277,6 +302,16 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
       }
     }
 
+    const challengeUses = bonusUsed.filter(usedId => usedId === bonusId).length;
+    const challengeLimitReached = !canUseBonusInAttempt(bonusUsed, bonusId);
+    const dailyUsesAvailable = isPremium || !dailyBonusUses ||
+      (dailyBonusUses[bonusId] ?? 0) > 0;
+    const helpEnabled = !bonusTutorialDismissed.includes(bonusId);
+    if (!helpEnabled && !challengeLimitReached && dailyUsesAvailable && canActivateBonus(bonusId)) {
+      onActivateBonus(bonusId);
+      return;
+    }
+
     // Toujours afficher la modale d'explication au clic
     setExplainBonusId(bonusId);
   };
@@ -291,6 +326,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
     if (!bonusId) return;
 
     if (bonusDisabled) return;
+    if (!canUseBonusInAttempt(bonusUsed, bonusId)) return;
 
     if (!isPremium && dailyBonusUses) {
       const remaining = dailyBonusUses[bonusId] ?? 0;
@@ -304,6 +340,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
 
   const explainBonusCanActivate = explainBonusId
     ? !bonusDisabled &&
+      canUseBonusInAttempt(bonusUsed, explainBonusId) &&
       (isPremium || (dailyBonusUses?.[explainBonusId] ?? 1) > 0) &&
       canActivateBonus(explainBonusId)
     : false;
@@ -328,15 +365,19 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
         {visibleBonusIds.map((bonusId) => {
           const def = BONUS_DEFINITIONS[bonusId];
           const alreadyUsed = bonusUsed.includes(def.id);
+          const challengeUses = bonusUsed.filter(usedId => usedId === bonusId).length;
+          const challengeLimitReached = !canUseBonusInAttempt(bonusUsed, bonusId);
           const cooldown = isCooldown(bonusId);
-          const remainingUses = isPremium ? Infinity : (dailyBonusUses?.[bonusId] ?? def.dailyLimit);
+          const dailyRemainingUses = isPremium
+            ? Infinity
+            : (dailyBonusUses?.[bonusId] ?? def.dailyLimit);
+          const challengeRemainingUses = Math.max(0, BONUS_USES_PER_CHALLENGE - challengeUses);
+          const remainingUses = Math.min(challengeRemainingUses, dailyRemainingUses);
           const exhausted = !isPremium && remainingUses <= 0;
-          const disabled = bonusDisabled || exhausted || cooldown;
+          const disabled = bonusDisabled || exhausted || challengeLimitReached || cooldown;
           const dl = getDeadline(bonusId);
 
-          const usesLabel = isPremium
-            ? '\u221e'
-            : `${remainingUses}/${def.dailyLimit}`;
+          const usesLabel = `${remainingUses}/${BONUS_USES_PER_CHALLENGE}`;
 
           // Icône clap : CE bonus est épuisé et sa pub est proposable (indépendant de l'autre bonus)
           const showWatchAdClap = exhausted && canWatchAdFor(bonusId);
@@ -389,8 +430,10 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
           visible
           bonusId={explainBonusId}
           canActivate={explainBonusCanActivate}
+          helpEnabled={!bonusTutorialDismissed.includes(explainBonusId)}
           onDismiss={handleModalDismiss}
           onActivate={handleModalActivate}
+          onToggleHelp={(enabled) => setBonusTutorialEnabled(explainBonusId, enabled)}
         />
       )}
     </View>
@@ -574,6 +617,19 @@ const modalStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     gap: 12,
+  },
+  helpToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  helpToggleLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.ui.text,
+    marginRight: 12,
   },
   stepRow: {
     flexDirection: 'row',

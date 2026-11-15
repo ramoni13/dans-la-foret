@@ -3,8 +3,8 @@
 //
 // Une pub est TOUJOURS volontaire. Trois usages, et trois seulement :
 //  - `foret_commune` : contribuer à la plantation de vrais arbres (accueil), pour tous (free et premium) ;
-//  - `bonus_reveal_cell` / `bonus_instinct` : recharger UN bonus épuisé (joueur gratuit uniquement : le premium a
-//    déjà des bonus illimités, donc aucune pub ne lui est proposée pour cela) ;
+//  - `bonus_reveal_cell` / `bonus_instinct` : recharger UN bonus épuisé (joueur gratuit uniquement : le premium n'a
+//    pas de quota quotidien, donc aucune pub ne lui est proposée pour cela) ;
 //  - `onf_recharge` : recharger le quota global de défis (joueur gratuit uniquement, UNE fois par jour,
 //    et seulement quand le quota du jour est épuisé : +CHALLENGE_AD_RECHARGE_COUNT défis). Le premium n'a pas de quota.
 // Aucune pub ne donne de graines ni de jeton de Duel : aucun déséquilibre free / premium sur la progression ni sur
