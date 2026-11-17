@@ -21,6 +21,7 @@ import {
   TouchableOpacity,
   Platform,
   BackHandler,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,7 +39,6 @@ import { useGame } from '../../src/hooks/useGame';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
-import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
@@ -91,12 +91,12 @@ export default function ONFGameScreen() {
   const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const game = useGame();
   const player = usePlayerStore();
   const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
-  const { borderW } = useFrameLayout();
   // ── État local ────────────────────────────────────────────
   const [countdownDone, setCountdownDone] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -515,7 +515,6 @@ export default function ONFGameScreen() {
           {
             paddingTop: insets.top,
             paddingBottom: Math.max(insets.bottom, 8),
-            paddingHorizontal: borderW,
           },
         ]}
       >
@@ -597,16 +596,21 @@ export default function ONFGameScreen() {
 
         {/* ── Plateau ── */}
         <View style={styles.boardArea}>
-          <BoardRenderer
-            boardDef={boardDef}
-            playerBoard={displayBoard}
-            fixedCells={fixedCells}
-            selectedElement={game.revealActive ? null : game.selectedElement}
-            highlightActive={game.errorHintCells.length > 0 || game.revealCellIndex !== null}
-            getCellColor={getCellColorOnf}
-            onCellPress={handleCellPress}
-            challengeKey={challenge?.id}
-          />
+          <View style={[
+            styles.boardContainer,
+            { maxHeight: Math.min(screenWidth, screenHeight * 0.52) },
+          ]}>
+            <BoardRenderer
+              boardDef={boardDef}
+              playerBoard={displayBoard}
+              fixedCells={fixedCells}
+              selectedElement={game.revealActive ? null : game.selectedElement}
+              highlightActive={game.errorHintCells.length > 0 || game.revealCellIndex !== null}
+              getCellColor={getCellColorOnf}
+              onCellPress={handleCellPress}
+              challengeKey={challenge?.id}
+            />
+          </View>
         </View>
 
         {/* ── Palette ── */}
@@ -858,9 +862,16 @@ const styles = StyleSheet.create({
   // Plateau
   boardArea: {
     flex: 1,
-    alignItems: 'stretch',
-    justifyContent: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.ui.background,
-    paddingVertical: 4,
+    padding: 4,
+  },
+  boardContainer: {
+    width: '100%',
+    maxWidth: 500,
+    aspectRatio: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
 });

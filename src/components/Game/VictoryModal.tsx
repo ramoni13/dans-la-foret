@@ -52,6 +52,7 @@ import { usePlayerStore } from '../../store/playerStore';
 import { RewardFly, useCounterPulse } from './RewardFly';
 import { StarRow, StarSlotLayout } from './StarRow';
 import { PineconeIcon, PineconeText } from './PineconeIcon';
+import { playLevelCompleteTone } from '../../services/starSoundService';
 import {
   LevelGaugeResult,
   StarSequence,
@@ -157,9 +158,11 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   const [starsFinished, setStarsFinished] = useState(!hasStars);
   const [gaugeShown, setGaugeShown] = useState(false);
   const [gaugeValue, setGaugeValue] = useState(starResult?.gauge.shownBefore ?? 0);
+  const levelTonePlayedRef = useRef(false);
 
   useEffect(() => {
     if (visible) {
+      levelTonePlayedRef.current = false;
       const start = seedsBeforeGain ?? (totalSeeds - seedsEarned);
       setDisplayedSeeds(start);
       setDisplayedGain(seedsEarned);
@@ -307,6 +310,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
       setGaugeShown(true);
       setGaugeValue(starResult.gauge.shownAfter);
       if (starResult.gauge.justCompleted) {
+        if (!levelTonePlayedRef.current) {
+          levelTonePlayedRef.current = true;
+          playLevelCompleteTone();
+        }
         AccessibilityInfo.announceForAccessibility(
           starResult.gauge.unlockedLevel
             ? t('victory_level_unlocked', { level: String(starResult.gauge.unlockedLevel) })

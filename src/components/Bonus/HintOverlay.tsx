@@ -38,11 +38,13 @@ import {
 import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
+import { PineconeIcon } from '../Game/PineconeIcon';
 
 const native = Platform.OS !== 'web';
 
 interface HintOverlayProps {
   seeds: number;
+  levelProgress?: { current: number; threshold: number; level: number };
   bonusUsed: BonusId[];
   selectedElement: string | null;
   isPremium: boolean;
@@ -230,6 +232,7 @@ const BonusExplainModal: React.FC<BonusExplainModalProps> = ({
 
 export const HintOverlay: React.FC<HintOverlayProps> = ({
   seeds,
+  levelProgress,
   bonusUsed,
   selectedElement,
   isPremium,
@@ -347,11 +350,27 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Compteur de graines */}
-      <View style={styles.seedsContainer}>
-        <Text style={styles.seedsIcon}>🌱</Text>
-        <Text style={styles.seedsCount}>{seeds}</Text>
-      </View>
+      {levelProgress ? (
+        <View
+          style={styles.seedsContainer}
+          accessible
+          accessibilityLabel={t('levels_stars_gauge_a11y', {
+            current: String(levelProgress.current),
+            threshold: String(levelProgress.threshold),
+            level: String(levelProgress.level),
+          })}
+        >
+          <PineconeIcon size={16} variant="gold" />
+          <Text style={styles.seedsCount}>
+            {`${levelProgress.current}/${levelProgress.threshold}`}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.seedsContainer}>
+          <Text style={styles.seedsIcon}>🌱</Text>
+          <Text style={styles.seedsCount}>{seeds}</Text>
+        </View>
+      )}
 
       {/* Indicateur mode révélation actif */}
       {revealActive && (

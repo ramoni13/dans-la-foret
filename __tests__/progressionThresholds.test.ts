@@ -1,4 +1,16 @@
-import { getLevelStatus } from '../src/constants/progression';
+import {
+  buildStarSequence,
+  getLevelStatus,
+  getStarPopDelays,
+} from '../src/constants/progression';
+
+describe('Solo victory pinecone animation timing', () => {
+  it('spaces the three new pinecones so each pop sound can be heard', () => {
+    const sequence = buildStarSequence(3, 0);
+
+    expect(getStarPopDelays(sequence)).toEqual([120, 520, 920]);
+  });
+});
 
 describe('Solo level progression thresholds', () => {
   it.each([

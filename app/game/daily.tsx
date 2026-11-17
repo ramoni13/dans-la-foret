@@ -49,7 +49,6 @@ import { awardBadgesFirestore } from '../../src/services/badgeService';
 
 import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
-import { useFrameLayout } from '../../src/constants/frameLayout';
 import { Colors } from '../../src/constants/colors';
 import { awardEarnedTrophies } from '../../src/services/trophyService';
 import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
@@ -223,7 +222,6 @@ export default function DailyGameScreen() {
   const player = usePlayerStore();
   const audioIngameEnabled = useAudioStore(s => s.ingameEnabled);
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
-  const { borderW } = useFrameLayout();
   // Ligue du joueur : la plus haute ouverte (Pousse fin ch.3, Grand Chêne fin ch.4) ; compte de
   // développement : Grand Chêne. Même grille, mêmes cases fixées pour tous les joueurs de la ligue.
   const dailyAccess = useFeatureAccess('dev');
@@ -563,7 +561,7 @@ export default function DailyGameScreen() {
       {/* Feuilles qui tombent */}
       <FallingLeaves />
 
-      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 8), paddingHorizontal: borderW }]}>
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 8) }]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>

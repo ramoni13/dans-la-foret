@@ -170,6 +170,10 @@ function LevelsScreen({
   const player  = usePlayerStore();
   const [levelIndex, setLevelIndex] = useState(initialLevelIndex);
 
+  useEffect(() => {
+    setLevelIndex(initialLevelIndex);
+  }, [initialLevelIndex]);
+
   const selectedLevelDef = LEVELS[levelIndex];
   const selectedLevel    = selectedLevelDef.id;
   const challenges       = ALL_CHALLENGES_BY_LEVEL[selectedLevel] ?? [];

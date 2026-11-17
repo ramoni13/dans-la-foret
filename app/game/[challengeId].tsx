@@ -40,6 +40,7 @@ import {
   computeSoloSeeds,
   computeStars,
   getLevelGaugeResult,
+  getLevelStatus,
   getNextAfterWin,
   getLevelFromChallengeId,
   getVictoryNavigation,
@@ -329,6 +330,9 @@ export default function GameScreen() {
 
   const levelNumber = challenge
     ? parseInt(challenge.level.replace('niveau_', ''), 10)
+    : null;
+  const soloLevelStatus = levelNumber !== null
+    ? getLevelStatus(levelNumber, player.challengeStars)
     : null;
   const levelMeta = levelNumber != null ? LEVEL_META[levelNumber] : null;
 
@@ -680,6 +684,11 @@ export default function GameScreen() {
         {/* ── Barre de bonus + bouton Valider (bandeau unique) ── */}
         <HintOverlay
           seeds={player.seeds}
+          levelProgress={soloLevelStatus && levelNumber !== null ? {
+            current: soloLevelStatus.starsShown,
+            threshold: soloLevelStatus.threshold,
+            level: levelNumber,
+          } : undefined}
           bonusUsed={game.bonusUsed}
           selectedElement={game.selectedElement}
           isPremium={player.isPremium}

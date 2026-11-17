@@ -688,9 +688,9 @@ export function buildStarSequence(earnedStars: StarRating, previousStars: number
   };
 }
 
-// Timings (ms) : la séquence complète dure moins de 2 s (C7). Resserrés après essai : la première étoile
-// apparaît presque aussitôt et l'envol vers le compteur ⭐ démarre dès son pop.
-export const STAR_POP_INTERVAL_MS = 260;
+// Timings (ms) : la première pomme de pin apparaît vite, puis les pops sont espacés
+// pour bien distinguer leurs sons. L'envol vers le compteur ⭐ démarre dès chaque pop.
+export const STAR_POP_INTERVAL_MS = 400;
 export const STAR_FIRST_POP_DELAY_MS = 120;
 export const STAR_GAUGE_DELAY_MS = 150;
 export const STAR_SEQUENCE_TARGET_MS = 2500;
