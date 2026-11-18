@@ -2,9 +2,10 @@
 // MUSICPANEL — Pavé de gestion de la musique dans le Profil
 //
 // Structure :
-//   - Ligne "Ambiance Forêt"  (menu)  : toggle + listbox + play
-//   - Ligne "Ambiance Défi"   (ingame): toggle + listbox + play
-//   - Barre de volume
+//   - Ligne "Musique des menus"  (menu)  : toggle + listbox + play
+//   - Ligne "Musique des défis"  (ingame): toggle + listbox + play
+//   (pas de volume : le joueur règle le volume de son appareil)
+//   - Cliquer un titre de la liste le sélectionne ET le préécoute (le précédent s'arrête)
 //   - Section "Acheter" pour les titres verrouillés
 // ============================================================
 
@@ -22,7 +23,7 @@ import { AudioPlayer } from 'expo-audio';
 import { Colors } from '../../constants/colors';
 import { useAudioStore } from '../../store/audioStore';
 import { showAlert } from '../../store/dialogStore';
-import { usePlayerStore, VisualEffect } from '../../store/playerStore';
+import { usePlayerStore } from '../../store/playerStore';
 import { MUSIC_CATALOG, MusicTrack } from '../../constants/music';
 import { BADGE_MAP, getTrophyTexts } from '../../constants/badges';
 import { getChapter } from '../../constants/progression';
@@ -48,7 +49,7 @@ interface RowPickerProps {
   onToggle: (v: boolean) => void;
   tracks: MusicTrack[];
   selectedId: string;
-  onSelect: (id: string) => void;
+  onSelect: (track: MusicTrack) => void;
   previewTrackId: string | null;
   onTogglePreview: (track: MusicTrack) => void;
 }
@@ -83,7 +84,7 @@ function RowPicker({
               <TouchableOpacity
                 key={t.id}
                 style={[rowStyles.listItem, selectedId === t.id && rowStyles.listItemSelected]}
-                onPress={() => onSelect(t.id)}
+                onPress={() => onSelect(t)}
                 activeOpacity={0.7}
               >
                 <Text
@@ -108,9 +109,7 @@ function RowPicker({
         {selectedTrack && (
           <TouchableOpacity
             style={[rowStyles.playBtn, isPlaying && rowStyles.playBtnActive]}
-            onPress={() => onTogglePreview(
-              tracks.find(t => t.id === (previewTrackId && isPlaying ? previewTrackId : selectedId)) ?? selectedTrack
-            )}
+            onPress={() => onTogglePreview(selectedTrack)}
             activeOpacity={0.7}
           >
             <Text style={rowStyles.playBtnIcon}>{isPlaying ? '⏹' : '▶'}</Text>
@@ -227,8 +226,12 @@ export function MusicPanel() {
   );
 
   // ── Gestion du preview ────────────────────────────────────
-  const stopPreview = async () => {
-    // Annuler le timer auto-stop
+  // `previewSeqRef` identifie la demande de préécoute en cours : toute nouvelle demande (ou un arrêt) l'incrémente,
+  // ce qui invalide les lectures encore en cours de démarrage (clics rapides dans la liste).
+  const previewSeqRef = useRef(0);
+
+  /** Coupe le son de préécoute en cours (synchrone, sans toucher à l'état d'affichage). */
+  const releasePreviewSound = () => {
     if (previewTimerRef.current) {
       clearTimeout(previewTimerRef.current);
       previewTimerRef.current = null;
@@ -237,62 +240,71 @@ export function MusicPanel() {
       const s = previewSoundRef.current;
       previewSoundRef.current = null;
       // Déléguer l'arrêt propre au service (gère le bug web ontimeupdate)
-      await audioService.stopPreviewSound(s);
+      audioService.stopPreviewSound(s).catch(() => {});
     }
+  };
+
+  const stopPreview = () => {
+    previewSeqRef.current += 1;
+    releasePreviewSound();
     setPreviewTrackId(null);
     // Signaler au store que le preview est terminé (reprend la musique principale)
     audioStore.setPreviewTrack(null);
   };
 
-  const togglePreview = async (track: MusicTrack) => {
-    if (previewTrackId === track.id) {
-      await stopPreview();
-      return;
-    }
-
-    // Arrêter l'éventuel preview précédent
-    await stopPreview();
+  /** Lance la préécoute d'un titre ; celle du titre précédent est arrêtée immédiatement. */
+  const startPreview = async (track: MusicTrack) => {
+    const seq = ++previewSeqRef.current;
+    releasePreviewSound();
 
     // Signaler au AudioController qu'un preview démarre (pause la musique principale)
     audioStore.setPreviewTrack(track.id);
     setPreviewTrackId(track.id);
 
-    const sound = await audioService.playPreview(track.file, audioStore.volume);
-    if (sound) {
-      previewSoundRef.current = sound;
-
-            // expo-audio : écouter la fin de lecture via addListener
-      if (Platform.OS !== 'web') {
-        sound.addListener('playbackStatusUpdate', (status) => {
-          if (status.didJustFinish) stopPreview();
-        });
-      }
-
-      // Timer de sécurité : arrêt auto après 30 secondes de preview max
-      previewTimerRef.current = setTimeout(() => {
-        stopPreview();
-      }, 30_000);
-    } else {
-      setPreviewTrackId(null);
-      audioStore.setPreviewTrack(null);
+    const sound = await audioService.playPreview(track.file);
+    if (seq !== previewSeqRef.current) {
+      // Une autre demande est arrivée pendant le démarrage : ce son ne doit pas rester audible
+      if (sound) audioService.stopPreviewSound(sound).catch(() => {});
+      return;
     }
+    if (!sound) {
+      stopPreview();
+      return;
+    }
+    previewSoundRef.current = sound;
+
+    // expo-audio : écouter la fin de lecture via addListener
+    if (Platform.OS !== 'web') {
+      sound.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish && seq === previewSeqRef.current) stopPreview();
+      });
+    }
+
+    // Timer de sécurité : arrêt auto après 30 secondes de preview max
+    previewTimerRef.current = setTimeout(() => {
+      if (seq === previewSeqRef.current) stopPreview();
+    }, 30_000);
+  };
+
+  const togglePreview = (track: MusicTrack) => {
+    if (previewTrackId === track.id) stopPreview();
+    else startPreview(track).catch(() => {});
   };
 
   // Nettoyage au démontage
   useEffect(() => {
     return () => {
-      // stopPreview est async mais on ne peut pas await dans cleanup —
-      // on appelle stopPreviewSound directement si un son est en cours
-      if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
-      if (previewSoundRef.current) {
-        const s = previewSoundRef.current;
-        previewSoundRef.current = null;
-        audioService.stopPreviewSound(s).catch(() => {});
-      }
+      previewSeqRef.current += 1;
+      releasePreviewSound();
       audioStore.setPreviewTrack(null);
     };
   }, []);
 
+  /** Clic sur un titre de la liste : il devient le titre choisi ET on l'entend (le précédent s'arrête). */
+  const handlePickTrack = (type: 'ingame' | 'menu', track: MusicTrack) => {
+    handleSelectTrack(type, track.id);
+    togglePreview(track);
+  };
   // ── Sélection de piste avec persistance Firestore ─────────
   const handleSelectTrack = (type: 'ingame' | 'menu', trackId: string) => {
     audioStore.setSelectedTrack(type, trackId);
@@ -339,14 +351,11 @@ export function MusicPanel() {
     return { emoji: '🌱', label: t('music_unlock_seeds', { cost: String(u.cost) }) };
   };
 
-  // ── Volume — slider simplifié via 5 boutons ───────────────
-  const VOLUMES = [0, 0.25, 0.5, 0.75, 1.0];
-
   return (
     <View style={styles.panel}>
       <Text style={styles.panelTitle}>{t('music_panel_title')}</Text>
 
-      {/* Ligne Ambiance Forêt (menu) */}
+      {/* Ligne Musique des menus */}
       <RowPicker
         typeLabel={t('music_type_menu')}
         typeEmoji="🌲"
@@ -354,14 +363,14 @@ export function MusicPanel() {
         onToggle={audioStore.setMenuEnabled}
         tracks={ownedMenu}
         selectedId={audioStore.selectedMenuTrackId}
-        onSelect={id => handleSelectTrack('menu', id)}
+        onSelect={track => handlePickTrack('menu', track)}
         previewTrackId={previewTrackId}
         onTogglePreview={togglePreview}
       />
 
       <View style={styles.divider} />
 
-      {/* Ligne Ambiance Défi (ingame) */}
+      {/* Ligne Musique des défis (ingame) */}
       <RowPicker
         typeLabel={t('music_type_ingame')}
         typeEmoji="🎮"
@@ -369,64 +378,10 @@ export function MusicPanel() {
         onToggle={audioStore.setIngameEnabled}
         tracks={ownedIngame}
         selectedId={audioStore.selectedIngameTrackId}
-        onSelect={id => handleSelectTrack('ingame', id)}
+        onSelect={track => handlePickTrack('ingame', track)}
         previewTrackId={previewTrackId}
         onTogglePreview={togglePreview}
       />
-
-      <View style={styles.divider} />
-
-      {/* Volume */}
-      <View style={styles.volumeRow}>
-        <Text style={styles.volumeLabel}>{t('music_volume')}</Text>
-        <View style={styles.volumeBtns}>
-          {VOLUMES.map(v => (
-            <TouchableOpacity
-              key={v}
-              style={[
-                styles.volumeBtn,
-                Math.abs(audioStore.volume - v) < 0.01 && styles.volumeBtnActive,
-              ]}
-              onPress={() => audioStore.setVolume(v)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.volumeBtnText}>
-                {v === 0 ? '🔇' : v === 1 ? '🔊' : `${Math.round(v * 100)}%`}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* ── Effets visuels ── */}
-      <View style={styles.divider} />
-      <Text style={styles.effectsTitle}>{t('settings_visual_effects')}</Text>
-      <View style={styles.effectsRow}>
-        {([
-          { id: 'leaves'      as VisualEffect, emoji: '🍃', labelKey: 'effect_leaves' },
-          { id: 'butterflies' as VisualEffect, emoji: '🦋', labelKey: 'effect_butterflies' },
-          { id: 'birds'       as VisualEffect, emoji: '🐦', labelKey: 'effect_birds' },
-          { id: 'none'        as VisualEffect, emoji: '❌', labelKey: 'effect_none' },
-        ]).map(opt => (
-          <TouchableOpacity
-            key={opt.id}
-            style={[
-              styles.effectBtn,
-              player.visualEffect === opt.id && styles.effectBtnActive,
-            ]}
-            onPress={() => player.setVisualEffect(opt.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.effectEmoji}>{opt.emoji}</Text>
-            <Text style={[
-              styles.effectLabel,
-              player.visualEffect === opt.id && styles.effectLabelActive,
-            ]}>
-              {t(opt.labelKey)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
 
       {/* ── Réactiver les aides bonus ── */}
       <View style={styles.divider} />
@@ -513,36 +468,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.ui.border,
   },
-  volumeRow: {
-    gap: 8,
-  },
-  volumeLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.forest.dark,
-  },
-  volumeBtns: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  volumeBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: Colors.ui.background,
-    borderWidth: 1,
-    borderColor: Colors.ui.border,
-  },
-  volumeBtnActive: {
-    backgroundColor: Colors.forest.light + '20',
-    borderColor: Colors.forest.medium,
-  },
-  volumeBtnText: {
-    fontSize: 12,
-    color: Colors.ui.textLight,
-    fontWeight: '600',
-  },
   // Section titres verrouillés
   unlockTitle: {
     fontSize: 14,
@@ -612,46 +537,6 @@ const styles = StyleSheet.create({
     color: Colors.ui.textLight,
     fontStyle: 'italic',
     lineHeight: 15,
-  },
-  // ── Effets visuels ──
-  effectsTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.ui.text,
-    marginBottom: 8,
-  },
-  effectsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  effectBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.ui.border,
-    backgroundColor: Colors.ui.background,
-    minWidth: 68,
-    gap: 4,
-  },
-  effectBtnActive: {
-    borderColor: Colors.forest.medium,
-    backgroundColor: Colors.forest.dark + '12',
-  },
-  effectEmoji: {
-    fontSize: 22,
-  },
-  effectLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.ui.textLight,
-  },
-  effectLabelActive: {
-    color: Colors.forest.dark,
-    fontWeight: '700',
   },
   // ── Réactiver les aides bonus ──
   resetTutorialsBtn: {

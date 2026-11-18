@@ -27,6 +27,7 @@ import {
   getDocs,
   serverTimestamp,
   runTransaction,
+  onSnapshot,
   Timestamp,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -320,6 +321,42 @@ export async function getCompletedChallenges(
     const tb = (b.updatedAt as Timestamp)?.toMillis() ?? 0;
     return tb - ta;
   });
+}
+
+// ── Mise à jour en direct ──────────────────────────────────
+/**
+ * Écoute en temps réel les défis du joueur : défi reçu (pending), défi envoyé dont le statut change (adversaire qui
+ * joue, refuse…) et défi reçu terminé. `onChange` est appelé à chaque changement APRÈS l'état initial ; l'appelant
+ * relit alors ses listes. Mêmes requêtes que `getReceivedChallenges` / `getSentChallenges` / `getCompletedChallenges`.
+ * Retourne la fonction d'arrêt de toutes les écoutes.
+ */
+export function subscribeFriendChallenges(myUid: string, onChange: () => void): () => void {
+  const col = collection(db, 'friendChallenges');
+  const queries = [
+    query(col, where('opponentUid', '==', myUid), where('status', '==', 'pending')),
+    query(col, where('challengerUid', '==', myUid)),
+    query(col, where('opponentUid', '==', myUid), where('status', '==', 'completed')),
+  ];
+
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  // Plusieurs écoutes réagissent souvent au même événement (ex. défi terminé) : une seule relecture
+  const notify = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { timer = null; onChange(); }, 250);
+  };
+
+  const unsubscribers = queries.map(q => {
+    let initial = true;
+    return onSnapshot(q, () => {
+      if (initial) { initial = false; return; }
+      notify();
+    }, () => { /* erreur de permissions : pas de mise à jour en direct */ });
+  });
+
+  return () => {
+    if (timer) clearTimeout(timer);
+    unsubscribers.forEach(u => u());
+  };
 }
 
 // Les défis expirés sont supprimés physiquement de Firestore par purgeExpiredDocs(),

@@ -374,7 +374,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
 
       {/* Indicateur mode révélation actif */}
       {revealActive && (
-        <View style={styles.revealBanner}>
+        <View style={styles.revealBanner} pointerEvents="none">
           <Text style={styles.revealBannerText}>{t('bonus_reveal_pick_cell')}</Text>
         </View>
       )}
@@ -462,6 +462,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
 // ── Styles HintOverlay ────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -490,10 +491,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.ui.text,
   },
+  // Hors flux : flotte sous la barre sans décaler le plateau
   revealBanner: {
-    flex: 1,
-    marginHorizontal: 8,
-    backgroundColor: '#F59E0B22',
+    position: 'absolute',
+    top: '100%',
+    left: 16,
+    right: 16,
+    zIndex: 10,
+    marginTop: 4,
+    backgroundColor: '#FEF3C7',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,

@@ -367,7 +367,7 @@ export default function ProfileScreen() {
   // ── Section STATS ─────────────────────────────────────────────────────────────
   if (activeSection === 'stats') {
     return (
-      <View style={StyleSheet.absoluteFill}>
+      <View key="section-stats" style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>{t('profile_section_stats')}</Text>
@@ -380,7 +380,7 @@ export default function ProfileScreen() {
   // ── Section BADGES ────────────────────────────────────────────────────────────
   if (activeSection === 'badges') {
     return (
-      <View style={StyleSheet.absoluteFill}>
+      <View key="section-badges" style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <Text style={styles.sectionHeading}>{t('profile_section_badges')}</Text>
@@ -419,7 +419,7 @@ export default function ProfileScreen() {
   // ── Section CLASSEMENT ────────────────────────────────────────────────────────
   if (activeSection === 'classement') {
     return (
-      <View style={StyleSheet.absoluteFill}>
+      <View key="section-classement" style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
         <View style={[styles.subSection, { top: innerTop }]}>
           <LeaderboardScreen />
@@ -431,7 +431,7 @@ export default function ProfileScreen() {
   // ── Section RÉGLAGES ─────────────────────────────────────────────────────────
   if (activeSection === 'reglages') {
     return (
-      <View style={StyleSheet.absoluteFill}>
+      <View key="section-reglages" style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
         <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
             <Text style={styles.sectionHeading}>{t('profile_section_settings')}</Text>
@@ -540,7 +540,7 @@ export default function ProfileScreen() {
   // ── Section À PROPOS ─────────────────────────────────────────────────────────
   if (activeSection === 'about') {
     return (
-      <View style={StyleSheet.absoluteFill}>
+      <View key="section-about" style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
         <ScrollView
           style={[styles.subSection, { top: innerTop }]}
@@ -602,7 +602,7 @@ export default function ProfileScreen() {
 
   // ── HUB (état initial) ────────────────────────────────────────────────────────
   return (
-    <View style={StyleSheet.absoluteFill}>
+    <View key="section-hub" style={StyleSheet.absoluteFill}>
       <BgImage overlay={0.52} />
       <ScrollView contentContainerStyle={[styles.container, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
 

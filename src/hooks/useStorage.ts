@@ -32,7 +32,6 @@ const AUDIO_STORAGE_KEY = 'dlf_audio_v1';
 interface PersistedAudioState {
   ingameEnabled: boolean;
   menuEnabled: boolean;
-  volume: number;
   selectedIngameTrackId: string;
   selectedMenuTrackId: string;
   /** IDs des musiques déjà possédées au dernier démarrage (évite de re-déclencher la modale) */
@@ -85,8 +84,6 @@ interface PersistedPlayerState {
   lastPlayedDate: string;
   // Tutoriels bonus masqués
   bonusTutorialDismissed: string[];
-  // Effet visuel en jeu
-  visualEffect: string;
   // Défi journalier
   dailyChallengeStreak: number;
   longestDailyChallengeStreak: number;
@@ -150,7 +147,6 @@ function extractPersistable(state: ReturnType<typeof usePlayerStore.getState>): 
     dailyStreak:         state.dailyStreak,
     lastPlayedDate:      state.lastPlayedDate,
     bonusTutorialDismissed: state.bonusTutorialDismissed as string[],
-    visualEffect:          state.visualEffect,
     dailyChallengeStreak:           state.dailyChallengeStreak,
     longestDailyChallengeStreak:    state.longestDailyChallengeStreak,
     lastDailyChallengeDate:         state.lastDailyChallengeDate,
@@ -243,7 +239,6 @@ export function useStorage() {
             dailyStreak:     saved.dailyStreak     ?? 0,
             lastPlayedDate:  saved.lastPlayedDate  ?? '',
             bonusTutorialDismissed: (saved.bonusTutorialDismissed ?? []) as import('../constants/bonus').BonusId[],
-            visualEffect: (saved.visualEffect ?? 'leaves') as import('../store/playerStore').VisualEffect,
             dailyChallengeStreak:        saved.dailyChallengeStreak        ?? 0,
             longestDailyChallengeStreak: (saved as any).longestDailyChallengeStreak ?? 0,
             lastDailyChallengeDate:      saved.lastDailyChallengeDate      ?? '',
@@ -326,7 +321,6 @@ export function useStorage() {
           useAudioStore.getState().hydrate({
             ingameEnabled:         savedAudio.ingameEnabled,
             menuEnabled:           savedAudio.menuEnabled,
-            volume:                savedAudio.volume,
             selectedIngameTrackId: savedAudio.selectedIngameTrackId,
             selectedMenuTrackId:   savedAudio.selectedMenuTrackId,
           });
@@ -351,7 +345,6 @@ export function useStorage() {
       const changed =
         newA.ingameEnabled          !== prevA.ingameEnabled          ||
         newA.menuEnabled            !== prevA.menuEnabled            ||
-        newA.volume                 !== prevA.volume                 ||
         newA.selectedIngameTrackId  !== prevA.selectedIngameTrackId  ||
         newA.selectedMenuTrackId    !== prevA.selectedMenuTrackId    ||
         newA.ownedTrackIds.length   !== prevA.ownedTrackIds.length;
@@ -364,7 +357,6 @@ export function useStorage() {
         const toSave: PersistedAudioState = {
           ingameEnabled:         a.ingameEnabled,
           menuEnabled:           a.menuEnabled,
-          volume:                a.volume,
           selectedIngameTrackId: a.selectedIngameTrackId,
           selectedMenuTrackId:   a.selectedMenuTrackId,
           // Persister les pistes possédées pour éviter de re-déclencher la modale au prochain démarrage
@@ -397,7 +389,6 @@ export function useStorage() {
         newState.countedDuelIds                 !== prevState.countedDuelIds                 ||
         newState.duelWinStreak                  !== prevState.duelWinStreak                  ||
         newState.bonusTutorialDismissed.length  !== prevState.bonusTutorialDismissed.length ||
-        newState.visualEffect                   !== prevState.visualEffect ||
         newState.dailyChallengeStreak           !== prevState.dailyChallengeStreak ||
         newState.longestDailyChallengeStreak    !== prevState.longestDailyChallengeStreak ||
         newState.lastDailyChallengeDate         !== prevState.lastDailyChallengeDate ||

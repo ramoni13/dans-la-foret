@@ -31,6 +31,8 @@ export interface RuleCard {
    * niveau 17 ; le briefing du niveau 17 le dit au joueur au lieu de le lui présenter comme inédit.
    */
   seenElsewhereKey?: string;
+  /** Élément auquel la règle se rapporte : les règles d'un même élément s'affichent ensemble sur une seule page du briefing. */
+  focusElement?: string;
 }
 
 export interface LevelMeta {
@@ -42,10 +44,26 @@ export interface LevelMeta {
   newRules: RuleCard[];     // sous-ensemble : seulement les règles nouvellement introduites
 }
 
+/**
+ * Regroupe des règles par élément (ordre de première apparition conservé) : une page de briefing par élément,
+ * avec toutes ses règles. Une règle sans ocusElement forme son propre groupe.
+ */
+export function groupRulesByElement(rules: readonly RuleCard[]): RuleCard[][] {
+  const groups = new Map<string, RuleCard[]>();
+  for (const rule of rules) {
+    const key = rule.focusElement ?? rule.id;
+    const group = groups.get(key);
+    if (group) group.push(rule);
+    else groups.set(key, [rule]);
+  }
+  return [...groups.values()];
+}
+
 // ── Règles réutilisables ─────────────────────────────────────────────────────
 
 const rNoSameBucheron: RuleCard = {
   id: 'no_same_bucheron',
+  focusElement: 'bucheron',
   type: 'no_same_neighbor',
   elements: ['bucheron', 'bucheron'],
   i18nKey: 'a11y_no_same',
@@ -53,6 +71,7 @@ const rNoSameBucheron: RuleCard = {
 };
 const rNoSameOurs: RuleCard = {
   id: 'no_same_ours',
+  focusElement: 'ours',
   type: 'no_same_neighbor',
   elements: ['ours', 'ours'],
   i18nKey: 'a11y_no_same',
@@ -60,6 +79,7 @@ const rNoSameOurs: RuleCard = {
 };
 const rNoSameMouton: RuleCard = {
   id: 'no_same_mouton',
+  focusElement: 'mouton',
   type: 'no_same_neighbor',
   elements: ['mouton', 'mouton'],
   i18nKey: 'a11y_no_same',
@@ -69,6 +89,7 @@ const rNoSameMouton: RuleCard = {
 // (inversé par rapport à l'ancien rRequireRucheOurs)
 const rRequireOursRuche: RuleCard = {
   id: 'require_ours_ruche',
+  focusElement: 'ruche',
   type: 'require_neighbor',
   elements: ['ours', 'ruche'],
   i18nKey: 'a11y_require_neighbor',
@@ -78,6 +99,7 @@ const rRequireOursRuche: RuleCard = {
 // Animation : 3 ours → flèches → 1 ruche centrale
 const rAllOursRuche: RuleCard = {
   id: 'all_ours_ruche',
+  focusElement: 'ruche',
   type: 'require_all_neighbor',
   elements: ['ours', 'ours', 'ours', 'ruche'],
   i18nKey: 'a11y_require_all_neighbor',
@@ -85,6 +107,7 @@ const rAllOursRuche: RuleCard = {
 };
 const rSingletonRuche: RuleCard = {
   id: 'singleton_ruche',
+  focusElement: 'ruche',
   type: 'singleton',
   elements: ['ruche'],
   i18nKey: 'a11y_singleton',
@@ -92,6 +115,7 @@ const rSingletonRuche: RuleCard = {
 };
 const rNoSameChien: RuleCard = {
   id: 'no_same_chien',
+  focusElement: 'chien',
   type: 'no_same_neighbor',
   elements: ['chien', 'chien'],
   i18nKey: 'a11y_no_same',
@@ -99,6 +123,7 @@ const rNoSameChien: RuleCard = {
 };
 const rConnectedChien: RuleCard = {
   id: 'connected_chien',
+  focusElement: 'chien',
   type: 'connected_group',
   elements: ['chien', 'chien', 'chien'],  // 3 chiens pour illustrer la meute
   i18nKey: 'a11y_connected_group',
@@ -106,6 +131,7 @@ const rConnectedChien: RuleCard = {
 };
 const rNoSameloup: RuleCard = {
   id: 'no_same_loup',
+  focusElement: 'loup',
   type: 'no_same_neighbor',
   elements: ['loup', 'loup'],
   i18nKey: 'a11y_no_same',
@@ -113,6 +139,7 @@ const rNoSameloup: RuleCard = {
 };
 const rForbidloupMouton: RuleCard = {
   id: 'forbid_loup_mouton',
+  focusElement: 'loup',
   type: 'forbid_neighbor',
   elements: ['loup', 'mouton'],
   i18nKey: 'a11y_forbid_neighbor',
@@ -120,6 +147,7 @@ const rForbidloupMouton: RuleCard = {
 };
 const rNoSameCerf: RuleCard = {
   id: 'no_same_cerf',
+  focusElement: 'cerf',
   type: 'no_same_neighbor',
   elements: ['cerf', 'cerf'],
   i18nKey: 'a11y_no_same',
@@ -127,6 +155,7 @@ const rNoSameCerf: RuleCard = {
 };
 const rNoSameBiche: RuleCard = {
   id: 'no_same_biche',
+  focusElement: 'biche',
   type: 'no_same_neighbor',
   elements: ['biche', 'biche'],
   i18nKey: 'a11y_no_same',
@@ -134,6 +163,7 @@ const rNoSameBiche: RuleCard = {
 };
 const rPairedCerfBiche: RuleCard = {
   id: 'paired_cerf_biche',
+  focusElement: 'cerf',
   type: 'paired',
   elements: ['cerf', 'biche'],
   i18nKey: 'a11y_paired',
@@ -142,6 +172,7 @@ const rPairedCerfBiche: RuleCard = {
 // Règle exclusive cerf : 1 cerf ne peut pas être connecté à 2 biches
 const rPairedExclusiveCerf: RuleCard = {
   id: 'paired_exclusive_cerf',
+  focusElement: 'cerf',
   type: 'paired_exclusive',
   elements: ['cerf', 'biche', 'biche'],
   i18nKey: 'a11y_paired_exclusive',
@@ -150,6 +181,7 @@ const rPairedExclusiveCerf: RuleCard = {
 // Règle exclusive biche : 1 biche ne peut pas être connectée à 2 cerfs
 const rPairedExclusiveBiche: RuleCard = {
   id: 'paired_exclusive_biche',
+  focusElement: 'biche',
   type: 'paired_exclusive',
   elements: ['biche', 'cerf', 'cerf'],
   i18nKey: 'a11y_paired_exclusive',
@@ -158,6 +190,7 @@ const rPairedExclusiveBiche: RuleCard = {
 // Niveau 11 : tas_buches doit etre voisin d'un bucheron (pas de chalet encore)
 const rChainTasBuches: RuleCard = {
   id: 'chain_tas_buches',
+  focusElement: 'tas_buches',
   type: 'chain',
   elements: ['bucheron', 'tas_buches'],
   i18nKey: 'a11y_chain',
@@ -166,6 +199,7 @@ const rChainTasBuches: RuleCard = {
 // Niveau 12 : quand chalet est present, tas_buches doit aussi etre voisin du chalet
 const rChainTasBuchesChalet: RuleCard = {
   id: 'chain_tas_buches_chalet',
+  focusElement: 'chalet',
   type: 'chain',
   elements: ['tas_buches', 'chalet'],
   i18nKey: 'a11y_chain_chalet',
@@ -173,6 +207,7 @@ const rChainTasBuchesChalet: RuleCard = {
 };
 const rNoSameChalet: RuleCard = {
   id: 'no_same_chalet',
+  focusElement: 'chalet',
   type: 'no_same_neighbor',
   elements: ['chalet', 'chalet'],
   i18nKey: 'a11y_no_same',
@@ -180,6 +215,7 @@ const rNoSameChalet: RuleCard = {
 };
 const rRequireChaletBucheron: RuleCard = {
   id: 'require_chalet_bucheron',
+  focusElement: 'chalet',
   type: 'require_neighbor',
   elements: ['chalet', 'bucheron'],
   i18nKey: 'a11y_require_neighbor',
@@ -188,6 +224,7 @@ const rRequireChaletBucheron: RuleCard = {
 // Niveau 17 : champignon uniquement sur cases centrales
 const rCenterOnlyChampignon: RuleCard = {
   id: 'center_only_champignon',
+  focusElement: 'champignon',
   type: 'center_only',
   elements: ['champignon'],
   i18nKey: 'a11y_center_only',
@@ -197,6 +234,7 @@ const rCenterOnlyChampignon: RuleCard = {
 };
 const rNoSameChampignon: RuleCard = {
   id: 'no_same_champignon',
+  focusElement: 'champignon',
   type: 'no_same_neighbor',
   elements: ['champignon', 'champignon'],
   i18nKey: 'a11y_no_same',
@@ -205,6 +243,7 @@ const rNoSameChampignon: RuleCard = {
 // Niveau 19 : arbres forment une forêt connexe (seuls)
 const rConnectedArbre: RuleCard = {
   id: 'connected_arbre',
+  focusElement: 'arbre',
   type: 'connected_group',
   elements: ['arbre', 'arbre', 'arbre'],
   i18nKey: 'a11y_connected_group',
@@ -213,6 +252,7 @@ const rConnectedArbre: RuleCard = {
 // Niveau 19 : si des bûches sont présentes, elles rejoignent la forêt connexe
 const rConnectedArbreBuches: RuleCard = {
   id: 'connected_arbre_buches',
+  focusElement: 'arbre',
   type: 'connected_group_with',
   elements: ['arbre', 'arbre', 'tas_buches'],
   i18nKey: 'a11y_connected_group_with',

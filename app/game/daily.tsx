@@ -28,6 +28,7 @@ import { useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
+import { BoardBackdrop } from '../../src/components/Board/BoardBackdrop';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { VictoryModal } from '../../src/components/Game/VictoryModal';
 import { useGame } from '../../src/hooks/useGame';
@@ -51,7 +52,6 @@ import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
 import { Colors } from '../../src/constants/colors';
 import { awardEarnedTrophies } from '../../src/services/trophyService';
-import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { DailyBriefingModal } from '../../src/components/LevelBriefing/DailyBriefingModal';
@@ -375,11 +375,12 @@ export default function DailyGameScreen() {
   // -- BackHandler Android --
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleDailyBack();
+      // Victoire affichée : « Retour » ne doit pas proposer d'abandonner un défi déjà gagné
+      if (!game.isVictory) handleDailyBack();
       return true;
     });
     return () => sub.remove();
-  }, [handleDailyBack]);
+  }, [handleDailyBack, game.isVictory]);
 
   // -- Tap sur une case --
   const handleCellPress = useCallback((cellIndex: number) => {
@@ -558,8 +559,6 @@ export default function DailyGameScreen() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      {/* Feuilles qui tombent */}
-      <FallingLeaves />
 
       <View style={[styles.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 8) }]}>
         {/* Header */}
@@ -623,6 +622,7 @@ export default function DailyGameScreen() {
 
         {/* Plateau — occupe tout l'espace flex restant */}
         <View style={styles.boardArea}>
+          <BoardBackdrop boardDef={boardDef} />
           <BoardRenderer
             boardDef={boardDef}
             playerBoard={game.playerBoard}
@@ -865,6 +865,7 @@ const styles = StyleSheet.create({
   },
   boardArea: {
     flex: 1,
+    overflow: 'hidden',
     alignItems: 'stretch',
     justifyContent: 'flex-start',
     backgroundColor: Colors.ui.background,

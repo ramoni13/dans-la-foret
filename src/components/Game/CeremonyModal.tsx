@@ -51,7 +51,6 @@ import { ElementRegistry } from '../../elements/ElementRegistry';
 import { getMusicForChapter } from '../../constants/musicUnlocks';
 import { MUSIC_CATALOG } from '../../constants/music';
 import { notificationSuccess, impactLight, impactMedium } from '../../utils/haptics';
-import { playStarTone } from '../../services/starSoundService';
 import { useT } from '../../i18n';
 import { Confetti, useConfetti } from './Confetti';
 import { RewardFly, useCounterPulse } from './RewardFly';
@@ -93,7 +92,6 @@ function EmblemStep({ chapterId, active, reduceMotion, t }: {
     for (let i = 0; i < count; i++) {
       timers.push(setTimeout(() => {
         setFilled(i + 1);
-        playStarTone(Math.min(i, 2));
         if (i >= 2) impactMedium(); else impactLight();
       }, reduceMotion ? i * 120 : 450 + i * 350));
     }

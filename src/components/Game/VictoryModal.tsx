@@ -3,7 +3,7 @@
 //
 // Séquence (C7), un tap passe à la fin :
 //   1. pommes de pin (Solo uniquement, si `starResult` est fourni) : 3 emplacements avec leur
-//      critère, vide → bois l'une après l'autre (note de plus en plus aiguë, vibration), puis,
+//      critère, vide → bois l'une après l'autre (vibration), puis,
 //      si la 3e est obtenue, les 3 bois se transforment en dorées avec confettis (voir StarRow) ;
 //      les pommes de pin nouvelles s'envolent vers le compteur (pomme de pin dorée) ;
 //   2. jauge du niveau `x / seuil`, puis bandeau « Niveau N débloqué ! » si le seuil
@@ -12,6 +12,10 @@
 //
 // Les modes sans étoiles (Journalier, Forestier, Duel) n'envoient pas `starResult` :
 // la séquence d'étoiles et la jauge sont alors absentes et les graines démarrent aussitôt.
+//
+// Affichée en SUPERPOSITION dans l'écran de jeu, et NON dans un `Modal` natif : empilé avec d'autres modales
+// (déblocage de musique, record de série, roulette…), un `Modal` natif pouvait se fermer tout seul et laisser
+// l'écran de jeu figé, sans aucun bouton cliquable. Une vue ordinaire ne peut pas être fermée par le système.
 // ============================================================
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -19,7 +23,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Modal,
   TouchableOpacity,
   TouchableWithoutFeedback,
   LayoutChangeEvent,
@@ -52,7 +55,6 @@ import { usePlayerStore } from '../../store/playerStore';
 import { RewardFly, useCounterPulse } from './RewardFly';
 import { StarRow, StarSlotLayout } from './StarRow';
 import { PineconeIcon, PineconeText } from './PineconeIcon';
-import { playLevelCompleteTone } from '../../services/starSoundService';
 import {
   LevelGaugeResult,
   StarSequence,
@@ -158,11 +160,9 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   const [starsFinished, setStarsFinished] = useState(!hasStars);
   const [gaugeShown, setGaugeShown] = useState(false);
   const [gaugeValue, setGaugeValue] = useState(starResult?.gauge.shownBefore ?? 0);
-  const levelTonePlayedRef = useRef(false);
 
   useEffect(() => {
     if (visible) {
-      levelTonePlayedRef.current = false;
       const start = seedsBeforeGain ?? (totalSeeds - seedsEarned);
       setDisplayedSeeds(start);
       setDisplayedGain(seedsEarned);
@@ -310,10 +310,6 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
       setGaugeShown(true);
       setGaugeValue(starResult.gauge.shownAfter);
       if (starResult.gauge.justCompleted) {
-        if (!levelTonePlayedRef.current) {
-          levelTonePlayedRef.current = true;
-          playLevelCompleteTone();
-        }
         AccessibilityInfo.announceForAccessibility(
           starResult.gauge.unlockedLevel
             ? t('victory_level_unlocked', { level: String(starResult.gauge.unlockedLevel) })
@@ -484,8 +480,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   const sequenceActive = hasStars && phase !== 'seeds';
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+    <View style={styles.overlay} accessibilityViewIsModal>
       <Animated.View style={[styles.backdrop, backdropStyle]}>
         <Animated.View style={[styles.card, cardStyle]}>
           <TouchableWithoutFeedback onPress={handleSkip} disabled={!sequenceActive}>
@@ -745,12 +743,17 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
         <BadgeToast queue={badgeQueue} onQueueEmpty={onBadgeQueueEmpty} />
       )}
 
-    </Modal>
+    </View>
   );
 };
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 1000,
+    elevation: 1000,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',

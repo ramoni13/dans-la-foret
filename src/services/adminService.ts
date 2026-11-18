@@ -154,9 +154,9 @@ export interface TrackMetrics {
 export interface MusicMetrics {
   /** Métriques par piste (triées par écoutes décroissantes) */
   tracks: TrackMetrics[];
-  /** % de joueurs ayant coupé le son Ambiance Défi */
+  /** % de joueurs ayant coupé la musique des défis */
   pctIngameMuted: number;
-  /** % de joueurs ayant coupé le son Ambiance Forêt */
+  /** % de joueurs ayant coupé la musique des menus */
   pctMenuMuted: number;
   /** Nombre de joueurs avec la donnée audio disponible (ingameAudioEnabled renseigné) */
   playersWithAudioData: number;

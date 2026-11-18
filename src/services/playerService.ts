@@ -81,6 +81,11 @@ export interface PlayerProfile {
   countedDuelIds?: string[];
   /** Série de victoires de Duel en cours (Lot D). */
   duelWinStreak?: number;
+  /** Série du Défi du jour en cours et record (conservés après une réinstallation). */
+  dailyChallengeStreak?: number;
+  longestDailyChallengeStreak?: number;
+  /** UIDs des amis déjà défiés (trophées sociaux). */
+  challengedFriendIds?: string[];
   isPremium: boolean;
   /**
    * Quota global de défis et limites quotidiennes associées. Les anciens compteurs Forestier / Duel restent présents pour la migration.
@@ -146,9 +151,9 @@ export interface PlayerProfile {
   // ── Métriques audio ─────────────────────────────────
   /** Nombre de fois que chaque piste a été lancée (trackId → count) */
   trackPlayCounts?: Record<string, number>;
-  /** true si l'Ambiance Défi est activée (false = son coupé) */
+  /** true si la musique des défis est activée (false = son coupé) */
   ingameAudioEnabled?: boolean;
-  /** true si l'Ambiance Forêt est activée (false = son coupé) */
+  /** true si la musique des menus est activée (false = son coupé) */
   menuAudioEnabled?: boolean;
 }
 
@@ -238,6 +243,9 @@ function migrateProfile(raw: any): PlayerProfile {
     },
     countedDuelIds: Array.isArray(raw.countedDuelIds) ? raw.countedDuelIds : [],
     duelWinStreak:  typeof raw.duelWinStreak === 'number' && raw.duelWinStreak > 0 ? Math.floor(raw.duelWinStreak) : 0,
+    dailyChallengeStreak:        typeof raw.dailyChallengeStreak === 'number' && raw.dailyChallengeStreak > 0 ? Math.floor(raw.dailyChallengeStreak) : 0,
+    longestDailyChallengeStreak: typeof raw.longestDailyChallengeStreak === 'number' && raw.longestDailyChallengeStreak > 0 ? Math.floor(raw.longestDailyChallengeStreak) : 0,
+    challengedFriendIds:         Array.isArray(raw.challengedFriendIds) ? raw.challengedFriendIds : [],
     earnedBadges,
     badgeShowcase:   raw.badgeShowcase ?? [],
     dailyStreak:       raw.dailyStreak ?? 0,
@@ -381,15 +389,38 @@ export async function updateDailyLimits(userId: string, limits: DailyLimits): Pr
 // `bestTimes` étaient écrits après une victoire Solo, et une victoire Forestier réécrivait l'objet entier). `merge: true` :
 // rien d'autre n'est touché. Les compteurs sont cumulatifs et fusionnés par maximum à la connexion (`mergeStats`), donc
 // une écriture en retard d'un autre appareil ne peut pas les faire baisser.
+/** Données du joueur écrites avec les statistiques : sans elles, une réinstallation remettrait ces valeurs à zéro. */
+export interface StatsExtra {
+  countedDuelIds: string[];
+  duelWinStreak: number;
+  dailyChallengeStreak: number;
+  longestDailyChallengeStreak: number;
+  challengedFriendIds: string[];
+}
+
+/** Point d'entrée unique pour construire `StatsExtra` depuis l'état du store. */
+export function buildStatsExtra(s: StatsExtra): StatsExtra {
+  return {
+    countedDuelIds: s.countedDuelIds,
+    duelWinStreak: s.duelWinStreak,
+    dailyChallengeStreak: s.dailyChallengeStreak,
+    longestDailyChallengeStreak: s.longestDailyChallengeStreak,
+    challengedFriendIds: s.challengedFriendIds,
+  };
+}
+
 export async function updateStats(
   userId: string,
   stats: PlayerProfile['stats'],
-  extra: { countedDuelIds: string[]; duelWinStreak: number },
+  extra: StatsExtra,
 ): Promise<void> {
   await setDoc(doc(db, 'players', userId), {
     stats,
     countedDuelIds: extra.countedDuelIds,
     duelWinStreak: extra.duelWinStreak,
+    dailyChallengeStreak: extra.dailyChallengeStreak,
+    longestDailyChallengeStreak: extra.longestDailyChallengeStreak,
+    challengedFriendIds: extra.challengedFriendIds,
     updatedAt: serverTimestamp(),
   }, { merge: true });
 }

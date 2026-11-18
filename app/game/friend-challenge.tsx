@@ -28,8 +28,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
+import { BoardBackdrop } from '../../src/components/Board/BoardBackdrop';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
-import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { FailModal } from '../../src/components/Game/FailModal';
@@ -560,7 +560,6 @@ export default function FriendChallengeScreen() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <FallingLeaves />
 
       <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
 
@@ -599,6 +598,7 @@ export default function FriendChallengeScreen() {
 
         {/* Plateau */}
         <View style={styles.boardArea}>
+          <BoardBackdrop boardDef={boardDef} />
           <View style={[styles.boardContainer, { maxHeight: Math.min(screenWidth, screenHeight * 0.45) }]}>
             <BoardRenderer
               boardDef={boardDef}
@@ -918,6 +918,7 @@ const styles = StyleSheet.create({
   validateBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   boardArea: {
     flex: 1,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
@@ -926,7 +927,5 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     aspectRatio: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
   },
 });

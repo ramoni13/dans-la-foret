@@ -18,7 +18,6 @@ interface AudioControllerProps {
 export function AudioController({ isInGame }: AudioControllerProps) {
   const ingameEnabled       = useAudioStore(s => s.ingameEnabled);
   const menuEnabled         = useAudioStore(s => s.menuEnabled);
-  const volume              = useAudioStore(s => s.volume);
   const selectedIngame      = useAudioStore(s => s.selectedIngameTrackId);
   const selectedMenu        = useAudioStore(s => s.selectedMenuTrackId);
   const ownedTrackIds       = useAudioStore(s => s.ownedTrackIds);
@@ -63,7 +62,6 @@ export function AudioController({ isInGame }: AudioControllerProps) {
       await audioService.syncFromStore({
         ingameEnabled,
         menuEnabled,
-        volume,
         selectedIngameTrackId: selectedIngame,
         selectedMenuTrackId: selectedMenu,
         isInGame,
@@ -80,7 +78,6 @@ export function AudioController({ isInGame }: AudioControllerProps) {
   }, [
     ingameEnabled,
     menuEnabled,
-    volume,
     selectedIngame,
     selectedMenu,
     isInGame,

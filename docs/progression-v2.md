@@ -191,8 +191,8 @@ Expert attendu : React Native / Expo 57 / TypeScript / Zustand / Firebase, et ga
 - **Animation des étoiles** (dans VictoryModal, environ 2,5 s, un tap passe la séquence) :
   - 3 emplacements vides, chacun avec son critère écrit en dessous (Gagné / Sans erreur /
     Parfait) ;
-  - pop successif des étoiles obtenues, avec une note de plus en plus aiguë et une
-    vibration légère (moyenne pour la 3ᵉ) ; les étoiles manquées restent grises avec leur
+  - pop successif des étoiles obtenues, avec une vibration légère (moyenne pour la 3ᵉ ;
+    aucun son : ni notes de pommes de pin, ni jingle de fin de niveau) ; les étoiles manquées restent grises avec leur
     critère visible ;
   - en rejouant : les étoiles déjà acquises sont pâles, seules les NOUVELLES brillent et
     s'envolent vers le compteur ⭐ du bandeau ;

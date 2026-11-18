@@ -50,6 +50,7 @@ import {
   getReceivedChallenges,
   getSentChallenges,
   getCompletedChallenges,
+  subscribeFriendChallenges,
   refuseFriendChallenge,
   CHALLENGE_WINNER_SEEDS,
 } from '../../src/services/challengeService';
@@ -442,6 +443,12 @@ export default function ChallengeScreen() {
   useFocusEffect(useCallback(() => {
     loadChallenges();
   }, [loadChallenges]));
+
+  // Défi reçu, accepté ou terminé : les listes se mettent à jour toutes seules, sans quitter l'écran ni tirer pour rafraîchir
+  useEffect(() => {
+    if (!uid || isAnon) return;
+    return subscribeFriendChallenges(uid, () => { loadChallenges(true); });
+  }, [uid, isAnon, loadChallenges]);
 
   const onRefresh = () => {
     setRefreshing(true);

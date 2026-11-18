@@ -14,7 +14,7 @@ import { useNavStore } from '../../src/store/navStore';
 import { onAuthChange } from '../../src/services/authService';
 import { runInactivePurgeIfDue } from '../../src/services/inactiveAccountService';
 import { isAuthAccountOlderThan } from '../../src/constants/inactiveAccounts';
-import { buildSoloProgressionPayload, createPlayer, getPlayer, isUsernameTaken, resetPlayerProgression, updateDailyLimits, updateNewFeatureBadges, updatePremium, updateSeeds, updateSoloProgression, updateStats } from '../../src/services/playerService';
+import { buildSoloProgressionPayload, createPlayer, getPlayer, isUsernameTaken, resetPlayerProgression, buildStatsExtra, updateDailyLimits, updateNewFeatureBadges, updatePremium, updateSeeds, updateSoloProgression, updateStats } from '../../src/services/playerService';
 import { awardEarnedTrophies } from '../../src/services/trophyService';
 import { awardBadgesFirestore } from '../../src/services/badgeService';
 import { publishLeaderboardEntry, resetLeaderboardCache } from '../../src/services/leaderboardService';
@@ -105,7 +105,7 @@ export default function TabsLayout() {
           if (merged.isPremium && !profile.isPremium && localWasPremium) updatePremium(firebaseUser!.uid, true).catch(() => {});
           updateDailyLimits(firebaseUser!.uid, merged).catch(() => {});
           // Lot D : les statistiques fusionnées (max local/cloud) deviennent la référence du cloud
-          updateStats(firebaseUser!.uid, merged.stats, { countedDuelIds: merged.countedDuelIds, duelWinStreak: merged.duelWinStreak }).catch(() => {});
+          updateStats(firebaseUser!.uid, merged.stats, buildStatsExtra(merged)).catch(() => {});
 
           // ── Progression v2 (C3) : rattrapage des graines de fin de chapitre ─────
           // Un chapitre terminé sur un autre appareil, ou avant ce lot, n'a pas été versé ici :
@@ -293,11 +293,16 @@ export default function TabsLayout() {
     const flush = () => {
       const s = usePlayerStore.getState();
       if (s.userId !== uid) return;
-      updateStats(uid, s.stats, { countedDuelIds: s.countedDuelIds, duelWinStreak: s.duelWinStreak }).catch(() => {});
+      updateStats(uid, s.stats, buildStatsExtra(s)).catch(() => {});
     };
     const unsub = usePlayerStore.subscribe((n, p) => {
       if (n.userId !== uid) return;
-      if (n.stats !== p.stats || n.countedDuelIds !== p.countedDuelIds) {
+      if (
+        n.stats !== p.stats || n.countedDuelIds !== p.countedDuelIds ||
+        n.dailyChallengeStreak !== p.dailyChallengeStreak ||
+        n.longestDailyChallengeStreak !== p.longestDailyChallengeStreak ||
+        n.challengedFriendIds !== p.challengedFriendIds
+      ) {
         if (timer) clearTimeout(timer);
         timer = setTimeout(flush, 5000);
       }

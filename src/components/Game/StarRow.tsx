@@ -5,8 +5,8 @@
 //   vide (PP_vide2) = non obtenue · bois (PP_bois) = 1 ou 2 obtenues · dorée (PP_or) = les 3 obtenues.
 //
 // Séquence :
-//   - les pommes de pin NOUVELLES passent de vide à bois l'une après l'autre (pop, note de plus en plus
-//     aiguë, vibration légère, moyenne pour la 3e) ;
+//   - les pommes de pin NOUVELLES passent de vide à bois l'une après l'autre (pop, vibration légère,
+//     moyenne pour la 3e ; aucun son) ;
 //   - si la 3e (« Parfait ») est obtenue CE TOUR-CI : après un court temps d'arrêt, les trois bois se
 //     transforment ensemble en dorées, avec un pulse et une gerbe de confettis / feu d'artifice ;
 //   - défi déjà à 3 (rien de nouveau) : les trois dorées sont affichées d'emblée, sans fête ;
@@ -47,7 +47,6 @@ import {
   shouldTransform,
 } from '../../constants/pinecone';
 import { impactLight, impactMedium, notificationSuccess } from '../../utils/haptics';
-import { playStarTone } from '../../services/starSoundService';
 import { useT } from '../../i18n';
 import { PineconeIcon } from './PineconeIcon';
 import { BurstShot, PineconeBurst } from './PineconeBurst';
@@ -283,9 +282,8 @@ export function StarRow({ sequence, play, skip = false, onStarPopped, onFinished
 
   const handlePop = useCallback((index: number, order: number) => {
     poppedRef.current += 1;
-    // Son et vibration : une note de plus en plus aiguë par pomme de pin nouvelle.
+    // Vibration (sans son) : plus marquée à mesure que les pommes de pin se remplissent.
     const rank = Math.min(order, STAR_NOTE_RATES.length - 1);
-    playStarTone(rank);
     if (getStarHaptic(rank) === 'medium') impactMedium(); else impactLight();
 
     const l = layouts.current[index];

@@ -1,6 +1,6 @@
 // ============================================================
 // CATALOGUE DE MUSIQUES
-// 2 types : "Ambiance Défi" (ingame) et "Ambiance Forêt" (hors défi)
+// 2 types : "Musique des défis" (ingame) et "Musique des menus" (hors défi)
 //
 // Déblocage (Progression v2, C8 / D11) — voir src/constants/musicUnlocks.ts :
 //   - `unlock` absent → gratuit, disponible dès le début (2 titres) ;
@@ -29,7 +29,7 @@ export interface MusicTrack {
 }
 
 const RAW_CATALOG: MusicTrack[] = [
-  // ── Ambiance Forêt (menu) — gratuits ──────────────────────────────────────
+  // ── Musique des menus — gratuits ──────────────────────────────────────
   {
     id: 'manor_cocktail',
     title: 'Manor Cocktail',
@@ -38,7 +38,7 @@ const RAW_CATALOG: MusicTrack[] = [
     description: 'Ambiance feutrée pour explorer les menus',
   },
 
-  // ── Ambiance Forêt (menu) — débloquables ────────────────────────────────
+  // ── Musique des menus — débloquables ────────────────────────────────
   {
     id: 'jardin_japonais',
     title: 'Jardin Japonais',
@@ -75,7 +75,7 @@ const RAW_CATALOG: MusicTrack[] = [
     description: 'Chaleur dorée d\'un groove ensoleillé, baume contre le froid',
   },
 
-  // ── Ambiance Défi (ingame) — gratuits ─────────────────────────────────────
+  // ── Musique des défis (ingame) — gratuits ─────────────────────────────────────
   {
     id: 'foret_mystique',
     title: 'Forêt Mystique',
@@ -84,7 +84,7 @@ const RAW_CATALOG: MusicTrack[] = [
     description: 'Musique immersive pour les défis',
   },
 
-  // ── Ambiance Défi (ingame) — débloquables ────────────────────────────────
+  // ── Musique des défis (ingame) — débloquables ────────────────────────────────
   {
     id: 'forest_breath',
     title: 'Forest Breath',

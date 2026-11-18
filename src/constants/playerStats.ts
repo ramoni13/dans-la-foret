@@ -4,7 +4,7 @@
 // Aucune dépendance React / Zustand / Firebase : testé dans __tests__/playerStats.test.ts.
 //
 // Deux rôles :
-//   1. `buildStatsView` : transforme l'état du joueur en 4 blocs affichés (Progression, Solo, Modes, Régularité).
+//   1. `buildStatsView` : transforme l'état du joueur en 3 blocs affichés (Solo, Autres modes, Régularité).
 //   2. `mergeStats` : fusion des statistiques locales et cloud. Règle : les compteurs cumulatifs ne baissent JAMAIS
 //      (max local / cloud) ; les records de temps gardent le meilleur ; les dictionnaires fusionnent clé par clé.
 //
@@ -13,9 +13,7 @@
 // Rendez-vous : un joueur pouvait donc perdre sa progression de trophée en se reconnectant.
 // ============================================================
 
-import { CHAPTERS, countThreeStarChallenges, countTotalStars, getChapterForLevel, getLevelFromChallengeId } from './progression';
-import type { DailyLeague } from './dailyLeagues';
-import type { OnfTier } from './onfTiers';
+import { countThreeStarChallenges } from './progression';
 
 // ── Compteurs cumulatifs (jamais décrémentés) ────────────────────────────────
 
@@ -123,49 +121,6 @@ export function mergeStats<T extends StatsLike>(local: T, cloud: StatsLike | nul
   return out as T;
 }
 
-// ── Série du Journalier ──────────────────────────────────────────────────────
-
-/** Jours entre deux dates `YYYY-MM-DD` (UTC) ; `null` si l'une est invalide. */
-export function daysBetween(a: string, b: string): number | null {
-  const x = Date.parse(`${a}T00:00:00Z`);
-  const y = Date.parse(`${b}T00:00:00Z`);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-  return Math.round((y - x) / 86_400_000);
-}
-
-/**
- * Série du Journalier à AFFICHER. La série stockée ne retombe à 0 qu'à un échec explicite : un jour simplement non
- * joué la laisse intacte jusqu'à la victoire suivante. Pour l'affichage, une série n'est « en cours » que si le
- * dernier jour joué est aujourd'hui ou hier (UTC, comme les grilles) ; sinon elle est rompue : 0.
- */
-export function effectiveDailyStreak(streak: number, lastDailyDate: string, todayUtc: string): number {
-  if (!(streak > 0) || !lastDailyDate) return 0;
-  const gap = daysBetween(lastDailyDate, todayUtc);
-  if (gap === null) return 0;
-  return gap <= 1 && gap >= 0 ? streak : 0;
-}
-
-// ── Forestier par palier (dérivé, jamais stocké) ─────────────────────────────
-
-/**
- * Grilles du Forestier résolues et existantes, par palier. Déduit de `completedOnfChallengeIds` et du champ `tier` de
- * chaque grille : aucun compteur n'est stocké, donc rien à fusionner ni à faire dériver. Une grille terminée dont
- * l'identifiant n'existe plus (renumérotation des grilles) n'est comptée dans aucun palier.
- */
-export function countOnfByTier(
-  completedIds: readonly string[] | null | undefined,
-  grids: ReadonlyArray<{ id: string; tier: OnfTier }>,
-): { solved: Partial<Record<OnfTier, number>>; totals: Partial<Record<OnfTier, number>> } {
-  const done = new Set(completedIds ?? []);
-  const solved: Partial<Record<OnfTier, number>> = {};
-  const totals: Partial<Record<OnfTier, number>> = {};
-  for (const g of grids) {
-    totals[g.tier] = (totals[g.tier] ?? 0) + 1;
-    if (done.has(g.id)) solved[g.tier] = (solved[g.tier] ?? 0) + 1;
-  }
-  return { solved, totals };
-}
-
 // ── Duel : résultats réconciliés avec Firestore ──────────────────────────────
 
 /** Un défi entre amis terminé (extrait de `friendChallenges`). */
@@ -227,193 +182,71 @@ export function tallyNewDuels(
   return { countedIds, played: wins + losses, wins, losses, winStreak, bestWinStreak: best };
 }
 
-// ── Pourcentages ─────────────────────────────────────────────────────────────
-
-/** Pourcentage entier (0-100), `null` si le dénominateur est nul. Jamais plus de 100 : un compteur incohérent est borné. */
-export function percent(part: number, total: number): number | null {
-  if (!(total > 0)) return null;
-  return Math.min(100, Math.max(0, Math.round((Math.min(part, total) / total) * 100)));
-}
-
-// ── Temps moyen du Solo ──────────────────────────────────────────────────────
-
-/**
- * Meilleurs temps regroupés par chapitre. Le temps moyen « tous niveaux » croissait mécaniquement avec la progression
- * (les niveaux avancés sont plus longs) : il ne mesurait pas la vitesse du joueur. Par chapitre, on compare ce qui est
- * comparable.
- */
-export function averageBestTimeByChapter(
-  bestTimes: Record<string, number> | null | undefined,
-): Array<{ chapterId: number; count: number; averageMs: number }> {
-  const sums = new Map<number, { total: number; count: number }>();
-  for (const [challengeId, ms] of Object.entries(bestTimes ?? {})) {
-    const t = num(ms);
-    if (t <= 0) continue;
-    const level = getLevelFromChallengeId(challengeId);
-    if (level === null) continue;
-    const chapter = getChapterForLevel(level);
-    if (!chapter) continue;
-    const cur = sums.get(chapter.id) ?? { total: 0, count: 0 };
-    cur.total += t;
-    cur.count += 1;
-    sums.set(chapter.id, cur);
-  }
-  return CHAPTERS
-    .map(ch => ({ chapterId: ch.id, entry: sums.get(ch.id) }))
-    .filter((x): x is { chapterId: number; entry: { total: number; count: number } } => !!x.entry)
-    .map(x => ({ chapterId: x.chapterId, count: x.entry.count, averageMs: Math.round(x.entry.total / x.entry.count) }));
-}
-
 // ── Vue d'affichage ──────────────────────────────────────────────────────────
 
 export interface StatsViewInput {
   stats: StatsLike & { totalSolved?: number; dailyWon?: number };
   challengeStars: Record<string, number> | null | undefined;
-  levelsCompleted: number;
-  currentLevel: number;
-  earnedTrophies: number;
-  trophyTotal: number;
-  herbierCount: number;
-  herbierTotal: number;
   onfSolvedCount: number;
-  /** Grilles du Forestier résolues / existantes par palier (déduites de completedOnfChallengeIds, jamais stockées). */
-  onfSolvedByTier: Partial<Record<OnfTier, number>>;
-  onfTierTotals: Partial<Record<OnfTier, number>>;
-  dailyChallengeStreak: number;
   longestDailyChallengeStreak: number;
-  lastDailyChallengeDate: string;
-  loyaltyStreak: number;
   loyaltyBest: number;
-  /** Date du jour `YYYY-MM-DD` (UTC). */
-  todayUtc: string;
-  starTotal: number;
-}
-
-export interface StatsView {
-  progression: {
-    stars: number;
-    starTotal: number;
-    threeStars: number;
-    chapter: number;
-    levelsCompleted: number;
-    trophies: number;
-    trophyTotal: number;
-    herbier: number;
-    herbierTotal: number;
-  };
-  solo: {
-    solved: number;
-    firstTryRate: number | null;
-    byChapter: Array<{ chapterId: number; count: number; averageMs: number }>;
-    fastestMs: number | null;
-    abandons: number;
-  };
-  modes: {
-    daily: { played: number; won: number; rate: number | null; byLeague: Record<DailyLeague, { played: number; won: number; bestMs: number | null }> };
-    onf: { solved: number; byTier: Array<{ tier: OnfTier; solved: number; total: number }>; bestMs: number | null; perfect: number };
-    duel: { played: number; wins: number; losses: number; rate: number | null; bestWinStreak: number };
-  };
-  regularity: {
-    dailyStreak: number;
-    dailyStreakRecord: number;
-    loyaltyStreak: number;
-    loyaltyBest: number;
-    daysPlayed: number;
-    seedsEarned: number;
-    seedsSpent: number;
-    adsWatched: number;
-    totalWins: number;
-  };
 }
 
 /**
- * Les 4 blocs du menu Statistiques. Toute valeur absente ou incohérente est ramenée à une valeur neutre : l'écran
- * n'a jamais à gérer `undefined` ni `NaN`.
+ * Statistiques affichées : uniquement celles qui se comprennent sans explication et qui ne se retrouvent pas ailleurs
+ * dans l'app (graines, pommes de pin totales, chapitre, trophées, Herbier et série en cours sont déjà sur l'accueil
+ * ou le profil). Toute valeur absente ou incohérente est ramenée à une valeur neutre : l'écran n'a jamais à gérer
+ * `undefined` ni `NaN`.
  */
+export interface StatsView {
+  solo: {
+    solved: number;
+    perfect: number;
+    fastestMs: number | null;
+  };
+  modes: {
+    dailyWon: number;
+    dailyPlayed: number;
+    dailyStreakRecord: number;
+    onfSolved: number;
+    duelWins: number;
+    duelPlayed: number;
+  };
+  regularity: {
+    daysPlayed: number;
+    loyaltyBest: number;
+  };
+}
+
 export function buildStatsView(i: StatsViewInput): StatsView {
   const s = i.stats;
-  const sum = (o?: Record<string, number>) => Object.values(o ?? {}).reduce((a, b) => a + num(b), 0);
 
   const dailyPlayed = num(s.dailyPlayed);
-  // Un compteur incohérent (gagnées > jouées) est borné : le pourcentage ne dépasse jamais 100 %
+  // Un compteur incohérent (gagnées > jouées) est borné : on n'affiche jamais « 5 / 3 »
   const dailyWon = dailyPlayed > 0 ? Math.min(num(s.dailyWon), dailyPlayed) : num(s.dailyWon);
   const duelWins = num(s.friendWins);
-  const duelLosses = num(s.friendLosses);
-  const duelPlayed = duelWins + duelLosses;
+  const duelPlayed = duelWins + num(s.friendLosses);
 
   const solved = Math.max(num(s.totalSolved), Object.keys(i.challengeStars ?? {}).length);
-  // Défis gagnés du premier coup : plus de ⭐⭐ ou ⭐⭐⭐ = pas d'échec de validation ; approximation par les étoiles
-  const wellPlayed = Object.values(i.challengeStars ?? {}).filter(v => v >= 2).length;
-
-  const byTier = (['sentier', 'clairiere', 'profonde'] as const).map(tier => ({
-    tier,
-    solved: Math.min(num(i.onfSolvedByTier[tier]), i.onfTierTotals[tier] ?? Infinity),
-    total: i.onfTierTotals[tier] ?? 0,
-  }));
-
   const allBest = Object.values(s.bestTimes ?? {}).map(num).filter(v => v > 0);
 
   return {
-    progression: {
-      stars: countTotalStars(i.challengeStars),
-      starTotal: i.starTotal,
-      threeStars: countThreeStarChallenges(i.challengeStars),
-      chapter: getChapterForLevel(Math.min(21, i.currentLevel))?.id ?? 1,
-      levelsCompleted: i.levelsCompleted,
-      trophies: i.earnedTrophies,
-      trophyTotal: i.trophyTotal,
-      herbier: i.herbierCount,
-      herbierTotal: i.herbierTotal,
-    },
     solo: {
       solved,
-      firstTryRate: percent(wellPlayed, solved),
-      byChapter: averageBestTimeByChapter(s.bestTimes),
+      perfect: countThreeStarChallenges(i.challengeStars),
       fastestMs: allBest.length ? Math.min(...allBest) : null,
-      abandons: sum(s.abandonCount),
     },
     modes: {
-      daily: {
-        played: dailyPlayed,
-        won: dailyWon,
-        rate: percent(dailyWon, dailyPlayed),
-        byLeague: {
-          pousse: {
-            played: num(s.dailyPlayedPousse),
-            won: num(s.dailyWonPousse),
-            bestMs: num(s.bestDailyTimeMsPousse) || null,
-          },
-          grand_chene: {
-            played: num(s.dailyPlayedGrandChene),
-            won: num(s.dailyWonGrandChene),
-            bestMs: num(s.bestDailyTimeMsGrandChene) || null,
-          },
-        },
-      },
-      onf: {
-        solved: i.onfSolvedCount,
-        byTier,
-        bestMs: num(s.bestOnfTimeMs) || null,
-        perfect: num(s.onfPerfectCount),
-      },
-      duel: {
-        played: duelPlayed,
-        wins: duelWins,
-        losses: duelLosses,
-        rate: percent(duelWins, duelPlayed),
-        bestWinStreak: num(s.friendBestWinStreak),
-      },
+      dailyWon: Math.max(dailyWon, 0),
+      dailyPlayed: Math.max(dailyPlayed, dailyWon),
+      dailyStreakRecord: Math.max(0, i.longestDailyChallengeStreak),
+      onfSolved: Math.max(0, i.onfSolvedCount),
+      duelWins,
+      duelPlayed,
     },
     regularity: {
-      dailyStreak: effectiveDailyStreak(i.dailyChallengeStreak, i.lastDailyChallengeDate, i.todayUtc),
-      dailyStreakRecord: i.longestDailyChallengeStreak,
-      loyaltyStreak: i.loyaltyStreak,
-      loyaltyBest: i.loyaltyBest,
       daysPlayed: num(s.daysPlayed),
-      seedsEarned: num(s.seedsEarned),
-      seedsSpent: num(s.seedsSpent),
-      adsWatched: num(s.adsWatched),
-      totalWins: solved + dailyWon + duelWins + i.onfSolvedCount,
+      loyaltyBest: Math.max(0, i.loyaltyBest),
     },
   };
 }

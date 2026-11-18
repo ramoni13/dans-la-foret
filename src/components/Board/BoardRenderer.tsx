@@ -4,7 +4,7 @@
 // ============================================================
 
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, LayoutChangeEvent, ImageBackground } from 'react-native';
+import { View, StyleSheet, LayoutChangeEvent } from 'react-native';
 import Svg from 'react-native-svg';
 
 import { BoardDefinition } from '../../core/models/Board';
@@ -126,13 +126,8 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
    containerSize, effectiveCellSize, challengeKey]);
 
   return (
-    <ImageBackground
-      source={boardDef.backgroundAsset as any}
-      style={styles.container}
-      imageStyle={styles.backgroundImage}
-      resizeMode="cover"
-      onLayout={onLayout}
-    >
+    // Le fond (image) est fourni par <BoardBackdrop /> sur toute la zone de jeu
+    <View style={styles.container} onLayout={onLayout}>
       {/* Couche SVG : lignes de connexion */}
       {containerSize.width > 0 && (
         <Svg
@@ -155,7 +150,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
 
       {/* Cases */}
       {containerSize.width > 0 && cells}
-    </ImageBackground>
+    </View>
   );
 };
 
@@ -165,8 +160,5 @@ const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 1,
     elevation: 1,
-  },
-  backgroundImage: {
-    borderRadius: 16,
   },
 });

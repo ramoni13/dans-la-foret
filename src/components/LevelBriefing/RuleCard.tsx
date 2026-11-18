@@ -25,6 +25,8 @@ interface RuleCardProps {
   isNew: boolean;
   width: number;
   animHeight?: number;
+  /** Carte empilée avec d'autres règles du même élément : texte plus petit, pas de « Nouveau ! » (porté par la page). */
+  compact?: boolean;
 }
 
 function RuleAnimation({ rule, a11yLabel }: { rule: RuleCardData; a11yLabel: string }) {
@@ -55,7 +57,7 @@ function RuleAnimation({ rule, a11yLabel }: { rule: RuleCardData; a11yLabel: str
   }
 }
 
-export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width, animHeight }) => {
+export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width, animHeight, compact }) => {
   const t = useT();
 
   // Résoudre les noms d'éléments dans les i18nVars avant interpolation :
@@ -74,9 +76,9 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width, animHeig
   const a11yLabel = t(rule.i18nKey, resolvedVars);
 
   return (
-    <View style={[styles.card, { width }]}>
+    <View style={[compact ? styles.cardCompact : styles.card, { width }]}>
       {/* Badge "Nouveau !" */}
-      {isNew && (
+      {isNew && !compact && (
         <View style={styles.newBadge}>
           <Text style={styles.newBadgeText}>{t('label_new')}</Text>
         </View>
@@ -88,7 +90,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({ rule, isNew, width, animHeig
       </View>
 
       {/* Texte explicatif */}
-      <Text style={styles.a11yText} numberOfLines={3}>
+      <Text style={[styles.a11yText, compact && styles.a11yTextCompact]} numberOfLines={3}>
         {a11yLabel}
       </Text>
 
@@ -111,6 +113,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 8,
     position: 'relative',
+  },
+  // Carte empilée : hauteur = son contenu. Surtout pas de `flex` (même `flex: 0` l'écrase à 0 sur le web et les cartes se chevauchent).
+  cardCompact: {
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    position: 'relative',
+    flexGrow: 0,
+    flexShrink: 0,
   },
   newBadge: {
     backgroundColor: Colors.forest.accent,
@@ -148,5 +160,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     paddingHorizontal: 12,
+  },
+  a11yTextCompact: {
+    fontSize: 16,
+    lineHeight: 21,
   },
 });

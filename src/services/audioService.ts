@@ -1,19 +1,22 @@
 // ============================================================
 // SERVICE AUDIO — expo-audio (remplace expo-av, New Architecture)
 // Gère la lecture en boucle des 2 pistes musicales :
-//   - "Ambiance Forêt"  : musique de menu (hors jeu)
-//   - "Ambiance Défi"   : musique pendant le jeu
+//   - "Musique des menus"  : musique de menu (hors jeu)
+//   - "Musique des défis"  : musique pendant le jeu
 // Le service est un singleton. Il reçoit l'état du store via
 // syncFromStore() appelé par le composant AudioController.
+// Pas de réglage de volume dans l'app : le joueur règle le volume de son appareil.
 // ============================================================
 
 import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
 import { MusicType } from '../constants/music';
 
+/** Volume de lecture fixe (musique et aperçus) ; le joueur règle le volume sur son appareil. */
+export const AUDIO_VOLUME = 0.7;
+
 interface PlayState {
   ingameEnabled: boolean;
   menuEnabled: boolean;
-  volume: number;
   selectedIngameTrackId: string;
   selectedMenuTrackId: string;
   isInGame: boolean;
@@ -49,9 +52,7 @@ class AudioService {
     }
 
     if (desiredTrackId === this.currentTrackId && this.player) {
-      // Même piste — juste mettre à jour le volume
-      try { this.player.volume = state.volume; } catch (_) {}
-      return;
+      return; // Même piste déjà en lecture
     }
 
     await this._playTrack(desiredTrackId, state);
@@ -102,7 +103,7 @@ class AudioService {
       await this._initAudioMode();
 
       const player = createAudioPlayer(track.file);
-      player.volume = state.volume;
+      player.volume = AUDIO_VOLUME;
       player.loop = true;
       player.play();
 
@@ -127,11 +128,11 @@ class AudioService {
   }
 
   /** Joue un aperçu d'une piste (sans boucle) */
-  async playPreview(trackFile: any, volume: number): Promise<AudioPlayer | null> {
+  async playPreview(trackFile: any): Promise<AudioPlayer | null> {
     try {
       await this._initAudioMode();
       const player = createAudioPlayer(trackFile);
-      player.volume = volume;
+      player.volume = AUDIO_VOLUME;
       player.loop = false;
       player.play();
       return player;

@@ -16,6 +16,7 @@ import { RewardedAdHost } from '../src/components/Ads/RewardedAdHost';
 import { DialogHost } from '../src/components/Game/DialogHost';
 import { PremiumCelebrationModal } from '../src/components/Premium/PremiumCelebrationModal';
 import { useAudioStore } from '../src/store/audioStore';
+import { useGameStore } from '../src/store/gameStore';
 import { NavigationBar } from 'expo-navigation-bar';
 import { AppSplashScreen } from '../src/components/SplashScreen';
 
@@ -59,6 +60,9 @@ function AudioBridge() {
   const userHasInteracted      = useAudioStore(s => s.userHasInteracted);
   const pendingMusicUnlockId   = useAudioStore(s => s.pendingMusicUnlockTrackId);
   const dismissMusicUnlock     = useAudioStore(s => s.dismissMusicUnlock);
+  // Le déblocage d'une musique tombe souvent à la victoire : on attend la fin de la victoire pour ne pas empiler
+  // deux modales (cause probable d'une modale de victoire qui se ferme seule).
+  const victoryShown           = useGameStore(s => s.isVictory);
 
   // Sur web : écouter le premier clic/toucher au niveau du document
   // (phase de capture, avant tout handler React) pour débloquer l'audio
@@ -94,7 +98,7 @@ function AudioBridge() {
     <>
       <AudioController isInGame={isInGame} />
       <MusicUnlockModal
-        visible={!!pendingMusicUnlockId}
+        visible={!!pendingMusicUnlockId && !victoryShown}
         trackId={pendingMusicUnlockId}
         onClose={dismissMusicUnlock}
       />

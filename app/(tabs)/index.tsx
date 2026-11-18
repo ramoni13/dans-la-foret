@@ -593,7 +593,7 @@ function SoloModal({
             onPress={onPlay}
             activeOpacity={0.85}
           >
-            <Text style={soloStyles.btnPlayLabel}>{playLabel}</Text>
+            <Text style={soloStyles.btnPlayLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{playLabel}</Text>
             {playSublabel ? (
               <Text style={soloStyles.btnPlaySublabel}>{playSublabel}</Text>
             ) : null}
@@ -605,7 +605,7 @@ function SoloModal({
             onPress={onSeeAll}
             activeOpacity={0.8}
           >
-            <Text style={soloStyles.btnSeeAllText}>{t('index_solo_see_all')}</Text>
+            <Text style={soloStyles.btnSeeAllText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{t('index_solo_see_all')}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
       </TouchableOpacity>
@@ -693,6 +693,9 @@ const soloStyles = StyleSheet.create({
     elevation: 6,
   },
   btnPlayLabel: {
+    alignSelf: 'stretch',
+    textAlign: 'center',
+    paddingHorizontal: 12,
     color: '#fff',
     fontSize: 17,
     fontWeight: '800',
@@ -701,6 +704,9 @@ const soloStyles = StyleSheet.create({
     textShadowRadius: 3,
   },
   btnPlaySublabel: {
+    alignSelf: 'stretch',
+    textAlign: 'center',
+    paddingHorizontal: 12,
     color: 'rgba(255,255,255,0.8)',
     fontSize: 12,
     fontWeight: '500',
@@ -715,6 +721,11 @@ const soloStyles = StyleSheet.create({
     alignItems: 'center',
   },
   btnSeeAllText: {
+    // Pleine largeur + centré : le texte est mesuré sur la largeur réelle du bouton (et non sur sa largeur"intrinsèque",
+    // fausse avec l'emoji sur Android, ce qui coupait le dernier mot)
+    alignSelf: 'stretch',
+    textAlign: 'center',
+    paddingHorizontal: 12,
     color: 'rgba(255,255,255,0.85)',
     fontSize: 15,
     fontWeight: '600',

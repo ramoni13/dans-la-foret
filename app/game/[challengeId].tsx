@@ -21,6 +21,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BoardRenderer } from '../../src/components/Board/BoardRenderer';
+import { BoardBackdrop } from '../../src/components/Board/BoardBackdrop';
 import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { HintOverlay } from '../../src/components/Bonus/HintOverlay';
 import { VictoryModal } from '../../src/components/Game/VictoryModal';
@@ -64,7 +65,6 @@ import { calculateSeedReward } from '../../src/core/engine/hintEngine';
 import { awardEarnedTrophies, computeNextTrophies, readTrophyState } from '../../src/services/trophyService';
 import type { NextTrophyItem } from '../../src/components/Badges/BadgeProgressInline';
 
-import { FallingLeaves } from '../../src/components/Game/FallingLeaves';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { useT } from '../../src/i18n';
@@ -235,7 +235,8 @@ export default function GameScreen() {
   // ── BackHandler Android ────────────────────────────────────
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleAbandon();
+      // Victoire affichée : « Retour » ne doit pas proposer d'abandonner un défi déjà gagné
+      if (!useGameStore.getState().isVictory) handleAbandon();
       return true; // empêche la navigation par défaut
     });
     return () => sub.remove();
@@ -635,8 +636,6 @@ export default function GameScreen() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      {/* ── Feuilles qui tombent ── */}
-      <FallingLeaves />
 
       <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         {/* ── Header ── */}
@@ -719,6 +718,7 @@ export default function GameScreen() {
 
         {/* ── Plateau ── */}
         <View style={styles.boardArea}>
+          <BoardBackdrop boardDef={boardDef} />
           <View style={[styles.boardContainer, { maxHeight: Math.min(screenWidth, screenHeight * 0.52) }]}>
             <BoardRenderer
               boardDef={boardDef}
@@ -999,6 +999,7 @@ const styles = StyleSheet.create({
   },
   boardArea: {
     flex: 1,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.ui.background,
@@ -1018,7 +1019,5 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     aspectRatio: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
   },
 });

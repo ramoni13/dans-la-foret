@@ -66,8 +66,6 @@ import {
   mergeCeremonyIds,
 } from '../constants/ceremonies';
 
-/** Type d'effet visuel en jeu (particules en arrière-plan) */
-export type VisualEffect = 'leaves' | 'butterflies' | 'birds' | 'none';
 import {
   BADGE_MAP,
   BADGE_SEED_REWARDS,
@@ -197,8 +195,6 @@ interface PlayerState {
   /** BonusId dont le joueur a coché "Ne plus me montrer" */
   bonusTutorialDismissed: BonusId[];
 
-  // ── Effet visuel en jeu ─────────────────────────────────────────────────
-  visualEffect: VisualEffect;
 
   // ── Défi journalier ────────────────────────────────────────────────────────
   dailyChallengeStreak: number;                                      // Jours consécutifs réussis (indépendant du streak normal)
@@ -354,8 +350,6 @@ interface PlayerState {
   setBonusTutorialEnabled: (bonusId: BonusId, enabled: boolean) => void;
   resetBonusTutorials: () => void;
 
-  // ── Actions effet visuel ───────────────────────────────────────────────────
-  setVisualEffect: (effect: VisualEffect) => void;
 
   // ── Action quotidienne ───────────────────────────────────────────────────────
   checkDailyLogin: () => boolean; // Retourne true si c'est la première connexion du jour
@@ -478,7 +472,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   lastPlayedDate: '',
 
   bonusTutorialDismissed: [],
-  visualEffect: 'leaves' as VisualEffect,
 
   dailyChallengeStreak: 0,
   longestDailyChallengeStreak: 0,
@@ -665,12 +658,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       lastPlayedDate:    mergedLastPlayed,
       dailyChallengeStreak: Math.max(
         get().dailyChallengeStreak,
-        (profile as any).dailyChallengeStreak ?? 0,
+        profile.dailyChallengeStreak ?? 0,
       ),
       longestDailyChallengeStreak: Math.max(
         get().longestDailyChallengeStreak,
-        (profile as any).longestDailyChallengeStreak ?? 0,
+        profile.longestDailyChallengeStreak ?? 0,
       ),
+      // Amis déjà défiés : union (jamais perdus à la réinstallation)
+      challengedFriendIds: Array.from(new Set([...get().challengedFriendIds, ...(profile.challengedFriendIds ?? [])])),
       onfSolvedCount: (profile as any).onfSolvedCount ?? (profile as any).onf4x4SolvedCount ?? 0,
       completedOnfChallengeIds: (profile as any).completedOnfChallengeIds ?? [],
       // Herbier : union sans doublon, triée — jamais perdre les cartes offline
@@ -1157,8 +1152,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   resetBonusTutorials: () => set({ bonusTutorialDismissed: [] }),
 
-  // ── Effet visuel ─────────────────────────────────────────
-  setVisualEffect: (effect) => set({ visualEffect: effect }),
 
   // ── Défi journalier ────────────────────────────────────────
   submitDailyResult: (date, success, timeMs, league) => {

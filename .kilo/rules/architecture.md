@@ -37,16 +37,17 @@ Refonte de la progression (étoiles, chapitres, déblocages, cérémonies, Herbi
 
 ### Statistiques (Lot D)
 
-**Quatre blocs** (avant : 5 cartes, aucune donnée de la Progression v2). Écran : `src/components/Stats/StatsScreen.tsx`, monté par la section « Stats » du Profil (`profile.tsx` n'a plus de calcul de stats ni de `StatCard`).
+**Trois blocs, simplifiés (retours de test de novembre 2026)** : ne restent que des valeurs qui se comprennent **sans explication** (plus de « ? » ni de modale d'aide), bien alimentées et **absentes du reste de l'app** (graines, pommes de pin totales, chapitre, trophées, Herbier et série en cours sont déjà sur l'accueil / le profil). Écran : `src/components/Stats/StatsScreen.tsx`, monté par la section « Stats » du Profil.
 
 | Bloc | Contenu |
 |---|---|
-| 🌲 Progression | étoiles x/630, défis ⭐⭐⭐, chapitre x/7, trophées, Herbier |
-| 🧩 Solo | défis résolus, « bien joués » (⭐⭐+), plus rapide, abandons, **temps moyen par chapitre** |
-| 🎮 Modes | Journalier (global + **par ligue** : parties, victoires, meilleur temps), Forestier (**par palier**, meilleur temps, sans erreur), Duel (V / D, taux, record de série) |
-| 📆 Régularité | série du Journalier, jours de suite, jours joués, victoires, graines gagnées / dépensées, pubs regardées |
+| 🧩 Défis solo | défis résolus, défis parfaits (3 pommes de pin), défi le plus rapide |
+| 🎮 Autres modes | Défis du jour gagnés (`gagnés / joués`), record de série du Défi du jour, grilles Forestier résolues, défis entre amis gagnés (`V / joués`) |
+| 📆 Régularité | jours joués, record de jours d'affilée |
 
-**Logique pure** (`src/constants/playerStats.ts`, testée par `__tests__/playerStats.test.ts`) : `buildStatsView` (les 4 blocs, valeurs neutres, jamais `NaN` ni `undefined`, pourcentages bornés à 100 %), `mergeStats` (fusion local/cloud), `tallyNewDuels`, `effectiveDailyStreak`, `averageBestTimeByChapter`, `countOnfByTier`, `percent`.
+**Logique pure** (`src/constants/playerStats.ts`) : `buildStatsView` (valeurs neutres, jamais `NaN` ni `undefined`), `mergeStats` (fusion local/cloud), `tallyNewDuels`. Supprimés avec la simplification : `effectiveDailyStreak`, `daysBetween`, `averageBestTimeByChapter`, `countOnfByTier`, `percent` et les clés i18n `stats_*` devenues inutiles (les compteurs `seedsEarned`, `adsWatched`, `daily*Pousse/GrandChene`… restent alimentés dans `playerStore.stats`, simplement non affichés).
+
+> Les paragraphes ci-dessous décrivent le Lot D tel que livré ; ceux qui parlent des 4 blocs, du temps moyen par chapitre, de `countOnfByTier` ou de `effectiveDailyStreak` sont **historiques**.
 
 **Fusion** : `restoreFromCloud` utilise `mergeStats` : les compteurs cumulatifs ne baissent **jamais** (max local / cloud), `bestTimes` garde le plus petit temps par défi, les dictionnaires fusionnent clé par clé, les records de temps gardent le meilleur, la moyenne vient de la source qui compte le plus de parties. **Avant le Lot D**, `dailyPlayed`, `dailyWon`, `friendPlayed`, `failCount`, `sameChallengePlays`… étaient ÉCRASÉS par le cloud (0 si le Journalier ou le Duel n'y avaient jamais écrit leurs stats) : `dailyWon` alimente le trophée Rendez-vous, qui pouvait donc régresser à chaque reconnexion. Un profil cloud vierge (nouveau compte) n'hérite pas des stats locales d'une session précédente.
 
@@ -235,14 +236,13 @@ Refonte de la progression (étoiles, chapitres, déblocages, cérémonies, Herbi
 
 **Tout ce qui suit n'est visible que si `PROGRESSION_V2 = true`.** Avec `false`, le bandeau, la victoire et l'écran des niveaux restent ceux d'avant (seules les modales de graines passent à Reanimated, sans changement visuel).
 
-**Logique pure** (`src/constants/progression.ts`, testée) : `buildChallengeId`, `getLevelChallengeIds`, `isLevelOpen`, `getLevelStatus` (jauge `x / seuil`), `getRecommendedChallengeId` (1er défi jamais gagné, sinon 1er sans ⭐⭐⭐), `getNextRecommended` (accueil), `getNextAfterWin` (bouton « Défi suivant »), `buildStarSequence` (états `new | owned | missed` par emplacement), `getStarPopDelays`, `getStarSequenceDuration` (≈ 1 s : 1re étoile à 120 ms, 260 ms entre deux étoiles), `STAR_NOTE_RATES`, `getStarHaptic`, `getLevelGaugeResult` (jauge + bandeau « Niveau N débloqué »). `src/constants/counterLayout.ts` : géométrie des compteurs ⭐ / 🌱. `src/utils/starTones.ts` : 3 notes WAV synthétisées en mémoire (le dépôt n'a aucun son d'effet et `assets/` ne se modifie pas).
+**Logique pure** (`src/constants/progression.ts`, testée) : `buildChallengeId`, `getLevelChallengeIds`, `isLevelOpen`, `getLevelStatus` (jauge `x / seuil`), `getRecommendedChallengeId` (1er défi jamais gagné, sinon 1er sans ⭐⭐⭐), `getNextRecommended` (accueil), `getNextAfterWin` (bouton « Défi suivant »), `buildStarSequence` (états `new | owned | missed` par emplacement), `getStarPopDelays`, `getStarSequenceDuration` (≈ 1 s : 1re étoile à 120 ms, 260 ms entre deux étoiles), `STAR_NOTE_RATES` (sert encore de rang pour la vibration), `getStarHaptic`, `getLevelGaugeResult` (jauge + bandeau « Niveau N débloqué »). `src/constants/counterLayout.ts` : géométrie des compteurs ⭐ / 🌱. **Aucun son d'effet** : les notes des pommes de pin et le jingle de fin de niveau (`starSoundService.ts`, `assets/sounds/*.wav`) ont été supprimés (novembre 2026).
 
 **Composants (Reanimated)** :
 - `src/components/Game/RewardFly.tsx` — remplace `SeedFlyAnimation` : `RewardFly` (cible `'seeds' | 'stars'`) et `useCounterPulse()` (retourne `{ counterStyle, haloStyle, pulse }`, styles Reanimated). Respecte `useReducedMotion()` (fondu sur place, pas de trajet ; les arrivées sont quand même signalées).
 - `src/store/rewardFlyStore.ts` — remplace `seedAnimStore` : positions des compteurs du bandeau (`counters`), `triggerFly`, `clearFly`, `pulses` / `requestPulse(target)`. `ForestFrame` publie les centres des compteurs ; le compteur du bandeau rebondit à chaque `requestPulse`. **Aucun composant n'appelle encore `triggerFly`** : les modales (Victory, RankUp, Roulette, friend-challenge) volent vers leur PROPRE compteur local.
-- `src/components/Game/StarRow.tsx` — 3 emplacements avec critère (Gagné / Sans erreur / Parfait) en **pommes de pin** (voir « Pommes de pin » ci-dessus) : pop successif des NOUVELLES, note de plus en plus aiguë (`playStarTone`), vibration légère (moyenne pour la 3e), transformation bois → or avec confettis si la 3e est obtenue. L'envol vers le compteur part dès l'APPARITION de la pomme de pin (pas à la fin du ressort).
+- `src/components/Game/StarRow.tsx` — 3 emplacements avec critère (Gagné / Sans erreur / Parfait) en **pommes de pin** (voir « Pommes de pin » ci-dessus) : pop successif des NOUVELLES, vibration légère (aucun son) (moyenne pour la 3e), transformation bois → or avec confettis si la 3e est obtenue. L'envol vers le compteur part dès l'APPARITION de la pomme de pin (pas à la fin du ressort).
 - `src/components/Game/VictoryModal.tsx` — réécrit en Reanimated. Prop optionnelle `starResult?: VictoryStarResult` (`{ sequence, gauge, isReplay }`) : sans elle (Journalier, Forestier, Duel) la séquence d'étoiles est absente et les graines démarrent comme avant. Phases : `stars` → `gauge` (jauge `x / seuil`, bandeau « Niveau N débloqué ! ») → `seeds` (puis PERFECT ×2). Un tap passe la séquence. **`starResult` doit être fourni dès le premier rendu visible** (la séquence est décidée à l'ouverture). **Le pavé des 3 prochains trophées n'est plus dans la modale** (trop chargée) : elle n'affiche qu'UNE ligne (`pickTrophyHint`, `trophyHint.ts`) — un trophée obtenu ce tour, sinon un trophée à ≥ 75 % de sa cible, sinon rien. Les 3 prochains trophées et leur barre restent dans le Profil. Le bandeau PERFECT a la largeur de la carte (plus de marge négative).
-- `src/services/starSoundService.ts` — joue la note via `expo-audio`, silencieux si le son en jeu est coupé ou avant la 1re interaction (web).
 - `ForestFrame` — `CountersOverlay` : deux blocs côte à côte, pommes de pin à gauche (`bloc_pp.png`) et graines à droite (`bloc_graines.png`). Chaque bloc porte DÉJÀ son icône : le texte n'affiche que le nombre, sans voile coloré ni icône ajoutée ; avec le drapeau à `false`, 🌱 seul, libellé « N graines » comme avant.
 
 **Écran de jeu Solo** (`[challengeId].tsx`) : `soloOutcome` (useMemo au passage en victoire) fige les notes AVANT la partie ; `starResult` en dérive. Avec le drapeau, les boutons de la `VictoryModal` viennent de `getVictoryNavigation` (`progression.ts`, pur, testé) : par défaut « Défi suivant » = `getNextAfterWin` (le prochain jamais gagné du niveau via `getNextInLevel`, puis le niveau suivant s'il est ouvert, sinon l'accueil). **Niveau tout juste validé** (`gauge.unlockedLevel`) : le bouton principal devient « Passer au niveau N » (cohérent avec le bandeau « Niveau N débloqué ») et un bouton secondaire « Continuer le niveau M (pommes de pin manquantes) » (props `onSecondaryAction` / `secondaryActionLabel` de `VictoryModal`) mène au prochain défi du niveau validé, absent si ce niveau n'a plus rien à améliorer. **Cérémonie en file** (`pendingCeremonies` non vide, cas des fins de chapitre) : le bouton principal devient « Découvrir ta récompense » et ramène à l'accueil, où `useCeremonyPlayer` la joue (jamais sur l'écran de jeu, règle C7) ; le « prochain conseillé » de l'accueil pointe alors vers le niveau suivant. Le bouton secondaire reste un choix explicite du joueur (il saute la cérémonie, qui reste en file). Clés i18n : `victory_go_next_level`, `victory_continue_level`, `victory_go_home_ceremony`.
@@ -267,6 +267,22 @@ Toujours actifs (additifs, sans effet visible) : calcul et persistance des étoi
 
 **Remise à zéro (C9)** : à la connexion, si `progressionVersion` est absent ou `< 2` : (1) `resetPlayerProgression(uid)` écrit les défauts dans Firestore (`merge: true`, identité et préférences conservées), (2) `playerStore.resetProgression()`, (3) relecture du profil, (4) `restoreFromCloud`. Si l'écriture cloud échoue, l'ancien profil n'est **pas** restauré et l'opération est retentée à la connexion suivante. Les profils créés par `createPlayer` naissent à `progressionVersion: 2`. `isPremium` est remis à `false` **uniquement** parce que les testeurs n'ont pas payé (commentaire obligatoire dans `profileDefaults.ts` : en production, un achat ne doit jamais être remis à zéro). La purge des classements, records et résultats du Défi du Jour est **proposée, non exécutée** : `docs/purge-progression-v2.md` + `scripts/purgeProgressionV2.ts` (dry-run par défaut). `foret_commune` n'est pas touchée.
 
+---
+
+### Retours de test (novembre 2026)
+
+- **Profil (`profile.tsx`)** : chaque section a un `key` propre (`section-hub`, `section-reglages`…). Toutes renvoyaient `View > BgImage > ScrollView` : React réutilisait le MÊME `ScrollView` natif avec son offset (bas de page), et le hub, plus court, s'affichait vide au retour.
+- **Réinstallation** : AsyncStorage (`dlf_player_v1`, `dlf_audio_v1`) est effacé, le **compte Firebase** reste. Après reconnexion, `restoreFromCloud` restaure progression, étoiles, graines, trophées, Herbier, musiques, statistiques, limites du jour, premium, séries du Défi du jour (`dailyChallengeStreak`, `longestDailyChallengeStreak`) et amis déjà défiés (`challengedFriendIds`) : ces trois derniers sont écrits avec `updateStats(uid, stats, buildStatsExtra(state))` (point d'entrée unique, `playerService.ts`). **Reste local, perdu** : langue (retombe sur celle du téléphone), « Ne plus me montrer » des tutoriels bonus, préférence du badge rouge « amis », minuteurs des défis en cours, briefing Forestier déjà vu, et tout ce qui n'a pas encore été synchronisé (hors-ligne). Sans reconnexion au même compte : profil neuf.
+- **Fond des défis** : `BoardBackdrop` (image `boardDef.backgroundAsset`, `absoluteFill`, `cover`) est le premier enfant de `boardArea` dans `[challengeId]`, `daily`, `friend-challenge` et `onf` ; `BoardRenderer` n'a plus d'image (fond transparent). L'image remplit toute la zone de jeu, quel que soit l'appareil.
+- **Effets de surface supprimés** : `FallingLeaves`, `visualEffect` / `setVisualEffect` / type `VisualEffect` (store, `useStorage`, `MusicPanel`) et clés `settings_visual_effects` / `effect_*`. Une ancienne sauvegarde qui contient `visualEffect` est ignorée sans erreur.
+- **Volume supprimé** des Réglages : `audioStore.volume` / `setVolume` retirés (store, persistance, `AudioController`), lecture à `AUDIO_VOLUME` fixe. Clé `music_volume` retirée.
+- **Libellés** : « Ambiance Forêt » → **« Musique des menus »** (`music_type_menu`), « Ambiance Défi » → **« Musique des défis »** (`music_type_ingame`) ; EN : « Menu music » / « Challenge music ».
+- **Préécoute (`MusicPanel`)** : cliquer un titre de la liste le **sélectionne ET le joue** (le précédent s'arrête) ; recliquer le titre en cours l'arrête. `previewSeqRef` invalide les lectures encore en démarrage (clics rapides). Le bouton ▶/⏹ agit sur le titre sélectionné.
+- **Défis entre amis en direct** : `subscribeFriendChallenges(uid, onChange)` (`challengeService.ts`, 3 `onSnapshot` : reçus en attente, envoyés, reçus terminés, état initial ignoré, relecture regroupée à 250 ms) est branché dans `(tabs)/challenge.tsx` : un défi reçu, ou terminé par l'adversaire, apparaît sans quitter l'écran.
+- **Briefing de niveau** : `LevelMeta.newRules` est regroupé par élément via `groupRulesByElement` (`levelMeta.ts`, champ `RuleCard.focusElement`) : **une page par élément**, toutes ses règles empilées (`RuleCard compact`, badge « Nouveau ! » unique, `ScrollView` si l'écran est petit). Ex. : loup = 1 page, 2 règles. Testé par `__tests__/levelMetaGroups.test.ts`.
+- **Victoire sans son** : plus de notes de pommes de pin ni de jingle de fin de niveau (`starSoundService.ts` et `assets/sounds/*.wav` supprimés ; `atelier-son-pommes-de-pin.html` aussi).
+- **Bug « victoire figée »** : la `VictoryModal` est désormais une **superposition** (`View` absolue, `zIndex`/`elevation` 1000) et non un `Modal` natif : empilée avec d'autres modales natives (déblocage de musique, record de série, roulette), elle pouvait se fermer seule et laisser un écran de jeu inerte. De plus : `MusicUnlockModal` attend la fin de la victoire (`app/_layout.tsx`, `gameStore.isVictory`) et le bouton retour Android est ignoré pendant la victoire (3 écrans de jeu). Cause non reproduite : correctif préventif.
+- **Pistes de performance** : voir la réponse de la session (non implémentées) — abonnements `usePlayerStore()` sur le store entier, `getCellColor` en fonction inline qui invalide le `useMemo` des cases du plateau, 21 JSON de niveaux importés en bloc dans `[challengeId].tsx`, `fond-ecran.jpg` (2,5 Mo, 1344×3168) décodé par chaque écran, `assets/cadre/bordure.svg` (8 Mo) non utilisé.
 ---
 
 ## Convention de maintenance de ce fichier
@@ -450,12 +466,12 @@ src/
     locales/fr.json / en.json
   components/
     SplashScreen.tsx
-    Board/      ← BoardRenderer.tsx, Cell.tsx, Connection.tsx
+    Board/      ← BoardRenderer.tsx (fond transparent), BoardBackdrop.tsx (image de fond plein cadre, `cover`, posée par chaque écran de jeu), Cell.tsx, Connection.tsx
     Elements/   ← ElementPalette.tsx, ElementToken.tsx
     Bonus/      ← HintOverlay.tsx, BonusTutorialModal.tsx
     Account/    ← DeleteAccountModal.tsx (suppression du compte), LegalLinks.tsx (mention d'inscription + liens légaux du Profil)
     Ads/        ← RewardedAdHost.tsx (pub volontaire simulée : recharge d'un bonus, Forêt commune ou quota du Défi de la forêt, montée UNE fois à la racine)
-    Game/       ← DialogHost.tsx (affiche `dialogStore` avec ConfirmModal : remplace Alert.alert / window.alert / confirm, monté UNE fois à la racine), ConfirmModal.tsx (prop `hideCancel` pour une alerte), VictoryModal.tsx (Reanimated, Lot 2), StarRow.tsx, PineconeIcon.tsx (+ PineconeText), PineconeBurst.tsx, RewardFly.tsx, CeremonyModal.tsx (Lot 4), FailModal.tsx, Confetti.tsx, FallingLeaves.tsx,
+    Game/       ← DialogHost.tsx (affiche `dialogStore` avec ConfirmModal : remplace Alert.alert / window.alert / confirm, monté UNE fois à la racine), ConfirmModal.tsx (prop `hideCancel` pour une alerte), VictoryModal.tsx (Reanimated, Lot 2 ; **superposition dans l'écran, pas un `Modal` natif**), StarRow.tsx, PineconeIcon.tsx (+ PineconeText), PineconeBurst.tsx, RewardFly.tsx, CeremonyModal.tsx (Lot 4), FailModal.tsx, Confetti.tsx,
                   ChallengeCountdown.tsx, ConfirmModal.tsx,
                   AbandonConfirmModal.tsx, DailyAbandonConfirmModal.tsx, DailyRouletteModal.tsx,
                   DailyStreakRecordModal.tsx
@@ -662,7 +678,7 @@ Profil + progression + badges + graines. Points critiques :
 **Persistance** : `useStorage.ts` sérialise le store dans AsyncStorage (`dlf_player_v1`) ; `playerService.ts` synchronise Firestore (`/players/{uid}`) ; `migrateProfile(raw)` normalise un profil Firestore (valeurs par défaut, anciens champs).
 
 ### audioStore
-- `ingameEnabled` / `menuEnabled` — son pendant le jeu / dans les menus
+- `ingameEnabled` / `menuEnabled` — « Musique des défis » / « Musique des menus » ; **pas de volume dans l'app** (constante `AUDIO_VOLUME` de `audioService.ts` : le joueur règle le volume de son appareil)
 - `selectedIngameTrackId` / `selectedMenuTrackId`, `ownedTrackIds`, `previewTrackId`
 - `userHasInteracted` — requis sur web avant toute lecture audio
 - `signalUserInteraction()` — déclenché par premier clic/toucher (géré dans `app/_layout.tsx`)
@@ -679,7 +695,7 @@ Positions des compteurs ⭐ / 🌱 du bandeau (`counters`, alimentées par `Fore
 
 1. `useLocalSearchParams` → `challengeId`
 2. `game.loadChallenge(found)` — charge le défi
-3. Briefing modal (`LevelBriefingModal`) si `challengeNumber === 1` (réouvrable via le bouton « ? »)
+3. Briefing modal (`LevelBriefingModal`, une page par élément avec toutes ses règles) si `challengeNumber === 1` (réouvrable via le bouton « ? »)
 4. `game.startTimer()` après fermeture du briefing (immédiat pour les défis 2+)
 5. Pose des jetons : tap sur un jeton de la palette (`ElementPalette`) puis tap sur une case (`BoardRenderer`)
 6. Bouton **Valider** → `game.validateChallenge()` → `VictoryModal` ou `FailModal` (échec = `failCountForGameRef` incrémenté)

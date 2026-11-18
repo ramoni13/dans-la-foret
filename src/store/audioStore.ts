@@ -2,10 +2,9 @@
 // STORE AUDIO — Zustand
 // Gestion des préférences musicales du joueur
 //
-// - 2 types : "Ambiance Défi" (ingame) et "Ambiance Forêt" (menu)
+// - 2 types : "Musique des défis" (ingame) et "Musique des menus" (menu)
 // - Morceau sélectionné par type (persisté dans AsyncStorage via useStorage)
 // - Toggles on/off par type
-// - Volume global
 //
 // Source de vérité des musiques débloquées (Progression v2, C8 / D11) :
 //   audioStore.ownedTrackIds est calculé par `computeOwnedMusic` (musicUnlocks.ts) depuis les titres gratuits,
@@ -21,7 +20,6 @@ interface AudioState {
   // Préférences
   ingameEnabled: boolean;         // Musique activée pendant le défi
   menuEnabled: boolean;           // Musique activée hors défi (menus)
-  volume: number;                 // 0.0 à 1.0
 
   // Morceaux sélectionnés
   selectedIngameTrackId: string;  // ID du morceau choisi pour ingame
@@ -47,7 +45,6 @@ interface AudioState {
   // ── Actions ──────────────────────────────────────────────────
   setIngameEnabled: (v: boolean) => void;
   setMenuEnabled: (v: boolean) => void;
-  setVolume: (v: number) => void;
   setSelectedTrack: (type: MusicType, trackId: string) => void;
   setPreviewTrack: (trackId: string | null) => void;
   signalUserInteraction: () => void;
@@ -69,7 +66,7 @@ interface AudioState {
    * N'écrase PAS userHasInteracted ni previewTrackId.
    */
   hydrate: (data: Partial<Pick<AudioState,
-    'ingameEnabled' | 'menuEnabled' | 'volume' |
+    'ingameEnabled' | 'menuEnabled' |
     'selectedIngameTrackId' | 'selectedMenuTrackId'
   >>) => void;
 }
@@ -96,7 +93,6 @@ function computeOwnedFromProgress(p: MusicProgress): string[] {
 export const useAudioStore = create<AudioState>((set, get) => ({
   ingameEnabled: true,
   menuEnabled: true,
-  volume: 0.7,
   selectedIngameTrackId: DEFAULT_INGAME_TRACK,
   selectedMenuTrackId: DEFAULT_MENU_TRACK,
   ownedTrackIds: [...FREE_TRACK_IDS],
@@ -106,7 +102,6 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
   setIngameEnabled: (v) => set({ ingameEnabled: v }),
   setMenuEnabled: (v) => set({ menuEnabled: v }),
-  setVolume: (v) => set({ volume: Math.max(0, Math.min(1, v)) }),
 
   setSelectedTrack: (type, trackId) => {
     if (type === 'ingame') {
@@ -168,7 +163,6 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         ...s,
         ingameEnabled:         data.ingameEnabled          ?? s.ingameEnabled,
         menuEnabled:           data.menuEnabled             ?? s.menuEnabled,
-        volume:                data.volume                  ?? s.volume,
         selectedIngameTrackId: data.selectedIngameTrackId  ?? s.selectedIngameTrackId,
         selectedMenuTrackId:   data.selectedMenuTrackId    ?? s.selectedMenuTrackId,
       };
