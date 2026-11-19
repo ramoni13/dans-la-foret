@@ -189,30 +189,11 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
     }
   }, [seedsEarned]);
 
-  // ── Animation entrée carte ────────────────────────────────────────────────
-  const cardScale = useSharedValue(0);
-  const backdropOpacity = useSharedValue(0);
-
   useEffect(() => {
     if (visible) {
       notificationSuccess();
-      if (reduceMotion) {
-        cardScale.value = 1;
-        backdropOpacity.value = withTiming(1, { duration: 150 });
-      } else {
-        cardScale.value = withSpring(1, { damping: 12, stiffness: 150 });
-        backdropOpacity.value = withTiming(1, { duration: 200 });
-      }
-    } else {
-      cancelAnimation(cardScale);
-      cancelAnimation(backdropOpacity);
-      cardScale.value = 0;
-      backdropOpacity.value = 0;
     }
   }, [visible]);
-
-  const cardStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
 
   // ── Positions mesurées dans la carte (via onLayout) ───────────────────────
   const [titleLayout, setTitleLayout] = useState<{ y: number; height: number } | null>(null);
@@ -484,8 +465,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
   return (
     <View style={styles.overlay} accessibilityViewIsModal>
-      <Animated.View style={[styles.backdrop, backdropStyle]}>
-        <Animated.View style={[styles.card, cardStyle]}>
+      <View style={styles.backdrop}>
+        <View style={styles.card}>
           <TouchableWithoutFeedback onPress={handleSkip} disabled={!sequenceActive}>
             <View style={styles.cardInner} onLayout={onCardInnerLayout}>
 
@@ -734,8 +715,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             />
           )}
 
-        </Animated.View>
-      </Animated.View>
+        </View>
+      </View>
 
       <Confetti pieces={confettiPieces ?? null} />
 
