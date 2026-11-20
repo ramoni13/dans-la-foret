@@ -49,7 +49,9 @@ import { useT } from '../../i18n';
 import {
   BTN_X_CENTERS,
   computeFrameLayout,
+  MENU_RATIO,
 } from '../../constants/frameLayout';
+import { WoodCounterPill } from '../relooking/relookingPrimitives';
 
 // ── Assets ────────────────────────────────────────────────────────────────────
 const COIN_IMG      = require('../../../assets/cadre/coin.png');
@@ -217,6 +219,71 @@ function SoundButton({ iconTopY }: { iconTopY: number }) {
   );
 }
 
+function HomeFrame({ stars, seeds, pending, duelIsNew }: {
+  stars: number;
+  seeds: number;
+  pending: number;
+  duelIsNew: boolean;
+}) {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { hideBack, onBack } = useNavStore();
+  const setCounterPosition = useRewardFlyStore(s => s.setCounterPosition);
+  const starsPulse = usePulseOnReward('stars');
+  const seedsPulse = usePulseOnReward('seeds');
+  const t = useT();
+  const menuWidth = Math.min(width * 0.9, 430);
+  const menuHeight = menuWidth * MENU_RATIO;
+  const menuLeft = (width - menuWidth) / 2;
+  const menuBottom = Math.max(insets.bottom, 8);
+  const counterWidth = Math.min(165, (width - 48) / 2);
+
+  React.useEffect(() => {
+    setCounterPosition('stars', width / 2 - 8 - counterWidth / 2, insets.top + 31);
+    setCounterPosition('seeds', width / 2 + 8 + counterWidth / 2, insets.top + 31);
+  }, [width, insets.top, counterWidth, setCounterPosition]);
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      <View style={{ position: 'absolute', top: insets.top + 8, left: 16, right: 16, flexDirection: 'row', justifyContent: 'center', gap: 16 }} pointerEvents="none">
+        {PROGRESSION_V2 && <ReAnimated.View style={[{ flex: 1, maxWidth: 165, height: 46 }, starsPulse]}><WoodCounterPill type="pp" value={stars} /></ReAnimated.View>}
+        <ReAnimated.View style={[{ flex: 1, maxWidth: 165, height: 46 }, seedsPulse]}><WoodCounterPill type="graines" value={seeds} /></ReAnimated.View>
+      </View>
+      <SoundButton iconTopY={insets.top + 58} />
+      <Image source={MENU_IMG} resizeMode="stretch" style={{ position: 'absolute', left: menuLeft, bottom: menuBottom, width: menuWidth, height: menuHeight }} />
+      {BUTTONS.map(btn => {
+        const x = menuLeft + btn.xC * menuWidth;
+        const y = height - menuBottom - menuHeight / 2;
+        const size = Math.max(48, menuHeight * 0.65);
+        const isActive = btn.key === 'index';
+        return (
+          <View key={btn.key} pointerEvents="box-none" style={{ position: 'absolute', left: x - size / 2, top: y - size / 2, width: size, height: size }}>
+            {isActive && <View pointerEvents="none" style={styles.homeActive} />}
+            {btn.key === 'challenge' && duelIsNew && <View pointerEvents="none" style={styles.newDot}><Text style={styles.newDotText}>✦</Text></View>}
+            {btn.key === 'challenge' && pending > 0 && (
+              <View pointerEvents="none" style={styles.badgeWrapper}><View style={styles.badge}><Text style={styles.badgeText}>{pending > 9 ? '9+' : pending}</Text></View></View>
+            )}
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              onPress={() => {
+                if (isActive && onBack) onBack();
+                else {
+                  if (btn.key !== 'profile') hideBack();
+                  router.push(btn.route);
+                }
+              }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={btn.key === 'challenge' && duelIsNew ? t('ceremony_new_badge_a11y') : btn.key}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 // ── Composant principal ────────────────────────────────────────────────────────
 export default function ForestFrame() {
   const t = useT();
@@ -254,6 +321,10 @@ export default function ForestFrame() {
    *  Les coins (rendus après) recouvrent les extrémités. */
   const borderVTop = topBarCenterY + coinH / 2;
   const borderH    = Math.max(0, screenH - borderVTop);
+
+  if (activeTab === 'index' && !onBack) {
+    return <HomeFrame stars={totalStars} seeds={seeds} pending={pendingFriendChallenges} duelIsNew={duelIsNew} />;
+  }
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -470,6 +541,13 @@ export default function ForestFrame() {
 }
 
 const styles = StyleSheet.create({
+  homeActive: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 999,
+    borderWidth: 3,
+    borderColor: '#FFD166',
+    backgroundColor: 'rgba(255,209,102,0.12)',
+  },
   coin: {
     position: 'absolute',
   },

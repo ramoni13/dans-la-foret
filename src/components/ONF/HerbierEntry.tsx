@@ -9,7 +9,7 @@
 // ============================================================
 
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { usePlayerStore } from '../../store/playerStore';
 import { getCollectionProgress, getNextCard } from '../../utils/onfCards';
 import { countUnseenCards, formatBadgeCount, getOpenRegions, getRegionFeature } from '../../constants/herbier';
@@ -17,9 +17,14 @@ import { isFeatureUnlocked } from '../../constants/progression';
 import { isDemoAccount } from '../../constants/devAccess';
 import { TreeCardGallery } from './TreeCardGallery';
 import { useT } from '../../i18n';
+import { RelookingAssets } from '../../theme/relookingAssets';
+import { useHomeFont } from '../../theme/homeTypography';
+import { ForestColors } from '../../theme/forestTheme';
 
-export function HerbierEntry() {
+export function HerbierEntry({ compact = false }: { compact?: boolean }) {
   const t = useT();
+  const fontFamily = useHomeFont();
+  const displayFont = fontFamily ? { fontFamily, fontWeight: 'normal' as const } : undefined;
   const collectedIds = usePlayerStore(s => s.collectedTreeCardIds);
   const levelsCompleted = usePlayerStore(s => s.levelsCompleted);
   const username = usePlayerStore(s => s.username);
@@ -38,7 +43,7 @@ export function HerbierEntry() {
   return (
     <>
       <TouchableOpacity
-        style={styles.card}
+        style={compact ? styles.compactCard : styles.card}
         onPress={() => setOpen(true)}
         activeOpacity={0.85}
         accessibilityRole="button"
@@ -52,6 +57,16 @@ export function HerbierEntry() {
             <Text style={styles.badgeText}>{formatBadgeCount(unseenCount)}</Text>
           </View>
         )}
+        {compact ? (
+          <>
+            <View style={styles.compactInfo}>
+              <Text style={[styles.compactTitle, displayFont]}>{t('herbier_home_title')}</Text>
+              <Text style={[styles.compactProgress, displayFont]}>{t('herbier_home_progress', { owned: String(progress.owned), total: String(progress.total) })}</Text>
+            </View>
+            <Image source={RelookingAssets.carteHerbier} style={styles.compactImage} resizeMode="contain" />
+          </>
+        ) : (
+        <>
         {/* Prochaine carte en silhouette */}
         <View style={styles.silhouette} accessible={false} importantForAccessibility="no-hide-descendants">
           <Text style={styles.silhouetteEmoji}>{next ? '🌳' : '🌟'}</Text>
@@ -68,6 +83,8 @@ export function HerbierEntry() {
           </View>
           <Text style={styles.next}>{next ? t('herbier_home_next') : t('herbier_home_complete')}</Text>
         </View>
+        </>
+        )}
       </TouchableOpacity>
 
       <TreeCardGallery visible={open} onClose={() => setOpen(false)} initialTab="plant" />
@@ -76,6 +93,11 @@ export function HerbierEntry() {
 }
 
 const styles = StyleSheet.create({
+  compactCard: { flex: 1, minHeight: 78, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  compactInfo: { flex: 1, alignItems: 'center' },
+  compactTitle: { color: ForestColors.textInkPrimary, fontSize: 16, fontWeight: '800', textAlign: 'center' },
+  compactProgress: { color: ForestColors.textInkPrimary, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  compactImage: { width: 42, height: 62 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',

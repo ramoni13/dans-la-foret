@@ -15,6 +15,7 @@
 import {
   FEATURE_UNLOCK_CHAPTER,
   ProgressionFeature,
+  getChapter,
   isFeatureUnlocked,
 } from './progression';
 
@@ -74,14 +75,18 @@ export function getFeatureLockHint(feature: ProgressionFeature, useChapters: boo
 
 /**
  * Clé i18n et variables du message « verrouillé » d'un mode, selon le système actif.
- *   chapitres : « Disponible à la fin du chapitre {{chapter}} » ;
+ *   chapitres : niveau à valider et chapitre correspondant ;
  *   niveaux   : « Disponible au niveau {{level}} » (ancien libellé inchangé).
  * `chapterName` / `levelLabel` sont fournis par l'appelant (déjà traduits).
  */
 export function getLockMessageKey(hint: LockHint): { key: string; vars: Record<string, string> } {
-  return hint.kind === 'chapter'
-    ? { key: 'unlock_at_chapter', vars: { chapter: String(hint.chapterId) } }
-    : { key: 'daily_locked', vars: { level: String(hint.level) } };
+  if (hint.kind === 'level') return { key: 'daily_locked', vars: { level: String(hint.level) } };
+  const chapter = getChapter(hint.chapterId);
+  if (!chapter) throw new Error(`Unknown chapter: ${hint.chapterId}`);
+  return {
+    key: 'unlock_at_chapter',
+    vars: { chapter: String(chapter.id), level: String(chapter.levels[1]) },
+  };
 }
 
 /**

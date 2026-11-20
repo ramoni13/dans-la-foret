@@ -15,6 +15,8 @@ import {
   Animated,
   Easing,
   Modal,
+  Image,
+  ImageBackground,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -59,12 +61,15 @@ import { getPlayerLeague } from '../../src/constants/dailyLeagues';
 import { formatTime } from '../../src/utils/boardUtils';
 import { DifficultyLevel } from '../../src/core/models/Challenge';
 import { WorldRecord, subscribeAllWorldRecords } from '../../src/services/worldRecordService';
-import { WoodButton } from '../../src/components/UI/WoodButton';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { ForetCommuneWidget } from '../../src/components/ForetCommune/ForetCommuneWidget';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
 import { useRewardedAd } from '../../src/hooks/useRewardedAd';
 import { useT } from '../../src/i18n';
+import { ParchmentBanner, TexturedButton } from '../../src/components/relooking/relookingPrimitives';
+import { RelookingAssets } from '../../src/theme/relookingAssets';
+import { useHomeFont } from '../../src/theme/homeTypography';
+import { ForestColors } from '../../src/theme/forestTheme';
 
 
 // ── Tous les défis (21 niveaux) ────────────────────────────────────────────────
@@ -534,11 +539,9 @@ function SoloModal({
     playLabel   = t('index_solo_replay');
     playSublabel = t('index_solo_all_done', { completed: String(totalCompleted), total: String(totalChallenges) });
   } else if (nextChallenge) {
-    const levelChallenges = ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? [];
-    const defIdx = levelChallenges.findIndex((c: any) => c.id === nextChallenge.challenge.id) + 1;
     const levelNum = nextChallenge.level.id.replace('niveau_', '');
     playLabel    = t('index_solo_play_label');
-    playSublabel = t('index_solo_play_sublabel', { emoji: nextChallenge.level.emoji, level: t('level_prefix') + ' ' + levelNum, current: String(defIdx), total: String(levelChallenges.length) });
+    playSublabel = t('index_solo_play_sublabel', { emoji: nextChallenge.level.emoji, level: t('level_prefix') + ' ' + levelNum, current: String(nextChallenge.challenge.challengeNumber) });
   }
 
   return (
@@ -737,6 +740,7 @@ const soloStyles = StyleSheet.create({
 // ══════════════════════════════════════════════════════════════════════════════
 export default function HomeScreen() {
   const t = useT();
+  const fontFamily = useHomeFont();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { frameBottom, innerTop } = useFrameLayout();
@@ -750,6 +754,7 @@ export default function HomeScreen() {
   const [showSoloModal, setShowSoloModal] = useState(false);
   const [showLevels, setShowLevels]       = useState(false);
   const [showPremium, setShowPremium]     = useState(false);
+  const [showProgressHelp, setShowProgressHelp] = useState(false);
   const { showBack, hideBack } = useNavStore();
   const isFreePlayer = !player.isPremium && !isDemoAccount(player.username);
   const challengeCountToday = isLimitsOfDay(player, todayLocalISO()) ? player.challengeCountToday : 0;
@@ -814,6 +819,10 @@ export default function HomeScreen() {
   const allCompleted    = PROGRESSION_V2
     ? getNextRecommended(player.challengeStars) === null
     : totalCompleted >= totalChallenges;
+  const soloProgress = useMemo(() => computeLevelProgress(player.challengeStars), [player.challengeStars]);
+  const soloLevelStatus = getLevelStatus(soloProgress.currentLevel, player.challengeStars, soloProgress);
+  const recommendedLevel = nextChallenge ? Number(nextChallenge.level.id.replace('niveau_', '')) : null;
+  const recommendedChapter = recommendedLevel !== null ? getChapterForLevel(recommendedLevel) : null;
 
   // Index initial du niveau (niveau courant du joueur)
   const initialLevelIndex = Math.min(Math.max(0, player.currentLevel - 1), LEVELS.length - 1);
@@ -885,8 +894,8 @@ export default function HomeScreen() {
 
       Animated.parallel([
         makeAppear(scaleSolo,   opaSolo,   0),
-        makeAppear(scaleOnf,    opaOnf,    180),
-        makeAppear(scaleDaily,  opaDaily,  360),
+        makeAppear(scaleDaily,  opaDaily,  180),
+        makeAppear(scaleOnf,    opaOnf,    360),
         makeAppear(scaleWidget, opaWidget, 540),
       ]).start();
     }, [authReady, isAuthenticated])
@@ -904,6 +913,31 @@ export default function HomeScreen() {
     loop.start();
     return () => loop.stop();
   }, [isDailyToday, dailyStatus]);
+
+  const dailyUnlocked = devAccess.isOpen('daily_pousse');
+  const dailyFinished = isDailyToday && !!dailyStatus;
+  const dailyLock = getLockMessageKey(devAccess.lockHint('daily_pousse'));
+  const dailyTime = player.dailyChallengeTimeMs;
+  const dailyMyRecord = dailyLeader != null && (player.userId ?? auth.currentUser?.uid) === dailyLeader.userId;
+  const dailySublabel = !dailyUnlocked
+    ? t(dailyLock.key, dailyLock.vars)
+    : !dailyFinished
+      ? dailyLeader ? '🏆 ' + formatTime(dailyLeader.timeMs) + ' · ' + dailyLeader.username : t('index_daily_discover')
+      : dailyStatus !== 'success'
+        ? t('index_daily_failed')
+        : dailyTime != null && dailyMyRecord
+          ? t('index_daily_done_record', { time: formatTime(dailyTime) })
+          : dailyTime != null && dailyLeader
+            ? t('index_daily_done_time_wr', { time: formatTime(dailyTime), wr: formatTime(dailyLeader.timeMs) })
+            : dailyTime != null ? t('index_daily_done_time', { time: formatTime(dailyTime) }) : t('index_daily_done');
+  const continueDetail = nextChallenge ? t(PROGRESSION_V2 ? 'home_solo_challenge' : 'relooking_continue_detail', {
+    level: nextChallenge.level.id.replace('niveau_', ''),
+    current: String(nextChallenge.challenge.challengeNumber),
+  }) : undefined;
+  const soloCaption = PROGRESSION_V2 && recommendedChapter && recommendedLevel !== null && !allCompleted
+    ? t('home_solo_location', { chapter: String(recommendedChapter.id), level: String(recommendedLevel) })
+    : t('index_solo_btn');
+  const displayFont = fontFamily ? { fontFamily, fontWeight: 'normal' as const } : undefined;
 
   // ── Gardes ────────────────────────────────────────────────────────────────
   if (!authReady) {
@@ -958,19 +992,18 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
         contentContainerStyle={[
           styles.container,
-          { paddingTop: innerTop + 32, paddingBottom: frameBottom + 160 },
+          { paddingTop: Math.max(insets.top + 88, innerTop + 32), paddingBottom: frameBottom + insets.bottom + 40 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.challengeQuotaCard}>
-          <Text style={styles.challengeQuotaText}>
-            {isFreePlayer
-              ? t('challenge_quota_counter', {
-                  remaining: String(challengeRemaining),
-                  quota: String(challengeQuota),
-                })
-              : t('challenge_quota_unlimited')}
-          </Text>
+        <View>
+          <View style={styles.challengeQuotaBadge} accessible>
+            <Text style={[styles.challengeQuotaBadgeText, displayFont]}>
+              {isFreePlayer
+                ? t('challenge_quota_counter', { remaining: String(challengeRemaining), quota: String(challengeQuota) })
+                : player.isPremium ? t('challenge_quota_unlimited') : t('challenge_quota_exempt')}
+            </Text>
+          </View>
           {isFreePlayer && challengeRemaining === 0 && (
             <View style={styles.challengeQuotaActions}>
               <TouchableOpacity
@@ -998,25 +1031,108 @@ export default function HomeScreen() {
 
         {/* ── Défi Solo ── */}
         <Animated.View style={{ opacity: opaSolo, transform: [{ scale: scaleSolo }] }}>
-          <WoodButton
-            variant="green"
-            label={t('index_solo_btn')}
-            sublabel={
-              allCompleted
-                ? t('index_solo_all_done', { completed: String(totalCompleted), total: String(totalChallenges) })
-                : nextChallenge
-                  ? t('index_solo_play_sublabel', {
-                      emoji: nextChallenge.level.emoji,
-                      level: t('level_prefix') + ' ' + nextChallenge.level.id.replace('niveau_', ''),
-                      current: String((ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? []).indexOf(nextChallenge.challenge) + 1),
-                      total: String((ALL_CHALLENGES_BY_LEVEL[nextChallenge.level.id] ?? []).length),
-                    })
-                  : t('index_solo_progress', { completed: String(totalCompleted), total: String(totalChallenges) })
-            }
-            height={76}
-            onPress={() => setShowSoloModal(true)}
-          />
+          <View style={styles.soloButton}>
+            <TexturedButton
+              variant="green"
+              caption={soloCaption}
+              label={
+                allCompleted
+                  ? t('index_solo_all_done', { completed: String(totalCompleted), total: String(totalChallenges) })
+                  : continueDetail
+                    ? t('relooking_continue', { detail: continueDetail })
+                    : t('index_solo_progress', { completed: String(totalCompleted), total: String(totalChallenges) })
+              }
+              accentText={!allCompleted ? continueDetail : undefined}
+              fontSize={18}
+              onPress={() => setShowSoloModal(true)}
+              style={{ aspectRatio: 3.1, minHeight: 64 }}
+            />
+          </View>
+          {PROGRESSION_V2 && (
+            <View style={styles.soloProgressSection}>
+              <View style={styles.soloProgressRow}>
+                <Text style={[styles.soloProgressText, displayFont]}>
+                  {soloLevelStatus.isCompleted
+                    ? t('home_solo_levels_complete')
+                    : t('home_solo_level_progress', {
+                        current: String(soloLevelStatus.starsShown),
+                        total: String(soloLevelStatus.threshold),
+                        level: String(soloProgress.currentLevel),
+                      })}
+                </Text>
+                <TouchableOpacity
+                  style={styles.soloHelpButton}
+                  onPress={() => setShowProgressHelp(visible => !visible)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('home_solo_help_label')}
+                  accessibilityState={{ expanded: showProgressHelp }}
+                >
+                  <Text style={styles.soloHelpIcon}>?</Text>
+                </TouchableOpacity>
+              </View>
+              {showProgressHelp && (
+                <Text style={[styles.soloHelpText, displayFont]}>{t('home_solo_help_text')}</Text>
+              )}
+            </View>
+          )}
         </Animated.View>
+
+        <Animated.View style={{ opacity: opaDaily, transform: [{ scale: scaleDaily }, { scale: dailyFinished ? 1 : pulseAnim }] }}>
+          <ParchmentBanner>
+            <TouchableOpacity
+              style={styles.dailyRelook}
+              disabled={!dailyUnlocked || dailyFinished}
+              onPress={() => {
+                player.clearNewFeatureBadge('daily');
+                router.push('/game/daily');
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !dailyUnlocked || dailyFinished }}
+            >
+              <View style={styles.dailyRelookText}>
+                <Text style={[styles.relookTitle, displayFont]}>{t('index_daily_btn')}</Text>
+                <Text style={[styles.relookSubtitle, displayFont]} numberOfLines={dailyUnlocked ? 2 : undefined}>{dailySublabel}</Text>
+                {hasNewBadge('daily', player.newFeatureBadges) && dailyUnlocked && !dailyFinished && (
+                  <Text style={[styles.relookSubtitle, displayFont]}>{t('ceremony_new_badge')}</Text>
+                )}
+              </View>
+              {!dailyUnlocked ? (
+                <View style={styles.dailyStatusIcon} accessible={false}>
+                  <Text style={styles.lockIcon}>🔒</Text>
+                </View>
+              ) : !dailyFinished ? (
+                <Image source={RelookingAssets.flecheGo} style={styles.dailyArrow} resizeMode="contain" />
+              ) : null}
+            </TouchableOpacity>
+            {dailyFinished && isAdminAccount(player.username) && (
+              <TouchableOpacity style={styles.dailyReplayBtn} onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}>
+                <Text style={styles.dailyReplayText}>↺</Text>
+              </TouchableOpacity>
+            )}
+          </ParchmentBanner>
+        </Animated.View>
+
+        {!player.isPremium && (
+          <ParchmentBanner style={styles.premiumBanner}>
+            <TouchableOpacity
+              style={styles.premiumEntry}
+              onPress={() => setShowPremium(true)}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('premium_title')}. ${t('premium_home_benefit')}. ${t('premium_home_contribution')}. ${t('premium_home_price')}`}
+            >
+              <Image source={RelookingAssets.arbre} style={styles.premiumTree} resizeMode="contain" />
+              <View style={styles.premiumText}>
+                <Text style={[styles.premiumTitle, displayFont]}>{t('premium_title')}</Text>
+                <Text style={[styles.premiumDetail, displayFont]}>{t('premium_home_benefit')}</Text>
+                <Text style={[styles.premiumDetail, displayFont]}>{t('premium_home_contribution')}</Text>
+              </View>
+              <View style={styles.premiumPrice}>
+                <Text style={[styles.premiumPriceText, displayFont]}>{t('premium_home_price')}</Text>
+              </View>
+            </TouchableOpacity>
+          </ParchmentBanner>
+        )}
 
         {/* ── Défi de la forêt — Planète Urgence 4×4 (avant le Journalier : il s'ouvre au chapitre 2, le Journalier au chapitre 3) ── */}
         <Animated.View style={{ opacity: opaOnf, transform: [{ scale: scaleOnf }] }}>
@@ -1026,174 +1142,45 @@ export default function HomeScreen() {
           const onfSolved = player.onfSolvedCount;
           const cards     = getOwnedCardCount(player.collectedTreeCardIds);
 
-          const sublabelOnf = onfSolved === 0
-            ? t('onf_btn_first_win')
-            : cards === 1
-              ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
-              : cards > 1
-                ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
-                : t('onf_btn_stats_no_card', { count: String(onfSolved) });
-
-          if (!isOnfUnlocked) {
-            const lock = getLockMessageKey(demoAccess.lockHint('onf_sentier'));
-            return (
-              <WoodButton
-                variant="locked"
-                label={t('index_onf_btn')}
-                sublabel={t(lock.key, lock.vars)}
-                height={76}
-                onPress={() => {}}
-                disabled
-              />
-            );
-          }
-
+          const lock = getLockMessageKey(demoAccess.lockHint('onf_sentier'));
           return (
-            <WoodButton
-              variant="green"
-              label={t('index_onf_btn')}
-              sublabel={sublabelOnf}
-              height={76}
-              newBadge={hasNewBadge('onf', player.newFeatureBadges) ? t('ceremony_new_badge') : undefined}
-              onPress={() => {
-                player.clearNewFeatureBadge('onf');
-                router.push('/game/onf-lobby');
-              }}
-            />
+            <ImageBackground source={RelookingAssets.doublePagePapier} resizeMode="stretch" style={styles.doubleRelook} imageStyle={{ width: '100%', height: '100%' }}>
+              <TouchableOpacity
+                style={styles.onfRelook}
+                disabled={!isOnfUnlocked}
+                onPress={() => {
+                  player.clearNewFeatureBadge('onf');
+                  router.push('/game/onf-lobby');
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !isOnfUnlocked }}
+              >
+                <View style={styles.onfTitleRow}>
+                  {!isOnfUnlocked && <Text style={styles.lockIcon} accessible={false}>🔒</Text>}
+                  <Text style={[styles.relookTitle, styles.onfTitle, displayFont]} numberOfLines={2}>{t('index_onf_btn')}</Text>
+                </View>
+                <Text style={[styles.relookSubtitle, displayFont]} numberOfLines={isOnfUnlocked ? 2 : undefined}>
+                  {isOnfUnlocked
+                    ? onfSolved === 0
+                      ? t('onf_btn_first_win')
+                      : cards === 1
+                        ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
+                        : cards > 1
+                          ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
+                          : t('onf_btn_stats_no_card', { count: String(onfSolved) })
+                    : t(lock.key, lock.vars)}
+                </Text>
+                {isOnfUnlocked && hasNewBadge('onf', player.newFeatureBadges) && <Text style={[styles.relookSubtitle, displayFont]}>{t('ceremony_new_badge')}</Text>}
+              </TouchableOpacity>
+              {PROGRESSION_V2 && <HerbierEntry compact />}
+            </ImageBackground>
           );
         })()}
         </Animated.View>
 
-        {/* ── Défi du Jour ── */}
-        <Animated.View style={{ opacity: opaDaily, transform: [{ scale: scaleDaily }] }}>
-        {(() => {
-          // Le Journalier s'ouvre avec la ligue Pousse (fin du chapitre 3) ; comptes de développement exemptés.
-          const dailyUnlocked = devAccess.isOpen('daily_pousse');
-
-          if (!dailyUnlocked) {
-            const lock = getLockMessageKey(devAccess.lockHint('daily_pousse'));
-            return (
-              <WoodButton
-                variant="locked"
-                label={t('index_daily_btn')}
-                sublabel={t(lock.key, lock.vars)}
-                height={76}
-                onPress={() => {}}
-                disabled
-              />
-            );
-          }
-
-          if (!isDailyToday || !dailyStatus) {
-            const dailySublabel = dailyLeader
-              ? '🏆 ' + formatTime(dailyLeader.timeMs) + ' · ' + dailyLeader.username
-              : t('index_daily_discover');
-            return (
-              <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-                <WoodButton
-                  variant="yellow"
-                  label={t('index_daily_btn')}
-                  sublabel={dailySublabel}
-                  height={76}
-                  newBadge={hasNewBadge('daily', player.newFeatureBadges) ? t('ceremony_new_badge') : undefined}
-                  onPress={() => {
-                    // 1re partie dans ce mode : la pastille « Nouveau » disparaît
-                    player.clearNewFeatureBadge('daily');
-                    router.push('/game/daily');
-                  }}
-                />
-              </Animated.View>
-            );
-          }
-
-          if (dailyStatus === 'success') {
-            const myTime = player.dailyChallengeTimeMs;
-            const myTimeStr = myTime != null ? formatTime(myTime) : null;
-            const wrHolder = dailyLeader;
-            // Fallback sur auth.currentUser si player.userId pas encore hydraté
-            const myUid = player.userId ?? auth.currentUser?.uid ?? null;
-            const isMyRecord = wrHolder != null && myUid != null && wrHolder.userId === myUid;
-            // Sublabel court : "Réussi · 2:34 · 🏆 1:58" ou si même joueur "Réussi · 🏆 2:34"
-            let sublabelSuccess: string;
-            if (isMyRecord && myTimeStr) {
-              sublabelSuccess = t('index_daily_done_record', { time: myTimeStr });
-            } else if (myTimeStr && wrHolder) {
-              sublabelSuccess = t('index_daily_done_time_wr', { time: myTimeStr, wr: formatTime(wrHolder.timeMs) });
-            } else if (myTimeStr) {
-              sublabelSuccess = t('index_daily_done_time', { time: myTimeStr });
-            } else {
-              sublabelSuccess = t('index_daily_done');
-            }
-            return (
-              <View style={styles.dailyDoneRow}>
-                <WoodButton
-                  variant="locked"
-                  lockIcon="✅"
-                  label={t('index_daily_btn')}
-                  sublabel={sublabelSuccess}
-                  showArrow={false}
-                  height={76}
-                  onPress={() => {}}
-                  disabled
-                />
-                {isAdminAccount(player.username) && (
-                  <TouchableOpacity
-                    style={styles.dailyReplayBtn}
-                    onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.dailyReplayText}>↺</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          }
-
-          // failed ou abandonné
-          return (
-            <View style={styles.dailyDoneRow}>
-              <WoodButton
-                variant="locked"
-                lockIcon="❌"
-                label={t('index_daily_btn')}
-                sublabel={t('index_daily_failed')}
-                showArrow={false}
-                height={76}
-                onPress={() => {}}
-                disabled
-              />
-              {isAdminAccount(player.username) && (
-                <TouchableOpacity
-                  style={styles.dailyReplayBtn}
-                  onPress={() => { player.resetDailyStatus(); router.push('/game/daily'); }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.dailyReplayText}>↺</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          );
-        })()}
+        <Animated.View style={{ opacity: opaWidget, transform: [{ scale: scaleWidget }] }}>
+          <ForetCommuneWidget />
         </Animated.View>
-
-        {/* ── Herbier de la Forêt (Progression v2, C6) : accessible dès le chapitre 1 ──
-             Visible uniquement avec PROGRESSION_V2 : sans le drapeau, l'Herbier reste dans le lobby Forestier. */}
-        {PROGRESSION_V2 && (
-          <Animated.View style={{ opacity: opaDaily, transform: [{ scale: scaleDaily }] }}>
-            <HerbierEntry />
-          </Animated.View>
-        )}
-
-        {/* ── Soutenir la forêt — masqué, intégré dans ForetCommuneWidget ── */}
-        {/* {!player.isPremium && (
-          <WoodButton
-            variant="yellow"
-            label="🌲 Soutenir la forêt"
-            sublabel="2,99 € · dont 1 € reversé à l'ONF"
-            height={76}
-            onPress={() => setShowPremium(true)}
-          />
-        )} */}
 
       </ScrollView>
 
@@ -1219,21 +1206,6 @@ export default function HomeScreen() {
           setShowPremium(false);
         }}
       />
-
-      {/* ── Forêt Commune — ancrée en bas, laisse voir la maison ── */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          bottom: frameBottom + 8,
-          left: 16,
-          right: 16,
-          opacity: opaWidget,
-          transform: [{ scale: scaleWidget }],
-        }}
-        pointerEvents="box-none"
-      >
-        <ForetCommuneWidget />
-      </Animated.View>
 
       {/* ── SoloModal (bottom-sheet) ── */}
       <SoloModal
@@ -1285,23 +1257,47 @@ const styles = StyleSheet.create({
 
   // ── Écran principal ─────────────────────────────────────────────────────────
   container: {
-    paddingHorizontal: 16,
-    gap: 24,
+    paddingHorizontal: 20,
+    gap: 12,
   },
-  challengeQuotaCard: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: 'rgba(24, 55, 33, 0.78)',
+  dailyRelook: { minHeight: 65, flexDirection: 'row', alignItems: 'center' },
+  dailyRelookText: { flex: 1, alignItems: 'center' },
+  dailyArrow: { width: 42, height: 42 },
+  dailyStatusIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  lockIcon: { fontSize: 17 },
+  soloButton: { width: '100%', maxWidth: 300, alignSelf: 'center' },
+  soloProgressSection: { alignSelf: 'center', width: '100%', maxWidth: 330, marginTop: 3 },
+  soloProgressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingLeft: 32 },
+  soloProgressText: { flexShrink: 1, color: '#FFF8E7', fontSize: 12, fontWeight: '700', textAlign: 'center', textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  soloHelpButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  soloHelpIcon: { width: 23, height: 23, overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: '#D5B774', backgroundColor: '#315B34', color: '#FFF8E7', textAlign: 'center', fontSize: 15, fontWeight: '800' },
+  soloHelpText: { color: '#24170E', backgroundColor: '#F4ECD8', borderColor: '#C4AE85', borderWidth: 1, borderRadius: 10, padding: 10, fontSize: 12, lineHeight: 18 },
+  premiumBanner: { paddingHorizontal: 18, paddingVertical: 10 },
+  premiumEntry: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  premiumTree: { width: 34, height: 44 },
+  premiumText: { flex: 1 },
+  premiumTitle: { color: ForestColors.textInkPrimary, fontSize: 15, fontWeight: '800' },
+  premiumDetail: { color: ForestColors.textInkPrimary, fontSize: 11, fontWeight: '700' },
+  premiumPrice: { backgroundColor: '#315B34', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 8 },
+  premiumPriceText: { color: '#FFF8E7', fontSize: 12, fontWeight: '800' },
+  doubleRelook: { flexDirection: 'row', alignItems: 'center', minHeight: 88, paddingHorizontal: 12 },
+  onfRelook: { flex: 1, minHeight: 78, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  onfTitleRow: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  onfTitle: { flexShrink: 1 },
+  relookTitle: { fontSize: 18, fontWeight: '800', color: ForestColors.textInkPrimary, textAlign: 'center' },
+  relookSubtitle: { fontSize: 12, fontWeight: '700', color: ForestColors.textInkPrimary, textAlign: 'center' },
+  challengeQuotaBadge: {
+    alignSelf: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#315B34',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: '#D5B774',
   },
-  challengeQuotaText: {
-    color: '#fff',
-    fontSize: 14,
+  challengeQuotaBadgeText: {
+    color: '#FFF8E7',
+    fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -1310,6 +1306,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexWrap: 'wrap',
     gap: 8,
+    marginTop: 8,
   },
   challengeQuotaPremium: {
     backgroundColor: Colors.forest.medium,

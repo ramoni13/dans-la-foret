@@ -34,7 +34,7 @@ import { Timestamp } from 'firebase/firestore';
 import { Colors } from '../../src/constants/colors';
 import { useFrameLayout } from '../../src/constants/frameLayout';
 import { useFeatureAccess } from '../../src/hooks/useFeatureAccess';
-import { getFeatureLockHint } from '../../src/constants/unlocks';
+import { getFeatureLockHint, getLockMessageKey } from '../../src/constants/unlocks';
 import { isDemoAccount } from '../../src/constants/devAccess';
 import { getDailyChallengesRemaining } from '../../src/constants/dailyLimits';
 import { getAdViews } from '../../src/constants/adRewards';
@@ -644,6 +644,7 @@ export default function ChallengeScreen() {
   // ── Rendu : mode verrouillé (fin du chapitre 1, ou niveau 3 sans PROGRESSION_V2) ──
   if (!duelAccess.isOpen('duel')) {
     const lock = getFeatureLockHint('duel', duelAccess.useChapters);
+    const lockMessage = getLockMessageKey(lock);
     return (
       <View style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
@@ -651,7 +652,7 @@ export default function ChallengeScreen() {
           <Text style={styles.emptyEmoji}>🔒</Text>
           <Text style={[styles.emptyTitle, { color: '#fff' }]}>
             {lock.kind === 'chapter'
-              ? t('unlock_challenge_locked_title', { chapter: String(lock.chapterId) })
+              ? t(lockMessage.key, lockMessage.vars)
               : t('challenge_locked_title', { level: String(lock.level) })}
           </Text>
           <Text style={[styles.emptyDesc, { color: 'rgba(255,255,255,0.75)' }]}>

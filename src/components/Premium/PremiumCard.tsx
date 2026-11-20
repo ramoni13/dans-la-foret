@@ -93,8 +93,7 @@ export function PremiumCard({ visible, onClose, onPurchase }: PremiumCardProps) 
 
             {/* Bloc ONF */}
             <View style={styles.onfBlock}>
-              <Text style={styles.onfText}>{t('premium_onf_line1')}</Text>
-              <Text style={styles.onfText}>{t('premium_onf_line2')}</Text>
+              <Text style={styles.onfText}>{t('premium_tree_contribution')}</Text>
               <View style={styles.treesCounterRow}>
                 <Text style={styles.treesCounterEmoji}>🌳</Text>
                 <Text style={styles.treesCounterNumber}>{totalTrees.toLocaleString()}</Text>

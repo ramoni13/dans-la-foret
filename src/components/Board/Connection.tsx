@@ -23,6 +23,7 @@ interface ConnectionProps {
   containerHeight: number;
   /** Taille effective des cases — pour calculer l'offset correct des lignes */
   cellSize?: number;
+  relooking?: boolean;
 }
 
 const LINE_GAP = 5;
@@ -45,6 +46,7 @@ export const Connection: React.FC<ConnectionProps> = ({
   containerWidth,
   containerHeight,
   cellSize,
+  relooking = false,
 }) => {
   const OFFSET = (cellSize ?? CELL_SIZE) / 2 + LINE_GAP;
   const cx1 = (from.x / 100) * containerWidth;
@@ -78,18 +80,18 @@ export const Connection: React.FC<ConnectionProps> = ({
         y1={y1}
         x2={x2}
         y2={y2}
-        stroke={HALO_COLOR}
-        strokeWidth={style.width + 2.5}
+        stroke={relooking ? '#80562F' : HALO_COLOR}
+        strokeWidth={relooking ? 8 : style.width + 2.5}
         strokeLinecap="round"
       />
-      {/* Trait principal bleu marine */}
+      {/* Trait principal */}
       <Line
         x1={x1}
         y1={y1}
         x2={x2}
         y2={y2}
-        stroke={STROKE_COLOR}
-        strokeWidth={style.width}
+        stroke={relooking ? '#C9A06C' : STROKE_COLOR}
+        strokeWidth={relooking ? 5 : style.width}
         strokeLinecap="round"
       />
     </G>

@@ -23,6 +23,7 @@ import { TokenCount } from '../../core/models/Challenge';
 import { Colors } from '../../constants/colors';
 import { impactLight } from '../../utils/haptics';
 import { useT } from '../../i18n';
+import { TexturedButton } from '../relooking/relookingPrimitives';
 
 const ARROW_RIGHT = require('../../../assets/elements/design_app/fleche.png');
 const ARROW_LEFT  = require('../../../assets/elements/design_app/fleche_gauche.png');
@@ -212,6 +213,8 @@ interface ElementPaletteProps {
   onSelectElement: (elementId: string | null) => void;
   /** Si fourni, affiche un bouton "Vider tout" à côté des flèches */
   onClearAll?: () => void;
+  relooking?: boolean;
+  rightSlot?: React.ReactNode;
 }
 
 // Largeur du scroll à déplacer par tap de flèche
@@ -226,6 +229,8 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
   selectedElement,
   onSelectElement,
   onClearAll,
+  relooking = false,
+  rightSlot,
 }) => {
   const t = useT();
   const { width: screenWidth } = useWindowDimensions();
@@ -242,14 +247,14 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
   };
 
   const tokenSize = React.useMemo(() => {
-    const tokenCount = availableTokens.length;
+    const tokenCount = relooking && availableTokens.length > 4 ? 3 : availableTokens.length;
     if (tokenCount === 0) return TOKEN_SIZE;
     const availableWidth = screenWidth - PALETTE_H_PADDING;
     const maxSize = Math.floor(
       (availableWidth - (tokenCount - 1) * GAP) / tokenCount - TOKEN_WRAPPER_EXTRA
     );
     return Math.max(TOKEN_MIN_SIZE, Math.min(TOKEN_SIZE, maxSize));
-  }, [availableTokens.length, screenWidth]);
+  }, [availableTokens.length, screenWidth, relooking]);
 
   const placedCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
@@ -275,6 +280,55 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
 
   // Bouton "Vider tout" : actif seulement si au moins un jeton joueur est posé
   const hasPlacedTokens = Object.values(placedCounts).some(c => c > 0);
+
+  if (relooking) {
+    return (
+      <View style={styles.relookingContainer}>
+        <View style={styles.relookingTitleRow}>
+          <Text style={styles.relookingTitle}>{t('palette_tokens_title')}</Text>
+          {onClearAll && (
+            <TexturedButton
+              variant="paper"
+              label={t('palette_clear_all')}
+              onPress={onClearAll}
+              disabled={!hasPlacedTokens}
+              fontSize={11}
+              style={styles.relookingClear}
+            />
+          )}
+          {rightSlot}
+        </View>
+        <ScrollView
+          style={styles.relookingScroll}
+          contentContainerStyle={styles.relookingGrid}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+        >
+          {availableTokens.map(({ elementId, count }) => {
+            const elementDef = ElementRegistry[elementId];
+            if (!elementDef) return null;
+            const remaining = count - (placedCounts[elementId] ?? 0);
+            const isSelected = selectedElement === elementId;
+            return (
+              <View key={elementId} style={availableTokens.length > 4 ? styles.relookingGridItem : styles.relookingSmallItem}>
+                <AnimatedTokenWrapper
+                  elementId={elementId}
+                  elementColor={elementDef.color}
+                  isSelected={isSelected}
+                  isEmpty={remaining <= 0}
+                  remaining={remaining}
+                  tokenSize={tokenSize}
+                  onSelect={() => onSelectElement(isSelected ? null : elementId)}
+                  label={t(`rules_element_${elementId}`)}
+                  elementDef={elementDef}
+                />
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -383,6 +437,20 @@ export const ElementPalette: React.FC<ElementPaletteProps> = ({
 };
 
 const styles = StyleSheet.create({
+  relookingContainer: {
+    backgroundColor: '#F4ECD8',
+    borderTopWidth: 3,
+    borderTopColor: '#734B2C',
+    paddingHorizontal: 8,
+    paddingBottom: 4,
+  },
+  relookingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  relookingTitle: { flex: 1, color: '#24170E', fontSize: 11, fontWeight: '800', textAlign: 'center' },
+  relookingClear: { width: 90 },
+  relookingScroll: { maxHeight: 185 },
+  relookingGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', paddingTop: 6, rowGap: 6 },
+  relookingGridItem: { width: '33.33%', alignItems: 'center' },
+  relookingSmallItem: { flex: 1, alignItems: 'center' },
   container: {
     backgroundColor: Colors.ui.card,
     borderTopWidth: 1,

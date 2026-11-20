@@ -37,6 +37,7 @@ import ReAnimated, {
 import { Colors } from '../../constants/colors';
 import { ElementRegistry } from '../../elements/ElementRegistry';
 import { impactLight, impactMedium } from '../../utils/haptics';
+import { BoardSlotBackground } from '../relooking/relookingPrimitives';
 
 export const CELL_SIZE = 64;
 
@@ -51,6 +52,7 @@ interface CellProps {
   onPress: (cellIndex: number) => void;
   /** Taille effective de la case (px). Par défaut CELL_SIZE = 64. */
   cellSize?: number;
+  relooking?: boolean;
 }
 
 const native = Platform.OS !== 'web';
@@ -65,6 +67,7 @@ const CellComponent: React.FC<CellProps> = ({
   positionStyle,
   onPress,
   cellSize: cellSizeProp,
+  relooking = false,
 }) => {
   const cs = cellSizeProp ?? CELL_SIZE;
   const elementDef = elementId ? ElementRegistry[elementId] : null;
@@ -355,7 +358,7 @@ const CellComponent: React.FC<CellProps> = ({
       )}
 
       {/* Overlay fond assombri pour les cases fixes */}
-      {isFixed && (
+      {isFixed && !relooking && (
         <View style={[styles.fixedOverlay, cs !== CELL_SIZE && { borderRadius: cs / 2 }]} pointerEvents="none" />
       )}
 
@@ -406,6 +409,18 @@ const CellComponent: React.FC<CellProps> = ({
   const dynamicInnerStyle = cs !== CELL_SIZE ? {
     borderRadius: cs / 2,
   } : undefined;
+  const slot = relooking ? (
+    <BoardSlotBackground locked={isFixed} size={cs} highlighted={isHighlighted || isErrorCell}>
+      {cellContent}
+    </BoardSlotBackground>
+  ) : cellContent;
+  const frameStyle = relooking ? {
+    backgroundColor: 'transparent',
+    borderWidth: isHighlighted || isErrorCell ? borderWidth : 0,
+    borderColor,
+    shadowOpacity: 0,
+    elevation: 0,
+  } : cellStyle;
 
   // ── Rendu WEB ─────────────────────────────────────────────
   if (Platform.OS === 'web') {
@@ -414,7 +429,7 @@ const CellComponent: React.FC<CellProps> = ({
         styles.cell,
         dynamicCellStyle,
         positionStyle,
-        cellStyle,
+        frameStyle,
         { transform: [{ scale: emptyPulseAnim }] },
       ]}>
         <TouchableOpacity
@@ -422,7 +437,7 @@ const CellComponent: React.FC<CellProps> = ({
           onPress={() => !isFixed && onPress(cellIndex)}
           style={[styles.innerTouchable, dynamicInnerStyle]}
         >
-          {cellContent}
+          {slot}
         </TouchableOpacity>
       </Animated.View>
     );
@@ -435,12 +450,12 @@ const CellComponent: React.FC<CellProps> = ({
         styles.cell,
         dynamicCellStyle,
         positionStyle,
-        cellStyle,
+        frameStyle,
         {
           transform: [{ scale: emptyPulseAnim }],
         },
       ]}>
-        {cellContent}
+        {slot}
       </Animated.View>
     </GestureDetector>
   );
@@ -570,4 +585,5 @@ export const Cell = React.memo(CellComponent, (prev, next) =>
   prev.hasSelection    === next.hasSelection    &&
   prev.positionStyle   === next.positionStyle   &&
   prev.cellSize        === next.cellSize
+  && prev.relooking    === next.relooking
 );

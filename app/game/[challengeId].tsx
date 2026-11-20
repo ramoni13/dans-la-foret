@@ -69,6 +69,7 @@ import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { useT } from '../../src/i18n';
 import { showAlert } from '../../src/store/dialogStore';
+import { ChallengeHeaderContainer, TexturedButton } from '../../src/components/relooking/relookingPrimitives';
 
 // Donnees de defis embarquees (offline) — 10 niveaux
 import niveau1  from '../../src/data/challenges/niveau_1.json';
@@ -136,6 +137,7 @@ export default function GameScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const [boardAreaHeight, setBoardAreaHeight] = useState(0);
 
   const game = useGame();
   const player = usePlayerStore();
@@ -637,18 +639,13 @@ export default function GameScreen() {
   return (
     <GestureHandlerRootView style={styles.root}>
 
-      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <View style={[styles.root, { paddingBottom: insets.bottom }]}>
+        <ChallengeHeaderContainer topInset={insets.top}>
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={handleAbandon} style={styles.backBtn}>
-              <Text style={styles.backText}>{'← '}{t('abandon_confirm')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setBriefingForcedOpen(true)}
-              style={styles.helpBtn}
-            >
-              <Text style={styles.helpText}>?</Text>
+              <Text style={styles.backText}>{t('onf_quit')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -668,6 +665,12 @@ export default function GameScreen() {
                 </Text>
               )}
             </View>
+            <TouchableOpacity
+              onPress={() => setBriefingForcedOpen(true)}
+              style={styles.helpBtn}
+            >
+              <Text style={styles.helpText}>?</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.speakerBtn}
               onPress={() => setIngameEnabled(!audioIngameEnabled)}
@@ -701,25 +704,16 @@ export default function GameScreen() {
           hasPlacedElements={hasPlacedElements}
           adRemaining={bonusAdRemaining}
           onWatchAd={handleWatchAd}
-          rightSlot={
-            <TouchableOpacity
-              style={[
-                styles.validateBtn,
-                !allFilled && styles.validateBtnDisabled,
-              ]}
-              onPress={handleValidate}
-              activeOpacity={0.8}
-              disabled={!allFilled}
-            >
-              <Text style={styles.validateBtnText}>{t('onf_validate')}</Text>
-            </TouchableOpacity>
-          }
+          relooking
         />
+        </ChallengeHeaderContainer>
 
         {/* ── Plateau ── */}
-        <View style={styles.boardArea}>
+        <View style={styles.boardArea} onLayout={e => setBoardAreaHeight(e.nativeEvent.layout.height)}>
           <BoardBackdrop boardDef={boardDef} />
-          <View style={[styles.boardContainer, { maxHeight: Math.min(screenWidth, screenHeight * 0.52) }]}>
+          <View style={[styles.boardContainer, {
+            width: Math.min(Math.max(0, screenWidth - 32), screenHeight * 0.52, boardAreaHeight || screenHeight, 500),
+          }]}>
             <BoardRenderer
               boardDef={boardDef}
               playerBoard={displayBoard}
@@ -729,6 +723,7 @@ export default function GameScreen() {
               getCellColor={(idx) => game.getCellColor(idx)}
               onCellPress={handleCellPress}
               challengeKey={challenge?.id}
+              relooking
             />
           </View>
         </View>
@@ -742,6 +737,16 @@ export default function GameScreen() {
             selectedElement={game.selectedElement}
             onSelectElement={game.selectElement}
             onClearAll={game.clearPlayerBoard}
+            relooking
+            rightSlot={
+              <TexturedButton
+                label={t('onf_validate')}
+                onPress={handleValidate}
+                disabled={!allFilled}
+                fontSize={12}
+                style={{ width: 100 }}
+              />
+            }
           />
           {/* Overlay bloquant les interactions palette quand reveal actif */}
           {game.revealActive && (
@@ -885,7 +890,7 @@ export default function GameScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.ui.background,
+    backgroundColor: '#F4ECD8',
   },
   loading: {
     flex: 1,
@@ -903,9 +908,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 6,
-    backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
+    backgroundColor: 'transparent',
   },
   headerLeft: {
     flexDirection: 'row',

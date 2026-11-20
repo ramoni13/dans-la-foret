@@ -34,6 +34,7 @@ import {
 import { recordSession, initPlayerMetrics } from '../../src/services/metricsService';
 import { getRankForLevel } from '../../src/constants/progression';
 import { Platform } from 'react-native';
+import { HomeFontProvider } from '../../src/theme/homeTypography';
 
 export default function TabsLayout() {
   const player   = usePlayerStore();
@@ -400,6 +401,7 @@ export default function TabsLayout() {
   }, [user, player.friendNotifBadgeEnabled]);
 
   return (
+    <HomeFontProvider>
     <View style={{ flex: 1 }}>
       {/* ── Tabs Expo Router — tab bar native masquée ─────────────────── */}
       <Tabs
@@ -418,5 +420,6 @@ export default function TabsLayout() {
       {/* ── Cadre bois + boutons navigation (superposé en absolu) ─────── */}
       <ForestFrame />
     </View>
+    </HomeFontProvider>
   );
 }

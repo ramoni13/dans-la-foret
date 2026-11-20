@@ -26,6 +26,7 @@ interface BoardRendererProps {
    * Évite le bug où contentScale reste à 0 entre deux parties successives.
    */
   challengeKey?: string;
+  relooking?: boolean;
 }
 
 export const BoardRenderer: React.FC<BoardRendererProps> = ({
@@ -37,6 +38,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
   getCellColor,
   onCellPress,
   challengeKey,
+  relooking = false,
 }) => {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
@@ -118,12 +120,13 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
           hasSelection={hasSelection}
           onPress={onCellPress}
           cellSize={effectiveCellSize}
+          relooking={relooking}
           positionStyle={{ left: x, top: y }}
         />
       );
     }),
   [boardDef, playerBoard, fixedCells, getCellColor, onCellPress, hasSelection,
-   containerSize, effectiveCellSize, challengeKey]);
+   containerSize, effectiveCellSize, challengeKey, relooking]);
 
   return (
     // Le fond (image) est fourni par <BoardBackdrop /> sur toute la zone de jeu
@@ -143,6 +146,7 @@ export const BoardRenderer: React.FC<BoardRendererProps> = ({
               containerWidth={containerSize.width}
               containerHeight={containerSize.height}
               cellSize={effectiveCellSize}
+              relooking={relooking}
             />
           ))}
         </Svg>

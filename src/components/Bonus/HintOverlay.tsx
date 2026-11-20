@@ -26,6 +26,7 @@ import {
   Animated,
   Platform,
   Switch,
+  Image,
 } from 'react-native';
 
 import {
@@ -39,6 +40,7 @@ import { Colors } from '../../constants/colors';
 import { useT } from '../../i18n';
 import { usePlayerStore } from '../../store/playerStore';
 import { PineconeIcon } from '../Game/PineconeIcon';
+import { RelookingAssets } from '../../theme/relookingAssets';
 
 const native = Platform.OS !== 'web';
 
@@ -71,6 +73,7 @@ interface HintOverlayProps {
   adRemaining?: Partial<Record<BonusId, number>>;
   /** Appelé au clic sur l'icône clap d'un bonus épuisé : l'écran montre la pub puis recharge CE bonus. */
   onWatchAd?: (bonusId: BonusId) => void;
+  relooking?: boolean;
 }
 
 // ── Composant countdown pulsant pour un seul bouton ──────────
@@ -211,7 +214,6 @@ const BonusExplainModal: React.FC<BonusExplainModalProps> = ({
             >
               <Text style={modalStyles.btnDismissText}>{t('bonus_tutorial_ok')}</Text>
             </TouchableOpacity>
-
             {canActivate && (
               <TouchableOpacity
                 style={[modalStyles.btn, modalStyles.btnActivate, { backgroundColor: headerColor }]}
@@ -247,6 +249,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
   revealActive = false,
   adRemaining,
   onWatchAd,
+  relooking = false,
 }) => {
   const t = useT();
   const bonusTutorialDismissed = usePlayerStore(s => s.bonusTutorialDismissed);
@@ -349,7 +352,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
     : false;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, relooking && styles.relookingContainer]}>
       {levelProgress ? (
         <View
           style={styles.seedsContainer}
@@ -406,6 +409,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
               <TouchableOpacity
                 style={[
                   styles.bonusBtn,
+                  relooking && styles.relookingBonusBtn,
                   disabled && !showWatchAdClap && styles.bonusBtnDisabled,
                   showWatchAdClap && styles.bonusBtnWatchAd,
                   alreadyUsed && !cooldown && !showWatchAdClap && styles.bonusBtnUsed,
@@ -416,20 +420,33 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
                 activeOpacity={cooldown ? 1 : 0.7}
                 disabled={cooldown}
               >
+                {relooking && (
+                  <Image
+                    source={bonusId === 'reveal_cell' ? RelookingAssets.indice : RelookingAssets.verification}
+                    style={styles.relookingBonusImage}
+                    resizeMode="contain"
+                  />
+                )}
                 {showWatchAdClap ? (
                   <>
-                    <Text style={styles.bonusIcon}>{def.icon}</Text>
+                    {!relooking && <Text style={styles.bonusIcon}>{def.icon}</Text>}
                     <Text style={styles.bonusWatchAdClap}>🎬</Text>
                   </>
                 ) : (
                   <>
-                    <Text style={styles.bonusIcon}>{def.icon}</Text>
-                    <Text style={[styles.bonusCost, exhausted && styles.bonusCostInsufficient]}>
-                      {usesLabel}
+                    {!relooking && <Text style={styles.bonusIcon}>{def.icon}</Text>}
+                    <Text style={[styles.bonusCost, relooking && styles.relookingBonusCount, exhausted && styles.bonusCostInsufficient]}>
+                      {relooking ? remainingUses : usesLabel}
                     </Text>
                   </>
                 )}
               </TouchableOpacity>
+
+              {relooking && (
+                <Text style={styles.relookingBonusLabel} numberOfLines={1}>
+                  {t(bonusId === 'reveal_cell' ? 'relooking_hint' : 'relooking_check')}
+                </Text>
+              )}
 
               {/* Countdown pulsant superposé */}
               {cooldown && dl != null && dl > Date.now() && (
@@ -472,6 +489,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.ui.border,
   },
+  relookingContainer: {
+    backgroundColor: 'transparent',
+    borderBottomWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  relookingBonusBtn: {
+    width: 52,
+    height: 50,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  relookingBonusImage: { ...StyleSheet.absoluteFill, width: '100%', height: '100%' },
+  relookingBonusCount: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    color: '#24170E',
+    backgroundColor: '#F4ECD8',
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    fontSize: 11,
+  },
+  relookingBonusLabel: { color: '#24170E', fontSize: 9, fontWeight: '700', textAlign: 'center' },
   seedsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
