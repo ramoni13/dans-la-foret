@@ -1,13 +1,14 @@
 // ============================================================
 // ÉCRAN PROFIL JOUEUR
 // État 1 : non connecté → formulaire login/inscription
-// État 2 : connecté → hub 4 tuiles + sous-sections
+// État 2 : connecté → menu profil + sous-sections
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -16,13 +17,16 @@ import {
   Switch,
   Modal,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from 'firebase/auth';
 
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { useFrameLayout } from '../../src/constants/frameLayout';
+import { useMenuLayout } from '../../src/constants/frameLayout';
+import { ForestColors } from '../../src/theme/forestTheme';
+import { RelookingAssets } from '../../src/theme/relookingAssets';
+import { useHomeFont } from '../../src/theme/homeTypography';
+import { ParchmentBanner } from '../../src/components/relooking/relookingPrimitives';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { useNavStore } from '../../src/store/navStore';
 import { showAlert as showDialogAlert, showConfirm as showDialogConfirm } from '../../src/store/dialogStore';
@@ -52,19 +56,22 @@ import { AdminPurgeModal } from '../../src/components/Admin/AdminPurgeModal';
 import { isAdminAccount } from '../../src/constants/devAccess';
 import { DeleteAccountModal } from '../../src/components/Account/DeleteAccountModal';
 import { LegalConsentNotice, LegalLinksPanel } from '../../src/components/Account/LegalLinks';
+import { LevelsScreen } from './index';
+import { WorldRecord, subscribeAllWorldRecords } from '../../src/services/worldRecordService';
 
 // ── Types ───────────────────────────────────────────────────────────────────────
-type ActiveSection = 'hub' | 'stats' | 'badges' | 'classement' | 'reglages' | 'about';
+type ActiveSection = 'hub' | 'badges' | 'classement' | 'reglages' | 'levels' | 'about';
 
 
 
 export default function ProfileScreen() {
   const player = usePlayerStore();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { frameBottom, innerTop, innerPadH } = useFrameLayout();
+  const { frameBottom, contentTop, innerPadH } = useMenuLayout();
   const { showBack, hideBack } = useNavStore();
   const t = useT();
+  const fontFamily = useHomeFont();
+  const displayFont = fontFamily ? { fontFamily, fontWeight: 'normal' as const } : undefined;
 
   // ── État Firebase Auth ────────────────────────────────────────────────────────
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
@@ -77,6 +84,13 @@ export default function ProfileScreen() {
 
   // ── Hub navigation ──────────────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<ActiveSection>('hub');
+  const [worldRecords, setWorldRecords] = useState<Map<string, WorldRecord>>(new Map());
+  const openingLevelChallenge = React.useRef(false);
+
+  useEffect(() => {
+    if (activeSection !== 'levels') return;
+    return subscribeAllWorldRecords(setWorldRecords);
+  }, [activeSection]);
 
   // ── Modal admin nettoyage base (Ramoni uniquement) ───────────────────────────
   const [showAdminClean, setShowAdminClean] = useState(false);
@@ -103,10 +117,19 @@ export default function ProfileScreen() {
       return () => {
         // Appelé quand l'onglet perd le focus (changement d'onglet)
         // On remet le hub pour que le prochain accès parte du hub
-        setActiveSection('hub');
+        if (openingLevelChallenge.current) openingLevelChallenge.current = false;
+        else setActiveSection('hub');
         hideBack();
       };
     }, [hideBack])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (activeSection === 'levels') {
+        showBack(goHub);
+      }
+    }, [activeSection, showBack, goHub])
   );
 
   // ── Mot de passe oublié ──────────────────────────────────────────────────────
@@ -204,7 +227,7 @@ export default function ProfileScreen() {
     return (
       <View style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
-        <View style={[styles.centered, { paddingTop: Math.max(insets.top, innerTop) }]}>
+        <View style={[styles.centered, { paddingTop: contentTop }]}>
           <ActivityIndicator size="large" color="#fff" />
           <Text style={[styles.loadingText, { color: 'rgba(255,255,255,0.75)' }]}>{t('profile_loading')}</Text>
         </View>
@@ -219,12 +242,12 @@ export default function ProfileScreen() {
     return (
       <View style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
-      <ScrollView contentContainerStyle={[styles.container, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: contentTop, paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
           <View style={styles.avatarSection}>
             <View style={styles.avatar}>
               <Text style={styles.avatarEmoji}>🌲</Text>
             </View>
-            <Text style={styles.usernameText}>{t('profile_app_title')}</Text>
+            <Text style={[styles.usernameText, displayFont]}>{t('profile_app_title')}</Text>
             <Text style={styles.authSubtitle}>
               {t('profile_auth_subtitle')}
             </Text>
@@ -364,16 +387,13 @@ export default function ProfileScreen() {
   const rankChapter    = getChapter(currentRank.chapterId);
   const rankChapterProg = getChapterProgress(currentRank.chapterId, player.challengeStars);
 
-  // ── Section STATS ─────────────────────────────────────────────────────────────
-  if (activeSection === 'stats') {
+  if (activeSection === 'levels') {
     return (
-      <View key="section-stats" style={StyleSheet.absoluteFill}>
-        <BgImage overlay={0.52} />
-        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
-          <Text style={styles.sectionHeading}>{t('profile_section_stats')}</Text>
-          <StatsScreen />
-        </ScrollView>
-      </View>
+      <LevelsScreen
+        router={router}
+        worldRecords={worldRecords}
+        onOpenChallenge={() => { openingLevelChallenge.current = true; }}
+      />
     );
   }
 
@@ -382,8 +402,10 @@ export default function ProfileScreen() {
     return (
       <View key="section-badges" style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
-        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
-          <Text style={styles.sectionHeading}>{t('profile_section_badges')}</Text>
+        <ScrollView style={[styles.subSection, { top: contentTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
+          <ParchmentBanner style={styles.sectionBanner}>
+            <Text style={[styles.sectionBannerTitle, displayFont]}>{t('profile_section_badges')}</Text>
+          </ParchmentBanner>
 
           {/* ── Prochains trophées (les 3 plus proches, sans objectif à choisir) ── */}
           <View style={goalStyles.goalSection}>
@@ -409,6 +431,7 @@ export default function ProfileScreen() {
             hideRankPanel
           />
 
+          <StatsScreen />
         </ScrollView>
 
 
@@ -421,7 +444,7 @@ export default function ProfileScreen() {
     return (
       <View key="section-classement" style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
-        <View style={[styles.subSection, { top: innerTop }]}>
+        <View style={[styles.subSection, { top: contentTop }]}>
           <LeaderboardScreen />
         </View>
       </View>
@@ -433,12 +456,14 @@ export default function ProfileScreen() {
     return (
       <View key="section-reglages" style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
-        <ScrollView style={[styles.subSection, { top: innerTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
-            <Text style={styles.sectionHeading}>{t('profile_section_settings')}</Text>
+        <ScrollView style={[styles.subSection, { top: contentTop }]} contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
+          <ParchmentBanner style={styles.sectionBanner}>
+            <Text style={[styles.sectionBannerTitle, displayFont]}>{t('profile_section_settings')}</Text>
+          </ParchmentBanner>
 
           {/* Langue */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('profile_setting_language')}</Text>
+            <Text style={[styles.sectionTitle, displayFont]}>{t('profile_setting_language')}</Text>
             <View style={styles.langRow}>
               {(['fr', 'en'] as Lang[]).map(lang => (
                 <TouchableOpacity
@@ -543,11 +568,11 @@ export default function ProfileScreen() {
       <View key="section-about" style={StyleSheet.absoluteFill}>
         <BgImage overlay={0.52} />
         <ScrollView
-          style={[styles.subSection, { top: innerTop }]}
+          style={[styles.subSection, { top: contentTop }]}
           contentContainerStyle={[styles.container, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.sectionHeading}>{t('about_title')}</Text>
+          <Text style={[styles.sectionHeading, displayFont]}>{t('about_title')}</Text>
           <Text style={aboutStyles.subtitle}>{t('about_subtitle')}</Text>
 
           {/* Histoire */}
@@ -601,17 +626,32 @@ export default function ProfileScreen() {
   }
 
   // ── HUB (état initial) ────────────────────────────────────────────────────────
+  const menuItems: { section: Exclude<ActiveSection, 'hub'>; icon: string; title: string; subtitle: string }[] = [
+    {
+      section: 'badges',
+      icon: '🏅',
+      title: t('profile_tile_badges'),
+      subtitle: player.earnedBadges.length > 0
+        ? t('profile_tile_badges_sub_earned', { count: String(player.earnedBadges.length) })
+        : t('profile_tile_badges_sub_none'),
+    },
+    { section: 'classement', icon: '🏆', title: t('profile_tile_leaderboard'), subtitle: t('profile_tile_leaderboard_sub') },
+    { section: 'levels', icon: '📋', title: t('index_solo_see_all'), subtitle: t('index_all_challenges') },
+    { section: 'reglages', icon: '⚙️', title: t('profile_tile_settings'), subtitle: t('profile_tile_settings_sub') },
+    { section: 'about', icon: 'ℹ️', title: t('profile_btn_about'), subtitle: t('profile_btn_about_sub') },
+  ];
+
   return (
     <View key="section-hub" style={StyleSheet.absoluteFill}>
       <BgImage overlay={0.52} />
-      <ScrollView contentContainerStyle={[styles.container, { paddingTop: Math.max(insets.top + 8, innerTop + 8), paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: contentTop, paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}>
 
         {/* Avatar + nom */}
         <View style={styles.avatarSection}>
           <View style={styles.avatar}>
             <Text style={styles.avatarEmoji}>{currentRank.emoji}</Text>
           </View>
-          <Text style={styles.usernameText}>{displayName}</Text>
+          <Text style={[styles.usernameText, displayFont]}>{displayName}</Text>
           <View style={styles.rankBadge}>
             <Text style={styles.rankBadgeText}>{rankLabel}</Text>
             {rankChapter && (
@@ -623,73 +663,25 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Grille 2×2 de tuiles */}
-        <View style={styles.tilesGrid}>
-
-          {/* Stats */}
-          <TouchableOpacity
-            style={styles.tile}
-            onPress={() => setActiveSection('stats')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.tileEmoji}>📊</Text>
-            <Text style={styles.tileLabel}>{t('profile_tile_stats')}</Text>
-            <Text style={styles.tileSub}>{t('profile_tile_stats_sub', { count: String(Math.max(player.stats.totalSolved, Object.keys(player.challengeStars).length)) })}</Text>
-          </TouchableOpacity>
-
-          {/* Badges */}
-          <TouchableOpacity
-            style={styles.tile}
-            onPress={() => setActiveSection('badges')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.tileEmoji}>🏅</Text>
-            <Text style={styles.tileLabel}>{t('profile_tile_badges')}</Text>
-            <Text style={styles.tileSub}>
-              {player.earnedBadges.length > 0
-                ? t('profile_tile_badges_sub_earned', { count: String(player.earnedBadges.length) })
-                : t('profile_tile_badges_sub_none')}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Classement */}
-          <TouchableOpacity
-            style={styles.tile}
-            onPress={() => setActiveSection('classement')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.tileEmoji}>🌍</Text>
-            <Text style={styles.tileLabel}>{t('profile_tile_leaderboard')}</Text>
-            <Text style={styles.tileSub}>{t('profile_tile_leaderboard_sub')}</Text>
-          </TouchableOpacity>
-
-          {/* Réglages */}
-          <TouchableOpacity
-            style={styles.tile}
-            onPress={() => setActiveSection('reglages')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.tileEmoji}>{'⚙️'}</Text>
-            <Text style={styles.tileLabel}>{t('profile_tile_settings')}</Text>
-            <Text style={styles.tileSub}>{t('profile_tile_settings_sub')}</Text>
-          </TouchableOpacity>
-
+        <View style={styles.menuList}>
+          {menuItems.map(item => (
+            <ParchmentBanner key={item.section} style={styles.menuBanner}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => setActiveSection(item.section)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+              >
+                <Text style={styles.menuIcon}>{item.icon}</Text>
+                <View style={styles.menuText}>
+                  <Text style={[styles.menuTitle, displayFont]}>{item.title}</Text>
+                  <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                </View>
+                <Image source={RelookingAssets.flecheGo} style={styles.menuArrow} resizeMode="contain" />
+              </TouchableOpacity>
+            </ParchmentBanner>
+          ))}
         </View>
-
-        {/* À propos */}
-        <TouchableOpacity
-          style={styles.aboutBtn}
-          onPress={() => setActiveSection('about')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.aboutBtnInner}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.aboutBtnText}>{t('profile_btn_about')}</Text>
-              <Text style={styles.aboutBtnSub}>{t('profile_btn_about_sub')}</Text>
-            </View>
-            <Text style={styles.aboutBtnChevron}>›</Text>
-          </View>
-        </TouchableOpacity>
 
       </ScrollView>
     </View>
@@ -698,10 +690,10 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
-  // Zone de contenu des sous-sections, positionnée sous la barre bois haute
+  // Zone de contenu des sous-sections, sous les compteurs.
   subSection: {
     position: 'absolute',
-    // top est injecté dynamiquement (= innerTop) via style inline
+    // top est injecté dynamiquement via style inline.
     left: 0,
     right: 0,
     bottom: 0,
@@ -765,39 +757,14 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // Grille de tuiles 2×2
-  tilesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  tile: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: Colors.ui.card,
-    borderRadius: 18,
-    padding: 20,
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: Colors.ui.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  tileEmoji: { fontSize: 36 },
-  tileLabel: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: Colors.forest.dark,
-  },
-  tileSub: {
-    fontSize: 11,
-    color: Colors.ui.textLight,
-    textAlign: 'center',
-  },
+  menuList: { gap: 10 },
+  menuBanner: { paddingVertical: 8 },
+  menuItem: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuIcon: { fontSize: 28, width: 36, textAlign: 'center' },
+  menuText: { flex: 1, gap: 2 },
+  menuTitle: { fontSize: 17, fontWeight: '800', color: ForestColors.textInkPrimary },
+  menuSubtitle: { fontSize: 12, color: ForestColors.textInkSecondary },
+  menuArrow: { width: 42, height: 42 },
 
   // En-tête sous-section
   sectionHeading: {
@@ -811,6 +778,8 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
+  sectionBanner: { paddingVertical: 10, alignItems: 'center' },
+  sectionBannerTitle: { fontSize: 22, fontWeight: '800', color: ForestColors.textInkPrimary, textAlign: 'center' },
 
   // (backBtn supprimé — le bouton Retour vit dans ForestFrame via navStore)
 
@@ -821,54 +790,23 @@ const styles = StyleSheet.create({
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.ui.card,
+    backgroundColor: ForestColors.parchmentBase,
     borderRadius: 14,
     padding: 16,
     gap: 12,
     borderWidth: 1,
-    borderColor: Colors.ui.border,
+    borderColor: ForestColors.parchmentBorder,
   },
   settingLeft: { flex: 1, gap: 3 },
   settingLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.ui.text,
+    color: ForestColors.textInkPrimary,
   },
   settingDesc: {
     fontSize: 12,
-    color: Colors.ui.textLight,
+    color: ForestColors.textInkSecondary,
     lineHeight: 16,
-  },
-
-  // À propos
-  aboutBtn: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.ui.border,
-    backgroundColor: Colors.ui.card,
-    overflow: 'hidden',
-  },
-  aboutBtnInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  aboutBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.ui.text,
-  },
-  aboutBtnSub: {
-    fontSize: 12,
-    color: Colors.ui.textLight,
-    marginTop: 2,
-  },
-  aboutBtnChevron: {
-    fontSize: 22,
-    color: Colors.ui.textLight,
-    lineHeight: 24,
   },
 
   // Déconnexion / réinitialisation
@@ -878,7 +816,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#F4433660',
-    backgroundColor: Colors.ui.card,
+    backgroundColor: ForestColors.parchmentBase,
   },
   logoutBtnText: { fontSize: 14, color: '#F44336', fontWeight: '600' },
   deleteAccountBtn: {
@@ -905,17 +843,17 @@ const styles = StyleSheet.create({
 
   // Auth form
   authSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.75)', textAlign: 'center', paddingHorizontal: 24 },
-  toggleRow: { flexDirection: 'row', backgroundColor: Colors.ui.border + '40', borderRadius: 12, padding: 4 },
+  toggleRow: { flexDirection: 'row', backgroundColor: '#285235', borderRadius: 12, padding: 4, borderWidth: 1, borderColor: ForestColors.parchmentBorder },
   toggleBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
-  toggleBtnActive: { backgroundColor: Colors.ui.card, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
-  toggleBtnText: { fontSize: 14, fontWeight: '600', color: Colors.ui.textLight },
+  toggleBtnActive: { backgroundColor: ForestColors.parchmentBase, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
+  toggleBtnText: { fontSize: 14, fontWeight: '600', color: '#FFF8E7' },
   toggleBtnTextActive: { color: Colors.forest.dark },
   form: { gap: 10 },
   input: {
-    backgroundColor: Colors.ui.card,
+    backgroundColor: ForestColors.parchmentBase,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.ui.border,
+    borderColor: ForestColors.parchmentBorder,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
@@ -944,8 +882,8 @@ const styles = StyleSheet.create({
   btnGoogleText: { fontSize: 15, fontWeight: '600', color: Colors.ui.text },
 
   // Langue
-  section: { gap: 12 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  section: { gap: 12, padding: 14, borderRadius: 14, backgroundColor: ForestColors.parchmentBase, borderWidth: 1, borderColor: ForestColors.parchmentBorder },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: ForestColors.textInkPrimary },
   langRow: { flexDirection: 'row', gap: 10 },
   langBtn: {
     flex: 1,
@@ -953,20 +891,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(26,58,26,0.82)',
+    borderColor: ForestColors.parchmentBorder,
+    backgroundColor: ForestColors.parchmentLight,
     alignItems: 'center',
   },
   langBtnActive: {
-    backgroundColor: 'rgba(26,58,26,0.82)',
-    borderColor: Colors.forest.accent,
+    backgroundColor: '#315B34',
+    borderColor: '#D5B774',
   },
-  langBtnText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  langBtnText: { fontSize: 13, fontWeight: '600', color: ForestColors.textInkPrimary },
   langBtnTextActive: { color: '#fff', fontWeight: '700' },
 
   // Mot de passe oublié
   forgotBtn: { alignSelf: 'center', marginTop: 4, paddingVertical: 8 },
-  forgotBtnText: { fontSize: 13, color: Colors.forest.medium, fontWeight: '600' },
+  forgotBtnText: { fontSize: 13, color: '#FFF8E7', fontWeight: '600' },
   forgotBox: {
     backgroundColor: Colors.ui.card,
     borderRadius: 16,

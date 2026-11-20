@@ -42,7 +42,8 @@ import { BoardRegistry } from '../../src/boards/BoardRegistry';
 import { formatTime } from '../../src/utils/boardUtils';
 import { Colors } from '../../src/constants/colors';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
-import { getRankForLevel } from '../../src/constants/progression';
+import { getRankForLevel, isFeatureUnlocked } from '../../src/constants/progression';
+import { getOpenRegions, getRegionFeature } from '../../src/constants/herbier';
 import { recordVictory } from '../../src/services/metricsService';
 import { awardEarnedTrophies } from '../../src/services/trophyService';
 import { awardBadgesFirestore } from '../../src/services/badgeService';
@@ -69,13 +70,15 @@ import {
   upsertPlayer,
   markOnfChallengeCompleted,
 } from '../../src/services/playerService';
-import { getTreeCard } from '../../src/utils/onfCards';
+import { getTreeCard, getNextCard, getCardProgress } from '../../src/utils/onfCards';
 import { TreeCard } from '../../src/data/treesData';
 import { ONFCardUnlockBanner } from '../../src/components/ONF/ONFCardUnlockBanner';
 import { TreeCardGallery } from '../../src/components/ONF/TreeCardGallery';
 import { useT } from '../../src/i18n';
 import { useRewardedAd } from '../../src/hooks/useRewardedAd';
 import type { BonusId } from '../../src/constants/bonus';
+import { ChallengeHeaderContainer, TexturedButton } from '../../src/components/relooking/relookingPrimitives';
+import { showAlert } from '../../src/store/dialogStore';
 
 const native = Platform.OS !== 'web';
 
@@ -99,6 +102,7 @@ export default function ONFGameScreen() {
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
   // ── État local ────────────────────────────────────────────
   const [countdownDone, setCountdownDone] = useState(false);
+  const [boardAreaHeight, setBoardAreaHeight] = useState(0);
   const [loading, setLoading] = useState(true);
   const [allCompleted, setAllCompleted] = useState(false);
   /** Paliers ouverts épuisés alors que d'autres restent verrouillés : « avance en solo » (Lot 5). */
@@ -112,8 +116,7 @@ export default function ONFGameScreen() {
   // AIDE DÉSACTIVÉE : violations ligne/colonne calculées après la validation.
   // Réactiver si les joueurs demandent ce retour visuel.
   // const [rowColViolationCells, setRowColViolationCells] = useState<number[]>([]);
-  /** Briefing affiché avant la première partie ONF */
-  const [briefingDone, setBriefingDone] = useState(player.hasSeenOnfBriefing);
+  const [showBriefing, setShowBriefing] = useState(false);
   const [showFailModal, setShowFailModal] = useState(false);
   const [showAbandonModal, setShowAbandonModal] = useState(false);
   const badgesEvaluatedRef = useRef(false);
@@ -138,7 +141,7 @@ export default function ONFGameScreen() {
   const handleQuitConfirm = useCallback(() => {
     setShowAbandonModal(false);
     game.resetGame();
-    router.replace('/game/onf-lobby');
+    router.replace('/(tabs)');
   }, [game, router]);
 
   // ── Sélection et chargement d'un défi ────────────────────
@@ -187,10 +190,17 @@ export default function ONFGameScreen() {
 
       if (!usePlayerStore.getState().consumeChallengeQuota()) {
         setLoading(false);
+        showAlert({
+          title: t('challenge_quota_reached_title'),
+          message: t('challenge_quota_reached_msg'),
+          icon: '⏰',
+        });
         router.replace('/(tabs)');
         return;
       }
 
+      setCountdownDone(false);
+      setShowBriefing(false);
       game.loadChallenge(result.challenge);
       game.setBonusDisabled(false);
       // Le timer démarrera après le countdown (handleCountdownDone)
@@ -212,19 +222,17 @@ export default function ONFGameScreen() {
   }, []);
 
   useEffect(() => {
-    pickAndLoad(true);
+    return pickAndLoad(true);
   }, []);
 
-  // ── Fermeture du briefing ─────────────────────────────────
   const handleBriefingClose = useCallback(() => {
     player.markOnfBriefingSeen();
-    setBriefingDone(true);
-    // Le timer démarrera après le countdown (handleCountdownDone)
+    setShowBriefing(false);
   }, [player]);
 
   const handleCountdownDone = useCallback(() => {
     setCountdownDone(true);
-    setTimeout(() => game.startTimer(0), 50);
+    game.startTimer(0);
   }, [game]);
 
   // ── Données dérivées ──────────────────────────────────────
@@ -451,7 +459,7 @@ export default function ONFGameScreen() {
           <Text style={styles.allCompletedText}>{t('onf_tier_exhausted_msg')}</Text>
           <TouchableOpacity
             style={styles.errorBtn}
-            onPress={() => router.replace('/game/onf-lobby')}
+            onPress={() => router.replace('/(tabs)')}
             activeOpacity={0.8}
           >
             <Text style={styles.errorBtnText}>{t('onf_tier_exhausted_btn')}</Text>
@@ -476,7 +484,7 @@ export default function ONFGameScreen() {
           </Text>
           <TouchableOpacity
             style={styles.errorBtn}
-            onPress={() => router.replace('/game/onf-lobby')}
+            onPress={() => router.replace('/(tabs)')}
             activeOpacity={0.8}
           >
             <Text style={styles.errorBtnText}>{t('onf_back_home')}</Text>
@@ -504,20 +512,42 @@ export default function ONFGameScreen() {
   const rewardProgress = getOnfRewardProgress(completedCount);
   // Dénominateur = grilles des paliers OUVERTS (le joueur ne voit pas les grilles qu'il n'a pas débloquées)
   const totalCount = getOnfChallengeCount(onfAccess.onfTiers);
-  const gridLabel = t('onf_header_progress', { current: String(completedCount + 1), total: String(totalCount) });
+  const gridLabel = `${completedCount + 1}/${totalCount}`;
+  const cardProgress = getCardProgress(completedCount);
+  const openRegions = getOpenRegions(
+    region => isFeatureUnlocked(getRegionFeature(region)!, { levelsCompleted: player.levelsCompleted }),
+    false,
+  );
+  const cardAvailable = getNextCard(player.collectedTreeCardIds, openRegions) !== null;
+  const cardProgressText = cardAvailable
+    ? t('onf_card_progress', { current: String(cardProgress.current), total: String(cardProgress.total) })
+    : t('onf_card_unavailable');
+  const cardProgressA11y = cardAvailable
+    ? t('onf_card_progress_a11y', { current: String(cardProgress.current), total: String(cardProgress.total) })
+    : cardProgressText;
+  const compactHeader = screenWidth < 360;
+  const forestHeading = (
+    <View style={styles.headerCenter}>
+      <Text style={styles.levelLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
+        {t('onf_header_mode')} ({gridLabel})
+      </Text>
+      <Text style={styles.rewardProgressLabel}>
+        {t('onf_reward_progress', {
+          base: String(rewardProgress.baseSeeds),
+          count: String(rewardProgress.nextMilestone),
+          next: String(rewardProgress.nextBaseSeeds),
+        })}
+      </Text>
+    </View>
+  );
 
   return (
     <GestureHandlerRootView style={styles.root}>
 
       <View
-        style={[
-          styles.root,
-          {
-            paddingTop: insets.top,
-            paddingBottom: Math.max(insets.bottom, 8),
-          },
-        ]}
+        style={[styles.root, { paddingBottom: insets.bottom }]}
       >
+        <ChallengeHeaderContainer topInset={insets.top}>
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -529,22 +559,20 @@ export default function ONFGameScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.levelLabel}>{t('onf_header_mode')}</Text>
-            <Text style={styles.challengeLabel}>{gridLabel}</Text>
-            <Text style={styles.rewardProgressLabel}>
-              {t('onf_reward_progress', {
-                base: String(rewardProgress.baseSeeds),
-                count: String(rewardProgress.nextMilestone),
-                next: String(rewardProgress.nextBaseSeeds),
-              })}
-            </Text>
-          </View>
+          {!compactHeader && forestHeading}
 
           <View style={styles.headerRight}>
             <View style={styles.timer}>
               <Text style={styles.timerText}>{formatTime(game.elapsedTime)}</Text>
             </View>
+            <TouchableOpacity
+              onPress={() => setShowBriefing(true)}
+              style={styles.helpBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t('game_rules_accessibility')}
+            >
+              <Text style={styles.helpText}>?</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.speakerBtn}
               onPress={() => setIngameEnabled(!audioIngameEnabled)}
@@ -556,17 +584,24 @@ export default function ONFGameScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        {compactHeader && forestHeading}
 
         {/* ── Bannière contrainte sudoku ── */}
         <View style={styles.onfBanner}>
           <Text style={styles.onfBannerText}>
             {t('onf_sudoku_banner')}
           </Text>
-          <Text style={styles.onfBonusBannerText}>{t('onf_bonus_banner')}</Text>
         </View>
 
         <HintOverlay
           seeds={player.seeds}
+          counterSlot={
+            <View style={styles.cardProgress} accessible accessibilityLabel={cardProgressA11y}>
+              <Text style={styles.cardProgressText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                {cardProgressText}
+              </Text>
+            </View>
+          }
           bonusUsed={game.bonusUsed}
           selectedElement={game.selectedElement}
           isPremium={player.isPremium}
@@ -582,24 +617,16 @@ export default function ONFGameScreen() {
           )}
           adRemaining={bonusAdRemaining}
           onWatchAd={handleWatchAd}
-          rightSlot={
-            <TouchableOpacity
-              style={[styles.validateBtn, !allFilled && styles.validateBtnDisabled]}
-              onPress={handleValidate}
-              activeOpacity={0.8}
-              disabled={!allFilled}
-            >
-              <Text style={styles.validateBtnText}>{t('onf_validate')}</Text>
-            </TouchableOpacity>
-          }
+          relooking
         />
+        </ChallengeHeaderContainer>
 
         {/* ── Plateau ── */}
-        <View style={styles.boardArea}>
+        <View style={styles.boardArea} onLayout={e => setBoardAreaHeight(e.nativeEvent.layout.height)}>
           <BoardBackdrop boardDef={boardDef} />
           <View style={[
             styles.boardContainer,
-            { maxHeight: Math.min(screenWidth, screenHeight * 0.52) },
+            { width: Math.min(Math.max(0, screenWidth - 32), screenHeight * 0.52, boardAreaHeight || screenHeight, 500) },
           ]}>
             <BoardRenderer
               boardDef={boardDef}
@@ -610,19 +637,35 @@ export default function ONFGameScreen() {
               getCellColor={getCellColorOnf}
               onCellPress={handleCellPress}
               challengeKey={challenge?.id}
+              relooking
             />
           </View>
         </View>
 
         {/* ── Palette ── */}
-        <ElementPalette
-          availableTokens={challenge.availableTokens}
-          playerBoard={game.playerBoard}
-          fixedCells={fixedCells}
-          selectedElement={game.selectedElement}
-          onSelectElement={game.selectElement}
-          onClearAll={game.clearPlayerBoard}
-        />
+        <View style={{ position: 'relative' }}>
+          <ElementPalette
+            availableTokens={challenge.availableTokens}
+            playerBoard={displayBoard}
+            fixedCells={fixedCells}
+            selectedElement={game.selectedElement}
+            onSelectElement={game.selectElement}
+            onClearAll={game.clearPlayerBoard}
+            relooking
+            rightSlot={
+              <TexturedButton
+                label={t('onf_validate')}
+                onPress={handleValidate}
+                disabled={!allFilled}
+                fontSize={12}
+                style={{ width: 100 }}
+              />
+            }
+          />
+          {game.revealActive && (
+            <View style={styles.paletteOverlay} pointerEvents="box-only" />
+          )}
+        </View>
 
         {/* ── Modal échec ── */}
         <FailModal
@@ -631,7 +674,7 @@ export default function ONFGameScreen() {
           onGiveUp={() => {
             setShowFailModal(false);
             game.resetGame();
-            router.replace('/game/onf-lobby');
+            router.replace('/(tabs)');
           }}
         />
 
@@ -665,16 +708,15 @@ export default function ONFGameScreen() {
           onBackToMenu={() => {
             setJustUnlockedCard(null);
             game.resetGame();
-            router.replace('/game/onf-lobby');
+            router.replace('/(tabs)');
           }}
         />
       </View>
 
-      {/* ── Briefing ONF (première partie uniquement) ── */}
-      {challenge && !briefingDone && (
+      {/* ── Règles ONF consultables pendant la partie ── */}
+      {challenge && showBriefing && (
         <OnfBriefingModal
           challenge={challenge}
-          tier={(challenge as { tier?: 'sentier' | 'clairiere' | 'profonde' }).tier}
           onClose={handleBriefingClose}
         />
       )}
@@ -698,10 +740,9 @@ export default function ONFGameScreen() {
         initialCardId={justUnlockedCard?.id}
       />
 
-      {/* ── Countdown pré-défi ──
-           Affiché après le briefing ONF (première fois) ou immédiatement (parties suivantes). */}
-      {!countdownDone && briefingDone && (
-        <ChallengeCountdown onDone={handleCountdownDone} />
+      {/* ── Countdown pré-défi ── */}
+      {!countdownDone && (
+        <ChallengeCountdown key={challenge.id} onDone={handleCountdownDone} />
       )}
 
     </GestureHandlerRootView>
@@ -713,7 +754,7 @@ export default function ONFGameScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.ui.background,
+    backgroundColor: '#F4ECD8',
   },
   loading: {
     flex: 1,
@@ -765,11 +806,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingVertical: 6,
-    backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
+    backgroundColor: 'transparent',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -781,20 +820,17 @@ const styles = StyleSheet.create({
     color: Colors.forest.medium,
     fontWeight: '600',
   },
-  headerCenter: { alignItems: 'center' },
+  headerCenter: { flex: 1, alignItems: 'center' },
   levelLabel: {
     fontSize: 13,
     fontWeight: '700',
     color: '#4A7C59',
   },
-  challengeLabel: {
-    fontSize: 11,
-    color: Colors.ui.textLight,
-  },
   rewardProgressLabel: {
     fontSize: 9,
     color: Colors.forest.medium,
     fontWeight: '600',
+    textAlign: 'center',
   },
   headerRight: {
     flexDirection: 'row',
@@ -824,25 +860,46 @@ const styles = StyleSheet.create({
     borderColor: Colors.forest.dark + '30',
   },
   speakerIcon: { fontSize: 18 },
+  helpBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.forest.dark + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.forest.dark + '30',
+  },
+  helpText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.forest.dark,
+  },
+  cardProgress: {
+    flexShrink: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.ui.seed,
+    backgroundColor: Colors.ui.seed + '22',
+  },
+  cardProgressText: {
+    color: Colors.ui.text,
+    fontSize: 11,
+    fontWeight: '700',
+  },
 
   // Bannière ONF
   onfBanner: {
     gap: 2,
-    backgroundColor: '#E8F5E9',
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#C8E6C9',
+    paddingVertical: 3,
   },
   onfBannerText: {
     fontSize: 13,
     fontWeight: '600',
     color: '#2E7D32',
     flex: 1,
-  },
-  onfBonusBannerText: {
-    fontSize: 11,
-    color: '#2E7D32',
   },
   validateBtn: {
     backgroundColor: Colors.forest.medium,
@@ -873,5 +930,15 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     aspectRatio: 1,
+  },
+  paletteOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.12)',
+    borderRadius: 8,
+    zIndex: 10,
   },
 });

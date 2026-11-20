@@ -417,7 +417,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="profile"   options={{ title: 'Profil' }} />
       </Tabs>
 
-      {/* ── Cadre bois + boutons navigation (superposé en absolu) ─────── */}
+      {/* ── Compteurs et dock de navigation ──────────────────────────── */}
       <ForestFrame />
     </View>
     </HomeFontProvider>

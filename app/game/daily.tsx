@@ -236,7 +236,7 @@ export default function DailyGameScreen() {
   const [seedsEarned, setSeedsEarned] = useState(0);
   const [seedsBeforeGain, setSeedsBeforeGain] = useState(0);
   const [countdownDone, setCountdownDone] = useState(false);
-  const [briefingDone, setBriefingDone] = useState(false);
+  const [showBriefing, setShowBriefing] = useState(false);
   const [isNewDailyRecord, setIsNewDailyRecord] = useState(false);
   const [prevDailyRecordHolder, setPrevDailyRecordHolder] = useState<string | null>(null);
 
@@ -244,6 +244,7 @@ export default function DailyGameScreen() {
   const [streakRecordModal, setStreakRecordModal] = useState<{ newRecord: number; seeds: number } | null>(null);
 
   const badgesEvaluatedRef = useRef(false);
+  const priorElapsedRef = useRef(0);
   // uid capturé à la victoire pour la détection record
   const victoryUidRef = useRef<string | null>(null);
   const confettiPieces = useConfetti(game.isVictory);
@@ -297,7 +298,7 @@ export default function DailyGameScreen() {
 
       // Calculer l'offset de temps accumule (reprise apres quit app)
       const pState = usePlayerStore.getState();
-      const priorElapsed = isResuming
+      priorElapsedRef.current = isResuming
         ? (Date.now() - (pState.challengeStartedAt[dailyKey] ?? Date.now()))
         : 0;
       if (!isResuming && !pState.consumeChallengeQuota()) {
@@ -308,18 +309,12 @@ export default function DailyGameScreen() {
       game.loadDailyChallenge(adaptedChallenge);
       badgesEvaluatedRef.current = false;
 
-      // Marquer le daily comme en cours + enregistrer le timestamp de debut
+      // Marquer le daily comme en cours avant de lancer le compte à rebours.
       if (!isResuming) {
         usePlayerStore.setState({ dailyChallengeStatus: 'in_progress' });
-        player.markChallengeStarted(dailyKey);
       }
 
       setLoading(false);
-      // Si on reprend (briefing déjà vu), le countdown s'affiche directement
-      // et le timer démarrera après lui (handleCountdownDone).
-      if (isResuming) {
-        setBriefingDone(true);
-      }
     };
 
     // Laisser React Native rendre l'ecran de chargement avant de lancer le solveur
@@ -345,16 +340,15 @@ export default function DailyGameScreen() {
     return new Set(challenge.fixedPlacements.map(fp => fp.cellIndex));
   }, [challenge]);
 
-  // -- Fermeture du briefing : déclenche le countdown (le timer démarrera après) --
   const handleBriefingClose = useCallback(() => {
-    setBriefingDone(true);
-    // Le timer sera démarré dans handleCountdownDone
+    setShowBriefing(false);
   }, []);
 
   const handleCountdownDone = useCallback(() => {
     setCountdownDone(true);
-    setTimeout(() => game.startTimer(0), 50);
-  }, [game]);
+    usePlayerStore.getState().markChallengeStarted(buildDailyChallengeKey(dailyDate, league));
+    game.startTimer(priorElapsedRef.current);
+  }, [game, dailyDate, league]);
 
   // -- Abandon du defi journalier --
   const [showDailyAbandonModal, setShowDailyAbandonModal] = useState(false);
@@ -584,6 +578,14 @@ export default function DailyGameScreen() {
               )}
             </View>
             <TouchableOpacity
+              style={styles.helpBtn}
+              onPress={() => setShowBriefing(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('game_rules_accessibility')}
+            >
+              <Text style={styles.helpText}>?</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.speakerBtn}
               onPress={() => setIngameEnabled(!audioIngameEnabled)}
               activeOpacity={0.7}
@@ -707,8 +709,8 @@ export default function DailyGameScreen() {
         />
       </View>
 
-      {/* Briefing journalier (affiche avant le debut du jeu) */}
-      {challenge && !briefingDone && (
+      {/* Règles consultables pendant la partie */}
+      {challenge && showBriefing && (
         <DailyBriefingModal
           challenge={challenge}
           league={league}
@@ -716,9 +718,8 @@ export default function DailyGameScreen() {
         />
       )}
 
-      {/* ── Countdown pré-défi ──
-           Affiché après le briefing (première ouverture) ou immédiatement en reprise. */}
-      {!countdownDone && briefingDone && (
+      {/* ── Countdown pré-défi ── */}
+      {!countdownDone && (
         <ChallengeCountdown onDone={handleCountdownDone} />
       )}
 
@@ -741,6 +742,21 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: Colors.ui.textLight,
+  },
+  helpBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.forest.dark + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.forest.dark + '30',
+  },
+  helpText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.forest.dark,
   },
   errorBtn: {
     backgroundColor: Colors.forest.medium,

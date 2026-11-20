@@ -33,6 +33,7 @@ import { ElementPalette } from '../../src/components/Elements/ElementPalette';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
 import { FailModal } from '../../src/components/Game/FailModal';
+import { ChallengeHeaderContainer, TexturedButton } from '../../src/components/relooking/relookingPrimitives';
 
 import { useGame } from '../../src/hooks/useGame';
 import { usePlayerStore } from '../../src/store/playerStore';
@@ -375,6 +376,7 @@ export default function FriendChallengeScreen() {
 
   const insets   = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const [boardAreaHeight, setBoardAreaHeight] = useState(0);
   const game     = useGame();
   const boardDef = challenge ? BoardRegistry[challenge.boardId] : null;
 
@@ -561,8 +563,9 @@ export default function FriendChallengeScreen() {
   return (
     <GestureHandlerRootView style={styles.root}>
 
-      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      <View style={[styles.root, { paddingBottom: insets.bottom }]}>
 
+        <ChallengeHeaderContainer topInset={insets.top}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} style={styles.backBtn}>
@@ -584,22 +587,19 @@ export default function FriendChallengeScreen() {
           </Text>
         </View>
 
-        {/* Bouton Valider */}
-        <View style={styles.validateRow}>
-          <TouchableOpacity
-            style={[styles.validateBtn, !allFilled && styles.validateBtnDisabled]}
-            onPress={() => game.validateChallenge()}
-            disabled={!allFilled}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.validateBtnText}>{t('fc_validate')}</Text>
-          </TouchableOpacity>
-        </View>
+        </ChallengeHeaderContainer>
 
         {/* Plateau */}
-        <View style={styles.boardArea}>
+        <View style={styles.boardArea} onLayout={e => setBoardAreaHeight(e.nativeEvent.layout.height)}>
           <BoardBackdrop boardDef={boardDef} />
-          <View style={[styles.boardContainer, { maxHeight: Math.min(screenWidth, screenHeight * 0.45) }]}>
+          <View style={[styles.boardContainer, {
+            width: Math.min(
+              Math.max(0, screenWidth - 32),
+              screenHeight * 0.52,
+              boardAreaHeight > 0 ? Math.max(0, boardAreaHeight - 8) : screenHeight,
+              500,
+            ),
+          }]}>
             <BoardRenderer
               boardDef={boardDef}
               playerBoard={game.playerBoard}
@@ -609,6 +609,7 @@ export default function FriendChallengeScreen() {
               getCellColor={(idx) => game.getCellColor(idx)}
               onCellPress={handleCellPress}
               challengeKey={challenge?.id}
+              relooking
             />
           </View>
         </View>
@@ -620,6 +621,16 @@ export default function FriendChallengeScreen() {
           fixedCells={fixedCells}
           selectedElement={game.selectedElement}
           onSelectElement={game.selectElement}
+          relooking
+          rightSlot={
+            <TexturedButton
+              label={t('fc_validate')}
+              onPress={() => game.validateChallenge()}
+              disabled={!allFilled}
+              fontSize={12}
+              style={{ width: 100 }}
+            />
+          }
         />
 
         {/* Modal résultat Joueur A */}
@@ -862,7 +873,7 @@ const rs = StyleSheet.create({
 
 // ── Styles écran ───────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.ui.background },
+  root: { flex: 1, backgroundColor: '#F4ECD8' },
   loading: {
     flex: 1,
     alignItems: 'center',
@@ -875,11 +886,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
+    paddingVertical: 6,
   },
   backBtn: { padding: 4 },
   backText: { fontSize: 14, color: Colors.forest.medium, fontWeight: '600' },
@@ -894,34 +901,15 @@ const styles = StyleSheet.create({
   },
   timerText: { fontSize: 15, fontWeight: '700', color: Colors.forest.dark },
   noBonusBanner: {
-    backgroundColor: '#FFF3E0',
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFE0B2',
+    paddingVertical: 4,
   },
   noBonusText: { fontSize: 11, color: '#E65100', textAlign: 'center', fontWeight: '600' },
-  validateRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
-  },
-  validateBtn: {
-    backgroundColor: Colors.forest.medium,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  validateBtnDisabled: { backgroundColor: Colors.ui.border, opacity: 0.6 },
-  validateBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   boardArea: {
     flex: 1,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
+    padding: 4,
   },
   boardContainer: {
     width: '100%',

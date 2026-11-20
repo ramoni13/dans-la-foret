@@ -167,7 +167,7 @@ export function getChapterModes(chapter: Pick<Chapter, 'rewards'>): ProgressionF
 // ── « Essayer maintenant » ────────────────────────────────────────────────────
 
 export type CeremonyDestination =
-  | '/game/onf-lobby'
+  | '/game/onf'
   | '/game/daily'
   | '/(tabs)/challenge'
   | '/(tabs)/';
@@ -182,7 +182,7 @@ export function getTryNowDestination(chapter: Pick<Chapter, 'rewards'>): Ceremon
     case 'duel':               return '/(tabs)/challenge';
     case 'onf_sentier':
     case 'onf_clairiere':
-    case 'onf_profonde':       return '/game/onf-lobby';
+    case 'onf_profonde':       return '/game/onf';
     case 'daily_pousse':
     case 'daily_grand_chene':  return '/game/daily';
     default:                   return '/(tabs)/';

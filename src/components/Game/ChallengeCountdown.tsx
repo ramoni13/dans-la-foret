@@ -76,6 +76,8 @@ export function ChallengeCountdown({ onDone }: Props) {
 
   // ── Séquence principale ───────────────────────────────────
   useEffect(() => {
+    let active = true;
+    let fadeTimeout: ReturnType<typeof setTimeout> | undefined;
     popIn();
 
     const interval = setInterval(() => {
@@ -86,13 +88,13 @@ export function ChallengeCountdown({ onDone }: Props) {
           return next;
         } else {
           clearInterval(interval);
-          setTimeout(() => {
+          fadeTimeout = setTimeout(() => {
             Animated.timing(fadeOut, {
               toValue: 0,
               duration: 400,
               useNativeDriver: true,
-            }).start(() => {
-              if (!doneCalledRef.current) {
+            }).start(({ finished }) => {
+              if (active && finished && !doneCalledRef.current) {
                 doneCalledRef.current = true;
                 onDone();
               }
@@ -103,7 +105,12 @@ export function ChallengeCountdown({ onDone }: Props) {
       });
     }, STEP_DURATION_MS);
 
-    return () => clearInterval(interval);
+    return () => {
+      active = false;
+      clearInterval(interval);
+      if (fadeTimeout) clearTimeout(fadeTimeout);
+      fadeOut.stopAnimation();
+    };
   }, []);
 
   return (

@@ -145,33 +145,22 @@ export default function GameScreen() {
   const setIngameEnabled   = useAudioStore(s => s.setIngameEnabled);
 
   // ── Countdown pré-défi ────────────────────────────────────
-  // Countdown pré-défi :
-  // - niveau 1 (avec briefing) : démarre après fermeture du briefing
-  // - niveaux 2+ (sans briefing) : démarre immédiatement au montage
   const [countdownDone, setCountdownDone] = useState(false);
+  const priorElapsedRef = useRef(0);
 
   // ── Briefing de niveau ─────────────────────────────────────
-  const [briefingDone, setBriefingDone] = useState(false);
   const [briefingForcedOpen, setBriefingForcedOpen] = useState(false);
 
   const handleBriefingClose = useCallback(() => {
-    const wasFirstOpen = !briefingDone;
-    setBriefingDone(true);
     setBriefingForcedOpen(false);
-    // Le timer démarrera après le countdown (voir handleCountdownDone)
-    // On ne le démarre plus ici pour les premières ouvertures
-    if (!wasFirstOpen && challengeId) {
-      // Réouverture du briefing via bouton "?" — le timer était déjà lancé, rien à faire
-    }
-  }, [game, briefingDone, challengeId]);
+  }, []);
 
   const handleCountdownDone = useCallback(() => {
     setCountdownDone(true);
     // Démarre le timer après le countdown
     if (challengeId) {
-      const pState = usePlayerStore.getState();
-      const priorElapsed = getChallengeElapsed(pState.challengeStartedAt, challengeId);
-      game.startTimer(priorElapsed);
+      usePlayerStore.getState().markChallengeStarted(challengeId);
+      game.startTimer(priorElapsedRef.current);
     }
   }, [game, challengeId]);
 
@@ -302,22 +291,17 @@ export default function GameScreen() {
         }
       }
 
-      const priorElapsed = getChallengeElapsed(pState.challengeStartedAt, challengeId);
+      priorElapsedRef.current = getChallengeElapsed(pState.challengeStartedAt, challengeId);
 
       game.loadChallenge(found);
       player.setLastPlayed(found.id);
-      player.markChallengeStarted(found.id);
+      setCountdownDone(false);
+      setBriefingForcedOpen(false);
       badgesEvaluatedRef.current = false;
       failCountForGameRef.current = 0;
       setIsPerfectRun(false);
       setIsNewWorldRecord(false);
       setPreviousRecordHolder(null);
-      if (found.challengeNumber !== 1) {
-        setTimeout(() => game.startTimer(priorElapsed), 50);
-        setBriefingDone(true);
-      } else {
-        setBriefingDone(false);
-      }
     }
   }, [challengeId]);
 
@@ -626,7 +610,7 @@ export default function GameScreen() {
   );
 
 
-  if (!challenge || !boardDef) {
+  if (!challenge || challenge.id !== challengeId || !boardDef) {
     return (
       <GestureHandlerRootView style={styles.root}>
         <View style={[styles.loading, { paddingTop: insets.top }]}>
@@ -793,18 +777,18 @@ export default function GameScreen() {
               if (victoryNav) {
                 router.replace(
                   victoryNav.primary.kind === 'challenge'
-                    ? `/game/${victoryNav.primary.challengeId}`
+                    ? `/game/${victoryNav.primary.challengeId}${returnTo === 'levels' ? '?returnTo=levels' : ''}`
                     : '/(tabs)/',
                 );
               } else {
                 const after = usePlayerStore.getState().challengeStars;
                 const level = getLevelFromChallengeId(challenge.id);
                 const target = level !== null ? getNextAfterWin(level, challenge.id, after) : null;
-                router.replace(target ? `/game/${target}` : '/(tabs)/');
+                router.replace(target ? `/game/${target}${returnTo === 'levels' ? '?returnTo=levels' : ''}` : '/(tabs)/');
               }
             } else if (nextExists) {
               // Défi suivant dans le même niveau
-              router.replace(`/game/${nextId}`);
+              router.replace(`/game/${nextId}${returnTo === 'levels' ? '?returnTo=levels' : ''}`);
             } else {
               // Dernier défi du niveau → passer au niveau suivant si disponible
               const currentLevelNum = parseInt(challenge.level.replace('niveau_', ''), 10);
@@ -812,7 +796,7 @@ export default function GameScreen() {
               const nextLevelChallenges = ALL_CHALLENGES[nextLevelKey];
               if (nextLevelChallenges && nextLevelChallenges.length > 0) {
                 const firstNextChallenge = nextLevelChallenges[0];
-                router.replace(`/game/${firstNextChallenge.id}`);
+                router.replace(`/game/${firstNextChallenge.id}${returnTo === 'levels' ? '?returnTo=levels' : ''}`);
               } else {
                 // Dernier niveau atteint → retour à l'accueil
                 router.replace('/(tabs)/');
@@ -831,7 +815,7 @@ export default function GameScreen() {
               ? () => {
                   const target = victoryNav.secondary;
                   game.resetGame();
-                  if (target) router.replace(`/game/${target.challengeId}`);
+                  if (target) router.replace(`/game/${target.challengeId}${returnTo === 'levels' ? '?returnTo=levels' : ''}`);
                 }
               : undefined
           }
@@ -842,7 +826,11 @@ export default function GameScreen() {
           }
           onBackToMenu={() => {
             game.resetGame();
-            router.replace('/(tabs)/');
+            if (returnTo === 'levels' && router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/');
+            }
           }}
         />
 
@@ -866,8 +854,7 @@ export default function GameScreen() {
       </View>
 
         {/* ── Briefing de niveau ── */}
-      {challenge && levelMeta &&
-       (briefingForcedOpen || (!briefingDone && challenge.challengeNumber === 1)) && (
+      {challenge && levelMeta && briefingForcedOpen && (
         <LevelBriefingModal
           challenge={challenge}
           levelMeta={levelMeta}
@@ -875,12 +862,9 @@ export default function GameScreen() {
         />
       )}
 
-      {/* ── Countdown pré-défi ──
-           Affiché après le briefing (niveau 1) ou immédiatement (niveaux 2+).
-           Le briefing forcé (bouton "?") ne redéclenche PAS le countdown. */}
-      {!countdownDone && challenge &&
-       (challenge.challengeNumber !== 1 || briefingDone) && (
-        <ChallengeCountdown onDone={handleCountdownDone} />
+      {/* ── Countdown pré-défi ── */}
+      {!countdownDone && challenge && (
+        <ChallengeCountdown key={challenge.id} onDone={handleCountdownDone} />
       )}
 
     </GestureHandlerRootView>

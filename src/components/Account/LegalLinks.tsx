@@ -9,6 +9,7 @@
 import React from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/colors';
+import { ForestColors } from '../../theme/forestTheme';
 import { useT } from '../../i18n';
 import { buildContactMailto, getLegalUrl, type LegalPage } from '../../constants/legal';
 
@@ -77,10 +78,10 @@ const styles = StyleSheet.create({
   },
   noticeLink: { color: '#FFE082', fontWeight: '700', textDecorationLine: 'underline' },
   panel: {
-    backgroundColor: Colors.ui.card,
+    backgroundColor: ForestColors.parchmentBase,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.ui.border,
+    borderColor: ForestColors.parchmentBorder,
     overflow: 'hidden',
   },
   panelTitle: {

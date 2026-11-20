@@ -15,10 +15,11 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { Colors } from '../../src/constants/colors';
-import { useFrameLayout } from '../../src/constants/frameLayout';
+import { useMenuLayout } from '../../src/constants/frameLayout';
+import { ForestColors } from '../../src/theme/forestTheme';
+import { useHomeFont } from '../../src/theme/homeTypography';
+import { ParchmentBanner } from '../../src/components/relooking/relookingPrimitives';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { usePlayerStore } from '../../src/store/playerStore';
 import { isDemoAccount } from '../../src/constants/devAccess';
@@ -89,13 +90,14 @@ function ChallengeCard({ icon, titleKey, color, children }: {
   children: React.ReactNode;
 }) {
   const t = useT();
+  const fontFamily = useHomeFont();
   return (
     <View style={[challengeStyles.card, { borderLeftColor: color, borderLeftWidth: 4 }]}>
       <View style={challengeStyles.cardHeader}>
         <View style={[challengeStyles.iconBadge, { backgroundColor: color + '22' }]}>
           <Text style={challengeStyles.iconText}>{icon}</Text>
         </View>
-        <Text style={[challengeStyles.cardTitle, { color }]}>{t(titleKey)}</Text>
+        <Text style={[challengeStyles.cardTitle, { color }, fontFamily && { fontFamily, fontWeight: 'normal' }]}>{t(titleKey)}</Text>
       </View>
       <View style={challengeStyles.cardBody}>
         {children}
@@ -251,9 +253,10 @@ export default function RulesScreen() {
   const t = useT();
   const player = usePlayerStore();
   const currentLevel = player.currentLevel;
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { frameBottom, innerTop, innerPadH } = useFrameLayout();
+  const { frameBottom, contentTop, innerPadH } = useMenuLayout();
+  const fontFamily = useHomeFont();
+  const displayFont = fontFamily ? { fontFamily, fontWeight: 'normal' as const } : undefined;
   const ruleCardWidth = width - innerPadH * 2 - 32;
 
   const [activeTab, setActiveTab] = useState<'inhabitants' | 'challenges'>('inhabitants');
@@ -261,11 +264,13 @@ export default function RulesScreen() {
 
   return (
     <View style={styles.root}>
-      <BgImage overlay={0.52} />
+      <BgImage overlay={0.35} />
 
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 20), paddingHorizontal: innerPadH + 4 }]}>
-        <Text style={styles.title}>{t('rules_tab_title')}</Text>
+      <View style={[styles.header, { paddingTop: contentTop, paddingHorizontal: innerPadH }]}>
+        <ParchmentBanner style={styles.titleBanner}>
+          <Text style={[styles.title, displayFont]}>{t('rules_tab_title')}</Text>
+        </ParchmentBanner>
 
         {/* ── Tab switcher ── */}
         <View style={styles.tabBar}>
@@ -273,8 +278,10 @@ export default function RulesScreen() {
             style={[styles.tabBtn, activeTab === 'inhabitants' && styles.tabBtnActive]}
             onPress={() => setActiveTab('inhabitants')}
             activeOpacity={0.75}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'inhabitants' }}
           >
-            <Text style={[styles.tabLabel, activeTab === 'inhabitants' && styles.tabLabelActive]}>
+            <Text style={[styles.tabLabel, activeTab === 'inhabitants' && styles.tabLabelActive, displayFont]}>
               {t('rules_tab_inhabitants')}
             </Text>
           </TouchableOpacity>
@@ -282,8 +289,10 @@ export default function RulesScreen() {
             style={[styles.tabBtn, activeTab === 'challenges' && styles.tabBtnActive]}
             onPress={() => setActiveTab('challenges')}
             activeOpacity={0.75}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === 'challenges' }}
           >
-            <Text style={[styles.tabLabel, activeTab === 'challenges' && styles.tabLabelActive]}>
+            <Text style={[styles.tabLabel, activeTab === 'challenges' && styles.tabLabelActive, displayFont]}>
               {t('rules_tab_challenges')}
             </Text>
           </TouchableOpacity>
@@ -344,6 +353,7 @@ export default function RulesScreen() {
                       style={[
                         styles.elementName,
                         !unlocked && styles.elementNameLocked,
+                        displayFont,
                       ]}
                     >
                       {t(entry.nameKey)}
@@ -406,20 +416,20 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     gap: 8,
   },
+  titleBanner: { paddingVertical: 8, alignItems: 'center', justifyContent: 'center' },
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#fff',
+    color: ForestColors.textInkPrimary,
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
   },
 
   // ── Tab switcher ──
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.30)',
+    backgroundColor: '#285235',
+    borderWidth: 1,
+    borderColor: ForestColors.parchmentBorder,
     borderRadius: 12,
     padding: 3,
     gap: 3,
@@ -432,7 +442,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: ForestColors.parchmentBase,
   },
   tabLabel: {
     fontSize: 13,
@@ -470,8 +480,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardUnlocked: {
-    backgroundColor: Colors.ui.card,
-    borderColor: Colors.ui.border,
+    backgroundColor: ForestColors.parchmentBase,
+    borderColor: ForestColors.parchmentBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -479,8 +489,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardLocked: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#E0E0E0',
+    backgroundColor: ForestColors.parchmentDark,
+    borderColor: ForestColors.parchmentBorder,
   },
 
   // ── Header de carte ──
@@ -514,7 +524,7 @@ const styles = StyleSheet.create({
     color: Colors.forest.dark,
   },
   elementNameLocked: {
-    color: '#9E9E9E',
+    color: '#6A5948',
   },
   levelTag: {
     fontSize: 12,
@@ -522,7 +532,7 @@ const styles = StyleSheet.create({
     color: Colors.forest.medium,
   },
   levelTagLocked: {
-    color: '#BDBDBD',
+    color: '#6A5948',
   },
 
   // ── Zone regles animees ──
@@ -551,7 +561,9 @@ const styles = StyleSheet.create({
 // ── Styles onglet Défis ────────────────────────────────────────────────────
 const challengeStyles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: ForestColors.parchmentBase,
+    borderColor: ForestColors.parchmentBorder,
+    borderWidth: 1,
     borderRadius: 16,
     padding: 16,
     gap: 10,
@@ -629,7 +641,7 @@ const bonusCardStyles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: ForestColors.parchmentLight,
     marginTop: 6,
   },
   header: {

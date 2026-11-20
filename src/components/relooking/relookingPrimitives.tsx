@@ -193,7 +193,7 @@ export const ParchmentIconButton: React.FC<ParchmentIconButtonProps> = ({
 };
 
 /**
- * 4. Fond du bandeau supérieur de l'écran Défi (parchemin + poutre bois en bas)
+ * 4. Bandeau supérieur de l'écran Défi
  */
 interface ChallengeHeaderContainerProps {
   children: React.ReactNode;
@@ -206,23 +206,14 @@ export const ChallengeHeaderContainer: React.FC<ChallengeHeaderContainerProps> =
   topInset = 0,
   style,
 }) => (
-  <View style={styles.challengeHeaderWrapper}>
-    <View pointerEvents="none" style={styles.challengeHeaderUnderlay} />
-    <ImageBackground
-      source={RelookingAssets.pageAvecBandeauBoisBas}
-      resizeMode="stretch"
-      imageStyle={styles.fillImage}
-      style={[
-        styles.challengeHeaderBg,
-        {
-          paddingTop: Math.max(topInset, 8),
-          paddingBottom: 42 + Math.max(topInset - 8, 0) / 3,
-        },
-        style,
-      ]}
-    >
-      {children}
-    </ImageBackground>
+  <View
+    style={[
+      styles.challengeHeaderBg,
+      { paddingTop: Math.max(topInset, 8) },
+      style,
+    ]}
+  >
+    {children}
   </View>
 );
 
@@ -355,19 +346,11 @@ const styles = StyleSheet.create({
   challengeHeaderBg: {
     width: '100%',
     paddingHorizontal: 14,
-    zIndex: 1,
-  },
-  challengeHeaderWrapper: {
-    zIndex: 1,
-    marginBottom: -8,
-  },
-  challengeHeaderUnderlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 42,
+    paddingBottom: 8,
     backgroundColor: ForestColors.parchmentBase,
+    borderBottomWidth: 3,
+    borderBottomColor: '#734B2C',
+    zIndex: 1,
   },
   parchmentBanner: {
     width: '100%',

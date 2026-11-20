@@ -1,12 +1,11 @@
 // ============================================================
 // LEADERBOARD SCREEN (Lot C)
-// Classement mondial temps réel, 3 onglets :
+// Classement mondial temps réel. Seul l'onglet Records est affiché actuellement :
 //   1. ⭐ Étoiles   — étoiles → ⭐⭐⭐ → trophées → le premier arrivé (vitrine principale)
 //   2. 🌅 Journalier — victoires du jour dans UNE ligue (sélecteur Pousse / Grand Chêne) → le premier arrivé
 //   3. 🏆 Records   — records mondiaux détenus → le dernier record le plus ancien
 //
-// Chaque classement vient d'UNE requête serveur déjà triée (voir leaderboardService / constants/leaderboardRank) :
-// aucun re-tri côté client. Le joueur hors du top affiché voit sa position réelle (comptage serveur).
+// Les onglets Pommes de pin et Journalier peuvent être réactivés dans TABS.
 // ============================================================
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -19,7 +18,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Colors } from '../../constants/colors';
-import { useFrameLayout } from '../../constants/frameLayout';
+import { useMenuLayout } from '../../constants/frameLayout';
+import { ForestColors } from '../../theme/forestTheme';
+import { useHomeFont } from '../../theme/homeTypography';
 import { getRankLabel } from '../../constants/progression';
 import { usePlayerStore } from '../../store/playerStore';
 
@@ -47,6 +48,7 @@ import { auth } from '../../services/firebase';
 import { useT } from '../../i18n';
 import { PineconeText } from '../Game/PineconeIcon';
 import { PINECONE_TOKEN } from '../../constants/pinecone';
+import { ParchmentBanner } from '../relooking/relookingPrimitives';
 
 // ── Onglets ──────────────────────────────────────────────────────────────────
 
@@ -94,9 +96,10 @@ const Row: React.FC<RowProps> = ({ rank, isMe, username, sub, detail, value }) =
 
 export const LeaderboardScreen: React.FC = () => {
   const t = useT();
-  const { frameBottom, innerPadH } = useFrameLayout();
+  const { frameBottom, innerPadH } = useMenuLayout();
+  const fontFamily = useHomeFont();
   const language = usePlayerStore(s => s.language);
-  const [tab, setTab] = useState<Tab>('stars');
+  const [tab, setTab] = useState<Tab>('records');
 
   const myUid = auth.currentUser?.uid ?? null;
   const todayStr = getDailyDateString(new Date());
@@ -164,8 +167,8 @@ export const LeaderboardScreen: React.FC = () => {
   }, [tab, stars, daily, records, myUid, farStars]);
 
   const TABS: { key: Tab; label: string; emoji: string }[] = [
-    { key: 'stars', label: t('leaderboard_tab_stars'), emoji: PINECONE_TOKEN },
-    { key: 'daily', label: t('leaderboard_daily_tab'), emoji: '🌅' },
+    // { key: 'stars', label: t('leaderboard_tab_stars'), emoji: PINECONE_TOKEN },
+    // { key: 'daily', label: t('leaderboard_daily_tab'), emoji: '🌅' },
     { key: 'records', label: t('leaderboard_tab_records'), emoji: '🏆' },
   ];
 
@@ -184,19 +187,29 @@ export const LeaderboardScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Onglets */}
-      <View style={[styles.tabs, { paddingHorizontal: innerPadH }]}>
-        {TABS.map(tb => (
-          <TouchableOpacity
-            key={tb.key}
-            style={[styles.tab, tab === tb.key && styles.tabActive]}
-            onPress={() => setTab(tb.key)}
-            activeOpacity={0.7}
-          >
-            <PineconeText style={[styles.tabText, tab === tb.key && styles.tabTextActive]} text={`${tb.emoji} ${tb.label}`} />
-          </TouchableOpacity>
-        ))}
+      <View style={[styles.header, { paddingHorizontal: innerPadH }]}>
+        <ParchmentBanner style={styles.banner}>
+          <Text style={[styles.bannerTitle, fontFamily && { fontFamily, fontWeight: 'normal' }]}>
+            {t(tab === 'records' ? 'leaderboard_records_title' : tab === 'stars' ? 'leaderboard_tab_stars' : 'leaderboard_daily_tab')}
+          </Text>
+        </ParchmentBanner>
       </View>
+
+      {/* Onglets */}
+      {TABS.length > 1 && (
+        <View style={[styles.tabs, { marginHorizontal: innerPadH }]}>
+          {TABS.map(tb => (
+            <TouchableOpacity
+              key={tb.key}
+              style={[styles.tab, tab === tb.key && styles.tabActive]}
+              onPress={() => setTab(tb.key)}
+              activeOpacity={0.7}
+            >
+              <PineconeText style={[styles.tabText, tab === tb.key && styles.tabTextActive]} text={`${tb.emoji} ${tb.label}`} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {/* Journalier : sélecteur de ligue + record du jour de la ligue affichée */}
       {tab === 'daily' && (
@@ -230,13 +243,13 @@ export const LeaderboardScreen: React.FC = () => {
       )}
 
       {/* Règle de départage de l'onglet : le joueur sait comment il est classé */}
-      <View style={styles.ruleBar}>
+      <View style={[styles.ruleBar, { marginHorizontal: innerPadH }]}>
         <PineconeText style={styles.ruleText} text={t(`leaderboard_rule_${tab}`)} />
       </View>
 
       {/* Ma position */}
       {myRank != null && (mySummary != null || tab === 'stars') && (
-        <View style={styles.myRankBar}>
+        <View style={[styles.myRankBar, { marginHorizontal: innerPadH }]}>
           <PineconeText
             style={styles.myRankText}
             text={`${t('leaderboard_my_position', { rank: String(myRank) })}${mySummary ? `  ·  ${mySummary}` : ''}`}
@@ -254,7 +267,7 @@ export const LeaderboardScreen: React.FC = () => {
         <View style={styles.center}>
           <Text style={styles.emptyEmoji}>{tab === 'daily' ? '🌅' : '🌲'}</Text>
           <Text style={styles.emptyText}>{t('leaderboard_empty')}</Text>
-          <Text style={styles.emptySubtext}>{t(tab === 'daily' ? 'leaderboard_daily_empty' : 'leaderboard_empty_sub')}</Text>
+          <Text style={styles.emptySubtext}>{t(tab === 'records' ? 'leaderboard_records_empty' : tab === 'daily' ? 'leaderboard_daily_empty' : 'leaderboard_empty_sub')}</Text>
         </View>
       ) : (
         <FlatList
@@ -285,14 +298,12 @@ export const LeaderboardScreen: React.FC = () => {
                 rank={index + 1}
                 isMe={e.userId === myUid}
                 username={e.username}
-                detail={t('leaderboard_records_world', { count: String(e.recordCount) })}
                 value={`🏆 ${e.recordCount}`}
               />
             );
           }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           contentContainerStyle={[styles.list, { paddingHorizontal: innerPadH, paddingBottom: frameBottom + 16 }]}
-          getItemLayout={(_, index) => ({ length: ROW_HEIGHT, offset: (ROW_HEIGHT + 6) * index, index })}
         />
       )}
     </View>
@@ -319,12 +330,14 @@ function countThree(cs: Record<string, number>): number {
 const ROW_HEIGHT = 76;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.ui.background },
+  container: { flex: 1 },
+  header: { paddingTop: 16, paddingBottom: 8 },
+  banner: { minHeight: 55, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  bannerTitle: { fontSize: 20, fontWeight: '800', color: ForestColors.textInkPrimary, textAlign: 'center' },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
+    backgroundColor: ForestColors.parchmentBase,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingTop: 16,
     gap: 4,
@@ -348,21 +361,21 @@ const styles = StyleSheet.create({
   todayBannerLabel: { fontSize: 10, fontWeight: '700', color: '#D4A017', textTransform: 'uppercase', letterSpacing: 0.8 },
   todayBannerValue: { fontSize: 15, fontWeight: '800', color: '#FFD54F' },
   todayBannerEmpty: { fontSize: 12, color: '#A07830', fontStyle: 'italic' },
-  ruleBar: { paddingVertical: 6, paddingHorizontal: 16, backgroundColor: Colors.ui.card },
-  ruleText: { fontSize: 11, color: Colors.ui.textLight, textAlign: 'center' },
+  ruleBar: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: 'rgba(18,56,31,0.92)' },
+  ruleText: { fontSize: 12, lineHeight: 17, color: ForestColors.textOnDark, textAlign: 'center' },
   myRankBar: {
-    backgroundColor: Colors.forest.dark + '12', paddingVertical: 8, paddingHorizontal: 16,
-    borderBottomWidth: 1, borderBottomColor: Colors.ui.border,
+    backgroundColor: ForestColors.parchmentDark, paddingVertical: 10, paddingHorizontal: 16,
+    borderRadius: 12, marginTop: 8,
   },
-  myRankText: { fontSize: 12, color: Colors.forest.dark, fontWeight: '600', textAlign: 'center' },
+  myRankText: { fontSize: 13, color: ForestColors.forestGreenDark, fontWeight: '700', textAlign: 'center' },
   list: { paddingVertical: 8, paddingHorizontal: 12 },
   row: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.ui.card, borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 10, minHeight: ROW_HEIGHT,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: ForestColors.parchmentBase, borderRadius: 12,
+    borderWidth: 1, borderColor: ForestColors.parchmentBorder, paddingHorizontal: 12, paddingVertical: 10, minHeight: ROW_HEIGHT,
     shadowColor: Colors.ui.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 1,
   },
-  rowMe: { borderWidth: 1.5, borderColor: Colors.forest.medium, backgroundColor: Colors.forest.dark + '08' },
-  separator: { height: 6 },
+  rowMe: { borderWidth: 2, borderColor: ForestColors.forestGreenLight, backgroundColor: ForestColors.parchmentLight },
+  separator: { height: 8 },
   rankCol: { width: 36, alignItems: 'center' },
   medal: { fontSize: 22 },
   rankText: { fontSize: 15, fontWeight: '700', color: Colors.ui.textLight },
@@ -374,9 +387,9 @@ const styles = StyleSheet.create({
   subinfo: { fontSize: 11, color: Colors.ui.textLight, marginTop: 1 },
   valueCol: { alignItems: 'flex-end', minWidth: 70 },
   valueText: { fontSize: 15, fontWeight: '800', color: Colors.forest.dark },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  loadingText: { marginTop: 12, color: Colors.ui.textLight, fontSize: 14 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 24 },
+  loadingText: { marginTop: 12, color: ForestColors.textOnDark, fontSize: 14 },
   emptyEmoji: { fontSize: 40 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: Colors.forest.dark },
-  emptySubtext: { fontSize: 13, color: Colors.ui.textLight, textAlign: 'center', maxWidth: 240 },
+  emptyText: { fontSize: 16, fontWeight: '700', color: ForestColors.textOnDark, textAlign: 'center' },
+  emptySubtext: { fontSize: 13, color: ForestColors.parchmentBase, textAlign: 'center', maxWidth: 240 },
 });

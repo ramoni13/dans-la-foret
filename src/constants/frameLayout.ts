@@ -1,26 +1,15 @@
 // ============================================================
-// frameLayout.ts — Dimensions du cadre modulaire (ForestFrame)
+// frameLayout.ts — Géométrie historique et dock des onglets
 //
-// Cadre assemblé à partir de 3 assets :
-//   coin.png      558×549  — coin bois (original = coin haut-droit)
-//   bordure.svg   21.76×278.4  — bande verticale extensible
-//   menu_bas.png  1352×318  — barre navigation basse
-//
-// Principe d'assemblage :
-//   ┌─[coin TG]──────────────[coin TD]─┐
-//   [bord G]     contenu          [bord D]
-//   └──────────[menu_bas]──────────────┘
-//
-// Les 4 coins sont symétriques (scaleX / scaleY).
-// Les bordures SVG s'étirent en hauteur (preserveAspectRatio="none").
-// Le menu_bas est centré en bas, hauteur calculée depuis son ratio natif.
+// Le dock utilise le ratio natif de menu_bas.png. La géométrie historique
+// reste utilisée par l'accueil pour ses marges.
 // ============================================================
 
 import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ── Ratios natifs ────────────────────────────────────────────────────────────
-/** coin.png : 558×549 — quasi carré */
+/** Dimensions historiques des coins du cadre. */
 export const COIN_NATIVE_W = 558;
 export const COIN_NATIVE_H = 549;
 export const COIN_RATIO    = COIN_NATIVE_H / COIN_NATIVE_W; // ≈ 0.9839
@@ -37,8 +26,7 @@ export const MENU_RATIO    = MENU_NATIVE_H / MENU_NATIVE_W; // ≈ 0.2352
 export const COIN_W_FRACTION = 0.11; // fraction de screenW
 
 /**
- * Largeur rendue des bordures SVG : ~5% de la largeur d'écran, min 16 dp.
- * La bordure SVG fait 21.76 dp natifs sur un viewBox de 21.76 px de large.
+ * Largeur historique des bordures : ~5% de la largeur d'écran, min 16 dp.
  */
 export const BORDER_W_FRACTION = 0.05;
 
@@ -52,6 +40,28 @@ export const BTN_X_CENTERS = [0.165, 0.397, 0.603, 0.835];
  * Fraction Y du centre des boutons dans menu_bas.png (≈ 50%)
  */
 export const BTN_Y_IN_MENU = 0.50;
+
+/** Dimensions du dock compact et espace réservé aux compteurs. */
+export function getMenuLayout(screenW: number, insetTop: number, insetBottom: number) {
+  const menuWidth = Math.min(screenW * 0.9, 430);
+  const menuHeight = menuWidth * MENU_RATIO;
+  const menuBottom = Math.max(insetBottom, 8);
+  return {
+    menuWidth,
+    menuHeight,
+    menuLeft: (screenW - menuWidth) / 2,
+    menuBottom,
+    frameBottom: menuHeight + menuBottom,
+    contentTop: insetTop + 104,
+    innerPadH: 20,
+  };
+}
+
+export function useMenuLayout() {
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  return getMenuLayout(width, insets.top, insets.bottom);
+}
 
 /**
  * Calcule toutes les dimensions du cadre modulaire pour un écran donné.

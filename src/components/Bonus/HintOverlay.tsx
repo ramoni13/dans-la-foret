@@ -47,6 +47,7 @@ const native = Platform.OS !== 'web';
 interface HintOverlayProps {
   seeds: number;
   levelProgress?: { current: number; threshold: number; level: number };
+  counterSlot?: React.ReactNode;
   bonusUsed: BonusId[];
   selectedElement: string | null;
   isPremium: boolean;
@@ -235,6 +236,7 @@ const BonusExplainModal: React.FC<BonusExplainModalProps> = ({
 export const HintOverlay: React.FC<HintOverlayProps> = ({
   seeds,
   levelProgress,
+  counterSlot,
   bonusUsed,
   selectedElement,
   isPremium,
@@ -353,7 +355,7 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
 
   return (
     <View style={[styles.container, relooking && styles.relookingContainer]}>
-      {levelProgress ? (
+      {counterSlot ? counterSlot : levelProgress ? (
         <View
           style={styles.seedsContainer}
           accessible
@@ -419,6 +421,8 @@ export const HintOverlay: React.FC<HintOverlayProps> = ({
                 onPress={() => handleBonus(def.id)}
                 activeOpacity={cooldown ? 1 : 0.7}
                 disabled={cooldown}
+                accessibilityRole="button"
+                accessibilityLabel={t(bonusId === 'reveal_cell' ? 'bonus_reveal_title' : 'bonus_instinct_title')}
               >
                 {relooking && (
                   <Image

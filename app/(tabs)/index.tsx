@@ -16,12 +16,11 @@ import {
   Easing,
   Modal,
   Image,
-  ImageBackground,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { useFrameLayout } from '../../src/constants/frameLayout';
+import { useFrameLayout, useMenuLayout } from '../../src/constants/frameLayout';
 import { getLockMessageKey } from '../../src/constants/unlocks';
 import { useFeatureAccess } from '../../src/hooks/useFeatureAccess';
 import { useCeremonyPlayer } from '../../src/hooks/useCeremonyPlayer';
@@ -53,14 +52,13 @@ import { getAdViews, CHALLENGE_AD_RECHARGE_COUNT } from '../../src/constants/adR
 import { getOwnedCardCount } from '../../src/utils/onfCards';
 import { HerbierEntry } from '../../src/components/ONF/HerbierEntry';
 import { usePlayerStore } from '../../src/store/playerStore';
-import { useNavStore } from '../../src/store/navStore';
 import { auth } from '../../src/services/firebase';
 import { getDailyDateString, subscribeDailyLeaderboard, DailyResult } from '../../src/services/dailyChallengeService';
 import { getPlayerLeague } from '../../src/constants/dailyLeagues';
 
 import { formatTime } from '../../src/utils/boardUtils';
 import { DifficultyLevel } from '../../src/core/models/Challenge';
-import { WorldRecord, subscribeAllWorldRecords } from '../../src/services/worldRecordService';
+import { WorldRecord } from '../../src/services/worldRecordService';
 import { BgImage } from '../../src/components/UI/BgImage';
 import { ForetCommuneWidget } from '../../src/components/ForetCommune/ForetCommuneWidget';
 import { PremiumCard } from '../../src/components/Premium/PremiumCard';
@@ -158,26 +156,20 @@ const ALL_CHALLENGES_FLAT = LEVELS.flatMap(l => ALL_CHALLENGES_BY_LEVEL[l.id] ??
 // ══════════════════════════════════════════════════════════════════════════════
 // Sous-écran : navigateur de niveaux (carrousel + liste de défis)
 // ══════════════════════════════════════════════════════════════════════════════
-function LevelsScreen({
-  onBack,
+export function LevelsScreen({
   router,
   worldRecords,
-  initialLevelIndex,
+  onOpenChallenge,
 }: {
-  onBack: () => void;
   router: ReturnType<typeof useRouter>;
   worldRecords: Map<string, WorldRecord>;
-  initialLevelIndex: number;
+  onOpenChallenge?: () => void;
 }) {
   const t = useT();
-  const insets  = useSafeAreaInsets();
-  const { frameBottom, innerTop } = useFrameLayout();
+  const { frameBottom, contentTop } = useMenuLayout();
   const player  = usePlayerStore();
+  const initialLevelIndex = Math.min(Math.max(0, player.currentLevel - 1), LEVELS.length - 1);
   const [levelIndex, setLevelIndex] = useState(initialLevelIndex);
-
-  useEffect(() => {
-    setLevelIndex(initialLevelIndex);
-  }, [initialLevelIndex]);
 
   const selectedLevelDef = LEVELS[levelIndex];
   const selectedLevel    = selectedLevelDef.id;
@@ -230,7 +222,7 @@ function LevelsScreen({
       <BgImage />
 
       {/* Header titre */}
-      <View style={[styles.levelsHeader, { paddingTop: Math.max(insets.top + 8, innerTop + 20) }]}>
+      <View style={[styles.levelsHeader, { paddingTop: contentTop }]}>
         <Text style={styles.levelsHeaderTitle}>{t('index_all_challenges')}</Text>
         {PROGRESSION_V2 && (
           <PineconeText
@@ -448,7 +440,12 @@ function LevelsScreen({
                         isRecommended ? t('levels_recommended_badge') : '',
                       ].filter(Boolean).join(', ')
                     : undefined}
-                  onPress={() => unlocked && router.push(`/game/${challenge.id}?returnTo=levels`)}
+                  onPress={() => {
+                    if (unlocked) {
+                      onOpenChallenge?.();
+                      router.push(`/game/${challenge.id}?returnTo=levels`);
+                    }
+                  }}
                   activeOpacity={unlocked ? 0.8 : 1}
                 >
                   <View style={[
@@ -751,11 +748,8 @@ export default function HomeScreen() {
   const devAccess  = useFeatureAccess('dev');
   const demoAccess = useFeatureAccess('demo');
 
-  const [showSoloModal, setShowSoloModal] = useState(false);
-  const [showLevels, setShowLevels]       = useState(false);
   const [showPremium, setShowPremium]     = useState(false);
   const [showProgressHelp, setShowProgressHelp] = useState(false);
-  const { showBack, hideBack } = useNavStore();
   const isFreePlayer = !player.isPremium && !isDemoAccount(player.username);
   const challengeCountToday = isLimitsOfDay(player, todayLocalISO()) ? player.challengeCountToday : 0;
   const challengeRecharges = isLimitsOfDay(player, todayLocalISO())
@@ -771,25 +765,8 @@ export default function HomeScreen() {
   // Cérémonies de fin de chapitre (Progression v2, C7) : jouées au retour sur l'accueil, jamais
   // pendant une partie. Pas pendant l'écran des niveaux, la modale solo ou la carte premium.
   const ceremony = useCeremonyPlayer(
-    authReady && isAuthenticated && !showLevels && !showSoloModal && !showPremium,
+    authReady && isAuthenticated && !showPremium,
   );
-
-  // Synchronise le bouton Retour du ForestFrame avec l'écran niveaux
-  useEffect(() => {
-    if (showLevels) {
-      showBack(() => setShowLevels(false));
-    } else {
-      hideBack();
-    }
-    return () => { hideBack(); };
-  }, [showLevels]);
-
-  // ── Records mondiaux ───────────────────────────────────────────────────────
-  const [worldRecords, setWorldRecords] = useState<Map<string, WorldRecord>>(new Map());
-  useEffect(() => {
-    const unsub = subscribeAllWorldRecords(setWorldRecords);
-    return () => unsub();
-  }, []);
 
   // ── Prochain défi non complété ─────────────────────────────────────────────
   // PROGRESSION_V2 : « prochain conseillé » (premier défi jamais gagné du niveau jouable le plus
@@ -823,9 +800,6 @@ export default function HomeScreen() {
   const soloLevelStatus = getLevelStatus(soloProgress.currentLevel, player.challengeStars, soloProgress);
   const recommendedLevel = nextChallenge ? Number(nextChallenge.level.id.replace('niveau_', '')) : null;
   const recommendedChapter = recommendedLevel !== null ? getChapterForLevel(recommendedLevel) : null;
-
-  // Index initial du niveau (niveau courant du joueur)
-  const initialLevelIndex = Math.min(Math.max(0, player.currentLevel - 1), LEVELS.length - 1);
 
   // ── Défi du Jour ───────────────────────────────────────────────────────────
   const todayStr      = useMemo(() => getDailyDateString(new Date()), []);
@@ -971,18 +945,6 @@ export default function HomeScreen() {
     );
   }
 
-  // ── Sous-écran niveaux (plein écran, par-dessus tout) ────────────────────
-  if (showLevels) {
-    return (
-      <LevelsScreen
-        onBack={() => setShowLevels(false)}
-        router={router}
-        worldRecords={worldRecords}
-        initialLevelIndex={initialLevelIndex}
-      />
-    );
-  }
-
   // ── Écran principal ───────────────────────────────────────────────────────
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -1044,7 +1006,9 @@ export default function HomeScreen() {
               }
               accentText={!allCompleted ? continueDetail : undefined}
               fontSize={18}
-              onPress={() => setShowSoloModal(true)}
+              onPress={() => {
+                if (nextChallenge) router.push(`/game/${nextChallenge.challenge.id}`);
+              }}
               style={{ aspectRatio: 3.1, minHeight: 64 }}
             />
           </View>
@@ -1078,7 +1042,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         <Animated.View style={{ opacity: opaDaily, transform: [{ scale: scaleDaily }, { scale: dailyFinished ? 1 : pulseAnim }] }}>
-          <ParchmentBanner>
+          <ParchmentBanner style={styles.soloButton}>
             <TouchableOpacity
               style={styles.dailyRelook}
               disabled={!dailyUnlocked || dailyFinished}
@@ -1144,36 +1108,42 @@ export default function HomeScreen() {
 
           const lock = getLockMessageKey(demoAccess.lockHint('onf_sentier'));
           return (
-            <ImageBackground source={RelookingAssets.doublePagePapier} resizeMode="stretch" style={styles.doubleRelook} imageStyle={{ width: '100%', height: '100%' }}>
-              <TouchableOpacity
-                style={styles.onfRelook}
-                disabled={!isOnfUnlocked}
-                onPress={() => {
-                  player.clearNewFeatureBadge('onf');
-                  router.push('/game/onf-lobby');
-                }}
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !isOnfUnlocked }}
-              >
-                <View style={styles.onfTitleRow}>
-                  {!isOnfUnlocked && <Text style={styles.lockIcon} accessible={false}>🔒</Text>}
-                  <Text style={[styles.relookTitle, styles.onfTitle, displayFont]} numberOfLines={2}>{t('index_onf_btn')}</Text>
-                </View>
-                <Text style={[styles.relookSubtitle, displayFont]} numberOfLines={isOnfUnlocked ? 2 : undefined}>
+            <View style={styles.forestCards}>
+              <ParchmentBanner style={styles.forestCard}>
+                <TouchableOpacity
+                  style={styles.onfRelook}
+                  disabled={!isOnfUnlocked}
+                  onPress={() => {
+                    player.clearNewFeatureBadge('onf');
+                    router.push('/game/onf');
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !isOnfUnlocked }}
+                >
+                  <Text style={[styles.forestCardTitle, displayFont]}>{t('index_onf_btn')}</Text>
+                  <Text style={[styles.relookSubtitle, displayFont]}>
+                    {isOnfUnlocked
+                      ? onfSolved === 0
+                        ? t('onf_btn_first_win')
+                        : cards === 1
+                          ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
+                          : cards > 1
+                            ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
+                            : t('onf_btn_stats_no_card', { count: String(onfSolved) })
+                      : t(lock.key, lock.vars)}
+                  </Text>
+                  {isOnfUnlocked && hasNewBadge('onf', player.newFeatureBadges) && <Text style={[styles.relookSubtitle, displayFont]}>{t('ceremony_new_badge')}</Text>}
                   {isOnfUnlocked
-                    ? onfSolved === 0
-                      ? t('onf_btn_first_win')
-                      : cards === 1
-                        ? t('onf_btn_stats_one_card', { count: String(onfSolved) })
-                        : cards > 1
-                          ? t('onf_btn_stats_cards', { count: String(onfSolved), cards: String(cards) })
-                          : t('onf_btn_stats_no_card', { count: String(onfSolved) })
-                    : t(lock.key, lock.vars)}
-                </Text>
-                {isOnfUnlocked && hasNewBadge('onf', player.newFeatureBadges) && <Text style={[styles.relookSubtitle, displayFont]}>{t('ceremony_new_badge')}</Text>}
-              </TouchableOpacity>
-              {PROGRESSION_V2 && <HerbierEntry compact />}
-            </ImageBackground>
+                    ? <Image source={RelookingAssets.flecheGo} style={styles.forestCardArrow} resizeMode="contain" />
+                    : <Text style={styles.lockIcon} accessible={false}>🔒</Text>}
+                </TouchableOpacity>
+              </ParchmentBanner>
+              {PROGRESSION_V2 && (
+                <ParchmentBanner style={styles.forestCard}>
+                  <HerbierEntry compact />
+                </ParchmentBanner>
+              )}
+            </View>
           );
         })()}
         </Animated.View>
@@ -1207,25 +1177,6 @@ export default function HomeScreen() {
         }}
       />
 
-      {/* ── SoloModal (bottom-sheet) ── */}
-      <SoloModal
-        visible={showSoloModal}
-        onClose={() => setShowSoloModal(false)}
-        onPlay={() => {
-          setShowSoloModal(false);
-          if (nextChallenge) {
-            router.push(`/game/${nextChallenge.challenge.id}`);
-          }
-        }}
-        onSeeAll={() => {
-          setShowSoloModal(false);
-          setShowLevels(true);
-        }}
-        nextChallenge={nextChallenge}
-        totalCompleted={totalCompleted}
-        totalChallenges={totalChallenges}
-        allCompleted={allCompleted}
-      />
     </View>
   );
 }
@@ -1280,10 +1231,11 @@ const styles = StyleSheet.create({
   premiumDetail: { color: ForestColors.textInkPrimary, fontSize: 11, fontWeight: '700' },
   premiumPrice: { backgroundColor: '#315B34', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 8 },
   premiumPriceText: { color: '#FFF8E7', fontSize: 12, fontWeight: '800' },
-  doubleRelook: { flexDirection: 'row', alignItems: 'center', minHeight: 88, paddingHorizontal: 12 },
-  onfRelook: { flex: 1, minHeight: 78, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  onfTitleRow: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  onfTitle: { flexShrink: 1 },
+  forestCards: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
+  forestCard: { flex: 1, width: 'auto', minWidth: 0, paddingHorizontal: 10, paddingVertical: 8 },
+  onfRelook: { flex: 1, minHeight: 94, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  forestCardTitle: { fontSize: 16, fontWeight: '800', color: ForestColors.textInkPrimary, textAlign: 'center' },
+  forestCardArrow: { width: 26, height: 26 },
   relookTitle: { fontSize: 18, fontWeight: '800', color: ForestColors.textInkPrimary, textAlign: 'center' },
   relookSubtitle: { fontSize: 12, fontWeight: '700', color: ForestColors.textInkPrimary, textAlign: 'center' },
   challengeQuotaBadge: {

@@ -21,6 +21,7 @@ import {
 import { AudioPlayer } from 'expo-audio';
 
 import { Colors } from '../../constants/colors';
+import { ForestColors } from '../../theme/forestTheme';
 import { useAudioStore } from '../../store/audioStore';
 import { showAlert } from '../../store/dialogStore';
 import { usePlayerStore } from '../../store/playerStore';
@@ -144,7 +145,7 @@ const rowStyles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.ui.border,
-    backgroundColor: Colors.ui.background,
+    backgroundColor: ForestColors.parchmentLight,
     overflow: 'hidden',
   },
   listItem: {
@@ -171,7 +172,7 @@ const rowStyles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.ui.border,
-    backgroundColor: Colors.ui.background,
+    backgroundColor: ForestColors.parchmentLight,
   },
   singleTrackText: {
     fontSize: 13,
@@ -452,11 +453,11 @@ export function MusicPanel() {
 
 const styles = StyleSheet.create({
   panel: {
-    backgroundColor: Colors.ui.card,
+    backgroundColor: ForestColors.parchmentBase,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.ui.border,
+    borderColor: ForestColors.parchmentBorder,
     gap: 12,
   },
   panelTitle: {
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
     color: Colors.forest.dark,
   },
   lockedTrack: {
-    backgroundColor: Colors.ui.background,
+    backgroundColor: ForestColors.parchmentLight,
     borderRadius: 12,
     padding: 12,
     gap: 8,

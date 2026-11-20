@@ -22,6 +22,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
+  ScrollView,
   StyleSheet,
   TouchableOpacity,
   TouchableWithoutFeedback,
@@ -61,6 +62,7 @@ import {
   getStarSequenceDuration,
 } from '../../constants/progression';
 import { useT } from '../../i18n';
+import { useHomeFont } from '../../theme/homeTypography';
 
 /** Données Solo de la séquence d'étoiles. Absentes pour Journalier / Forestier / Duel. */
 export interface VictoryStarResult {
@@ -122,6 +124,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   const t = useT();
   const reduceMotion = useReducedMotion();
   const language = usePlayerStore(s => s.language);
+  const fontFamily = useHomeFont();
 
   // Ligne « trophée » unique (voir trophyHint.ts) : un trophée obtenu ce tour, sinon un trophée tout proche.
   const hint = pickTrophyHint(obtainedBadgeIds, nextTrophies);
@@ -196,12 +199,6 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   }, [visible]);
 
   // ── Positions mesurées dans la carte (via onLayout) ───────────────────────
-  const [titleLayout, setTitleLayout] = useState<{ y: number; height: number } | null>(null);
-  const onTitleBlockLayout = useCallback((e: LayoutChangeEvent) => {
-    const { y, height } = e.nativeEvent.layout;
-    setTitleLayout({ y, height });
-  }, []);
-
   const [fromY, setFromY] = useState<number | null>(null);
   const [fromX, setFromX] = useState<number>(225);
   const [toY, setToY]     = useState<number | null>(null);
@@ -340,6 +337,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
   // ── Callback : une graine arrive au compteur ──────────────────────────────
   const [showPerfectOverlay, setShowPerfectOverlay] = useState(false);
+  const [perfectBonusAdded, setPerfectBonusAdded] = useState(false);
 
   const onSeedArrived = useCallback(() => {
     arrivedCount.current += 1;
@@ -408,6 +406,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   useEffect(() => {
     if (!visible) {
       setShowPerfectOverlay(false);
+      setPerfectBonusAdded(false);
       setPerfectFlyActive(false);
       setStarFlights([]);
       setDisplayedStars(0);
@@ -429,6 +428,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
       if (perfectSeedsBonus > 0) setDisplayedGain(perfectSeedsBonus);
       // Appeler le callback pour addSeeds côté parent (le x2 effectif)
       onPerfectBonusCollected?.();
+      setPerfectBonusAdded(true);
       // Délai visuel avant de lancer la 2e pluie de graines
       setTimeout(() => {
         setPerfectFlyKey(k => k + 1);
@@ -466,6 +466,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
   return (
     <View style={styles.overlay} accessibilityViewIsModal>
       <View style={styles.backdrop}>
+        <View style={styles.cardFrame}>
+        <ScrollView style={styles.cardScroll} showsVerticalScrollIndicator>
         <View style={styles.card}>
           <TouchableWithoutFeedback onPress={handleSkip} disabled={!sequenceActive}>
             <View style={styles.cardInner} onLayout={onCardInnerLayout}>
@@ -501,15 +503,28 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
               </View>
 
               {/* ── Titre ────────────────────────────────────────────────────── */}
-              <View onLayout={onTitleBlockLayout} style={{ alignItems: 'center', width: '100%' }}>
+              <View style={{ alignItems: 'center', width: '100%' }}>
                 <Text style={styles.emoji}>🎉</Text>
-                <Text style={styles.title}>{t('victory_title')}</Text>
+                <Text style={[styles.title, fontFamily && { fontFamily, fontWeight: 'normal' }]}>{t('victory_title')}</Text>
                 {challengeNumber > 0 && (
                   <Text style={styles.subtitle}>
                     {DIFFICULTY_EMOJIS[difficulty] ?? ''} {t('level_prefix')} {difficulty.replace('niveau_', '')} — {t('victory_challenge_label', { number: String(challengeNumber) })}
                   </Text>
                 )}
               </View>
+
+              {showPerfectOverlay && (
+                <Animated.View
+                  style={[styles.perfectOverlay, perfectStyle]}
+                  pointerEvents="none"
+                  accessible
+                  accessibilityLiveRegion="polite"
+                  accessibilityLabel={`${t('perfect_run_label')} ${t('perfect_run_gain_x2')}`}
+                >
+                  <Text style={styles.perfectLabel}>{t('perfect_run_label')}</Text>
+                  <Text style={styles.perfectSub}>{t('perfect_run_gain_x2')}</Text>
+                </Animated.View>
+              )}
 
               {/* ── Étoiles (Solo) ───────────────────────────────────────────── */}
               {starResult && (
@@ -586,7 +601,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.stat}>
-                  <Text style={styles.statValue}>+{displayedGain} 🌱</Text>
+                  <Text style={styles.statValue}>+{seedsEarned + (perfectBonusAdded ? perfectSeedsBonus : 0)} 🌱</Text>
                   <Text style={styles.statLabel}>{t('victory_stat_seeds')}</Text>
                 </View>
               </View>
@@ -625,20 +640,24 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
                   accessibilityLiveRegion="polite"
                   accessibilityLabel={trophyLine}
                 >
-                  <Text style={styles.trophyLineText} numberOfLines={2}>{trophyLine}</Text>
+                  <Text style={styles.trophyLineText}>{trophyLine}</Text>
                 </View>
               )}
 
-              <TouchableOpacity style={styles.btnPrimary} onPress={onNextChallenge} activeOpacity={0.8}>
-                <Text style={styles.btnPrimaryText}>{nextChallengeLabel ?? t('victory_next_challenge')}</Text>
+              <TouchableOpacity style={[styles.button, styles.btnPrimarySurface]} onPress={onNextChallenge} activeOpacity={0.8} accessibilityRole="button">
+                <View style={[styles.buttonInner, styles.btnPrimaryInner]}>
+                  <Text style={styles.btnPrimaryText}>{nextChallengeLabel ?? t('victory_next_challenge')}</Text>
+                </View>
               </TouchableOpacity>
               {onSecondaryAction && secondaryActionLabel ? (
-                <TouchableOpacity style={styles.btnOutline} onPress={onSecondaryAction} activeOpacity={0.8}>
-                  <Text style={styles.btnOutlineText}>{secondaryActionLabel}</Text>
+                <TouchableOpacity style={[styles.button, styles.btnOutlineSurface]} onPress={onSecondaryAction} activeOpacity={0.8} accessibilityRole="button">
+                  <View style={[styles.buttonInner, styles.btnOutlineInner]}>
+                    <Text style={styles.btnOutlineText}>{secondaryActionLabel}</Text>
+                  </View>
                 </TouchableOpacity>
               ) : null}
               {showBackToMenu && (
-                <TouchableOpacity style={styles.btnSecondary} onPress={onBackToMenu} activeOpacity={0.8}>
+                <TouchableOpacity style={styles.btnSecondary} onPress={onBackToMenu} activeOpacity={0.8} accessibilityRole="button">
                   <Text style={styles.btnSecondaryText}>{t('victory_back_menu')}</Text>
                 </TouchableOpacity>
               )}
@@ -679,24 +698,6 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             />
           )}
 
-          {/* ── Overlay PERFECT — positionné sur le bloc BRAVO ─────────── */}
-          {showPerfectOverlay && titleLayout && (
-            <Animated.View
-              style={[
-                styles.perfectOverlay,
-                { top: cardOrigin.y + titleLayout.y - 4, height: titleLayout.height + 8 },
-                perfectStyle,
-              ]}
-              pointerEvents="none"
-              accessible
-              accessibilityLiveRegion="polite"
-              accessibilityLabel={`${t('perfect_run_label')} ${t('perfect_run_gain_x2')}`}
-            >
-              <Text style={styles.perfectLabel}>{t('perfect_run_label')}</Text>
-              <Text style={styles.perfectSub}>{t('perfect_run_gain_x2')}</Text>
-            </Animated.View>
-          )}
-
           {/* ── 2e pluie de graines (bonus parfait) ─────────────────────── */}
           {perfectFlyActive && seedFromY !== null && seedTargetY !== null && (
             <RewardFly
@@ -715,6 +716,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
             />
           )}
 
+        </View>
+        </ScrollView>
         </View>
       </View>
 
@@ -737,23 +740,39 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(20,25,14,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
-  card: {
-    backgroundColor: Colors.ui.card,
-    borderRadius: 24,
-    padding: 32,
-    alignItems: 'center',
+  cardFrame: {
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 400,
+    maxHeight: '100%',
+    flexShrink: 1,
+    borderWidth: 6,
+    borderColor: '#734B2C',
+    borderRadius: 18,
+    backgroundColor: '#E8C697',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
     elevation: 16,
+    overflow: 'hidden',
+  },
+  cardScroll: { flexGrow: 0, flexShrink: 1 },
+  card: {
+    backgroundColor: '#F7E7C9',
+    borderWidth: 1,
+    borderColor: '#D5B58B',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    alignItems: 'center',
+    width: '100%',
     overflow: 'visible',
   },
   cardInner: { width: '100%', alignItems: 'center' },
@@ -764,7 +783,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   counterWrapper: {
     alignItems: 'center',
@@ -832,49 +851,60 @@ const styles = StyleSheet.create({
   seedGainText: { fontSize: 10, fontWeight: '800', color: '#fff' },
 
   // ── Titre ─────────────────────────────────────────────────────────────────
-  emoji: { fontSize: 56, marginBottom: 8 },
-  title: { fontSize: 32, fontWeight: '800', color: Colors.forest.dark, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: Colors.ui.textLight, marginBottom: 24 },
+  emoji: { fontSize: 36 },
+  title: {
+    fontSize: 40,
+    fontWeight: '900',
+    color: '#79401F',
+    textAlign: 'center',
+    textShadowColor: '#E5B16B',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 1,
+    marginBottom: 2,
+  },
+  subtitle: { fontSize: 15, fontWeight: '700', color: '#572E1D', textAlign: 'center', marginBottom: 14 },
 
   // ── Étoiles et jauge ──────────────────────────────────────────────────────
-  starsBlock: { width: '100%', alignItems: 'center', marginBottom: 20 },
-  gaugeBlock: { width: '100%', marginTop: 14 },
-  gaugeText: { fontSize: 12, fontWeight: '700', color: Colors.forest.dark, marginBottom: 4, textAlign: 'center' },
+  starsBlock: { width: '100%', alignItems: 'center', marginBottom: 14 },
+  gaugeBlock: { width: '100%', marginTop: 10 },
+  gaugeText: { fontSize: 12, fontWeight: '700', color: '#572E1D', marginBottom: 4, textAlign: 'center' },
   gaugeBg: {
     height: 10,
     borderRadius: 5,
-    backgroundColor: Colors.ui.border,
+    backgroundColor: '#D5B58A',
     overflow: 'hidden',
   },
-  gaugeFill: { height: '100%', borderRadius: 5, backgroundColor: '#FFC107' },
+  gaugeFill: { height: '100%', borderRadius: 5, backgroundColor: '#DB9A25' },
   levelBanner: {
-    marginTop: 12,
-    backgroundColor: Colors.forest.medium,
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    marginTop: 10,
+    backgroundColor: '#A16B43',
+    borderRadius: 20,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
     borderWidth: 2,
-    borderColor: '#FFC107',
+    borderColor: '#FFF1D5',
     alignSelf: 'stretch',
     alignItems: 'center',
   },
-  levelBannerText: { color: '#FFF8E7', fontSize: 16, fontWeight: '800', textAlign: 'center' },
-  replayNote: { marginTop: 10, fontSize: 11, color: Colors.ui.textLight, textAlign: 'center', fontStyle: 'italic' },
-  skipHint: { marginTop: 8, fontSize: 10, color: Colors.ui.textLight, opacity: 0.7 },
+  levelBannerText: { color: '#FFF8E7', fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  replayNote: { marginTop: 8, fontSize: 11, color: '#684831', textAlign: 'center', fontStyle: 'italic' },
+  skipHint: { marginTop: 6, fontSize: 11, color: '#684831' },
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.forest.light + '15',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    marginBottom: 28,
+    backgroundColor: '#EAD1AA',
+    borderColor: '#C9A97E',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
     width: '100%',
   },
   rewardNote: {
-    marginTop: -8,
+    marginTop: 0,
     marginBottom: 12,
     fontSize: 12,
     color: Colors.forest.medium,
@@ -882,62 +912,60 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   stat: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 22, fontWeight: '700', color: Colors.forest.dark },
-  statLabel: { fontSize: 12, color: Colors.ui.textLight, marginTop: 2 },
-  statDivider: { width: 1, height: 36, backgroundColor: Colors.ui.border, marginHorizontal: 8 },
+  statValue: { fontSize: 22, fontWeight: '800', color: '#572E1D' },
+  statLabel: { fontSize: 12, color: '#684831', marginTop: 2 },
+  statDivider: { width: 1, height: 36, backgroundColor: '#BD9B70', marginHorizontal: 8 },
 
   // ── Boutons ───────────────────────────────────────────────────────────────
-  btnPrimary: {
-    backgroundColor: Colors.forest.medium,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
+  button: {
     width: '100%',
-    alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+    padding: 2,
+    borderWidth: 1,
+    borderBottomWidth: 4,
+    borderRadius: 12,
   },
-  btnPrimaryText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  btnOutline: {
-    borderWidth: 2,
-    borderColor: Colors.forest.medium,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    width: '100%',
+  buttonInner: {
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    marginBottom: 6,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
   },
-  btnOutlineText: { color: Colors.forest.medium, fontSize: 15, fontWeight: '700', textAlign: 'center' },
-  btnSecondary: { paddingVertical: 10 },
-  btnSecondaryText: { color: Colors.ui.textLight, fontSize: 14 },
+  btnPrimarySurface: { backgroundColor: '#285832', borderColor: '#1C4027' },
+  btnPrimaryInner: { backgroundColor: '#397B40', borderColor: '#60935D' },
+  btnOutlineSurface: { backgroundColor: '#A7764F', borderColor: '#794C31' },
+  btnOutlineInner: { backgroundColor: '#F1D9B3', borderColor: '#FAEBD2' },
+  btnPrimaryText: { color: '#FFFDF5', fontSize: 16, fontWeight: '800', textAlign: 'center' },
+  btnOutlineText: { color: '#572E1D', fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  btnSecondary: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 },
+  btnSecondaryText: { color: '#572E1D', fontSize: 14, fontWeight: '700', textAlign: 'center', textDecorationLine: 'underline' },
 
   trophyLine: {
     width: '100%',
-    backgroundColor: 'rgba(255,193,7,0.14)',
+    backgroundColor: '#F4DEAA',
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    marginBottom: 14,
+    marginBottom: 10,
     alignItems: 'center',
   },
-  trophyLineText: { fontSize: 13, fontWeight: '700', color: Colors.forest.dark, textAlign: 'center' },
+  trophyLineText: { fontSize: 13, fontWeight: '700', color: '#572E1D', textAlign: 'center' },
 
-  // ── PERFECT — positionné dynamiquement sur le bloc BRAVO ─────────────────
+  // ── PERFECT ───────────────────────────────────────────────────────────────
   perfectOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(74,46,27,0.92)',
     borderRadius: 16,
-    zIndex: 20,
-    // Même largeur que la carte de victoire : left/right à 0 dans la carte, SANS marge négative
-    // (l'ancienne marge de -32 le faisait déborder du padding de la carte).
-    paddingVertical: 8,
+    paddingVertical: 6,
+    marginBottom: 10,
   },
   perfectLabel: {
-    fontSize: 36,
+    fontSize: 26,
     fontWeight: '900',
     color: '#FFD700',
     textAlign: 'center',
@@ -947,10 +975,10 @@ const styles = StyleSheet.create({
     textShadowRadius: 6,
   },
   perfectSub: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFF8E7',
-    marginTop: 8,
+    marginTop: 2,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
@@ -978,7 +1006,7 @@ const styles = StyleSheet.create({
   wrBannerTime: { fontSize: 20, fontWeight: '800', color: Colors.forest.dark },
   wrPreviousHolder: { fontSize: 11, color: Colors.badges.or, fontStyle: 'italic', marginTop: 2 },
   wrInfo: {
-    backgroundColor: Colors.ui.background,
+    backgroundColor: '#F1DFC1',
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -988,7 +1016,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  wrInfoLabel: { fontSize: 11, fontWeight: '700', color: Colors.ui.textLight, flex: 1 },
-  wrInfoTime: { fontSize: 14, fontWeight: '800', color: Colors.forest.dark },
-  wrInfoHolder: { fontSize: 11, color: Colors.ui.textLight, maxWidth: 100 },
+  wrInfoLabel: { fontSize: 11, fontWeight: '700', color: '#684831', flex: 1 },
+  wrInfoTime: { fontSize: 14, fontWeight: '800', color: '#572E1D' },
+  wrInfoHolder: { fontSize: 11, color: '#684831', flexShrink: 1 },
 });

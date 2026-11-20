@@ -17,6 +17,7 @@ import {
   View,
   Text,
   Image,
+  ImageBackground,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -27,12 +28,15 @@ import {
   TextInput,
   KeyboardAvoidingView,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 
 import { Colors } from '../../src/constants/colors';
-import { useFrameLayout } from '../../src/constants/frameLayout';
+import { useMenuLayout } from '../../src/constants/frameLayout';
+import { ForestColors } from '../../src/theme/forestTheme';
+import { RelookingAssets } from '../../src/theme/relookingAssets';
+import { useHomeFont } from '../../src/theme/homeTypography';
+import { ParchmentBanner } from '../../src/components/relooking/relookingPrimitives';
 import { useFeatureAccess } from '../../src/hooks/useFeatureAccess';
 import { getFeatureLockHint, getLockMessageKey } from '../../src/constants/unlocks';
 import { isDemoAccount } from '../../src/constants/devAccess';
@@ -365,9 +369,10 @@ export default function ChallengeScreen() {
   const t       = useT();
   const router  = useRouter();
   const player  = usePlayerStore();
+  const fontFamily = useHomeFont();
+  const displayFont = fontFamily ? { fontFamily, fontWeight: 'normal' as const } : undefined;
   const duelAccess = useFeatureAccess('demo'); // compte démo exempté
-  const insets  = useSafeAreaInsets();
-  const { frameBottom, innerTop, innerPadH, topBarCenterY } = useFrameLayout();
+  const { frameBottom, contentTop, innerPadH } = useMenuLayout();
   const uid     = auth.currentUser?.uid ?? null;
   const isAnon  = auth.currentUser?.isAnonymous ?? true;
 
@@ -622,8 +627,8 @@ export default function ChallengeScreen() {
   if (!uid || isAnon) {
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BgImage overlay={0.52} />
-        <View style={[styles.centered, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
+        <BgImage overlay={0.35} />
+        <View style={[styles.centered, { paddingTop: contentTop }]}>
           <Text style={styles.emptyEmoji}>🔒</Text>
           <Text style={[styles.emptyTitle, { color: '#fff' }]}>{t('challenge_not_connected_title')}</Text>
           <Text style={[styles.emptyDesc, { color: 'rgba(255,255,255,0.75)' }]}>
@@ -647,8 +652,8 @@ export default function ChallengeScreen() {
     const lockMessage = getLockMessageKey(lock);
     return (
       <View style={StyleSheet.absoluteFill}>
-        <BgImage overlay={0.52} />
-        <View style={[styles.centered, { paddingTop: Math.max(insets.top + 8, innerTop + 8) }]}>
+        <BgImage overlay={0.35} />
+        <View style={[styles.centered, { paddingTop: contentTop }]}>
           <Text style={styles.emptyEmoji}>🔒</Text>
           <Text style={[styles.emptyTitle, { color: '#fff' }]}>
             {lock.kind === 'chapter'
@@ -674,16 +679,18 @@ export default function ChallengeScreen() {
 
   return (
     <View style={StyleSheet.absoluteFill}>
-      <BgImage overlay={0.52} />
+      <BgImage overlay={0.35} />
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, innerTop + 28), paddingLeft: innerPadH + 4, paddingRight: Math.max(72, innerPadH + 4) }]}>
-        <View style={styles.headerLeft}>
-          <Image source={IMG_HACHES} style={styles.headerIcon} resizeMode="contain" />
-          <View>
-            <Text style={styles.headerTitle}>{t('challenge_header_title')}</Text>
-            <Text style={styles.headerLevel}>{t('challenge_header_level', { level: String(player.currentLevel) })}</Text>
+      <View style={[styles.header, { paddingTop: contentTop, paddingHorizontal: innerPadH }]}>
+        <ParchmentBanner style={styles.headerBanner}>
+          <View style={styles.headerLeft}>
+            <Image source={IMG_HACHES} style={styles.headerIcon} resizeMode="contain" />
+            <View style={styles.headerText}>
+              <Text style={[styles.headerTitle, displayFont]}>{t('challenge_header_title')}</Text>
+              <Text style={[styles.headerLevel, displayFont]}>{t('challenge_header_level', { level: String(player.currentLevel) })}</Text>
+            </View>
           </View>
-        </View>
+        </ParchmentBanner>
       </View>
 
       {/* ── Bouton Défier un ami ── */}
@@ -694,10 +701,12 @@ export default function ChallengeScreen() {
           disabled={generating}
           activeOpacity={0.85}
         >
-          {generating
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.btnLaunchText}>{t('challenge_btn_challenge')}</Text>
-          }
+          <ImageBackground source={RelookingAssets.boutonVert} resizeMode="stretch" style={styles.btnLaunchBackground} imageStyle={styles.btnLaunchImage}>
+            {generating
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={[styles.btnLaunchText, displayFont]}>{t('challenge_btn_challenge')}</Text>
+            }
+          </ImageBackground>
         </TouchableOpacity>
         <Text style={styles.launchHint}>
           {t('challenge_duel_reward_hint', { seeds: String(CHALLENGE_WINNER_SEEDS) })}
@@ -712,8 +721,10 @@ export default function ChallengeScreen() {
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             onPress={() => setActiveTab(tab.key)}
             activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.key }}
           >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive, displayFont]}>
               {tab.label}
               {(tab.count ?? 0) > 0 ? ` (${tab.count})` : ''}
             </Text>
@@ -818,7 +829,7 @@ const ms = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   card: {
-    backgroundColor: Colors.ui.card,
+    backgroundColor: ForestColors.parchmentBase,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     padding: 24,
@@ -848,7 +859,7 @@ const ms = StyleSheet.create({
     fontStyle: 'italic',
   },
   input: {
-    backgroundColor: Colors.ui.background,
+    backgroundColor: ForestColors.parchmentLight,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.ui.border,
@@ -869,7 +880,7 @@ const ms = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: Colors.ui.card,
+    backgroundColor: ForestColors.parchmentBase,
     borderBottomWidth: 1,
     borderBottomColor: Colors.ui.border,
   },
@@ -904,7 +915,7 @@ const ms = StyleSheet.create({
     color: Colors.forest.medium,
   },
   rowLocked: {
-    backgroundColor: Colors.ui.background,
+    backgroundColor: ForestColors.parchmentDark,
     opacity: 0.6,
   },
   textLocked: {
@@ -941,16 +952,16 @@ const ms = StyleSheet.create({
 // ── Styles cartes ───────────────────────────────────────────
 const cardStyles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.ui.card,
+    backgroundColor: ForestColors.parchmentBase,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.ui.border,
+    borderColor: ForestColors.parchmentBorder,
     gap: 12,
   },
   cardWon: {
     borderColor: Colors.forest.medium + '80',
-    backgroundColor: Colors.forest.medium + '08',
+    backgroundColor: '#E8E8CB',
   },
   cardLost: {
     borderColor: Colors.ui.border,
@@ -1033,22 +1044,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingLeft: 20,
-    paddingRight: 72,
-    paddingBottom: 14,
-    backgroundColor: 'rgba(10,30,10,0.75)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.12)',
+    paddingBottom: 4,
   },
+  headerBanner: { paddingVertical: 10 },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    flex: 1,
   },
+  headerText: { flexShrink: 1 },
   headerIcon: {
     width: 28,
     height: 28,
@@ -1056,26 +1061,31 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#fff',
+    color: ForestColors.textInkPrimary,
   },
   headerLevel: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.65)',
+    color: ForestColors.textInkSecondary,
     marginTop: 2,
   },
   launchSection: {
-    padding: 16,
-    gap: 8,
-    backgroundColor: 'rgba(10,30,10,0.82)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.12)',
+    paddingVertical: 6,
+    gap: 4,
   },
   btnLaunch: {
-    backgroundColor: Colors.forest.dark,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
+    width: '100%',
+    maxWidth: 300,
+    aspectRatio: 3.1,
+    minHeight: 54,
+    alignSelf: 'center',
   },
+  btnLaunchBackground: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  btnLaunchImage: { width: '100%', height: '100%' },
   btnDisabled: {
     opacity: 0.5,
   },
@@ -1091,31 +1101,33 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
+    backgroundColor: '#285235',
+    marginHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ForestColors.parchmentBorder,
+    padding: 3,
   },
   tab: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderRadius: 9,
   },
   tabActive: {
-    borderBottomColor: Colors.forest.medium,
+    backgroundColor: ForestColors.parchmentBase,
   },
   tabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.ui.textLight,
+    color: '#FFF8E7',
   },
   tabTextActive: {
-    color: Colors.forest.medium,
+    color: ForestColors.textInkPrimary,
   },
   scrollArea: {
     flex: 1,
-    backgroundColor: 'rgba(240,245,240,0.92)',
+    backgroundColor: 'transparent',
   },
   list: {
     padding: 16,

@@ -59,11 +59,14 @@ export function HerbierEntry({ compact = false }: { compact?: boolean }) {
         )}
         {compact ? (
           <>
-            <View style={styles.compactInfo}>
-              <Text style={[styles.compactTitle, displayFont]}>{t('herbier_home_title')}</Text>
-              <Text style={[styles.compactProgress, displayFont]}>{t('herbier_home_progress', { owned: String(progress.owned), total: String(progress.total) })}</Text>
+            <View style={styles.compactContent}>
+              <View style={styles.compactInfo}>
+                <Text style={[styles.compactTitle, displayFont]}>{t('herbier_home_title')}</Text>
+                <Text style={[styles.compactProgress, displayFont]}>{t('herbier_home_progress', { owned: String(progress.owned), total: String(progress.total) })}</Text>
+              </View>
+              <Image source={RelookingAssets.carteHerbier} style={styles.compactImage} resizeMode="contain" />
             </View>
-            <Image source={RelookingAssets.carteHerbier} style={styles.compactImage} resizeMode="contain" />
+            <Image source={RelookingAssets.flecheGo} style={styles.compactArrow} resizeMode="contain" />
           </>
         ) : (
         <>
@@ -93,11 +96,13 @@ export function HerbierEntry({ compact = false }: { compact?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  compactCard: { flex: 1, minHeight: 78, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  compactCard: { flex: 1, minHeight: 94, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  compactContent: { flexDirection: 'row', alignItems: 'center' },
   compactInfo: { flex: 1, alignItems: 'center' },
   compactTitle: { color: ForestColors.textInkPrimary, fontSize: 16, fontWeight: '800', textAlign: 'center' },
   compactProgress: { color: ForestColors.textInkPrimary, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  compactImage: { width: 42, height: 62 },
+  compactImage: { width: 32, height: 48 },
+  compactArrow: { width: 26, height: 26 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
