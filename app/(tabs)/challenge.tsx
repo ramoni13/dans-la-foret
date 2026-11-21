@@ -1053,7 +1053,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  headerText: { flexShrink: 1 },
+  headerText: { flexShrink: 1, ...(Platform.OS === 'android' && { alignItems: 'center' }) },
   headerIcon: {
     width: 28,
     height: 28,
@@ -1085,7 +1085,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  btnLaunchImage: { width: '100%', height: '100%' },
+  btnLaunchImage: Platform.OS === 'android'
+    ? { width: undefined, height: undefined }
+    : { width: '100%', height: '100%' },
   btnDisabled: {
     opacity: 0.5,
   },

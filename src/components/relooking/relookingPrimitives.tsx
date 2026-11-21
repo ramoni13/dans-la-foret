@@ -5,6 +5,7 @@ import {
   Text,
   Image,
   ImageBackground,
+  Platform,
   Pressable,
   StyleSheet,
   ViewStyle,
@@ -279,7 +280,10 @@ export const BoardSlotBackground: React.FC<BoardSlotBackgroundProps> = ({
 };
 
 const styles = StyleSheet.create({
-  fillImage: { width: '100%', height: '100%' },
+  // Android uses the absolute edges; web needs explicit dimensions.
+  fillImage: Platform.OS === 'android'
+    ? { width: undefined, height: undefined }
+    : { width: '100%', height: '100%' },
   counterWrapper: {
     flex: 1,
     maxWidth: 165,
