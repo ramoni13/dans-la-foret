@@ -16,6 +16,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   Platform,
   Modal,
   Animated,
@@ -54,6 +55,7 @@ import { Colors } from '../../src/constants/colors';
 import { awardEarnedTrophies } from '../../src/services/trophyService';
 import { useConfetti, Confetti } from '../../src/components/Game/Confetti';
 import { ChallengeCountdown } from '../../src/components/Game/ChallengeCountdown';
+import { ChallengeHeaderContainer, TexturedButton } from '../../src/components/relooking/relookingPrimitives';
 import { DailyBriefingModal } from '../../src/components/LevelBriefing/DailyBriefingModal';
 import { DailyStreakRecordModal } from '../../src/components/Game/DailyStreakRecordModal';
 import { DailyRouletteModal } from '../../src/components/Game/DailyRouletteModal';
@@ -64,6 +66,7 @@ import { recordVictory } from '../../src/services/metricsService';
 import { useT } from '../../src/i18n';
 
 const native = Platform.OS !== 'web';
+const BOARD_VERTICAL_MARGIN = 26;
 
 // ── Modal d'echec journalier (pas de retry) ──────────────────────────────────
 
@@ -216,7 +219,7 @@ export default function DailyGameScreen() {
   const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const { width: screenWidth } = useWindowDimensions();
 
   const game = useGame();
   const player = usePlayerStore();
@@ -512,6 +515,14 @@ export default function DailyGameScreen() {
         el !== null || challenge.fixedPlacements.some(fp => fp.cellIndex === i)
       )
     : false;
+  const compactHeader = screenWidth < 400;
+  const boardSize = Math.min(Math.max(0, screenWidth - 32), 500);
+  const dailyHeading = (
+    <View style={[styles.headerCenter, !compactHeader && styles.headerCenterInline]}>
+      <Text style={styles.levelLabel}>{t('daily_title')}</Text>
+      <Text style={styles.challengeLabel}>{t('daily_location')}</Text>
+    </View>
+  );
 
   // -- Chargement --
   if (loading) {
@@ -554,98 +565,103 @@ export default function DailyGameScreen() {
   return (
     <GestureHandlerRootView style={styles.root}>
 
-      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 8) }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={handleDailyBack} style={styles.backBtn}>
-              <Text style={styles.backText}>{t('daily_abandon_btn')}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.headerCenter}>
-            <Text style={styles.levelLabel}>{t('daily_title')}</Text>
-            <Text style={styles.challengeLabel}>{t('daily_location')}</Text>
-          </View>
-
-          <View style={styles.headerRight}>
-            <View style={styles.timer}>
-              <Text style={styles.timerText}>{formatTime(game.elapsedTime)}</Text>
-              {leaderboard.length > 0 && (
-                <Text style={styles.wrBadge}>
-                  {'\uD83C\uDFC6'} {leaderboard[0].username} {formatTime(leaderboard[0].timeMs)}
-                </Text>
-              )}
+      <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <ChallengeHeaderContainer topInset={insets.top}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <TouchableOpacity onPress={handleDailyBack} style={styles.backBtn}>
+                <Text style={styles.backText}>{t('daily_abandon_btn')}</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.helpBtn}
-              onPress={() => setShowBriefing(true)}
-              accessibilityRole="button"
-              accessibilityLabel={t('game_rules_accessibility')}
-            >
-              <Text style={styles.helpText}>?</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.speakerBtn}
-              onPress={() => setIngameEnabled(!audioIngameEnabled)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.speakerIcon}>
-                {audioIngameEnabled ? '\uD83D\uDD0A' : '\uD83D\uDD07'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
 
-        {/* Banniere validation unique + bouton Valider (bandeau unique) */}
-        <View style={styles.dailyBanner}>
-          <View style={styles.dailyBannerInfo}>
+            {!compactHeader && dailyHeading}
+
+            <View style={styles.headerRight}>
+              <View style={styles.timer}>
+                <Text style={styles.timerText}>{formatTime(game.elapsedTime)}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.helpBtn}
+                onPress={() => setShowBriefing(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('game_rules_accessibility')}
+              >
+                <Text style={styles.helpText}>?</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.speakerBtn}
+                onPress={() => setIngameEnabled(!audioIngameEnabled)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.speakerIcon}>
+                  {audioIngameEnabled ? '\uD83D\uDD0A' : '\uD83D\uDD07'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          {compactHeader && dailyHeading}
+          {leaderboard.length > 0 && (
+            <Text style={styles.wrBadge}>
+              {'\uD83C\uDFC6'} {leaderboard[0].username} {formatTime(leaderboard[0].timeMs)}
+            </Text>
+          )}
+
+          {/* Banniere validation unique */}
+          <View style={styles.dailyBanner}>
             <Text style={styles.dailyBannerText}>
               {game.dailyValidationUsed
                 ? t('daily_validation_used')
                 : t('daily_validation_single')}
+              {' · '}
+              <Text style={styles.dailyBannerSub}>{t('daily_no_bonus')}</Text>
             </Text>
-            <Text style={styles.dailyBannerSub}>{t('daily_no_bonus')}</Text>
           </View>
-          <TouchableOpacity
-            style={[
-              styles.validateBtn,
-              (!allFilled || game.dailyValidationUsed) && styles.validateBtnDisabled,
-            ]}
-            onPress={handleValidate}
-            activeOpacity={0.8}
-            disabled={!allFilled || game.dailyValidationUsed}
-          >
-            <Text style={styles.validateBtnText}>
-              {game.dailyValidationUsed ? t('daily_validate_used_btn') : t('daily_validate_btn')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        </ChallengeHeaderContainer>
 
-        {/* Plateau — occupe tout l'espace flex restant */}
-        <View style={styles.boardArea}>
-          <BoardBackdrop boardDef={boardDef} />
-          <BoardRenderer
-            boardDef={boardDef}
+        <ScrollView
+          style={styles.gameScroll}
+          contentContainerStyle={styles.gameContent}
+          nestedScrollEnabled
+        >
+          {/* Plateau */}
+          <View style={[styles.boardArea, { minHeight: boardSize + BOARD_VERTICAL_MARGIN * 2 }]}>
+            <BoardBackdrop boardDef={boardDef} />
+            <View style={[styles.boardContainer, { width: boardSize }]}>
+              <BoardRenderer
+                boardDef={boardDef}
+                playerBoard={game.playerBoard}
+                fixedCells={fixedCells}
+                selectedElement={game.selectedElement}
+                highlightActive={false}
+                getCellColor={(idx) => game.getCellColor(idx)}
+                onCellPress={handleCellPress}
+                challengeKey={challenge?.id ?? dailyDate}
+                relooking
+              />
+            </View>
+          </View>
+
+          {/* Palette */}
+          <ElementPalette
+            availableTokens={challenge.availableTokens}
             playerBoard={game.playerBoard}
             fixedCells={fixedCells}
             selectedElement={game.selectedElement}
-            highlightActive={false}
-            getCellColor={(idx) => game.getCellColor(idx)}
-            onCellPress={handleCellPress}
-            challengeKey={challenge?.id ?? dailyDate}
+            onSelectElement={game.selectElement}
+            onClearAll={game.clearPlayerBoard}
+            relooking
+            rightSlot={
+              <TexturedButton
+                label={game.dailyValidationUsed ? t('daily_validate_used_btn') : t('daily_validate_btn')}
+                onPress={handleValidate}
+                disabled={!allFilled || game.dailyValidationUsed}
+                fontSize={12}
+                style={{ width: 100 }}
+              />
+            }
           />
-        </View>
-
-        {/* Palette */}
-        <ElementPalette
-          availableTokens={challenge.availableTokens}
-          playerBoard={game.playerBoard}
-          fixedCells={fixedCells}
-          selectedElement={game.selectedElement}
-          onSelectElement={game.selectElement}
-          onClearAll={game.clearPlayerBoard}
-        />
+        </ScrollView>
 
         {/* Modal victoire */}
         <VictoryModal
@@ -730,7 +746,7 @@ export default function DailyGameScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.ui.background,
+    backgroundColor: '#F4ECD8',
   },
   loading: {
     flex: 1,
@@ -773,11 +789,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     paddingVertical: 6,
-    backgroundColor: Colors.ui.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.ui.border,
+    backgroundColor: 'transparent',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -795,14 +808,17 @@ const styles = StyleSheet.create({
   headerCenter: {
     alignItems: 'center',
   },
+  headerCenterInline: { flex: 1 },
   levelLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#D4A017',
+    color: Colors.forest.dark,
+    textAlign: 'center',
   },
   challengeLabel: {
     fontSize: 11,
     color: Colors.ui.textLight,
+    textAlign: 'center',
   },
   headerRight: {
     flexDirection: 'row',
@@ -823,9 +839,10 @@ const styles = StyleSheet.create({
   },
   wrBadge: {
     fontSize: 10,
-    color: '#D4A017',
+    color: Colors.forest.medium,
     fontWeight: '600',
     marginTop: 1,
+    textAlign: 'center',
   },
   speakerBtn: {
     width: 36,
@@ -841,51 +858,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   dailyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFF3E0',
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FFE0B2',
-  },
-  dailyBannerInfo: {
-    flex: 1,
-    marginRight: 12,
+    paddingVertical: 4,
   },
   dailyBannerText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
     color: '#E65100',
+    textAlign: 'center',
   },
   dailyBannerSub: {
     fontSize: 11,
     color: '#BF360C',
-    marginTop: 1,
   },
-  validateBtn: {
-    backgroundColor: '#D4A017',
-    paddingHorizontal: 20,
-    paddingVertical: 9,
-    borderRadius: 12,
-  },
-  validateBtnDisabled: {
-    backgroundColor: Colors.ui.border,
-    opacity: 0.6,
-  },
-  validateBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  gameScroll: { flex: 1 },
+  gameContent: { flexGrow: 1 },
   boardArea: {
     flex: 1,
     overflow: 'hidden',
-    alignItems: 'stretch',
-    justifyContent: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: Colors.ui.background,
-    paddingHorizontal: 0,
-    paddingVertical: 4,
+    paddingVertical: BOARD_VERTICAL_MARGIN,
+  },
+  boardContainer: {
+    maxWidth: 500,
+    aspectRatio: 1,
   },
 });
